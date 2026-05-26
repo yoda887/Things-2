@@ -952,9 +952,9 @@ fun ThingsCategoryListPanel(
     val isLargeScreen = configuration.screenWidthDp >= 600
     val scaleFactor = if (isLargeScreen) 1.25f else 1.0f
 
-    val headerEmojiFontSize = (30 * scaleFactor).sp
-    val headerTitleFontSize = (32 * scaleFactor).sp
-    val subHeaderFontSize = (18 * scaleFactor).sp
+    val headerEmojiFontSize = androidx.compose.material3.MaterialTheme.typography.displayMedium.fontSize
+    val headerTitleFontSize = androidx.compose.material3.MaterialTheme.typography.displayLarge.fontSize
+    val subHeaderFontSize = androidx.compose.material3.MaterialTheme.typography.headlineSmall.fontSize
 
     val filteredTasks = remember(listTasks, selectedTag) {
         if (selectedTag == null) listTasks else listTasks.filter { it.tags.contains(selectedTag) }
@@ -1460,12 +1460,8 @@ fun TaskItemRow(
     dragModifier: Modifier = Modifier
 ) {
     val isDark = false
-    val configuration = androidx.compose.ui.platform.LocalConfiguration.current
-    val isLargeScreen = configuration.screenWidthDp >= 600
-    val scaleFactor = if (isLargeScreen) 1.25f else 1.0f
-
-    val titleFontSize = (15.6 * scaleFactor).sp
-    val subFontSize = (12.5 * scaleFactor).sp
+    val titleFontSize = androidx.compose.material3.MaterialTheme.typography.titleMedium.fontSize
+    val subFontSize = androidx.compose.material3.MaterialTheme.typography.bodySmall.fontSize
 
     val scope = rememberCoroutineScope()
     var localCompleted by remember(task.isCompleted) { mutableStateOf(task.isCompleted) }

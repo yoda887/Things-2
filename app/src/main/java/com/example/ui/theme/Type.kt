@@ -5,32 +5,115 @@ import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.sp
+import androidx.compose.runtime.Composable
+import androidx.compose.ui.platform.LocalConfiguration
 
-// Set of Material typography styles to start with
-val Typography =
-  Typography(
-    bodyLarge =
-      TextStyle(
+// Default static typography as a fallback
+val Typography = Typography(
+    bodyLarge = TextStyle(
         fontFamily = FontFamily.Default,
         fontWeight = FontWeight.Normal,
         fontSize = 16.sp,
         lineHeight = 24.sp,
         letterSpacing = 0.5.sp,
-      )
-    /* Other default text styles to override
-    titleLarge = TextStyle(
-        fontFamily = FontFamily.Default,
-        fontWeight = FontWeight.Normal,
-        fontSize = 22.sp,
-        lineHeight = 28.sp,
-        letterSpacing = 0.sp
-    ),
-    labelSmall = TextStyle(
-        fontFamily = FontFamily.Default,
-        fontWeight = FontWeight.Medium,
-        fontSize = 11.sp,
-        lineHeight = 16.sp,
-        letterSpacing = 0.5.sp
     )
-    */
-  )
+)
+
+/**
+ * Creates and remembers a responsive Material 3 Typography system.
+ * This dynamically adjusts font sizes based on screen scale factor
+ * and maps all custom sizes directly to the standard Material 3 slots.
+ */
+@Composable
+fun rememberThingsTypography(): Typography {
+    val configuration = LocalConfiguration.current
+    val isLargeScreen = configuration.screenWidthDp >= 600
+    val scaleFactor = if (isLargeScreen) 1.25f else 1.0f
+
+    return Typography(
+        // Hero title (e.g. Inbox / Today big name) - 32.sp base
+        displayLarge = TextStyle(
+            fontFamily = FontFamily.Default,
+            fontWeight = FontWeight.Bold,
+            fontSize = (32 * scaleFactor).sp
+        ),
+        // Hero Emoji - 30.sp base
+        displayMedium = TextStyle(
+            fontFamily = FontFamily.Default,
+            fontWeight = FontWeight.Normal,
+            fontSize = (30 * scaleFactor).sp
+        ),
+        // App / Group Settings Header - 24.sp base
+        headlineLarge = TextStyle(
+            fontFamily = FontFamily.Default,
+            fontWeight = FontWeight.Bold,
+            fontSize = 24.sp
+        ),
+        // Bottom Sheet / Dialog Title - 22.sp base
+        headlineMedium = TextStyle(
+            fontFamily = FontFamily.Default,
+            fontWeight = FontWeight.Bold,
+            fontSize = (22 * scaleFactor).sp
+        ),
+        // Dialog Subheaders / Prompt Titles / "When?" Header - 18.sp base
+        headlineSmall = TextStyle(
+            fontFamily = FontFamily.Default,
+            fontWeight = FontWeight.SemiBold,
+            fontSize = (18 * scaleFactor).sp
+        ),
+        // Section titles / Alternative Medium headers - 16.sp base
+        titleLarge = TextStyle(
+            fontFamily = FontFamily.Default,
+            fontWeight = FontWeight.Medium,
+            fontSize = (16 * scaleFactor).sp
+        ),
+        // Main Task Title - 15.6.sp base (scaled)
+        titleMedium = TextStyle(
+            fontFamily = FontFamily.Default,
+            fontWeight = FontWeight.Normal,
+            fontSize = (15.6f * scaleFactor).sp
+        ),
+        // Sheet Header / Editor Notes / Alternative Subheader - 15.sp base (scaled)
+        titleSmall = TextStyle(
+            fontFamily = FontFamily.Default,
+            fontWeight = FontWeight.Normal,
+            fontSize = (15 * scaleFactor).sp
+        ),
+        // Default text / TextField input / Task details body - 14.sp base (scaled)
+        bodyLarge = TextStyle(
+            fontFamily = FontFamily.Default,
+            fontWeight = FontWeight.Normal,
+            fontSize = (14 * scaleFactor).sp
+        ),
+        // Helper text / Project description / Main tags - 13.sp base (scaled)
+        bodyMedium = TextStyle(
+            fontFamily = FontFamily.Default,
+            fontWeight = FontWeight.Normal,
+            fontSize = (13 * scaleFactor).sp
+        ),
+        // Task List secondary / Date subtitle - 12.5.sp base (scaled)
+        bodySmall = TextStyle(
+            fontFamily = FontFamily.Default,
+            fontWeight = FontWeight.Normal,
+            fontSize = (12.5f * scaleFactor).sp
+        ),
+        // Clickable buttons / Action trigger text - 13.sp base (scaled, bold)
+        labelLarge = TextStyle(
+            fontFamily = FontFamily.Default,
+            fontWeight = FontWeight.Bold,
+            fontSize = (13 * scaleFactor).sp
+        ),
+        // Smaller UI Labels / Subtitle stamps / Badges - 12.sp base (scaled)
+        labelMedium = TextStyle(
+            fontFamily = FontFamily.Default,
+            fontWeight = FontWeight.Medium,
+            fontSize = (12 * scaleFactor).sp
+        ),
+        // Tiny tags / Details Category Label / Priority badge - 11.sp base (scaled)
+        labelSmall = TextStyle(
+            fontFamily = FontFamily.Default,
+            fontWeight = FontWeight.Bold,
+            fontSize = (11 * scaleFactor).sp
+        )
+    )
+}

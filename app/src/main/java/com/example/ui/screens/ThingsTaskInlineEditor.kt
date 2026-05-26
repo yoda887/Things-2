@@ -121,18 +121,14 @@ fun ThingsTaskInlineEditor(
     val helperBgColor = Color(0xFFF2F2F7) // light grey panel background
     val helperHintColor = Color(0xFF8E8E93)
 
-    // Proportional font sizing for large screens
-    val configuration = androidx.compose.ui.platform.LocalConfiguration.current
-    val isLargeScreen = configuration.screenWidthDp >= 600
-    val scaleFactor = if (isLargeScreen) 1.25f else 1.0f
-
-    val titleFontSize = (18 * scaleFactor).sp
-    val notesFontSize = (15 * scaleFactor).sp
-    val bodyFontSize = (14 * scaleFactor).sp
-    val tagFontSize = (13 * scaleFactor).sp
-    val buttonFontSize = (13 * scaleFactor).sp
-    val smallFontSize = (12 * scaleFactor).sp
-    val tinyFontSize = (11 * scaleFactor).sp
+    // Proportional font sizing from Material 3 Typography slots
+    val titleFontSize = androidx.compose.material3.MaterialTheme.typography.headlineSmall.fontSize
+    val notesFontSize = androidx.compose.material3.MaterialTheme.typography.titleSmall.fontSize
+    val bodyFontSize = androidx.compose.material3.MaterialTheme.typography.bodyLarge.fontSize
+    val tagFontSize = androidx.compose.material3.MaterialTheme.typography.bodyMedium.fontSize
+    val buttonFontSize = androidx.compose.material3.MaterialTheme.typography.labelLarge.fontSize
+    val smallFontSize = androidx.compose.material3.MaterialTheme.typography.labelMedium.fontSize
+    val tinyFontSize = androidx.compose.material3.MaterialTheme.typography.labelSmall.fontSize
 
     // Determine priority color & name representation
     val priorityName = when (priority) {
@@ -618,7 +614,7 @@ fun ThingsTaskInlineEditor(
                         Text(
                             text = activeDateLabel,
                             style = TextStyle(
-                                fontSize = 14.sp,
+                                fontSize = bodyFontSize,
                                 color = textPrimaryColor,
                                 fontWeight = FontWeight.Medium
                             )
@@ -810,7 +806,7 @@ fun ThingsTaskInlineEditor(
                             text = "When?",
                             style = TextStyle(
                                 color = Color.White,
-                                fontSize = 18.sp,
+                                fontSize = titleFontSize,
                                 fontWeight = FontWeight.Bold
                             )
                         )
@@ -818,7 +814,7 @@ fun ThingsTaskInlineEditor(
                             text = "Cancel",
                             style = TextStyle(
                                 color = Color(0xFF8E8E93),
-                                fontSize = 15.sp,
+                                fontSize = notesFontSize,
                                 fontWeight = FontWeight.Normal
                             ),
                             modifier = Modifier.clickable { showWhenDialog = false }
@@ -849,14 +845,14 @@ fun ThingsTaskInlineEditor(
                     ) {
                         Text(
                             text = "⭐",
-                            fontSize = 18.sp,
+                            fontSize = titleFontSize,
                             modifier = Modifier.padding(end = 12.dp)
                         )
                         Text(
                             text = "Today",
                             style = TextStyle(
                                 color = Color.White,
-                                fontSize = 16.sp,
+                                fontSize = androidx.compose.material3.MaterialTheme.typography.titleLarge.fontSize,
                                 fontWeight = FontWeight.Medium
                             ),
                             modifier = Modifier.weight(1f)
@@ -895,14 +891,14 @@ fun ThingsTaskInlineEditor(
                     ) {
                         Text(
                             text = "🌙",
-                            fontSize = 18.sp,
+                            fontSize = titleFontSize,
                             modifier = Modifier.padding(end = 12.dp)
                         )
                         Text(
                             text = "This Evening",
                             style = TextStyle(
                                 color = Color.White,
-                                fontSize = 16.sp,
+                                fontSize = androidx.compose.material3.MaterialTheme.typography.titleLarge.fontSize,
                                 fontWeight = FontWeight.Medium
                             ),
                             modifier = Modifier.weight(1f)
@@ -930,7 +926,7 @@ fun ThingsTaskInlineEditor(
                                 text = dayName,
                                 style = TextStyle(
                                     color = Color(0xFF5F6368),
-                                    fontSize = 12.sp,
+                                    fontSize = smallFontSize,
                                     fontWeight = FontWeight.Bold
                                 ),
                                 modifier = Modifier.weight(1f),

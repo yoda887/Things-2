@@ -83,6 +83,16 @@ fun ThingsTaskDetailsSheet(
     val textSecondaryColor = if (isDark) ThingsTextSecondaryDark else ThingsTextSecondaryLight
     val dividerColor = if (isDark) ThingsDividerDark else ThingsDividerLight
 
+    val sheetHeaderStyle = androidx.compose.material3.MaterialTheme.typography.titleSmall.copy(fontWeight = FontWeight.SemiBold, color = textSecondaryColor)
+    val sheetTitleStyle = androidx.compose.material3.MaterialTheme.typography.headlineMedium.copy(color = textPrimaryColor)
+    val sheetTitlePlaceholderStyle = androidx.compose.material3.MaterialTheme.typography.headlineMedium.copy(color = textSecondaryColor.copy(alpha = 0.5f))
+    val sheetNotesStyle = androidx.compose.material3.MaterialTheme.typography.titleLarge.copy(color = textPrimaryColor)
+    val sheetNotesPlaceholderStyle = androidx.compose.material3.MaterialTheme.typography.titleLarge.copy(color = textSecondaryColor.copy(alpha = 0.5f))
+    val sheetBodyStyle = androidx.compose.material3.MaterialTheme.typography.bodyLarge.copy(color = textPrimaryColor)
+    val sheetBodyPlaceholderStyle = androidx.compose.material3.MaterialTheme.typography.bodyLarge.copy(color = textSecondaryColor.copy(alpha = 0.5f))
+    val sheetSmallStyle = androidx.compose.material3.MaterialTheme.typography.labelMedium.copy(color = textPrimaryColor)
+    val sheetTinyStyle = androidx.compose.material3.MaterialTheme.typography.labelSmall.copy(color = textSecondaryColor)
+
     ModalBottomSheet(
         onDismissRequest = onDismiss,
         sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true),
@@ -112,11 +122,7 @@ fun ThingsTaskDetailsSheet(
             ) {
                 Text(
                     text = if (task == null) "New To-Do" else "Edit To-Do",
-                    style = TextStyle(
-                        fontSize = 15.sp,
-                        fontWeight = FontWeight.SemiBold,
-                        color = textSecondaryColor
-                    )
+                    style = sheetHeaderStyle
                 )
 
                 Row {
@@ -164,11 +170,7 @@ fun ThingsTaskDetailsSheet(
             BasicTextField(
                 value = title,
                 onValueChange = { title = it },
-                textStyle = TextStyle(
-                    fontSize = 22.sp,
-                    fontWeight = FontWeight.Bold,
-                    color = textPrimaryColor
-                ),
+                textStyle = sheetTitleStyle,
                 cursorBrush = SolidColor(ThingsBlue),
                 modifier = Modifier
                     .fillMaxWidth()
@@ -177,11 +179,7 @@ fun ThingsTaskDetailsSheet(
                     if (title.isEmpty()) {
                         Text(
                             "New To-Do",
-                            style = TextStyle(
-                                fontSize = 22.sp,
-                                fontWeight = FontWeight.Bold,
-                                color = textSecondaryColor.copy(alpha = 0.5f)
-                            )
+                            style = sheetTitlePlaceholderStyle
                         )
                     }
                     innerTextField()
@@ -193,10 +191,7 @@ fun ThingsTaskDetailsSheet(
             BasicTextField(
                 value = notes,
                 onValueChange = { notes = it },
-                textStyle = TextStyle(
-                    fontSize = 16.sp,
-                    color = textPrimaryColor
-                ),
+                textStyle = sheetNotesStyle,
                 cursorBrush = SolidColor(ThingsBlue),
                 modifier = Modifier
                     .fillMaxWidth()
@@ -206,10 +201,7 @@ fun ThingsTaskDetailsSheet(
                     if (notes.isEmpty()) {
                         Text(
                             "Notes",
-                            style = TextStyle(
-                                fontSize = 16.sp,
-                                color = textSecondaryColor.copy(alpha = 0.5f)
-                            )
+                            style = sheetNotesPlaceholderStyle
                         )
                     }
                     innerTextField()
@@ -221,12 +213,7 @@ fun ThingsTaskDetailsSheet(
             // Subtasks checklist builder
             Text(
                 "CHECKLIST",
-                style = TextStyle(
-                    fontSize = 11.sp,
-                    fontWeight = FontWeight.Bold,
-                    color = textSecondaryColor,
-                    letterSpacing = 1.sp
-                )
+                style = sheetTinyStyle.copy(fontWeight = FontWeight.Bold, letterSpacing = 1.sp)
             )
 
             Spacer(modifier = Modifier.height(8.dp))
@@ -279,8 +266,8 @@ fun ThingsTaskDetailsSheet(
 
                         Text(
                             text = item.title,
-                            style = TextStyle(
-                                fontSize = 15.sp,
+                            style = sheetHeaderStyle.copy(
+                                fontWeight = FontWeight.Normal,
                                 color = if (item.isCompleted) textSecondaryColor else textPrimaryColor,
                                 textDecoration = if (item.isCompleted) TextDecoration.LineThrough else null
                             ),
@@ -320,7 +307,7 @@ fun ThingsTaskDetailsSheet(
                         BasicTextField(
                             value = newChecklistItemTitle,
                             onValueChange = { newChecklistItemTitle = it },
-                            textStyle = TextStyle(fontSize = 15.sp, color = textPrimaryColor),
+                            textStyle = sheetHeaderStyle.copy(fontWeight = FontWeight.Normal, color = textPrimaryColor),
                             cursorBrush = SolidColor(ThingsBlue),
                             keyboardOptions = KeyboardOptions(imeAction = ImeAction.Done),
                             keyboardActions = KeyboardActions(onDone = {
@@ -336,7 +323,7 @@ fun ThingsTaskDetailsSheet(
                                 if (newChecklistItemTitle.isEmpty()) {
                                     Text(
                                         "Add Checklist Item...",
-                                        style = TextStyle(fontSize = 15.sp, color = textSecondaryColor.copy(alpha = 0.5f))
+                                        style = sheetHeaderStyle.copy(fontWeight = FontWeight.Normal, color = textSecondaryColor.copy(alpha = 0.5f))
                                     )
                                 }
                                 innerTextField()
@@ -357,7 +344,7 @@ fun ThingsTaskDetailsSheet(
                 Column(modifier = Modifier.weight(1f)) {
                     Text(
                         "ORGANIZATION",
-                        style = TextStyle(fontSize = 11.sp, fontWeight = FontWeight.Bold, color = textSecondaryColor)
+                        style = sheetTinyStyle.copy(fontWeight = FontWeight.Bold)
                     )
                     Spacer(modifier = Modifier.height(6.dp))
                     
@@ -382,8 +369,7 @@ fun ThingsTaskDetailsSheet(
                             ) {
                                 Text(
                                     text = sec.name.lowercase().capitalize(),
-                                    style = TextStyle(
-                                        fontSize = 11.sp,
+                                    style = sheetTinyStyle.copy(
                                         fontWeight = FontWeight.Medium,
                                         color = if (isSelected) ThingsBlue else textPrimaryColor
                                     )
@@ -413,7 +399,7 @@ fun ThingsTaskDetailsSheet(
                     Spacer(modifier = Modifier.width(8.dp))
                     Text(
                         text = "When: $formattedDate",
-                        style = TextStyle(fontSize = 14.sp, color = textPrimaryColor),
+                        style = sheetBodyStyle,
                         modifier = Modifier.clickable {
                             // Automatically select Today or flip date
                             dueDate = if (dueDate == null) System.currentTimeMillis() else null
@@ -440,8 +426,7 @@ fun ThingsTaskDetailsSheet(
                         Spacer(modifier = Modifier.width(6.dp))
                         Text(
                             "This Evening",
-                            style = TextStyle(
-                                fontSize = 12.sp,
+                            style = sheetSmallStyle.copy(
                                 fontWeight = FontWeight.Medium,
                                 color = if (isTonight) ThingsBlue else textPrimaryColor
                             )
@@ -470,7 +455,7 @@ fun ThingsTaskDetailsSheet(
                     val projName = projects.firstOrNull { it.id == selectedProjectId }?.name ?: "No Project"
                     Text(
                         text = "Project: $projName",
-                        style = TextStyle(fontSize = 14.sp, color = textPrimaryColor),
+                        style = sheetBodyStyle,
                         modifier = Modifier.clickable { showProjectDropdown = true }
                     )
                 }
@@ -518,14 +503,14 @@ fun ThingsTaskDetailsSheet(
                 BasicTextField(
                     value = tagInput,
                     onValueChange = { tagInput = it },
-                    textStyle = TextStyle(fontSize = 14.sp, color = textPrimaryColor),
+                    textStyle = sheetBodyStyle,
                     cursorBrush = SolidColor(ThingsBlue),
                     modifier = Modifier.weight(1f),
                     decorationBox = { innerTextField ->
                         if (tagInput.isEmpty()) {
                             Text(
                                 "Tags (comma-separated, e.g. Work, Urgent)",
-                                style = TextStyle(fontSize = 14.sp, color = textSecondaryColor.copy(alpha = 0.5f))
+                                style = sheetBodyPlaceholderStyle
                             )
                         }
                         innerTextField()

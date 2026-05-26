@@ -48,5 +48,6 @@ fun MyApplicationTheme(
       else -> LightColorScheme
     }
 
-  MaterialTheme(colorScheme = colorScheme, typography = Typography, content = content)
+  val typography = rememberThingsTypography()
+  MaterialTheme(colorScheme = colorScheme, typography = typography, content = content)
 }
