@@ -148,6 +148,20 @@ fun ThingsCategoryListPanel(
                                         // Чтобы скомпенсировать это смещение и предотвратить "прыжок", вычитаем размер перетаскиваемого элемента из дистанции.
                                         val distance = (hoveredItem.offset + hoveredItem.size) - draggedItemInfo.offset - draggedItemInfo.size
                                         dragAccumulatedOffset -= distance
+                                    } else {
+                                        // [ИСПРАВЛЕНИЕ СМЕЩЕНИЯ ВВЕРХ]: Когда вечерняя задача перетаскивается вверх
+                                        // через заголовок "evening_header", мы сразу делаем её дневной (isTonight = false).
+                                        // Это обеспечивает моментальное смещение и размещение задачи в конце списка дневных задач
+                                        // (прямо над заголовком "This Evening"), исключая задержку при перетаскивании.
+                                        movedItem = movedItem.copy(isTonight = false)
+                                        val firstEveningIndex = newList.indexOfFirst { it.isTonight }
+                                        val toIndex = if (firstEveningIndex != -1) firstEveningIndex else newList.size
+                                        newList.add(toIndex, movedItem)
+                                        localTasksList = newList
+                                        
+                                        // Смещение вычисляется от текущего уровня заголовка "This Evening"
+                                        val distance = hoveredItem.offset - draggedItemInfo.offset
+                                        dragAccumulatedOffset -= distance
                                     }
                                 }
                             } else if (hoveredItem.key == "main_header") {
