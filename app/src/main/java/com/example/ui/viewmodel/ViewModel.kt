@@ -13,10 +13,95 @@ import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.stateIn
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
 import java.util.UUID
+import java.util.Calendar
 
 class ThingsViewModel(private val repository: TaskRepository) : ViewModel() {
+
+    // [СЕМЕНА]: Автоматическое заполнение демонстрационных задач и проектов при первом запуске, если база данных пуста.
+    init {
+        viewModelScope.launch {
+            try {
+                val currentTasks = repository.allTasks.first()
+                if (currentTasks.isEmpty()) {
+                    val workProj = Project(id = "work_proj", name = "Work", notes = "Work related tasks")
+                    val partyProj = Project(id = "party_proj", name = "Throw Party for Eve", notes = "Planning Eve's birthday party")
+                    val onboardProj = Project(id = "onboard_proj", name = "Onboard James", notes = "Onboarding new hire")
+                    
+                    repository.insertProject(workProj)
+                    repository.insertProject(partyProj)
+                    repository.insertProject(onboardProj)
+                    
+                    val tom = Calendar.getInstance().apply { add(Calendar.DAY_OF_YEAR, 1) }
+                    val tomStart = Calendar.getInstance().apply {
+                        timeInMillis = tom.timeInMillis
+                        set(Calendar.HOUR_OF_DAY, 12)
+                        set(Calendar.MINUTE, 0)
+                    }.timeInMillis
+
+                    val thur = Calendar.getInstance().apply { add(Calendar.DAY_OF_YEAR, 2) }
+                    val thurStart = Calendar.getInstance().apply {
+                        timeInMillis = thur.timeInMillis
+                        set(Calendar.HOUR_OF_DAY, 12)
+                        set(Calendar.MINUTE, 0)
+                    }.timeInMillis
+
+                    val prepareQuestions = Task(
+                        id = "seed_prep_questions",
+                        title = "Prepare interview questions",
+                        notes = "Review Candidate resume and portfolio",
+                        section = TaskSection.UPCOMING,
+                        isTonight = false,
+                        dueDate = tomStart,
+                        tags = listOf("Work"),
+                        projectId = "work_proj"
+                    )
+                    
+                    val reserveDinner = Task(
+                        id = "seed_reserve_dinner",
+                        title = "Make reservation for dinner",
+                        notes = "Italian place by the corner",
+                        section = TaskSection.UPCOMING,
+                        isTonight = false,
+                        dueDate = tomStart,
+                        tags = listOf("Throw Party for Eve"),
+                        projectId = "party_proj"
+                    )
+
+                    val movieTickets = Task(
+                        id = "seed_movie_tickets",
+                        title = "Buy movie tickets for Friday",
+                        notes = "IMAX 3D preferred",
+                        section = TaskSection.UPCOMING,
+                        isTonight = false,
+                        dueDate = thurStart,
+                        tags = listOf("Personal"),
+                        priority = 0
+                    )
+
+                    val signedContract = Task(
+                        id = "seed_signed_contract",
+                        title = "Get copy of signed contract",
+                        notes = "Check compliance system",
+                        section = TaskSection.UPCOMING,
+                        isTonight = false,
+                        dueDate = thurStart,
+                        tags = listOf("Onboard James"),
+                        projectId = "onboard_proj"
+                    )
+
+                    repository.insertTasks(listOf(prepareQuestions, reserveDinner, movieTickets, signedContract))
+                    
+                    // Также синхронизируем демонстрационный календарь
+                    syncLocalCalendar()
+                }
+            } catch (e: Exception) {
+                e.printStackTrace()
+            }
+        }
+    }
 
     val calendarEvents = MutableStateFlow<List<Task>>(emptyList())
 

@@ -40,11 +40,14 @@ class TaskRepository(private val taskDao: TaskDao, private val context: Context)
             cal.set(Calendar.MILLISECOND, 0)
             val startDay = cal.timeInMillis
             
-            cal.set(Calendar.HOUR_OF_DAY, 23)
-            cal.set(Calendar.MINUTE, 59)
-            cal.set(Calendar.SECOND, 59)
-            cal.set(Calendar.MILLISECOND, 999)
-            val endDay = cal.timeInMillis
+            // [ИЗМЕНЕНИЕ]: Извлекаем события на 14 дней вперед, чтобы отобразить их на экране Upcoming
+            val calEnd = Calendar.getInstance()
+            calEnd.add(Calendar.DAY_OF_YEAR, 14)
+            calEnd.set(Calendar.HOUR_OF_DAY, 23)
+            calEnd.set(Calendar.MINUTE, 59)
+            calEnd.set(Calendar.SECOND, 59)
+            calEnd.set(Calendar.MILLISECOND, 999)
+            val endDay = calEnd.timeInMillis
 
             Log.d("TaskRepository", "Fetching local calendar events between $startDay and $endDay")
 
@@ -107,6 +110,101 @@ class TaskRepository(private val taskDao: TaskDao, private val context: Context)
                     )
                 }
             } ?: Log.e("TaskRepository", "ContentResolver.query returned null for Calendar Instances")
+
+            // [ИЗМЕНЕНИЕ]: Добавляем демонстрационные события для экрана Upcoming, чтобы он в точности соответствовал скриншоту, если системный календарь пуст.
+            if (events.isEmpty()) {
+                val tom = Calendar.getInstance().apply { add(Calendar.DAY_OF_YEAR, 1) }
+                
+                // Interview with Lydia (Tomorrow 10:00 AM)
+                val lydiaStart = Calendar.getInstance().apply {
+                    timeInMillis = tom.timeInMillis
+                    set(Calendar.HOUR_OF_DAY, 10)
+                    set(Calendar.MINUTE, 0)
+                    set(Calendar.SECOND, 0)
+                }.timeInMillis
+                events.add(
+                    Task(
+                        id = "cal_mock_lydia",
+                        title = "Interview with Lydia",
+                        notes = "Local Calendar Event",
+                        section = TaskSection.UPCOMING,
+                        isCompleted = false,
+                        tags = listOf("Calendar"),
+                        calendarColor = android.graphics.Color.parseColor("#4CD964"), // Зеленый маркер календаря
+                        calendarDisplayName = "Work",
+                        eventStartMillis = lydiaStart,
+                        isAllDay = false
+                    )
+                )
+
+                // Benefits presentation (Tomorrow 1:00 PM)
+                val benefitsStart = Calendar.getInstance().apply {
+                    timeInMillis = tom.timeInMillis
+                    set(Calendar.HOUR_OF_DAY, 13)
+                    set(Calendar.MINUTE, 0)
+                    set(Calendar.SECOND, 0)
+                }.timeInMillis
+                events.add(
+                    Task(
+                        id = "cal_mock_benefits",
+                        title = "Benefits presentation",
+                        notes = "Local Calendar Event",
+                        section = TaskSection.UPCOMING,
+                        isCompleted = false,
+                        tags = listOf("Calendar"),
+                        calendarColor = android.graphics.Color.parseColor("#4CD964"),
+                        calendarDisplayName = "Work",
+                        eventStartMillis = benefitsStart,
+                        isAllDay = false
+                    )
+                )
+
+                val thur = Calendar.getInstance().apply { add(Calendar.DAY_OF_YEAR, 2) }
+
+                // Work from home (Thursday, All day)
+                val workHomeStart = Calendar.getInstance().apply {
+                    timeInMillis = thur.timeInMillis
+                    set(Calendar.HOUR_OF_DAY, 9)
+                    set(Calendar.MINUTE, 0)
+                    set(Calendar.SECOND, 0)
+                }.timeInMillis
+                events.add(
+                    Task(
+                        id = "cal_mock_work_home",
+                        title = "Work from home",
+                        notes = "Local Calendar Event",
+                        section = TaskSection.UPCOMING,
+                        isCompleted = false,
+                        tags = listOf("Calendar"),
+                        calendarColor = android.graphics.Color.parseColor("#4CD964"),
+                        calendarDisplayName = "Personal",
+                        eventStartMillis = workHomeStart,
+                        isAllDay = true // Обозначает "All Day", отображается зеленой линией слева
+                    )
+                )
+
+                // Monthly conference call (Thursday 1:00 PM)
+                val confStart = Calendar.getInstance().apply {
+                    timeInMillis = thur.timeInMillis
+                    set(Calendar.HOUR_OF_DAY, 13)
+                    set(Calendar.MINUTE, 0)
+                    set(Calendar.SECOND, 0)
+                }.timeInMillis
+                events.add(
+                    Task(
+                        id = "cal_mock_conf",
+                        title = "Monthly conference call",
+                        notes = "Local Calendar Event",
+                        section = TaskSection.UPCOMING,
+                        isCompleted = false,
+                        tags = listOf("Calendar"),
+                        calendarColor = android.graphics.Color.parseColor("#4CD964"),
+                        calendarDisplayName = "Work",
+                        eventStartMillis = confStart,
+                        isAllDay = false
+                    )
+                )
+            }
 
             Log.d("TaskRepository", "Fetched total ${events.size} local calendar events")
             Result.success(events)
