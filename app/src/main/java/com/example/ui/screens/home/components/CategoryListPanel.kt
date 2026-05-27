@@ -129,6 +129,9 @@ fun ThingsCategoryListPanel(
                         if (hoveredItem != null) {
                             val fromIndex = localTasksList.indexOfFirst { it.id == task.id }
                             
+                            // [ВОЗВРАТ ИЗМЕНЕНИЙ]: Возвращена оригинальная логика перетаскивания.
+                            // Теперь при протаскивании элемента через заголовки или другие элементы, 
+                            // свойство isTonight и порядок задач обновляются моментально "на лету", предотвращая прыжки.
                             if (hoveredItem.key == "evening_header") {
                                 if (fromIndex != -1) {
                                     val newList = localTasksList.toMutableList()
@@ -140,7 +143,10 @@ fun ThingsCategoryListPanel(
                                         newList.add(toIndex, movedItem)
                                         localTasksList = newList
                                         
-                                        val distance = (hoveredItem.offset + hoveredItem.size) - draggedItemInfo.offset
+                                        // [ИСПРАВЛЕНИЕ ПРЫЖКА]: При перемещении из дневной секции (сверху) в вечернюю (снизу) через заголовок "evening_header",
+                                        // удаление элемента сверху сдвигает заголовок вверх на размер этого элемента.
+                                        // Чтобы скомпенсировать это смещение и предотвратить "прыжок", вычитаем размер перетаскиваемого элемента из дистанции.
+                                        val distance = (hoveredItem.offset + hoveredItem.size) - draggedItemInfo.offset - draggedItemInfo.size
                                         dragAccumulatedOffset -= distance
                                     }
                                 }
