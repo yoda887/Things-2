@@ -25,3 +25,12 @@ val ThingsTextPrimaryDark = Color(0xFFECECED)
 val ThingsTextSecondaryDark = Color(0xFF8B8C8E)
 val ThingsDividerDark = Color(0xFF28292B)
 
+// Предустановленные цвета календарей (Calendar color presets)
+val CalendarGreen = Color(0xFF34A853) // Google Зеленый
+val CalendarBlue = Color(0xFF4285F4)  // Google Синий
+val CalendarYellow = Color(0xFFFBBC05)// Google Желтый
+val CalendarRed = Color(0xFFEA4335)   // Google Красный
+val CalendarPurple = Color(0xFF8E24AA)// Фиолетовый
+val CalendarPink = Color(0xFFF06292)  // Розовый
+val CalendarTeal = Color(0xFF00ACC1)  // Голубой / Бирюзовый
+

@@ -13,7 +13,7 @@ import android.content.Context
 import androidx.room.Room
 import com.example.data.local.AppDatabase
 import com.example.data.repository.TaskRepository
-import com.example.ui.screens.ThingsHomeScreen
+import com.example.ui.screens.home.ThingsHomeScreen
 import com.example.ui.theme.MyApplicationTheme
 import com.example.ui.viewmodel.ThingsViewModel
 

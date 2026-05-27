@@ -34,6 +34,7 @@ import com.example.data.model.Project
 import com.example.data.model.Task
 import com.example.data.model.TaskSection
 import com.example.ui.theme.*
+import com.example.ui.components.ThingsCheckbox
 import java.text.SimpleDateFormat
 import java.util.*
 
@@ -231,36 +232,17 @@ fun ThingsTaskDetailsSheet(
                             .padding(vertical = 4.dp),
                         verticalAlignment = Alignment.CenterVertically
                     ) {
-                        // Custom Squircle Checklist Item Checkbox
-                        val checkboxBorderColor = if (item.isCompleted) ThingsBlue else {
-                            if (isDark) Color(0xFF48484A) else Color(0xFFC7C7CC)
-                        }
-                        val checkboxBgColor = if (item.isCompleted) ThingsBlue else {
-                            if (isDark) Color(0xFF1C1C1E) else Color(0xFFFFFFFF)
-                        }
-
-                        Box(
-                            modifier = Modifier
-                                .size(18.dp)
-                                .clip(RoundedCornerShape(4.dp))
-                                .background(checkboxBgColor)
-                                .border(1.2.dp, checkboxBorderColor, RoundedCornerShape(4.dp))
-                                .clickable {
-                                    checklist = checklist.map {
-                                        if (it.id == item.id) it.copy(isCompleted = !it.isCompleted) else it
-                                    }
-                                },
-                            contentAlignment = Alignment.Center
-                        ) {
-                            if (item.isCompleted) {
-                                Icon(
-                                    imageVector = Icons.Default.Check,
-                                    contentDescription = null,
-                                    tint = Color.White,
-                                    modifier = Modifier.size(12.dp)
-                                )
-                            }
-                        }
+                        // Custom ThingsCheckbox for beautifully styled subtasks
+                        ThingsCheckbox(
+                            checked = item.isCompleted,
+                            onCheckedChange = {
+                                checklist = checklist.map {
+                                    if (it.id == item.id) it.copy(isCompleted = !it.isCompleted) else it
+                                }
+                            },
+                            size = 18.dp,
+                            uncheckedColor = if (isDark) Color(0xFF48484A) else Color(0xFFC7C7CC)
+                        )
 
                         Spacer(modifier = Modifier.width(10.dp))
 

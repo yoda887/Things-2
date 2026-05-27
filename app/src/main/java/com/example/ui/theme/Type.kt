@@ -71,7 +71,7 @@ fun rememberThingsTypography(): Typography {
         titleMedium = TextStyle(
             fontFamily = FontFamily.Default,
             fontWeight = FontWeight.Normal,
-            fontSize = (15.6f * scaleFactor).sp
+            fontSize = (18f * scaleFactor).sp
         ),
         // Sheet Header / Editor Notes / Alternative Subheader - 15.sp base (scaled)
         titleSmall = TextStyle(
