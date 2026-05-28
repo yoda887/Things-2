@@ -47,7 +47,7 @@ fun InlineMainInputRow(
         ThingsCheckbox(
             checked = isCompleted,
             onCheckedChange = { onCheckboxClick() },
-            size = 20.dp,
+            size = 19.dp,
             uncheckedColor = Color(0xFFC7C7CC),
             modifier = Modifier.padding(end = 12.dp, top = 2.dp)
         )

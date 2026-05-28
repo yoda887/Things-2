@@ -61,6 +61,17 @@ data class UpcomingDay(
     val tasks: List<Task>
 )
 
+data class UpcomingHeaderItem(
+    val dateMillis: Long,
+    val dayOfMonth: String,
+    val dayOfWeekLabel: String
+)
+
+data class UpcomingEventItem(
+    val event: Task,
+    val dateMillis: Long
+)
+
 // [ИЗМЕНЕНИЕ]: Компонент для отображения одного календарного события на экране Upcoming
 @Composable
 fun UpcomingCalendarEventRow(
@@ -279,6 +290,28 @@ fun ThingsCategoryListPanel(
                     dragAccumulatedOffset += dragAmount.y
 
                     val visibleItems = lazyListState.layoutInfo.visibleItemsInfo
+                    val detectedSpacing = run {
+                        var spacing = 0f
+                        try {
+                            spacing = lazyListState.layoutInfo.mainAxisItemSpacing.toFloat()
+                        } catch (e: Exception) {
+                            // ignore
+                        }
+                        if (spacing <= 0f && visibleItems.size >= 2) {
+                            for (i in 0 until visibleItems.lastIndex) {
+                                val current = visibleItems[i]
+                                val next = visibleItems[i + 1]
+                                if (next.index == current.index + 1) {
+                                    val gap = next.offset - (current.offset + current.size)
+                                    if (gap >= 0) {
+                                        spacing = gap.toFloat()
+                                        break
+                                    }
+                                }
+                            }
+                        }
+                        spacing
+                    }
                     val draggedItemInfo = visibleItems.firstOrNull { it.key == task.id }
                     if (draggedItemInfo != null) {
                         val dragCenterY = draggedItemInfo.offset + draggedItemInfo.size / 2f + dragAccumulatedOffset
@@ -290,6 +323,10 @@ fun ThingsCategoryListPanel(
                         }
                         if (hoveredItem != null) {
                             val fromIndex = localTasksList.indexOfFirst { it.id == task.id }
+                            val cleanKey = (hoveredItem.key as? String) ?: ""
+                            val isHdr = cleanKey.startsWith("hdr_")
+                            val isEv = cleanKey.startsWith("ev_")
+
                             if (hoveredItem.key == "evening_header") {
                                 if (fromIndex != -1) {
                                     val newList = localTasksList.toMutableList()
@@ -310,7 +347,11 @@ fun ThingsCategoryListPanel(
                                         newList.add(toIndex, movedItem)
                                         localTasksList = newList
                                         
-                                        val distance = hoveredItem.offset - draggedItemInfo.offset
+                                        val distance = if (hoveredItem.offset > draggedItemInfo.offset) {
+                                            hoveredItem.size.toFloat()
+                                        } else {
+                                            -hoveredItem.size.toFloat()
+                                        }
                                         dragAccumulatedOffset -= distance
                                     }
                                 }
@@ -328,55 +369,101 @@ fun ThingsCategoryListPanel(
                                         dragAccumulatedOffset -= distance
                                     }
                                 }
-                            } else {
-                                val cleanKey = (hoveredItem.key as? String) ?: ""
-                                if (screen == ActiveScreen.UPCOMING && cleanKey.startsWith("hdr_")) {
-                                    val timestampStr = cleanKey.substringAfter("hdr_")
-                                    val timestamp = timestampStr.toLongOrNull()
-                                    if (timestamp != null && fromIndex != -1) {
-                                        val newList = localTasksList.toMutableList()
-                                        var movedItem = newList.removeAt(fromIndex)
-                                        
-                                        // Устанавливаем срок задачи (due date) на этот день в полдень (12:00 PM)
-                                        val cal = Calendar.getInstance().apply {
-                                            timeInMillis = timestamp
-                                            set(Calendar.HOUR_OF_DAY, 12)
+                            } else if (screen == ActiveScreen.UPCOMING && (isHdr || isEv)) {
+                                val timestampStr = if (isHdr) cleanKey.substringAfter("hdr_") else cleanKey.substringAfterLast("_")
+                                val timestamp = timestampStr.toLongOrNull()
+                                if (timestamp != null && fromIndex != -1) {
+                                    val newList = localTasksList.toMutableList()
+                                    var movedItem = newList.removeAt(fromIndex)
+                                    
+                                    val tomorrowStart = upcomingDays.firstOrNull()?.dateMillis ?: 0L
+                                    
+                                    val isCurrentlyInHoveredDay = if (movedItem.dueDate == null) {
+                                        timestamp == tomorrowStart
+                                    } else {
+                                        movedItem.dueDate!! in timestamp..(timestamp + 24 * 3600 * 1000 - 1)
+                                    }
+                                    
+                                    var targetTimestamp = if (isCurrentlyInHoveredDay && draggedItemInfo.offset > hoveredItem.offset) {
+                                        timestamp - 24 * 3600 * 1000L
+                                    } else {
+                                        timestamp
+                                    }
+                                    
+                                    if (targetTimestamp < tomorrowStart) {
+                                        targetTimestamp = tomorrowStart
+                                    }
+                                    
+                                    val cal = Calendar.getInstance().apply {
+                                        timeInMillis = targetTimestamp
+                                        set(Calendar.HOUR_OF_DAY, 12)
+                                        set(Calendar.MINUTE, 0)
+                                    }
+                                    val newDueDate = cal.timeInMillis
+                                    
+                                    val oldDueDateDayStart = if (movedItem.dueDate == null) {
+                                        tomorrowStart
+                                    } else {
+                                        Calendar.getInstance().apply {
+                                            timeInMillis = movedItem.dueDate!!
+                                            set(Calendar.HOUR_OF_DAY, 0)
                                             set(Calendar.MINUTE, 0)
-                                        }
-                                        movedItem = movedItem.copy(dueDate = cal.timeInMillis)
+                                            set(Calendar.SECOND, 0)
+                                            set(Calendar.MILLISECOND, 0)
+                                        }.timeInMillis
+                                    }
+                                    
+                                    val targetDayStart = Calendar.getInstance().apply {
+                                        timeInMillis = targetTimestamp
+                                        set(Calendar.HOUR_OF_DAY, 0)
+                                        set(Calendar.MINUTE, 0)
+                                        set(Calendar.SECOND, 0)
+                                        set(Calendar.MILLISECOND, 0)
+                                    }.timeInMillis
+                                    
+                                    if (oldDueDateDayStart != targetDayStart) {
+                                        movedItem = movedItem.copy(dueDate = newDueDate)
                                         
-                                        var toIndex = newList.indexOfFirst { it.dueDate != null && it.dueDate >= timestamp }
+                                        var toIndex = newList.indexOfFirst { it.dueDate != null && it.dueDate >= targetDayStart }
                                         if (toIndex == -1) {
                                             toIndex = newList.size
                                         }
                                         newList.add(toIndex, movedItem)
                                         localTasksList = newList
                                         
-                                        val distance = hoveredItem.offset - draggedItemInfo.offset
-                                        dragAccumulatedOffset -= distance
-                                    }
-                                } else {
-                                    val toIndex = localTasksList.indexOfFirst { it.id == hoveredItem.key }
-                                    if (fromIndex != -1 && toIndex != -1) {
-                                        val newList = localTasksList.toMutableList()
-                                        var movedItem = newList.removeAt(fromIndex)
-                                        
-                                        val hoveredItemTask = localTasksList.firstOrNull { it.id == hoveredItem.key }
-                                        if (hoveredItemTask != null) {
-                                            if (hoveredItemTask.isTonight != movedItem.isTonight) {
-                                                movedItem = movedItem.copy(isTonight = hoveredItemTask.isTonight)
-                                            }
-                                            if (screen == ActiveScreen.UPCOMING && movedItem.dueDate != hoveredItemTask.dueDate) {
-                                                movedItem = movedItem.copy(dueDate = hoveredItemTask.dueDate)
-                                            }
+                                        val distance = if (hoveredItem.offset > draggedItemInfo.offset) {
+                                            hoveredItem.size.toFloat()
+                                        } else {
+                                            -hoveredItem.size.toFloat()
                                         }
-                                        
-                                        newList.add(toIndex, movedItem)
-                                        localTasksList = newList
-                                        
-                                        val distance = hoveredItem.offset - draggedItemInfo.offset
                                         dragAccumulatedOffset -= distance
                                     }
+                                }
+                            } else {
+                                val toIndex = localTasksList.indexOfFirst { it.id == hoveredItem.key }
+                                if (fromIndex != -1 && toIndex != -1) {
+                                    val newList = localTasksList.toMutableList()
+                                    var movedItem = newList.removeAt(fromIndex)
+                                    
+                                    val hoveredItemTask = localTasksList.firstOrNull { it.id == hoveredItem.key }
+                                    if (hoveredItemTask != null) {
+                                        if (hoveredItemTask.isTonight != movedItem.isTonight) {
+                                            movedItem = movedItem.copy(isTonight = hoveredItemTask.isTonight)
+                                        }
+                                        if (screen == ActiveScreen.UPCOMING && movedItem.dueDate != hoveredItemTask.dueDate) {
+                                            movedItem = movedItem.copy(dueDate = hoveredItemTask.dueDate)
+                                        }
+                                    }
+                                    
+                                    newList.add(toIndex, movedItem)
+                                    localTasksList = newList
+                                    
+                                    val distance = if (hoveredItem.offset > draggedItemInfo.offset) {
+                                        hoveredItem.size.toFloat() + detectedSpacing
+                                    } else {
+                                        -(hoveredItem.size.toFloat() + detectedSpacing)
+                                    }
+                                    dragAccumulatedOffset -= distance
                                 }
                             }
                         }
@@ -423,8 +510,7 @@ fun ThingsCategoryListPanel(
                 })
             }
             .padding(horizontal = 20.dp)
-            .testTag("tasks_lazy_list"),
-        verticalArrangement = Arrangement.spacedBy(8.dp)
+            .testTag("tasks_lazy_list")
     ) {
         item(key = "main_header") {
             Row(
@@ -638,57 +724,40 @@ fun ThingsCategoryListPanel(
                     }
                 }
             }
-        } else if (screen == ActiveScreen.UPCOMING) {
-            // [ИЗМЕНЕНИЕ]: Особый рендеринг для экрана Upcoming: выводим задачи и события со стилем календаря, сгруппированными по дням
-            upcomingDays.forEach { day ->
-                item(key = "hdr_${day.dateMillis}") {
-                    Row(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .padding(top = 22.dp, bottom = 10.dp),
-                        verticalAlignment = Alignment.Bottom
-                    ) {
-                        Text(
-                            text = day.dayOfMonth,
-                            style = TextStyle(
-                                fontSize = 32.sp,
-                                fontWeight = FontWeight.Bold,
-                                color = textPrimaryColor
-                            )
-                        )
-                        Spacer(modifier = Modifier.width(8.dp))
-                        Text(
-                            text = day.dayOfWeekLabel,
-                            style = TextStyle(
-                                fontSize = 16.sp,
-                                fontWeight = FontWeight.Bold,
-                                color = textSecondaryColor.copy(alpha = 0.5f)
-                            ),
-                            modifier = Modifier.padding(bottom = 4.dp)
-                        )
-                        Spacer(modifier = Modifier.width(12.dp))
-                        Box(
-                            modifier = Modifier
-                                .weight(1f)
-                                .height(0.6.dp)
-                                .background(dividerColor)
-                                .padding(bottom = 4.dp)
-                        )
+        } else {
+            val flattened = buildList<Any> {
+                if (screen == ActiveScreen.TODAY) {
+                    addAll(standardToday)
+                    if (eveningToday.isNotEmpty() || draggedTaskId != null) {
+                        add("evening_header")
+                        addAll(eveningToday)
                     }
-                }
-                
-                if (day.calendarEvents.isNotEmpty()) {
-                    items(day.calendarEvents, key = { "ev_${it.id}_${day.dateMillis}" }) { event ->
-                        UpcomingCalendarEventRow(
-                            event = event,
-                            textSecondaryColor = textSecondaryColor,
-                            textPrimaryColor = textPrimaryColor
-                        )
+                } else if (screen == ActiveScreen.UPCOMING) {
+                    upcomingDays.forEach { day ->
+                        add(UpcomingHeaderItem(day.dateMillis, day.dayOfMonth, day.dayOfWeekLabel))
+                        day.calendarEvents.forEach { event ->
+                            add(UpcomingEventItem(event, day.dateMillis))
+                        }
+                        day.tasks.forEach { task ->
+                            add(task)
+                        }
                     }
+                } else {
+                    addAll(displayTasks)
                 }
-                
-                if (day.tasks.isNotEmpty()) {
-                    items(day.tasks, key = { it.id }) { task ->
+            }
+
+            items(flattened, key = { item ->
+                when (item) {
+                    is Task -> item.id
+                    is UpcomingHeaderItem -> "hdr_${item.dateMillis}"
+                    is UpcomingEventItem -> "ev_${item.event.id}_${item.dateMillis}"
+                    else -> item.toString()
+                }
+            }) { item ->
+                when (item) {
+                    is Task -> {
+                        val task = item
                         val isDragTask = draggedTaskId == task.id
                         val isExpanded = inlineExpandedTaskId == task.id
                         val shouldDim = inlineExpandedTaskId != null && !isExpanded
@@ -765,154 +834,116 @@ fun ThingsCategoryListPanel(
                                         onInlineExpandedTaskIdChange(task.id)
                                     },
                                     projects = projects,
-                                    showTodayIndicator = false,
-                                    isDragging = isDragTask,
-                                    dragOffsetY = if (isDragTask) dragAccumulatedOffset else 0f,
+                                    showTodayIndicator = screen == ActiveScreen.TODAY && !task.isTonight,
+                                    isDragging = false,
+                                    dragOffsetY = 0f,
                                     dragModifier = makeDragModifier(task)
                                 )
                             }
                         }
                     }
-                }
-            }
-        } else {
-            val flattened = buildList<Any> {
-                if (screen == ActiveScreen.TODAY) {
-                    addAll(standardToday)
-                    if (eveningToday.isNotEmpty() || draggedTaskId != null) {
-                        add("evening_header")
-                        addAll(eveningToday)
-                    }
-                } else {
-                    addAll(displayTasks)
-                }
-            }
-
-            items(flattened, key = { if (it is Task) it.id else it.toString() }) { item ->
-                if (item is Task) {
-                    val task = item
-                    val isDragTask = draggedTaskId == task.id
-                    val isExpanded = inlineExpandedTaskId == task.id
-                    val shouldDim = inlineExpandedTaskId != null && !isExpanded
-                    
-                    val dimAlpha by animateFloatAsState(
-                        targetValue = if (shouldDim) 0.3f else 1f,
-                        label = "dimAlpha_${task.id}"
-                    )
-                    val dragScale by animateFloatAsState(
-                        targetValue = if (isDragTask) 1.04f else 1.0f,
-                        label = "dragScale_${task.id}"
-                    )
-                    val dragElevation by animateDpAsState(
-                        targetValue = if (isDragTask) 8.dp else (if (isExpanded) 8.dp else 0.dp),
-                        label = "dragElev_${task.id}"
-                    )
-                    val zIndexValToUse = if (isDragTask) 100f else (if (isExpanded) 1f else 0f)
-                    val translationYVal = if (isDragTask) dragAccumulatedOffset else 0f
-                    
-                    val containerBgColor = if (isExpanded || isDragTask) MaterialTheme.colorScheme.background else Color.Transparent
-                    
-                    Column(
-                        modifier = (if (isDragTask) Modifier else Modifier.animateItem())
-                            .zIndex(zIndexValToUse)
-                            .graphicsLayer {
-                                translationY = translationYVal
-                                scaleX = dragScale
-                                scaleY = dragScale
-                                alpha = dimAlpha
-                            }
-                            .shadow(dragElevation, RoundedCornerShape(8.dp))
-                            .background(containerBgColor, RoundedCornerShape(8.dp))
-                            .animateContentSize(animationSpec = spring(
-                                dampingRatio = Spring.DampingRatioLowBouncy,
-                                stiffness = Spring.StiffnessMediumLow
-                            ))
-                    ) {
-                        if (isExpanded) {
-                            ThingsTaskInlineEditor(
-                                task = task,
-                                projects = projects,
-                                onSave = { title, notes, section, isTonight, dueDate, tags, projectId, checklist, priority ->
-                                    val updatedTask = task.copy(
-                                        title = title,
-                                        notes = notes,
-                                        section = section,
-                                        isTonight = isTonight,
-                                        dueDate = dueDate,
-                                        tags = tags,
-                                        projectId = projectId,
-                                        checklist = checklist,
-                                        priority = priority
-                                    )
-                                    viewModel.updateTask(updatedTask)
-                                    onInlineExpandedTaskIdChange(null)
-                                },
-                                onDelete = {
-                                    viewModel.deleteTask(task)
-                                    onInlineExpandedTaskIdChange(null)
-                                },
-                                onDone = {
-                                    onInlineExpandedTaskIdChange(null)
-                                }
-                            )
-                        } else {
-                            TaskItemRow(
-                                modifier = Modifier,
-                                task = task,
-                                textPrimaryColor = textPrimaryColor,
-                                textSecondaryColor = textSecondaryColor,
-                                dividerColor = dividerColor,
-                                onToggle = { onTaskToggle(task) },
-                                onClick = { 
-                                    onInlineExpandedTaskIdChange(task.id)
-                                },
-                                projects = projects,
-                                showTodayIndicator = screen == ActiveScreen.TODAY && !task.isTonight,
-                                isDragging = false,
-                                dragOffsetY = 0f,
-                                dragModifier = makeDragModifier(task)
-                            )
-                        }
-                    }
-                } else if (item == "evening_header") {
-                    val shouldDim = inlineExpandedTaskId != null
-                    val dimAlpha by animateFloatAsState(
-                        targetValue = if (shouldDim) 0.3f else 1f,
-                        label = "dimAlpha_evening"
-                    )
-
-                    Column(modifier = Modifier
-                        .animateItem()
-                        .graphicsLayer { alpha = dimAlpha }
-                    ) {
-                        Spacer(modifier = Modifier.height(16.dp))
+                    is UpcomingHeaderItem -> {
+                        val header = item
+                        val shouldDim = inlineExpandedTaskId != null
+                        val dimAlpha by animateFloatAsState(
+                            targetValue = if (shouldDim) 0.3f else 1f,
+                            label = "dimAlpha_hdr_${header.dateMillis}"
+                        )
                         Row(
                             modifier = Modifier
+                                .animateItem()
                                 .fillMaxWidth()
-                                .padding(vertical = 6.dp),
-                            verticalAlignment = Alignment.CenterVertically
+                                .graphicsLayer { alpha = dimAlpha }
+                                .padding(top = 22.dp, bottom = 10.dp),
+                            verticalAlignment = Alignment.Bottom
                         ) {
                             Text(
-                                text = "🌙",
-                                fontSize = 18.sp,
-                                modifier = Modifier.padding(end = 8.dp)
-                            )
-                            Text(
-                                "This Evening",
+                                text = header.dayOfMonth,
                                 style = TextStyle(
-                                    fontSize = 18.sp,
+                                    fontSize = 32.sp,
                                     fontWeight = FontWeight.Bold,
                                     color = textPrimaryColor
                                 )
                             )
+                            Spacer(modifier = Modifier.width(8.dp))
+                            Text(
+                                text = header.dayOfWeekLabel,
+                                style = TextStyle(
+                                    fontSize = 16.sp,
+                                    fontWeight = FontWeight.Bold,
+                                    color = textSecondaryColor.copy(alpha = 0.5f)
+                                ),
+                                modifier = Modifier.padding(bottom = 4.dp)
+                            )
+                            Spacer(modifier = Modifier.width(12.dp))
+                            Box(
+                                modifier = Modifier
+                                    .weight(1f)
+                                    .height(0.6.dp)
+                                    .background(dividerColor)
+                                    .padding(bottom = 4.dp)
+                            )
                         }
-                        Box(
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .height(1.dp)
-                                .background(dividerColor)
-                                .padding(bottom = 6.dp)
+                    }
+                    is UpcomingEventItem -> {
+                        val event = item.event
+                        val shouldDim = inlineExpandedTaskId != null
+                        val dimAlpha by animateFloatAsState(
+                            targetValue = if (shouldDim) 0.3f else 1f,
+                            label = "dimAlpha_ev_${event.id}"
                         )
+                        Column(
+                            modifier = Modifier
+                                .animateItem()
+                                .graphicsLayer { alpha = dimAlpha }
+                        ) {
+                            UpcomingCalendarEventRow(
+                                event = event,
+                                textSecondaryColor = textSecondaryColor,
+                                textPrimaryColor = textPrimaryColor
+                            )
+                        }
+                    }
+                    else -> { // like "evening_header"
+                        val shouldDim = inlineExpandedTaskId != null
+                        val dimAlpha by animateFloatAsState(
+                            targetValue = if (shouldDim) 0.3f else 1f,
+                            label = "dimAlpha_evening"
+                        )
+
+                        Column(modifier = Modifier
+                            .animateItem()
+                            .graphicsLayer { alpha = dimAlpha }
+                        ) {
+                            Spacer(modifier = Modifier.height(16.dp))
+                            Row(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .padding(vertical = 6.dp),
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+                                Text(
+                                    text = "🌙",
+                                    fontSize = 18.sp,
+                                    modifier = Modifier.padding(end = 8.dp)
+                                )
+                                Text(
+                                    "This Evening",
+                                    style = TextStyle(
+                                        fontSize = 18.sp,
+                                        fontWeight = FontWeight.Bold,
+                                        color = textPrimaryColor
+                                    )
+                                )
+                            }
+                            Box(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .height(1.dp)
+                                    .background(dividerColor)
+                                    .padding(bottom = 6.dp)
+                            )
+                        }
                     }
                 }
             }
