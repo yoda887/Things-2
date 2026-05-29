@@ -38,6 +38,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.zIndex
 import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.layout.layout
 import com.example.data.model.Project
 import com.example.data.model.Task
 import com.example.data.model.TaskSection
@@ -787,6 +788,17 @@ fun ThingsCategoryListPanel(
                                     scaleX = dragScale
                                     scaleY = dragScale
                                     alpha = dimAlpha
+                                }
+                                .layout { measurable, constraints ->
+                                    val paddingPx = 4.dp.roundToPx()
+                                    val extendedConstraints = constraints.copy(
+                                        minWidth = (constraints.minWidth + paddingPx * 2).coerceAtMost(constraints.maxWidth + paddingPx * 2),
+                                        maxWidth = (constraints.maxWidth + paddingPx * 2)
+                                    )
+                                    val placeable = measurable.measure(extendedConstraints)
+                                    layout(placeable.width - paddingPx * 2, placeable.height) {
+                                        placeable.place(-paddingPx, 0)
+                                    }
                                 }
                                 .shadow(dragElevation, RoundedCornerShape(8.dp))
                                 .background(containerBgColor, RoundedCornerShape(8.dp))

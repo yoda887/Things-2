@@ -43,6 +43,12 @@ fun rememberThingsTypography(): Typography {
             fontWeight = FontWeight.Normal,
             fontSize = (30 * scaleFactor).sp
         ),
+        // Category headers and project titles (decreased and synchronized)
+        displaySmall = TextStyle(
+            fontFamily = FontFamily.Default,
+            fontWeight = FontWeight.Medium,
+            fontSize = (19 * scaleFactor).sp
+        ),
         // App / Group Settings Header - 24.sp base
         headlineLarge = TextStyle(
             fontFamily = FontFamily.Default,

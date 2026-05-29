@@ -100,6 +100,7 @@ fun ThingsHomePanel(
                     textSecondaryColor = textSecondaryColor,
                     onClick = { onSmartListClick(ActiveScreen.INBOX) }
                 )
+                Spacer(modifier = Modifier.height(12.dp))
                 SmartListRow(
                     title = "Today",
                     icon = Icons.Default.Star,
@@ -153,7 +154,7 @@ fun ThingsHomePanel(
             Row(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .padding(top = 12.dp),
+                    .padding(top = 24.dp),
                 horizontalArrangement = Arrangement.SpaceBetween,
                 verticalAlignment = Alignment.CenterVertically
             ) {
@@ -188,48 +189,48 @@ fun ThingsHomePanel(
                 }
             }
         } else {
-            items(projects) { project ->
-                val projectTasks = allTasks.filter { it.projectId == project.id }
-                val completedCount = projectTasks.count { it.isCompleted }
-                val totalCount = projectTasks.size
-                
-                Row(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .clip(RoundedCornerShape(8.dp))
-                        .clickable { onProjectClick(project) }
-                        .padding(vertical = 10.dp, horizontal = 4.dp),
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    // Small completion arc
-                    ProjectProgressArc(
-                        completed = completedCount,
-                        total = totalCount,
-                        modifier = Modifier.size(20.dp)
-                    )
-
-                    Spacer(modifier = Modifier.width(12.dp))
-
-                    Text(
-                        text = project.name,
-                        style = TextStyle(
-                            fontSize = 15.sp,
-                            fontWeight = FontWeight.Medium,
-                            color = textPrimaryColor
-                        ),
-                        modifier = Modifier.weight(1f),
-                        maxLines = 1,
-                        overflow = TextOverflow.Ellipsis
-                    )
-
-                    if (totalCount > 0) {
-                        Text(
-                            text = "$completedCount/$totalCount",
-                            style = TextStyle(
-                                fontSize = 12.sp,
-                                color = textSecondaryColor
+            item {
+                Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                    projects.forEach { project ->
+                        val projectTasks = allTasks.filter { it.projectId == project.id }
+                        val completedCount = projectTasks.count { it.isCompleted }
+                        val totalCount = projectTasks.size
+                        
+                        Row(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .clip(RoundedCornerShape(8.dp))
+                                .clickable { onProjectClick(project) }
+                                .padding(vertical = 6.dp, horizontal = 6.dp),
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            // Small completion arc
+                            ProjectProgressArc(
+                                completed = completedCount,
+                                total = totalCount,
+                                modifier = Modifier.size(20.dp)
                             )
-                        )
+
+                            Spacer(modifier = Modifier.width(9.dp))
+
+                            Text(
+                                text = project.name,
+                                style = MaterialTheme.typography.displaySmall.copy(color = textPrimaryColor),
+                                modifier = Modifier.weight(1f),
+                                maxLines = 1,
+                                overflow = TextOverflow.Ellipsis
+                            )
+
+                            if (totalCount > 0) {
+                                Text(
+                                    text = "$completedCount/$totalCount",
+                                    style = TextStyle(
+                                        fontSize = 12.sp,
+                                        color = textSecondaryColor
+                                    )
+                                )
+                            }
+                        }
                     }
                 }
             }

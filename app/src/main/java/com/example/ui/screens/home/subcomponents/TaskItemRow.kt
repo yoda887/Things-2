@@ -69,7 +69,7 @@ fun TaskItemRow(
     Row(
         modifier = modifier
             .fillMaxWidth()
-            .height(56.dp)
+            .height(46.dp)
             .graphicsLayer {
                 translationY = dragOffsetY
                 scaleX = scale
@@ -80,7 +80,7 @@ fun TaskItemRow(
             .clip(RoundedCornerShape(8.dp))
             .then(dragModifier)
             .clickable(enabled = !isCalendarTask) { onClick() }
-            .padding(horizontal = 4.dp),
+            .padding(start = 8.dp, end = 4.dp),
         verticalAlignment = Alignment.CenterVertically
     ) {
         if (isCalendarTask) {
@@ -89,7 +89,7 @@ fun TaskItemRow(
                 contentDescription = "Calendar Event",
                 tint = ThingsBlue,
                 modifier = Modifier
-                    .size(22.dp)
+                    .size(16.dp)
             )
         } else {
             ThingsCheckbox(
@@ -101,13 +101,13 @@ fun TaskItemRow(
                         onToggle()
                     }
                 },
-                size = 19.dp,
+                size = 16.dp,
                 modifier = Modifier
                     .testTag("task_checkbox")
             )
         }
 
-        Spacer(modifier = Modifier.width(14.dp))
+        Spacer(modifier = Modifier.width(8.dp))
 
         Column(modifier = Modifier.weight(1f)) {
             Row(
