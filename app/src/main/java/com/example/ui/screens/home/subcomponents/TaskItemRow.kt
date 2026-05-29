@@ -24,6 +24,7 @@ import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextDecoration
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.platform.testTag
@@ -122,7 +123,9 @@ fun TaskItemRow(
                         color = if (localCompleted) textSecondaryColor else textPrimaryColor,
                         textDecoration = if (localCompleted) TextDecoration.LineThrough else null
                     ),
-                    modifier = Modifier.weight(1f, fill = false)
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis,
+                    modifier = Modifier.weight(1f)
                 )
 
                 // Inline note/subtask icons representation

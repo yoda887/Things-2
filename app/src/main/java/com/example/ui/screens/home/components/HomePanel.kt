@@ -90,7 +90,7 @@ fun ThingsHomePanel(
 
         // Smart Lists Grid
         item {
-            Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
+            Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
                 SmartListRow(
                     title = "Inbox",
                     icon = Icons.Outlined.Inbox,
@@ -114,7 +114,7 @@ fun ThingsHomePanel(
                     title = "Upcoming",
                     icon = Icons.Outlined.CalendarToday,
                     iconColor = ThingsUpcomingRed,
-                    count = upcomingCount,
+                    count = 0,
                     textPrimaryColor = textPrimaryColor,
                     textSecondaryColor = textSecondaryColor,
                     onClick = { onSmartListClick(ActiveScreen.UPCOMING) }
@@ -123,7 +123,7 @@ fun ThingsHomePanel(
                     title = "Anytime",
                     icon = Icons.Outlined.Archive,
                     iconColor = ThingsAnytimeTeal,
-                    count = anytimeCount,
+                    count = 0,
                     textPrimaryColor = textPrimaryColor,
                     textSecondaryColor = textSecondaryColor,
                     onClick = { onSmartListClick(ActiveScreen.ANYTIME) }
@@ -132,7 +132,7 @@ fun ThingsHomePanel(
                     title = "Someday",
                     icon = Icons.Outlined.Folder,
                     iconColor = ThingsSomedayGrey,
-                    count = somedayCount,
+                    count = 0,
                     textPrimaryColor = textPrimaryColor,
                     textSecondaryColor = textSecondaryColor,
                     onClick = { onSmartListClick(ActiveScreen.SOMEDAY) }
@@ -190,7 +190,7 @@ fun ThingsHomePanel(
             }
         } else {
             item {
-                Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
                     projects.forEach { project ->
                         val projectTasks = allTasks.filter { it.projectId == project.id }
                         val completedCount = projectTasks.count { it.isCompleted }
@@ -215,21 +215,14 @@ fun ThingsHomePanel(
 
                             Text(
                                 text = project.name,
-                                style = MaterialTheme.typography.displaySmall.copy(color = textPrimaryColor),
+                                style = MaterialTheme.typography.displaySmall.copy(
+                                    color = textPrimaryColor,
+                                    fontWeight = FontWeight.Normal
+                                ),
                                 modifier = Modifier.weight(1f),
                                 maxLines = 1,
                                 overflow = TextOverflow.Ellipsis
                             )
-
-                            if (totalCount > 0) {
-                                Text(
-                                    text = "$completedCount/$totalCount",
-                                    style = TextStyle(
-                                        fontSize = 12.sp,
-                                        color = textSecondaryColor
-                                    )
-                                )
-                            }
                         }
                     }
                 }

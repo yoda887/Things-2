@@ -53,7 +53,7 @@ fun SmartListRow(
             ) {
                 Text(
                     count.toString(),
-                    style = TextStyle(fontSize = 12.sp, fontWeight = FontWeight.Bold, color = iconColor)
+                    style = MaterialTheme.typography.displaySmall.copy(color = iconColor)
                 )
             }
         }
