@@ -4,13 +4,17 @@ import android.content.Context
 import android.provider.CalendarContract
 import android.util.Log
 import com.example.data.local.TaskDao
-import com.example.data.model.Project
-import com.example.data.model.Task
+import com.example.data.model.Area
+import com.example.data.model.Item
+import com.example.data.model.Tag
+import com.example.data.model.ItemTag
+import com.example.data.model.ChecklistItem
 import com.example.data.model.TaskSection
 import com.example.data.remote.GoogleTask
 import com.example.data.remote.GoogleTasksService
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.withContext
 import retrofit2.Retrofit
 import retrofit2.converter.moshi.MoshiConverterFactory
@@ -18,8 +22,19 @@ import java.util.Calendar
 
 class TaskRepository(private val taskDao: TaskDao, private val context: Context) {
 
-    val allTasks: Flow<List<Task>> = taskDao.getAllTasks()
-    val allProjects: Flow<List<Project>> = taskDao.getAllProjects()
+    val allTasks: Flow<List<Item>> = taskDao.getAllItems().map { items ->
+        val checklistMap = taskDao.getAllChecklistItems().groupBy { it.itemId }
+        items.forEach { item ->
+            item.checklist = checklistMap[item.id] ?: emptyList()
+        }
+        items
+    }
+
+    val allProjects: Flow<List<Item>> = allTasks.map { items ->
+        items.filter { it.type == 1 }
+    }
+
+    val allAreas: Flow<List<Area>> = taskDao.getAllAreasFlow()
 
     private val retrofit = Retrofit.Builder()
         .baseUrl("https://tasks.googleapis.com/v1/")
@@ -28,9 +43,31 @@ class TaskRepository(private val taskDao: TaskDao, private val context: Context)
 
     private val api = retrofit.create(GoogleTasksService::class.java)
 
-    suspend fun fetchLocalCalendarEvents(): Result<List<Task>> = withContext(Dispatchers.IO) {
+    suspend fun refreshCachedTags(itemId: String) = withContext(Dispatchers.IO) {
+        val tags = taskDao.getTagsByItemId(itemId)
+        val cachedString = tags.joinToString(", ") { it.title }
+        val item = taskDao.getItemById(itemId)
+        if (item != null) {
+            taskDao.insertItem(item.copy(cachedTags = cachedString))
+        }
+    }
+
+    suspend fun refreshChecklistCounters(itemId: String) = withContext(Dispatchers.IO) {
+        val checklist = taskDao.getChecklistItemsByItemId(itemId)
+        val item = taskDao.getItemById(itemId)
+        if (item != null) {
+            taskDao.insertItem(
+                item.copy(
+                    checklistItemsCount = checklist.size,
+                    openChecklistItemsCount = checklist.count { !it.isCompleted }
+                )
+            )
+        }
+    }
+
+    suspend fun fetchLocalCalendarEvents(): Result<List<Item>> = withContext(Dispatchers.IO) {
         try {
-            val events = mutableListOf<Task>()
+            val events = mutableListOf<Item>()
             
             // Get today's start and end times in milliseconds
             val cal = Calendar.getInstance()
@@ -40,7 +77,7 @@ class TaskRepository(private val taskDao: TaskDao, private val context: Context)
             cal.set(Calendar.MILLISECOND, 0)
             val startDay = cal.timeInMillis
             
-            // [ИЗМЕНЕНИЕ]: Извлекаем события на 14 дней вперед, чтобы отобразить их на экране Upcoming
+            // Extract events up to 14 days ahead
             val calEnd = Calendar.getInstance()
             calEnd.add(Calendar.DAY_OF_YEAR, 14)
             calEnd.set(Calendar.HOUR_OF_DAY, 23)
@@ -92,16 +129,17 @@ class TaskRepository(private val taskDao: TaskDao, private val context: Context)
                     val calendarColor = if (calendarColorIdx >= 0) cursor.getInt(calendarColorIdx) else null
                     val calendarDisplayName = if (calendarDisplayNameIdx >= 0) cursor.getString(calendarDisplayNameIdx) else null
 
-                    Log.d("TaskRepository", "Found calendar event: ID=$id, Title='$title', Start=$start, Color=$calendarColor, Calendar=$calendarDisplayName, AllDay=$allDay")
+                    Log.d("TaskRepository", "Found calendar event: ID=$id, Title='$title', Start=$start")
 
                     events.add(
-                        Task(
+                        Item(
                             id = "cal_$id",
+                            type = 0,
                             title = title,
                             notes = "Local Calendar Event",
-                            section = TaskSection.TODAY,
-                            isCompleted = false,
-                            tags = listOf("Calendar"),
+                            start = 1, // today
+                            status = 0,
+                            cachedTags = "Calendar",
                             calendarColor = calendarColor,
                             calendarDisplayName = calendarDisplayName,
                             eventStartMillis = start,
@@ -111,11 +149,10 @@ class TaskRepository(private val taskDao: TaskDao, private val context: Context)
                 }
             } ?: Log.e("TaskRepository", "ContentResolver.query returned null for Calendar Instances")
 
-            // [ИЗМЕНЕНИЕ]: Добавляем демонстрационные события для экрана Upcoming, чтобы он в точности соответствовал скриншоту, если системный календарь пуст.
+            // If empty, add mock calendar events for demonstration
             if (events.isEmpty()) {
                 val tom = Calendar.getInstance().apply { add(Calendar.DAY_OF_YEAR, 1) }
                 
-                // Interview with Lydia (Tomorrow 10:00 AM)
                 val lydiaStart = Calendar.getInstance().apply {
                     timeInMillis = tom.timeInMillis
                     set(Calendar.HOUR_OF_DAY, 10)
@@ -123,21 +160,21 @@ class TaskRepository(private val taskDao: TaskDao, private val context: Context)
                     set(Calendar.SECOND, 0)
                 }.timeInMillis
                 events.add(
-                    Task(
+                    Item(
                         id = "cal_mock_lydia",
+                        type = 0,
                         title = "Interview with Lydia",
                         notes = "Local Calendar Event",
-                        section = TaskSection.UPCOMING,
-                        isCompleted = false,
-                        tags = listOf("Calendar"),
-                        calendarColor = android.graphics.Color.parseColor("#4CD964"), // Зеленый маркер календаря
+                        start = 1, // mapped to today's sections
+                        status = 0,
+                        cachedTags = "Calendar",
+                        calendarColor = android.graphics.Color.parseColor("#4CD964"),
                         calendarDisplayName = "Work",
                         eventStartMillis = lydiaStart,
                         isAllDay = false
                     )
                 )
 
-                // Benefits presentation (Tomorrow 1:00 PM)
                 val benefitsStart = Calendar.getInstance().apply {
                     timeInMillis = tom.timeInMillis
                     set(Calendar.HOUR_OF_DAY, 13)
@@ -145,13 +182,14 @@ class TaskRepository(private val taskDao: TaskDao, private val context: Context)
                     set(Calendar.SECOND, 0)
                 }.timeInMillis
                 events.add(
-                    Task(
+                    Item(
                         id = "cal_mock_benefits",
+                        type = 0,
                         title = "Benefits presentation",
                         notes = "Local Calendar Event",
-                        section = TaskSection.UPCOMING,
-                        isCompleted = false,
-                        tags = listOf("Calendar"),
+                        start = 1,
+                        status = 0,
+                        cachedTags = "Calendar",
                         calendarColor = android.graphics.Color.parseColor("#4CD964"),
                         calendarDisplayName = "Work",
                         eventStartMillis = benefitsStart,
@@ -161,7 +199,6 @@ class TaskRepository(private val taskDao: TaskDao, private val context: Context)
 
                 val thur = Calendar.getInstance().apply { add(Calendar.DAY_OF_YEAR, 2) }
 
-                // Work from home (Thursday, All day)
                 val workHomeStart = Calendar.getInstance().apply {
                     timeInMillis = thur.timeInMillis
                     set(Calendar.HOUR_OF_DAY, 9)
@@ -169,21 +206,21 @@ class TaskRepository(private val taskDao: TaskDao, private val context: Context)
                     set(Calendar.SECOND, 0)
                 }.timeInMillis
                 events.add(
-                    Task(
+                    Item(
                         id = "cal_mock_work_home",
+                        type = 0,
                         title = "Work from home",
                         notes = "Local Calendar Event",
-                        section = TaskSection.UPCOMING,
-                        isCompleted = false,
-                        tags = listOf("Calendar"),
+                        start = 1,
+                        status = 0,
+                        cachedTags = "Calendar",
                         calendarColor = android.graphics.Color.parseColor("#4CD964"),
                         calendarDisplayName = "Personal",
                         eventStartMillis = workHomeStart,
-                        isAllDay = true // Обозначает "All Day", отображается зеленой линией слева
+                        isAllDay = true
                     )
                 )
 
-                // Monthly conference call (Thursday 1:00 PM)
                 val confStart = Calendar.getInstance().apply {
                     timeInMillis = thur.timeInMillis
                     set(Calendar.HOUR_OF_DAY, 13)
@@ -191,13 +228,14 @@ class TaskRepository(private val taskDao: TaskDao, private val context: Context)
                     set(Calendar.SECOND, 0)
                 }.timeInMillis
                 events.add(
-                    Task(
+                    Item(
                         id = "cal_mock_conf",
+                        type = 0,
                         title = "Monthly conference call",
                         notes = "Local Calendar Event",
-                        section = TaskSection.UPCOMING,
-                        isCompleted = false,
-                        tags = listOf("Calendar"),
+                        start = 1,
+                        status = 0,
+                        cachedTags = "Calendar",
                         calendarColor = android.graphics.Color.parseColor("#4CD964"),
                         calendarDisplayName = "Work",
                         eventStartMillis = confStart,
@@ -214,24 +252,85 @@ class TaskRepository(private val taskDao: TaskDao, private val context: Context)
         }
     }
 
-    suspend fun insertTask(task: Task) = withContext(Dispatchers.IO) {
-        taskDao.insertTask(task)
+    suspend fun insertTask(item: Item) = withContext(Dispatchers.IO) {
+        taskDao.insertItem(item)
+        // If there's an active in-memory checklist, persist to db
+        if (item.checklist.isNotEmpty()) {
+            val entities = item.checklist.map { it.copy(itemId = item.id) }
+            taskDao.deleteChecklistItemsByItemId(item.id)
+            taskDao.insertChecklistItems(entities)
+        }
+        refreshChecklistCounters(item.id)
     }
 
-    suspend fun insertTasks(tasks: List<Task>) = withContext(Dispatchers.IO) {
-        taskDao.insertTasks(tasks)
+    suspend fun insertTasks(items: List<Item>) = withContext(Dispatchers.IO) {
+        taskDao.insertItems(items)
+        for (item in items) {
+            if (item.checklist.isNotEmpty()) {
+                val entities = item.checklist.map { it.copy(itemId = item.id) }
+                taskDao.deleteChecklistItemsByItemId(item.id)
+                taskDao.insertChecklistItems(entities)
+            }
+            refreshChecklistCounters(item.id)
+        }
     }
 
-    suspend fun deleteTask(task: Task) = withContext(Dispatchers.IO) {
-        taskDao.deleteTask(task)
+    suspend fun deleteTask(item: Item) = withContext(Dispatchers.IO) {
+        taskDao.deleteItem(item)
     }
 
-    suspend fun insertProject(project: Project) = withContext(Dispatchers.IO) {
-        taskDao.insertProject(project)
+    suspend fun deleteTaskById(id: String) = withContext(Dispatchers.IO) {
+        taskDao.deleteItemById(id)
     }
 
-    suspend fun deleteProject(project: Project) = withContext(Dispatchers.IO) {
-        taskDao.deleteProject(project)
+    suspend fun insertProject(project: Item) = withContext(Dispatchers.IO) {
+        taskDao.insertItem(project)
+    }
+
+    suspend fun deleteProject(project: Item) = withContext(Dispatchers.IO) {
+        taskDao.deleteItem(project)
+    }
+
+    // Areas management
+    suspend fun insertArea(area: Area) = withContext(Dispatchers.IO) {
+        taskDao.insertArea(area)
+    }
+
+    suspend fun deleteArea(area: Area) = withContext(Dispatchers.IO) {
+        taskDao.deleteArea(area)
+    }
+
+    // Tag management
+    suspend fun insertTag(tag: Tag) = withContext(Dispatchers.IO) {
+        taskDao.insertTag(tag)
+    }
+
+    suspend fun deleteTag(tag: Tag) = withContext(Dispatchers.IO) {
+        taskDao.deleteTag(tag)
+    }
+
+    suspend fun updateItemTags(itemId: String, tags: List<Tag>) = withContext(Dispatchers.IO) {
+        taskDao.deleteItemTagsByItemId(itemId)
+        for (tag in tags) {
+            taskDao.insertItemTag(ItemTag(itemId, tag.id))
+        }
+        refreshCachedTags(itemId)
+    }
+
+    suspend fun getTagsByItemId(itemId: String): List<Tag> = withContext(Dispatchers.IO) {
+        taskDao.getTagsByItemId(itemId)
+    }
+
+    suspend fun getAllTags(): List<Tag> = withContext(Dispatchers.IO) {
+        taskDao.getAllTags()
+    }
+
+    // Checklist update helper
+    suspend fun updateChecklistItems(itemId: String, list: List<ChecklistItem>) = withContext(Dispatchers.IO) {
+        val entities = list.map { it.copy(itemId = itemId) }
+        taskDao.deleteChecklistItemsByItemId(itemId)
+        taskDao.insertChecklistItems(entities)
+        refreshChecklistCounters(itemId)
     }
 
     suspend fun syncWithGoogleTasks(accessToken: String): Result<Unit> = withContext(Dispatchers.IO) {
@@ -243,18 +342,17 @@ class TaskRepository(private val taskDao: TaskDao, private val context: Context)
             val unsyncedProjects = taskDao.getUnsyncedProjects()
             for (proj in unsyncedProjects) {
                 try {
-                    val body = mapOf("title" to proj.name)
+                    val body = mapOf("title" to proj.title)
                     val remoteList = api.createTaskList(authHeader, body)
-                    // Update project with the remote ID
                     val updatedProj = proj.copy(
                         id = remoteList.id,
                         googleTaskListId = remoteList.id
                     )
-                    taskDao.deleteProject(proj) // replace key
-                    taskDao.insertProject(updatedProj)
-                    Log.d("TaskRepository", "Pushed project ${proj.name} to list ${remoteList.id}")
+                    taskDao.deleteItem(proj) // replace key
+                    taskDao.insertItem(updatedProj)
+                    Log.d("TaskRepository", "Pushed project ${proj.title} to list ${remoteList.id}")
                 } catch (e: Exception) {
-                    Log.e("TaskRepository", "Failed to push project ${proj.name}", e)
+                    Log.e("TaskRepository", "Failed to push project ${proj.title}", e)
                 }
             }
 
@@ -265,14 +363,15 @@ class TaskRepository(private val taskDao: TaskDao, private val context: Context)
             // Merge Google Task lists to local Projects
             for (remoteList in remoteLists) {
                 if (remoteList.id == "@default") continue
-                val existingProject = taskDao.getProjectById(remoteList.id)
+                val existingProject = taskDao.getItemById(remoteList.id)
                 if (existingProject == null) {
-                    val newProject = Project(
+                    val newProject = Item(
                         id = remoteList.id,
-                        name = remoteList.title,
+                        type = 1,
+                        title = remoteList.title,
                         googleTaskListId = remoteList.id
                     )
-                    taskDao.insertProject(newProject)
+                    taskDao.insertItem(newProject)
                 }
             }
 
@@ -290,8 +389,7 @@ class TaskRepository(private val taskDao: TaskDao, private val context: Context)
             for (task in unsyncedTasks) {
                 try {
                     val listId = if (task.projectId != null) {
-                        // verify the listId exists
-                        taskDao.getProjectById(task.projectId)?.googleTaskListId ?: "@default"
+                        taskDao.getItemById(task.projectId)?.googleTaskListId ?: "@default"
                     } else {
                         "@default"
                     }
@@ -306,7 +404,7 @@ class TaskRepository(private val taskDao: TaskDao, private val context: Context)
                     val updatedTask = task.copy(
                         googleTaskId = remoteTask.id
                     )
-                    taskDao.insertTask(updatedTask)
+                    taskDao.insertItem(updatedTask)
                     Log.d("TaskRepository", "Pushed task ${task.title} to list $listId")
                 } catch (e: Exception) {
                     Log.e("TaskRepository", "Failed to push task ${task.title}", e)
@@ -328,30 +426,35 @@ class TaskRepository(private val taskDao: TaskDao, private val context: Context)
 
             for (remoteTask in remoteTasks) {
                 val remoteTaskId = remoteTask.id ?: continue
-                val localTask = taskDao.getTaskByGoogleTaskId(remoteTaskId)
+                val localTask = taskDao.getItemByGoogleTaskId(remoteTaskId)
                 val isCompletedRemote = remoteTask.status == "completed"
                 val notesRemote = remoteTask.notes ?: ""
                 val titleRemote = remoteTask.title
 
                 if (localTask == null) {
-                    val defaultSection = if (projectId == null) TaskSection.INBOX else TaskSection.ANYTIME
-                    val newTask = Task(
+                    val defaultStart = if (projectId == null) 0 else 2 // 0 = inbox, 2 = anytime
+                    val newTask = Item(
+                        type = 0,
                         title = titleRemote,
                         notes = notesRemote,
-                        section = defaultSection,
-                        isCompleted = isCompletedRemote,
+                        start = defaultStart,
+                        status = if (isCompletedRemote) 3 else 0,
                         projectId = projectId,
                         googleTaskId = remoteTaskId
                     )
-                    taskDao.insertTask(newTask)
+                    taskDao.insertItem(newTask)
+                    refreshChecklistCounters(newTask.id)
+                    refreshCachedTags(newTask.id)
                 } else {
                     val updatedTask = localTask.copy(
                         title = titleRemote,
                         notes = notesRemote,
-                        isCompleted = isCompletedRemote,
+                        status = if (isCompletedRemote) 3 else 0,
                         projectId = projectId
                     )
-                    taskDao.insertTask(updatedTask)
+                    taskDao.insertItem(updatedTask)
+                    refreshChecklistCounters(updatedTask.id)
+                    refreshCachedTags(updatedTask.id)
                 }
             }
         } catch (e: Exception) {

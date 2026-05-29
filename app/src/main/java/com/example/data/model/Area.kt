@@ -4,12 +4,11 @@ import androidx.room.Entity
 import androidx.room.PrimaryKey
 import java.util.UUID
 
-@Entity(tableName = "projects")
-data class Project(
+@Entity(tableName = "areas")
+data class Area(
     @PrimaryKey val id: String = UUID.randomUUID().toString(),
-    val name: String,
-    val notes: String = "",
-    val isCompleted: Boolean = false,
-    val googleTaskListId: String? = null,
+    val title: String,
+    val sortOrder: Int = 0,
+    val trashed: Boolean = false,
     val creationDate: Long = System.currentTimeMillis()
 )

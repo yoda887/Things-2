@@ -39,9 +39,9 @@ import androidx.compose.ui.unit.sp
 import androidx.compose.ui.zIndex
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.layout.layout
-import com.example.data.model.Project
-import com.example.data.model.Task
+import com.example.data.model.Item
 import com.example.data.model.TaskSection
+import com.example.data.model.Area
 import com.example.ui.components.ProjectProgressArc
 import com.example.ui.screens.home.ActiveScreen
 import com.example.ui.screens.home.subcomponents.TaskItemRow
@@ -58,8 +58,8 @@ data class UpcomingDay(
     val dateMillis: Long,
     val dayOfMonth: String,
     val dayOfWeekLabel: String,
-    val calendarEvents: List<Task>,
-    val tasks: List<Task>
+    val calendarEvents: List<Item>,
+    val tasks: List<Item>
 )
 
 data class UpcomingHeaderItem(
@@ -69,14 +69,14 @@ data class UpcomingHeaderItem(
 )
 
 data class UpcomingEventItem(
-    val event: Task,
+    val event: Item,
     val dateMillis: Long
 )
 
 // [ИЗМЕНЕНИЕ]: Компонент для отображения одного календарного события на экране Upcoming
 @Composable
 fun UpcomingCalendarEventRow(
-    event: Task,
+    event: Item,
     textSecondaryColor: Color,
     textPrimaryColor: Color
 ) {
@@ -151,22 +151,24 @@ fun UpcomingCalendarEventRow(
 @Composable
 fun ThingsCategoryListPanel(
     screen: ActiveScreen,
-    project: Project?,
-    tasks: List<Task>,
+    project: Item?,
+    tasks: List<Item>,
     allTags: Set<String>,
     selectedTag: String?,
     textPrimaryColor: Color,
     textSecondaryColor: Color,
     dividerColor: Color,
     onTagSelect: (String?) -> Unit,
-    onTaskToggle: (Task) -> Unit,
-    onTaskClick: (Task) -> Unit,
-    projects: List<Project>,
+    onTaskToggle: (Item) -> Unit,
+    onTaskClick: (Item) -> Unit,
+    projects: List<Item>,
     viewModel: ThingsViewModel,
     inlineExpandedTaskId: String?,
-    onInlineExpandedTaskIdChange: (String?) -> Unit
+    onInlineExpandedTaskIdChange: (String?) -> Unit,
+    area: Area? = null,
+    onProjectClick: (Item) -> Unit = {}
 ) {
-    val listTasks = remember(tasks, screen, project) {
+    val listTasks = remember(tasks, screen, project, area) {
         tasks.filter { task ->
             when (screen) {
                 ActiveScreen.INBOX -> task.section == TaskSection.INBOX && !task.isCompleted
@@ -176,6 +178,8 @@ fun ThingsCategoryListPanel(
                 ActiveScreen.SOMEDAY -> task.section == TaskSection.SOMEDAY && !task.isCompleted
                 ActiveScreen.LOGBOOK -> task.isCompleted
                 ActiveScreen.PROJECT_DETAIL -> task.projectId == project?.id && !task.isCompleted
+                // [ИЗМЕНЕНИЕ]: Фильтруем строго по типу задачи (task.type == 0), чтобы проекты не дублировались и не вызывали ошибку duplicate key
+                ActiveScreen.AREA_DETAIL -> task.areaId == area?.id && task.type == 0 && !task.isCompleted
                 else -> false
             }
         }.sortedBy { it.creationDate }
@@ -279,7 +283,7 @@ fun ThingsCategoryListPanel(
         localTasksList = filteredTasks
     }
 
-    val makeDragModifier = { task: Task ->
+    val makeDragModifier = { task: Item ->
         Modifier.pointerInput(task.id, task.creationDate) {
             detectDragGesturesAfterLongPress(
                 onDragStart = {
@@ -635,6 +639,23 @@ fun ThingsCategoryListPanel(
                             )
                         )
                     }
+                    ActiveScreen.AREA_DETAIL -> {
+                        Icon(
+                            imageVector = Icons.Outlined.Layers,
+                            contentDescription = null,
+                            tint = Color(0xFF1B80FA),
+                            modifier = Modifier.size((26 * scaleFactor).dp)
+                        )
+                        Spacer(modifier = Modifier.width(12.dp))
+                        Text(
+                            text = area?.title ?: "Responsibility Area",
+                            style = TextStyle(
+                                fontSize = headerTitleFontSize,
+                                fontWeight = FontWeight.Bold,
+                                color = textPrimaryColor
+                            )
+                        )
+                    }
                     else -> {}
                 }
             }
@@ -693,10 +714,15 @@ fun ThingsCategoryListPanel(
         }
 
         val displayTasks = localTasksList
-        // [ИЗМЕНЕНИЕ]: Меняем логику проверки наличия элементов, включая экран Upcoming
+        // [ИЗМЕНЕНИЕ]: Меняем логику проверки наличия элементов, включая экран Upcoming и Area Detail
         val hasTasks = when (screen) {
             ActiveScreen.TODAY -> standardToday.isNotEmpty() || eveningToday.isNotEmpty() || draggedTaskId != null
             ActiveScreen.UPCOMING -> upcomingDays.isNotEmpty()
+            ActiveScreen.AREA_DETAIL -> {
+                val areaProjCount = projects.count { it.areaId == area?.id }
+                val areaTasksCount = displayTasks.count { it.areaId == area?.id && (it.projectId == null || it.projectId == "") }
+                areaProjCount > 0 || areaTasksCount > 0
+            }
             else -> displayTasks.isNotEmpty()
         }
 
@@ -743,6 +769,17 @@ fun ThingsCategoryListPanel(
                             add(task)
                         }
                     }
+                } else if (screen == ActiveScreen.AREA_DETAIL) {
+                    val areaProjects = projects.filter { it.areaId == area?.id }
+                    if (areaProjects.isNotEmpty()) {
+                        add("projects_heading")
+                        addAll(areaProjects)
+                    }
+                    val areaDirectTasks = displayTasks.filter { it.areaId == area?.id && (it.projectId == null || it.projectId == "") }
+                    if (areaDirectTasks.isNotEmpty()) {
+                        add("tasks_heading")
+                        addAll(areaDirectTasks)
+                    }
                 } else {
                     addAll(displayTasks)
                 }
@@ -750,107 +787,155 @@ fun ThingsCategoryListPanel(
 
             items(flattened, key = { item ->
                 when (item) {
-                    is Task -> item.id
+                    is Item -> item.id
                     is UpcomingHeaderItem -> "hdr_${item.dateMillis}"
                     is UpcomingEventItem -> "ev_${item.event.id}_${item.dateMillis}"
                     else -> item.toString()
                 }
             }) { item ->
                 when (item) {
-                    is Task -> {
+                    is Item -> {
                         val task = item
-                        val isDragTask = draggedTaskId == task.id
-                        val isExpanded = inlineExpandedTaskId == task.id
-                        val shouldDim = inlineExpandedTaskId != null && !isExpanded
-                        
-                        val dimAlpha by animateFloatAsState(
-                            targetValue = if (shouldDim) 0.3f else 1f,
-                            label = "dimAlpha_${task.id}"
-                        )
-                        val dragScale by animateFloatAsState(
-                            targetValue = if (isDragTask) 1.04f else 1.0f,
-                            label = "dragScale_${task.id}"
-                        )
-                        val dragElevation by animateDpAsState(
-                            targetValue = if (isDragTask) 8.dp else (if (isExpanded) 8.dp else 0.dp),
-                            label = "dragElev_${task.id}"
-                        )
-                        val zIndexValToUse = if (isDragTask) 100f else (if (isExpanded) 1f else 0f)
-                        val translationYVal = if (isDragTask) dragAccumulatedOffset else 0f
-                        
-                        val containerBgColor = if (isExpanded || isDragTask) MaterialTheme.colorScheme.background else Color.Transparent
-                        
-                        Column(
-                            modifier = (if (isDragTask) Modifier else Modifier.animateItem())
-                                .zIndex(zIndexValToUse)
-                                .graphicsLayer {
-                                    translationY = translationYVal
-                                    scaleX = dragScale
-                                    scaleY = dragScale
-                                    alpha = dimAlpha
-                                }
-                                .layout { measurable, constraints ->
-                                    val paddingPx = 4.dp.roundToPx()
-                                    val extendedConstraints = constraints.copy(
-                                        minWidth = (constraints.minWidth + paddingPx * 2).coerceAtMost(constraints.maxWidth + paddingPx * 2),
-                                        maxWidth = (constraints.maxWidth + paddingPx * 2)
-                                    )
-                                    val placeable = measurable.measure(extendedConstraints)
-                                    layout(placeable.width - paddingPx * 2, placeable.height) {
-                                        placeable.place(-paddingPx, 0)
+                        if (task.type == 1) {
+                            // [ИЗМЕНЕНИЕ]: Отрисовка строки проекта в списке проектов области
+                            // Использует скругление углов 10.dp для достижения полной идентичности с главным экраном!
+                            val projectTasks = tasks.filter { it.projectId == task.id }
+                            val completedCount = projectTasks.count { it.isCompleted }
+                            val totalCount = projectTasks.size
+                            val shouldDim = inlineExpandedTaskId != null
+                            val dimAlpha by animateFloatAsState(
+                                targetValue = if (shouldDim) 0.3f else 1f,
+                                label = "dimAlpha_proj_${task.id}"
+                            )
+
+                            Row(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .animateItem()
+                                    .clip(RoundedCornerShape(10.dp))
+                                    .clickable { onProjectClick(task) }
+                                    .graphicsLayer { alpha = dimAlpha }
+                                    .padding(vertical = 8.dp, horizontal = 6.dp),
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+                                ProjectProgressArc(
+                                    completed = completedCount,
+                                    total = totalCount,
+                                    modifier = Modifier.size(22.dp)
+                                )
+                                Spacer(modifier = Modifier.width(10.dp))
+                                Text(
+                                    text = task.title,
+                                    style = MaterialTheme.typography.displaySmall.copy(
+                                        color = textPrimaryColor,
+                                        fontWeight = FontWeight.Medium
+                                    ),
+                                    modifier = Modifier.weight(1f),
+                                    maxLines = 1,
+                                    overflow = TextOverflow.Ellipsis
+                                )
+                            }
+                        } else {
+                            val isDragTask = draggedTaskId == task.id
+                            val isExpanded = inlineExpandedTaskId == task.id
+                            val shouldDim = inlineExpandedTaskId != null && !isExpanded
+                            
+                            val dimAlpha by animateFloatAsState(
+                                targetValue = if (shouldDim) 0.3f else 1f,
+                                label = "dimAlpha_${task.id}"
+                            )
+                            val dragScale by animateFloatAsState(
+                                targetValue = if (isDragTask) 1.04f else 1.0f,
+                                label = "dragScale_${task.id}"
+                            )
+                            val dragElevation by animateDpAsState(
+                                targetValue = if (isDragTask) 8.dp else (if (isExpanded) 8.dp else 0.dp),
+                                label = "dragElev_${task.id}"
+                            )
+                            val zIndexValToUse = if (isDragTask) 100f else (if (isExpanded) 1f else 0f)
+                            val translationYVal = if (isDragTask) dragAccumulatedOffset else 0f
+                            
+                            val containerBgColor = if (isExpanded || isDragTask) MaterialTheme.colorScheme.background else Color.Transparent
+                            
+                            Column(
+                                modifier = (if (isDragTask) Modifier else Modifier.animateItem())
+                                    .zIndex(zIndexValToUse)
+                                    .graphicsLayer {
+                                        translationY = translationYVal
+                                        scaleX = dragScale
+                                        scaleY = dragScale
+                                        alpha = dimAlpha
                                     }
-                                }
-                                .shadow(dragElevation, RoundedCornerShape(8.dp))
-                                .background(containerBgColor, RoundedCornerShape(8.dp))
-                                .animateContentSize(animationSpec = spring(
-                                    dampingRatio = Spring.DampingRatioLowBouncy,
-                                    stiffness = Spring.StiffnessMediumLow
-                                ))
-                        ) {
-                            if (isExpanded) {
-                                ThingsTaskInlineEditor(
-                                    task = task,
-                                    projects = projects,
-                                    onSave = { title, notes, section, isTonight, dueDate, tags, projectId, checklist, priority ->
-                                        val updatedTask = task.copy(
-                                            title = title,
-                                            notes = notes,
-                                            section = section,
-                                            isTonight = isTonight,
-                                            dueDate = dueDate,
-                                            tags = tags,
-                                            projectId = projectId,
-                                            checklist = checklist,
-                                            priority = priority
+                                    .layout { measurable, constraints ->
+                                        val paddingPx = 4.dp.roundToPx()
+                                        val extendedConstraints = constraints.copy(
+                                            minWidth = (constraints.minWidth + paddingPx * 2).coerceAtMost(constraints.maxWidth + paddingPx * 2),
+                                            maxWidth = (constraints.maxWidth + paddingPx * 2)
                                         )
-                                        viewModel.updateTask(updatedTask)
-                                        onInlineExpandedTaskIdChange(null)
-                                    },
-                                    onDelete = {
-                                        viewModel.deleteTask(task)
-                                        onInlineExpandedTaskIdChange(null)
-                                    },
-                                    onDone = {
-                                        onInlineExpandedTaskIdChange(null)
+                                        val placeable = measurable.measure(extendedConstraints)
+                                        layout(placeable.width - paddingPx * 2, placeable.height) {
+                                            placeable.place(-paddingPx, 0)
+                                        }
                                     }
-                                )
-                            } else {
-                                TaskItemRow(
-                                    modifier = Modifier,
-                                    task = task,
-                                    textPrimaryColor = textPrimaryColor,
-                                    textSecondaryColor = textSecondaryColor,
-                                    dividerColor = dividerColor,
-                                    onToggle = { onTaskToggle(task) },
-                                    onClick = { 
-                                        onInlineExpandedTaskIdChange(task.id)
-                                    },
-                                    projects = projects,
-                                    showTodayIndicator = screen == ActiveScreen.TODAY && !task.isTonight,
-                                    isDragging = false,
-                                    dragOffsetY = 0f,
-                                    dragModifier = makeDragModifier(task)
-                                )
+                                    .shadow(dragElevation, RoundedCornerShape(8.dp))
+                                    .background(containerBgColor, RoundedCornerShape(8.dp))
+                                    .animateContentSize(animationSpec = spring(
+                                        dampingRatio = Spring.DampingRatioLowBouncy,
+                                        stiffness = Spring.StiffnessMediumLow
+                                    ))
+                            ) {
+                                if (isExpanded) {
+                                    ThingsTaskInlineEditor(
+                                        task = task,
+                                        projects = projects,
+                                        onSave = { title, notes, section, isTonight, dueDate, tags, projectId, checklist, priority ->
+                                            val startVal = when (section) {
+                                                TaskSection.INBOX -> 0
+                                                TaskSection.TODAY -> 1
+                                                TaskSection.ANYTIME -> 2
+                                                TaskSection.SOMEDAY -> 3
+                                                TaskSection.UPCOMING -> 2
+                                            }
+                                            val updatedTask = task.copy(
+                                                title = title,
+                                                notes = notes,
+                                                start = startVal,
+                                                isTonight = isTonight,
+                                                dueDate = dueDate,
+                                                cachedTags = tags.joinToString(", "),
+                                                projectId = projectId,
+                                                priority = priority
+                                            )
+                                            viewModel.updateTask(updatedTask)
+                                            viewModel.updateChecklistItems(task.id, checklist)
+                                            onInlineExpandedTaskIdChange(null)
+                                        },
+                                        onDelete = {
+                                            viewModel.deleteTask(task)
+                                            onInlineExpandedTaskIdChange(null)
+                                        },
+                                        onDone = {
+                                            onInlineExpandedTaskIdChange(null)
+                                        }
+                                    )
+                                } else {
+                                    TaskItemRow(
+                                        modifier = Modifier,
+                                        task = task,
+                                        textPrimaryColor = textPrimaryColor,
+                                        textSecondaryColor = textSecondaryColor,
+                                        dividerColor = dividerColor,
+                                        onToggle = { onTaskToggle(task) },
+                                        onClick = { 
+                                            onInlineExpandedTaskIdChange(task.id)
+                                        },
+                                        projects = projects,
+                                        showTodayIndicator = screen == ActiveScreen.TODAY && !task.isTonight,
+                                        isDragging = false,
+                                        dragOffsetY = 0f,
+                                        dragModifier = makeDragModifier(task)
+                                    )
+                                }
                             }
                         }
                     }
@@ -916,45 +1001,96 @@ fun ThingsCategoryListPanel(
                             )
                         }
                     }
-                    else -> { // like "evening_header"
+                    else -> { // like "evening_header", "projects_heading", "tasks_heading"
+                        val headerText = item as String
                         val shouldDim = inlineExpandedTaskId != null
                         val dimAlpha by animateFloatAsState(
                             targetValue = if (shouldDim) 0.3f else 1f,
-                            label = "dimAlpha_evening"
+                            label = "dimAlpha_$headerText"
                         )
 
-                        Column(modifier = Modifier
-                            .animateItem()
-                            .graphicsLayer { alpha = dimAlpha }
-                        ) {
-                            Spacer(modifier = Modifier.height(16.dp))
-                            Row(
+                        if (headerText == "projects_heading") {
+                            Column(
                                 modifier = Modifier
-                                    .fillMaxWidth()
-                                    .padding(vertical = 6.dp),
-                                verticalAlignment = Alignment.CenterVertically
+                                    .animateItem()
+                                    .graphicsLayer { alpha = dimAlpha }
+                                    .padding(top = 22.dp, bottom = 10.dp)
                             ) {
                                 Text(
-                                    text = "🌙",
-                                    fontSize = 18.sp,
-                                    modifier = Modifier.padding(end = 8.dp)
-                                )
-                                Text(
-                                    "This Evening",
+                                    text = "PROJECTS",
                                     style = TextStyle(
-                                        fontSize = 18.sp,
+                                        fontSize = 11.sp,
                                         fontWeight = FontWeight.Bold,
-                                        color = textPrimaryColor
+                                        color = textSecondaryColor.copy(alpha = 0.5f),
+                                        letterSpacing = 1.sp
                                     )
                                 )
+                                Spacer(modifier = Modifier.height(6.dp))
+                                Box(
+                                    modifier = Modifier
+                                        .fillMaxWidth()
+                                        .height(1.dp)
+                                        .background(dividerColor)
+                                )
                             }
-                            Box(
+                        } else if (headerText == "tasks_heading") {
+                            Column(
                                 modifier = Modifier
-                                    .fillMaxWidth()
-                                    .height(1.dp)
-                                    .background(dividerColor)
-                                    .padding(bottom = 6.dp)
-                            )
+                                    .animateItem()
+                                    .graphicsLayer { alpha = dimAlpha }
+                                    .padding(top = 22.dp, bottom = 10.dp)
+                            ) {
+                                Text(
+                                    text = "TASKS",
+                                    style = TextStyle(
+                                        fontSize = 11.sp,
+                                        fontWeight = FontWeight.Bold,
+                                        color = textSecondaryColor.copy(alpha = 0.5f),
+                                        letterSpacing = 1.sp
+                                    )
+                                )
+                                Spacer(modifier = Modifier.height(6.dp))
+                                Box(
+                                    modifier = Modifier
+                                        .fillMaxWidth()
+                                        .height(1.dp)
+                                        .background(dividerColor)
+                                )
+                            }
+                        } else {
+                            Column(modifier = Modifier
+                                .animateItem()
+                                .graphicsLayer { alpha = dimAlpha }
+                            ) {
+                                Spacer(modifier = Modifier.height(16.dp))
+                                Row(
+                                    modifier = Modifier
+                                        .fillMaxWidth()
+                                        .padding(vertical = 6.dp),
+                                    verticalAlignment = Alignment.CenterVertically
+                                ) {
+                                    Text(
+                                        text = "🌙",
+                                        fontSize = 18.sp,
+                                        modifier = Modifier.padding(end = 8.dp)
+                                    )
+                                    Text(
+                                        "This Evening",
+                                        style = TextStyle(
+                                            fontSize = 18.sp,
+                                            fontWeight = FontWeight.Bold,
+                                            color = textPrimaryColor
+                                        )
+                                    )
+                                }
+                                Box(
+                                    modifier = Modifier
+                                        .fillMaxWidth()
+                                        .height(1.dp)
+                                        .background(dividerColor)
+                                        .padding(bottom = 6.dp)
+                                )
+                            }
                         }
                     }
                 }

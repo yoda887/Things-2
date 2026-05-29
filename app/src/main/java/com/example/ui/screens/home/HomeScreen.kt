@@ -8,8 +8,10 @@ import androidx.compose.animation.*
 import androidx.compose.animation.core.spring
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
@@ -24,9 +26,9 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.core.content.ContextCompat
-import com.example.data.model.Project
-import com.example.data.model.Task
+import com.example.data.model.Item
 import com.example.data.model.TaskSection
+import com.example.data.model.Area
 import com.example.ui.screens.home.components.ThingsHomePanel
 import com.example.ui.screens.home.components.ThingsCategoryListPanel
 import com.example.ui.screens.ThingsTaskDetailsSheet
@@ -44,7 +46,7 @@ import kotlinx.coroutines.launch
 
 
 enum class ActiveScreen {
-    HOME, INBOX, TODAY, UPCOMING, ANYTIME, SOMEDAY, LOGBOOK, PROJECT_DETAIL
+    HOME, INBOX, TODAY, UPCOMING, ANYTIME, SOMEDAY, LOGBOOK, PROJECT_DETAIL, AREA_DETAIL
 }
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -79,14 +81,19 @@ fun ThingsHomeScreen(viewModel: ThingsViewModel) {
     }
 
     var activeScreen by remember { mutableStateOf(ActiveScreen.HOME) }
-    var selectedProject by remember { mutableStateOf<Project?>(null) }
-    var taskToEdit by remember { mutableStateOf<Task?>(null) }
+    var selectedProject by remember { mutableStateOf<Item?>(null) }
+    var selectedArea by remember { mutableStateOf<Area?>(null) }
+    var taskToEdit by remember { mutableStateOf<Item?>(null) }
     var showAddDialog by remember { mutableStateOf(false) }
     var showAddProjectDialog by remember { mutableStateOf(false) }
+    var showAddAreaDialog by remember { mutableStateOf(false) }
     var inlineExpandedTaskId by remember { mutableStateOf<String?>(null) }
     
     // Project input fields
     var newProjectName by remember { mutableStateOf("") }
+    val areas by viewModel.areas.collectAsState()
+    var selectedAreaIdForNewProject by remember { mutableStateOf<String?>(null) }
+    var showAreaDropdownInNewProject by remember { mutableStateOf(false) }
     
     val scope = rememberCoroutineScope()
     val isDark = false
@@ -123,6 +130,7 @@ fun ThingsHomeScreen(viewModel: ThingsViewModel) {
                             onClick = {
                                 activeScreen = ActiveScreen.HOME
                                 selectedProject = null
+                                selectedArea = null
                                 viewModel.selectTag(null)
                             }
                         ) {
@@ -213,11 +221,19 @@ fun ThingsHomeScreen(viewModel: ThingsViewModel) {
                     val initialProjectId = if (targetScreen == ActiveScreen.PROJECT_DETAIL) selectedProject?.id else null
                     val newTaskId = java.util.UUID.randomUUID().toString()
 
-                    val newTask = Task(
+                    val startValue = when (initialSection) {
+                        TaskSection.INBOX -> 0
+                        TaskSection.TODAY -> 1
+                        TaskSection.ANYTIME -> 2
+                        TaskSection.SOMEDAY -> 3
+                        TaskSection.UPCOMING -> 2
+                    }
+                    val newTask = Item(
                         id = newTaskId,
+                        type = 0,
                         title = "",
                         notes = "",
-                        section = initialSection,
+                        start = startValue,
                         projectId = initialProjectId,
                         creationDate = System.currentTimeMillis()
                     )
@@ -261,7 +277,15 @@ fun ThingsHomeScreen(viewModel: ThingsViewModel) {
                             selectedProject = proj
                             activeScreen = ActiveScreen.PROJECT_DETAIL
                         },
+                        onAreaClick = { area ->
+                            selectedArea = area
+                            activeScreen = ActiveScreen.AREA_DETAIL
+                        },
                         onAddProjectClick = { showAddProjectDialog = true },
+                        areas = areas,
+                        onAddAreaClick = { showAddAreaDialog = true },
+                        onDeleteArea = { viewModel.deleteArea(it) },
+                        onDeleteProject = { viewModel.deleteProject(it) },
                         onSyncClick = { token ->
                             viewModel.setAccessToken(token)
                             viewModel.syncWithGoogle()
@@ -284,7 +308,12 @@ fun ThingsHomeScreen(viewModel: ThingsViewModel) {
                         projects = projects,
                         viewModel = viewModel,
                         inlineExpandedTaskId = inlineExpandedTaskId,
-                        onInlineExpandedTaskIdChange = { inlineExpandedTaskId = it }
+                        onInlineExpandedTaskIdChange = { inlineExpandedTaskId = it },
+                        area = selectedArea,
+                        onProjectClick = { proj ->
+                            selectedProject = proj
+                            activeScreen = ActiveScreen.PROJECT_DETAIL
+                        }
                     )
                 }
             }
@@ -308,24 +337,31 @@ fun ThingsHomeScreen(viewModel: ThingsViewModel) {
             initialProjectId = initialProjectId,
             projects = projects,
             onDismiss = { showAddDialog = false },
-            onSave = { title, notes, section, isTonight, dueDate, tags, projectId, checklist ->
+            onSave = { title, notes, section, isTonight, dueDate, tags, projectId, checklistItems ->
                 if (taskToEdit == null) {
                     // Create Task
-                    viewModel.addTask(title, notes, section, isTonight, dueDate, tags, projectId, checklist)
+                    viewModel.addTask(title, notes, section, isTonight, dueDate, tags, projectId, checklistItems)
                 } else {
                     // Update Task
+                    val startVal = when (section) {
+                        TaskSection.INBOX -> 0
+                        TaskSection.TODAY -> 1
+                        TaskSection.ANYTIME -> 2
+                        TaskSection.SOMEDAY -> 3
+                        TaskSection.UPCOMING -> 2
+                    }
                     viewModel.updateTask(
                         taskToEdit!!.copy(
                             title = title,
                             notes = notes,
-                            section = section,
+                            start = startVal,
                             isTonight = isTonight,
                             dueDate = dueDate,
-                            tags = tags,
-                            projectId = projectId,
-                            checklist = checklist
+                            cachedTags = tags.joinToString(", "),
+                            projectId = projectId
                         )
                     )
+                    viewModel.updateChecklistItems(taskToEdit!!.id, checklistItems)
                 }
                 showAddDialog = false
             },
@@ -358,14 +394,52 @@ fun ThingsHomeScreen(viewModel: ThingsViewModel) {
                             focusedLabelColor = ThingsBlue
                         )
                     )
+                    Spacer(modifier = Modifier.height(12.dp))
+                    Text("Area of Responsibility:", color = textPrimaryColor, fontWeight = FontWeight.SemiBold, fontSize = 14.sp)
+                    Spacer(modifier = Modifier.height(4.dp))
+                    Box(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .border(1.dp, dividerColor, RoundedCornerShape(4.dp))
+                            .clickable { showAreaDropdownInNewProject = true }
+                            .padding(12.dp)
+                    ) {
+                        val activeAreaName = if (selectedAreaIdForNewProject == null) "Без области" else {
+                            areas.firstOrNull { it.id == selectedAreaIdForNewProject }?.title ?: "Без области"
+                        }
+                        Text(activeAreaName, color = textPrimaryColor)
+                        
+                        DropdownMenu(
+                            expanded = showAreaDropdownInNewProject,
+                            onDismissRequest = { showAreaDropdownInNewProject = false }
+                        ) {
+                            DropdownMenuItem(
+                                text = { Text("Без области", color = textPrimaryColor) },
+                                onClick = {
+                                    selectedAreaIdForNewProject = null
+                                    showAreaDropdownInNewProject = false
+                                }
+                            )
+                            areas.forEach { area ->
+                                DropdownMenuItem(
+                                    text = { Text(area.title, color = textPrimaryColor) },
+                                    onClick = {
+                                        selectedAreaIdForNewProject = area.id
+                                        showAreaDropdownInNewProject = false
+                                    }
+                                )
+                            }
+                        }
+                    }
                 }
             },
             confirmButton = {
                 TextButton(
                     onClick = {
                         if (newProjectName.isNotBlank()) {
-                            viewModel.addProject(newProjectName.trim())
+                            viewModel.addProject(newProjectName.trim(), areaId = selectedAreaIdForNewProject)
                             newProjectName = ""
+                            selectedAreaIdForNewProject = null
                             showAddProjectDialog = false
                         }
                     },
@@ -376,6 +450,53 @@ fun ThingsHomeScreen(viewModel: ThingsViewModel) {
             },
             dismissButton = {
                 TextButton(onClick = { showAddProjectDialog = false }) {
+                    Text("Cancel", color = textSecondaryColor)
+                }
+            },
+            containerColor = cardSurfaceColor
+        )
+    }
+
+    // Area creation Dialog
+    if (showAddAreaDialog) {
+        var newAreaName by remember { mutableStateOf("") }
+        AlertDialog(
+            onDismissRequest = { showAddAreaDialog = false },
+            title = { Text("Create Responsibility Area", fontWeight = FontWeight.Bold, color = textPrimaryColor) },
+            text = {
+                Column {
+                    Text("Areas (Области) organize related activities like Work, Personal Life, or Health, and do not have deadlines.", color = textSecondaryColor, fontSize = 13.sp)
+                    Spacer(modifier = Modifier.height(12.dp))
+                    OutlinedTextField(
+                        value = newAreaName,
+                        onValueChange = { newAreaName = it },
+                        label = { Text("Area Title") },
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .testTag("area_title_input"),
+                        colors = OutlinedTextFieldDefaults.colors(
+                            focusedBorderColor = ThingsBlue,
+                            unfocusedBorderColor = dividerColor,
+                            focusedLabelColor = ThingsBlue
+                        )
+                    )
+                }
+            },
+            confirmButton = {
+                TextButton(
+                    onClick = {
+                        if (newAreaName.isNotBlank()) {
+                            viewModel.addArea(newAreaName.trim())
+                            showAddAreaDialog = false
+                        }
+                    },
+                    modifier = Modifier.testTag("confirm_add_area")
+                ) {
+                    Text("Create", color = ThingsBlue, fontWeight = FontWeight.Bold)
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = { showAddAreaDialog = false }) {
                     Text("Cancel", color = textSecondaryColor)
                 }
             },

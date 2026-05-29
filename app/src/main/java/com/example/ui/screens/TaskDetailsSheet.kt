@@ -30,8 +30,7 @@ import androidx.compose.ui.text.style.TextDecoration
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.example.data.model.ChecklistItem
-import com.example.data.model.Project
-import com.example.data.model.Task
+import com.example.data.model.Item
 import com.example.data.model.TaskSection
 import com.example.ui.theme.*
 import com.example.ui.components.ThingsCheckbox
@@ -41,10 +40,10 @@ import java.util.*
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun ThingsTaskDetailsSheet(
-    task: Task?, // If null, we are in "Create Mode"
+    task: Item?, // If null, we are in "Create Mode"
     initialSection: TaskSection = TaskSection.INBOX,
     initialProjectId: String? = null,
-    projects: List<Project>,
+    projects: List<Item>,
     onDismiss: () -> Unit,
     onSave: (
         title: String,
@@ -294,7 +293,7 @@ fun ThingsTaskDetailsSheet(
                             keyboardOptions = KeyboardOptions(imeAction = ImeAction.Done),
                             keyboardActions = KeyboardActions(onDone = {
                                 if (newChecklistItemTitle.isNotBlank()) {
-                                    checklist = checklist + ChecklistItem(title = newChecklistItemTitle.trim())
+                                    checklist = checklist + ChecklistItem(itemId = task?.id ?: "", title = newChecklistItemTitle.trim())
                                     newChecklistItemTitle = ""
                                 }
                             }),

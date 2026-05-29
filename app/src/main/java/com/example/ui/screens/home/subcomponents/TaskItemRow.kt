@@ -28,8 +28,7 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.platform.testTag
-import com.example.data.model.Project
-import com.example.data.model.Task
+import com.example.data.model.Item
 import com.example.ui.components.ThingsCheckbox
 import com.example.ui.theme.*
 import kotlinx.coroutines.delay
@@ -43,13 +42,13 @@ import kotlinx.coroutines.launch
 @Composable
 fun TaskItemRow(
     modifier: Modifier = Modifier,
-    task: Task,
+    task: Item,
     textPrimaryColor: Color,
     textSecondaryColor: Color,
     dividerColor: Color,
     onToggle: () -> Unit,
     onClick: () -> Unit,
-    projects: List<Project>,
+    projects: List<Item>,
     showTodayIndicator: Boolean = false,
     isDragging: Boolean = false,
     dragOffsetY: Float = 0f,

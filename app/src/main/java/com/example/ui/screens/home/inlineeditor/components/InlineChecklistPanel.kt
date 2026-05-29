@@ -32,6 +32,7 @@ import com.example.ui.theme.ThingsBlue
 
 @Composable
 fun InlineChecklistPanel(
+    itemId: String = "",
     checklist: List<ChecklistItem>,
     onChecklistChange: (List<ChecklistItem>) -> Unit,
     showChecklistHelper: Boolean,
@@ -132,7 +133,7 @@ fun InlineChecklistPanel(
                     keyboardOptions = KeyboardOptions(imeAction = ImeAction.Done),
                     keyboardActions = KeyboardActions(onDone = {
                         if (newChecklistItemTitle.isNotBlank()) {
-                            val updated = checklist + ChecklistItem(title = newChecklistItemTitle.trim())
+                            val updated = checklist + ChecklistItem(itemId = itemId, title = newChecklistItemTitle.trim())
                             onChecklistChange(updated)
                             newChecklistItemTitle = ""
                         }

@@ -15,8 +15,7 @@ import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import com.example.data.model.ChecklistItem
-import com.example.data.model.Project
-import com.example.data.model.Task
+import com.example.data.model.Item
 import com.example.data.model.TaskSection
 import com.example.ui.theme.ThingsBlue
 import com.example.ui.theme.ThingsUpcomingRed
@@ -25,8 +24,8 @@ import com.example.ui.screens.home.inlineeditor.dialogs.ThingsWhenDialog
 
 @Composable
 fun ThingsTaskInlineEditor(
-    task: Task,
-    projects: List<Project>,
+    task: Item,
+    projects: List<Item>,
     onSave: (
         title: String,
         notes: String,
@@ -41,14 +40,14 @@ fun ThingsTaskInlineEditor(
     onDelete: (() -> Unit)? = null,
     onDone: () -> Unit = {}
 ) {
-    var title by remember { mutableStateOf(task.title) }
-    var notes by remember { mutableStateOf(task.notes) }
-    var section by remember { mutableStateOf(task.section) }
-    var isTonight by remember { mutableStateOf(task.isTonight) }
-    var dueDate by remember { mutableStateOf(task.dueDate) }
-    var tagInput by remember { mutableStateOf(task.tags.joinToString(", ")) }
-    var checklist by remember { mutableStateOf(task.checklist) }
-    var priority by remember { mutableStateOf(task.priority) }
+    var title by remember { mutableStateOf<String>(task.title) }
+    var notes by remember { mutableStateOf<String>(task.notes) }
+    var section by remember { mutableStateOf<TaskSection>(task.section) }
+    var isTonight by remember { mutableStateOf<Boolean>(task.isTonight) }
+    var dueDate by remember { mutableStateOf<Long?>(task.dueDate) }
+    var tagInput by remember { mutableStateOf<String>(task.tags.joinToString(", ")) }
+    var checklist by remember { mutableStateOf<List<ChecklistItem>>(task.checklist) }
+    var priority by remember { mutableStateOf<Int>(task.priority) }
 
     // Helpers visibility states
     var showCalendarHelper by remember { mutableStateOf(false) }
@@ -160,6 +159,7 @@ fun ThingsTaskInlineEditor(
 
             // Checklist Items Panel
             InlineChecklistPanel(
+                itemId = task.id,
                 checklist = checklist,
                 onChecklistChange = { checklist = it },
                 showChecklistHelper = showChecklistHelper,

@@ -19,7 +19,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import com.example.data.model.Task
+import com.example.data.model.Item
 import com.example.ui.theme.*
 import java.text.SimpleDateFormat
 import java.util.Date
@@ -38,7 +38,7 @@ import kotlin.math.abs
  */
 @Composable
 fun CalendarEventsWidget(
-    events: List<Task>, // Список событий, полученных из календаря
+    events: List<Item>, // Список событий, полученных из календаря
     textSecondaryColor: Color = Color.Unspecified, // Запасной цвет для вторичного текста
     isDark: Boolean = false, // Явный флаг темной темы (если передан)
     modifier: Modifier = Modifier,

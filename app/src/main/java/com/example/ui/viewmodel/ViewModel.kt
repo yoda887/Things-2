@@ -3,9 +3,11 @@ package com.example.ui.viewmodel
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.viewModelScope
+import com.example.data.model.Area
+import com.example.data.model.Item
+import com.example.data.model.Tag
+import com.example.data.model.ItemTag
 import com.example.data.model.ChecklistItem
-import com.example.data.model.Project
-import com.example.data.model.Task
 import com.example.data.model.TaskSection
 import com.example.data.repository.TaskRepository
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -20,25 +22,45 @@ import java.util.Calendar
 
 class ThingsViewModel(private val repository: TaskRepository) : ViewModel() {
 
-    // [СЕМЕНА]: Автоматическое заполнение демонстрационных задач и проектов при первом запуске, если база данных пуста.
     init {
         viewModelScope.launch {
             try {
                 val currentTasks = repository.allTasks.first()
                 if (currentTasks.isEmpty()) {
-                    val workProj = Project(id = "work_proj", name = "Work", notes = "Work related tasks")
-                    val partyProj = Project(id = "party_proj", name = "Throw Party for Eve", notes = "Planning Eve's birthday party")
-                    val onboardProj = Project(id = "onboard_proj", name = "Onboard James", notes = "Onboarding new hire")
+                    // Seed Areas
+                    val workArea = Area(id = "work_area", title = "Рабочие дела", sortOrder = 1)
+                    val personalArea = Area(id = "personal_area", title = "Личная жизнь", sortOrder = 2)
+                    repository.insertArea(workArea)
+                    repository.insertArea(personalArea)
+
+                    // Seed Projects (Item type = 1)
+                    val workProj = Item(
+                        id = "work_proj",
+                        type = 1,
+                        title = "Onboard James",
+                        notes = "Onboarding new hire",
+                        areaId = "work_area",
+                        creationDate = System.currentTimeMillis() - 50000
+                    )
+                    val partyProj = Item(
+                        id = "party_proj",
+                        type = 1,
+                        title = "Throw Party for Eve",
+                        notes = "Planning Eve's birthday party",
+                        areaId = "personal_area",
+                        creationDate = System.currentTimeMillis() - 40000
+                    )
                     
                     repository.insertProject(workProj)
                     repository.insertProject(partyProj)
-                    repository.insertProject(onboardProj)
                     
                     val tom = Calendar.getInstance().apply { add(Calendar.DAY_OF_YEAR, 1) }
                     val tomStart = Calendar.getInstance().apply {
                         timeInMillis = tom.timeInMillis
                         set(Calendar.HOUR_OF_DAY, 12)
                         set(Calendar.MINUTE, 0)
+                        set(Calendar.SECOND, 0)
+                        set(Calendar.MILLISECOND, 0)
                     }.timeInMillis
 
                     val thur = Calendar.getInstance().apply { add(Calendar.DAY_OF_YEAR, 2) }
@@ -46,55 +68,55 @@ class ThingsViewModel(private val repository: TaskRepository) : ViewModel() {
                         timeInMillis = thur.timeInMillis
                         set(Calendar.HOUR_OF_DAY, 12)
                         set(Calendar.MINUTE, 0)
+                        set(Calendar.SECOND, 0)
+                        set(Calendar.MILLISECOND, 0)
                     }.timeInMillis
 
-                    val prepareQuestions = Task(
+                    val prepareQuestions = Item(
                         id = "seed_prep_questions",
+                        type = 0,
                         title = "Prepare interview questions",
                         notes = "Review Candidate resume and portfolio",
-                        section = TaskSection.UPCOMING,
-                        isTonight = false,
+                        start = 1, // today's smart lists
+                        status = 0,
                         dueDate = tomStart,
-                        tags = listOf("Work"),
                         projectId = "work_proj"
                     )
                     
-                    val reserveDinner = Task(
+                    val reserveDinner = Item(
                         id = "seed_reserve_dinner",
+                        type = 0,
                         title = "Make reservation for dinner",
                         notes = "Italian place by the corner",
-                        section = TaskSection.UPCOMING,
-                        isTonight = false,
+                        start = 1,
+                        status = 0,
                         dueDate = tomStart,
-                        tags = listOf("Throw Party for Eve"),
                         projectId = "party_proj"
                     )
 
-                    val movieTickets = Task(
+                    val movieTickets = Item(
                         id = "seed_movie_tickets",
+                        type = 0,
                         title = "Buy movie tickets for Friday",
                         notes = "IMAX 3D preferred",
-                        section = TaskSection.UPCOMING,
-                        isTonight = false,
+                        start = 1,
+                        status = 0,
                         dueDate = thurStart,
-                        tags = listOf("Personal"),
-                        priority = 0
+                        priority = 1
                     )
 
-                    val signedContract = Task(
+                    val signedContract = Item(
                         id = "seed_signed_contract",
+                        type = 0,
                         title = "Get copy of signed contract",
                         notes = "Check compliance system",
-                        section = TaskSection.UPCOMING,
-                        isTonight = false,
+                        start = 1,
+                        status = 0,
                         dueDate = thurStart,
-                        tags = listOf("Onboard James"),
-                        projectId = "onboard_proj"
+                        projectId = "work_proj"
                     )
 
                     repository.insertTasks(listOf(prepareQuestions, reserveDinner, movieTickets, signedContract))
-                    
-                    // Также синхронизируем демонстрационный календарь
                     syncLocalCalendar()
                 }
             } catch (e: Exception) {
@@ -103,48 +125,57 @@ class ThingsViewModel(private val repository: TaskRepository) : ViewModel() {
         }
     }
 
-    val calendarEvents = MutableStateFlow<List<Task>>(emptyList())
+    val calendarEvents = MutableStateFlow<List<Item>>(emptyList())
 
-    // Main streams from database
-    val tasks: StateFlow<List<Task>> = repository.allTasks
+    val tasks: StateFlow<List<Item>> = repository.allTasks
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
 
-    val projects: StateFlow<List<Project>> = repository.allProjects
+    val projects: StateFlow<List<Item>> = repository.allProjects
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
 
-    // UI filtering states
+    val areas: StateFlow<List<Area>> = repository.allAreas
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
+
     val searchQuery = MutableStateFlow("")
     val selectedTagFilter = MutableStateFlow<String?>(null)
 
-    // Syncing states
     val isSyncing = MutableStateFlow(false)
     val syncError = MutableStateFlow<String?>(null)
     val googleAccessToken = MutableStateFlow("")
 
-    // Filtered tasks mapping
-    val filteredTasks: StateFlow<List<Task>> = combine(
+    val filteredTasks: StateFlow<List<Item>> = combine(
         tasks,
         searchQuery,
         selectedTagFilter
-    ) { taskList, query, tag ->
-        taskList.filter { task ->
+    ) { itemList, query, tag ->
+        itemList.filter { item ->
             val matchesQuery = query.isEmpty() ||
-                    task.title.contains(query, ignoreCase = true) ||
-                    task.notes.contains(query, ignoreCase = true)
+                    item.title.contains(query, ignoreCase = true) ||
+                    item.notes.contains(query, ignoreCase = true)
             
-            val matchesTag = tag == null || task.tags.contains(tag)
+            val matchesTag = tag == null || item.cachedTags.contains(tag, ignoreCase = true)
             
             matchesQuery && matchesTag
         }
     }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
 
-    // Aggregated tags across all active tasks for filtering
     val allTags: StateFlow<Set<String>> = tasks
         .combine(searchQuery) { taskList, _ ->
-            taskList.flatMap { it.tags }.filter { it.isNotBlank() }.toSet()
+            taskList.flatMap { item ->
+                if (item.cachedTags.isBlank()) emptyList() else item.cachedTags.split(", ").map { it.trim() }
+            }.filter { it.isNotBlank() }.toSet()
         }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptySet())
 
-    // UI actions
+    private fun sectionToStartValue(section: TaskSection): Int {
+        return when (section) {
+            TaskSection.INBOX -> 0
+            TaskSection.TODAY -> 1
+            TaskSection.ANYTIME -> 2
+            TaskSection.SOMEDAY -> 3
+            TaskSection.UPCOMING -> 2 // standard fallback
+        }
+    }
+
     fun addTask(
         title: String,
         notes: String = "",
@@ -153,101 +184,136 @@ class ThingsViewModel(private val repository: TaskRepository) : ViewModel() {
         dueDate: Long? = null,
         tags: List<String> = emptyList(),
         projectId: String? = null,
-        checklist: List<ChecklistItem> = emptyList()
+        checklist: List<ChecklistItem> = emptyList(),
+        priority: Int = 0
     ) {
         viewModelScope.launch {
-            val task = Task(
+            val itemId = UUID.randomUUID().toString()
+            val cleanTags = tags.map { it.trim() }.filter { it.isNotEmpty() }
+            val item = Item(
+                id = itemId,
+                type = 0,
                 title = title.ifBlank { "Untitled To-Do" },
                 notes = notes,
-                section = section,
+                start = sectionToStartValue(section),
                 isTonight = isTonight,
                 dueDate = dueDate,
-                tags = tags.map { it.trim() }.filter { it.isNotEmpty() },
                 projectId = projectId,
-                checklist = checklist
+                priority = priority
             )
-            repository.insertTask(task)
+            repository.insertTask(item)
+
+            if (cleanTags.isNotEmpty()) {
+                val tagList = cleanTags.map { Tag(title = it) }
+                for (t in tagList) {
+                    repository.insertTag(t)
+                }
+                repository.updateItemTags(itemId, tagList)
+            }
+            if (checklist.isNotEmpty()) {
+                val listEntities = checklist.map { it.copy(itemId = itemId) }
+                repository.updateChecklistItems(itemId, listEntities)
+            }
         }
     }
 
-    fun updateTask(task: Task) {
+    fun updateChecklistItems(itemId: String, list: List<ChecklistItem>) {
         viewModelScope.launch {
-            repository.insertTask(task)
+            repository.updateChecklistItems(itemId, list)
         }
     }
 
-    fun updateTasks(tasks: List<Task>) {
+    fun updateTask(item: Item) {
         viewModelScope.launch {
-            repository.insertTasks(tasks)
+            repository.insertTask(item)
         }
     }
 
-    fun toggleTaskCompletion(task: Task) {
+    fun updateTasks(items: List<Item>) {
         viewModelScope.launch {
-            val isCompleting = !task.isCompleted
-            val updated = task.copy(
-                isCompleted = isCompleting,
+            repository.insertTasks(items)
+        }
+    }
+
+    fun toggleTaskCompletion(item: Item) {
+        viewModelScope.launch {
+            val isCompleting = !item.isCompleted
+            val updated = item.copy(
+                status = if (isCompleting) 3 else 0,
                 completedDate = if (isCompleting) System.currentTimeMillis() else null
             )
             repository.insertTask(updated)
         }
     }
 
-    fun toggleChecklistItem(task: Task, itemId: String) {
+    fun toggleChecklistItem(item: Item, itemId: String) {
         viewModelScope.launch {
-            val updatedChecklist = task.checklist.map { item ->
-                if (item.id == itemId) item.copy(isCompleted = !item.isCompleted) else item
+            val updatedChecklist = item.checklist.map {
+                if (it.id == itemId) it.copy(isCompleted = !it.isCompleted) else it
             }
-            repository.insertTask(task.copy(checklist = updatedChecklist))
+            repository.updateChecklistItems(item.id, updatedChecklist)
         }
     }
 
-    fun addChecklistItemToTask(task: Task, title: String) {
+    fun addChecklistItemToTask(item: Item, title: String) {
         if (title.isBlank()) return
         viewModelScope.launch {
-            val updatedChecklist = task.checklist + ChecklistItem(title = title)
-            repository.insertTask(task.copy(checklist = updatedChecklist))
+            val updatedChecklist = item.checklist + ChecklistItem(itemId = item.id, title = title)
+            repository.updateChecklistItems(item.id, updatedChecklist)
         }
     }
 
-    fun deleteChecklistItemFromTask(task: Task, itemId: String) {
+    fun deleteChecklistItemFromTask(item: Item, itemId: String) {
         viewModelScope.launch {
-            val updatedChecklist = task.checklist.filter { it.id != itemId }
-            repository.insertTask(task.copy(checklist = updatedChecklist))
+            val updatedChecklist = item.checklist.filter { it.id != itemId }
+            repository.updateChecklistItems(item.id, updatedChecklist)
         }
     }
 
-    fun deleteTask(task: Task) {
+    fun deleteTask(item: Item) {
         viewModelScope.launch {
-            repository.deleteTask(task)
+            repository.deleteTask(item)
         }
     }
 
-    // Project Actions
-    fun addProject(name: String, notes: String = "") {
+    // Projects Actions
+    fun addProject(name: String, notes: String = "", areaId: String? = null) {
         viewModelScope.launch {
-            val project = Project(
-                name = name.ifBlank { "New Project" },
-                notes = notes
+            val project = Item(
+                type = 1,
+                title = name.ifBlank { "New Project" },
+                notes = notes,
+                areaId = areaId
             )
             repository.insertProject(project)
         }
     }
 
-    fun updateProject(project: Project) {
+    fun updateProject(project: Item) {
         viewModelScope.launch {
             repository.insertProject(project)
         }
     }
 
-    fun deleteProject(project: Project) {
+    fun deleteProject(project: Item) {
         viewModelScope.launch {
-            // Unlink all tasks under this project
-            val relatedTasks = tasks.value.filter { it.projectId == project.id }
-            relatedTasks.forEach { task ->
-                repository.insertTask(task.copy(projectId = null))
-            }
             repository.deleteProject(project)
+        }
+    }
+
+    // Areas Actions
+    fun addArea(title: String) {
+        viewModelScope.launch {
+            if (title.isNotBlank()) {
+                val area = Area(title = title)
+                repository.insertArea(area)
+            }
+        }
+    }
+
+    fun deleteArea(area: Area) {
+        viewModelScope.launch {
+            repository.deleteArea(area)
         }
     }
 
@@ -296,7 +362,6 @@ class ThingsViewModel(private val repository: TaskRepository) : ViewModel() {
         selectedTagFilter.value = tag
     }
 
-    // Factory Class for construction
     class Factory(private val repository: TaskRepository) : ViewModelProvider.Factory {
         @Suppress("UNCHECKED_CAST")
         override fun <T : ViewModel> create(modelClass: Class<T>): T {
