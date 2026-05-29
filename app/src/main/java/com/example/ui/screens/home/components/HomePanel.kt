@@ -60,6 +60,10 @@ fun ThingsHomePanel(
     val inboxCount = allTasks.count { it.type == 0 && it.start == 0 && !it.isCompleted }
     val todayCount = allTasks.count { it.type == 0 && it.start == 1 && !it.isCompleted }
 
+    val tasksByProject = remember(allTasks) {
+        allTasks.groupBy { it.projectId }
+    }
+
     val expandedStates = remember { mutableStateMapOf<String, Boolean>() }
     
     LaunchedEffect(areas) {
@@ -242,48 +246,87 @@ fun ThingsHomePanel(
         }
 
         // Two-level Areas & Projects tree
-        if (areas.isEmpty() && projects.isEmpty()) {
+        val noAreaProjects = projects.filter { it.areaId == null }
+
+        // Render projects without area first, as standalone items
+        noAreaProjects.forEach { project ->
             item {
-                Box(
+                val projectTasks = tasksByProject[project.id] ?: emptyList()
+                val completedCount = projectTasks.count { it.isCompleted }
+                val totalCount = projectTasks.size
+
+                Row(
                     modifier = Modifier
                         .fillMaxWidth()
-                        .padding(vertical = 12.dp),
-                    contentAlignment = Alignment.Center
+                        .clip(RoundedCornerShape(10.dp))
+                        .clickable { onProjectClick(project) }
+                        .padding(vertical = 6.dp, horizontal = 6.dp),
+                    verticalAlignment = Alignment.CenterVertically
                 ) {
-                    Text("No areas or custom projects created.", color = textSecondaryColor, fontSize = 13.sp)
+                    ProjectProgressArc(
+                        completed = completedCount,
+                        total = totalCount,
+                        modifier = Modifier.size(22.dp)
+                    )
+                    Spacer(modifier = Modifier.width(7.dp))
+                    Text(
+                        text = project.title,
+                        style = MaterialTheme.typography.displaySmall.copy(
+                            color = textPrimaryColor,
+                            fontWeight = FontWeight.Normal
+                        ),
+                        modifier = Modifier.weight(1f),
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis
+                    )
                 }
             }
-        } else {
-            // Render Areas first
-            areas.forEach { area ->
-                item {
-                    val isExpanded = expandedStates[area.id] ?: true
-                    Column(modifier = Modifier.fillMaxWidth()) {
-                        // [ИЗМЕНЕНИЕ]: Заголовок области styled identically to SmartListRow
-                        // Клик по области открывает экран AreaDetail, а клик по IconButton со стрелкой разворачивает проекты
-                        Row(
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .clip(RoundedCornerShape(10.dp))
-                                .clickable { onAreaClick(area) }
-                                .padding(vertical = 2.dp, horizontal = 6.dp),
-                            verticalAlignment = Alignment.CenterVertically
-                        ) {
-                            Icon(
-                                imageVector = Icons.Outlined.Layers,
-                                contentDescription = area.title,
-                                tint = textSecondaryColor,
-                                modifier = Modifier.size(22.dp)
-                            )
-                            Spacer(modifier = Modifier.width(7.dp))
-                            Text(
-                                text = area.title,
-                                style = MaterialTheme.typography.displaySmall.copy(
-                                    color = textPrimaryColor,
-                                    fontWeight = FontWeight.Bold
-                                ),
-                                modifier = Modifier.weight(1f)
-                            )
+        }
+
+        // Add a visual divider between standalone projects and subsequent area headers if both exist
+        if (noAreaProjects.isNotEmpty() && areas.isNotEmpty()) {
+            item {
+                HorizontalDivider(
+                    color = dividerColor,
+                    modifier = Modifier.padding(vertical = 8.dp)
+                )
+            }
+        }
+
+        // Render Areas
+        areas.forEach { area ->
+            val areaProjects = projects.filter { it.areaId == area.id }
+            val hasProjects = areaProjects.isNotEmpty()
+
+            item {
+                val isExpanded = expandedStates[area.id] ?: true
+                Column(modifier = Modifier.fillMaxWidth()) {
+                    // Title block for Area
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .clip(RoundedCornerShape(10.dp))
+                            .clickable { onAreaClick(area) }
+                            .padding(vertical = 2.dp, horizontal = 6.dp),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Icon(
+                            imageVector = Icons.Outlined.Layers,
+                            contentDescription = area.title,
+                            tint = textSecondaryColor,
+                            modifier = Modifier.size(22.dp)
+                        )
+                        Spacer(modifier = Modifier.width(7.dp))
+                        // [ИЗМЕНЕНИЕ]: Убрано переопределение fontWeight = FontWeight.Bold, чтобы начертание автоматически унаследовалось из базовой темы (FontWeight.Medium)
+                        Text(
+                            text = area.title,
+                            style = MaterialTheme.typography.displaySmall.copy(
+                                color = textPrimaryColor
+                            ),
+                            modifier = Modifier.weight(1f)
+                        )
+                        // [ИЗМЕНЕНИЕ]: Если в области есть проекты, показываем кнопку раскрытия. Иначе отображаем Spacer(44.dp) для сохранения выравнивания.
+                        if (hasProjects) {
                             IconButton(
                                 onClick = { expandedStates[area.id] = !isExpanded },
                                 modifier = Modifier.size(44.dp)
@@ -295,137 +338,48 @@ fun ThingsHomePanel(
                                     modifier = Modifier.size(22.dp)
                                 )
                             }
-                        }
-
-                        // Child Projects Nested under Area
-                        if (isExpanded) {
-                            val areaProjects = projects.filter { it.areaId == area.id }
-                            if (areaProjects.isEmpty()) {
-                                Text(
-                                    "No projects in this area",
-                                    color = textSecondaryColor.copy(alpha = 0.4f),
-                                    fontSize = 12.sp,
-                                    modifier = Modifier.padding(start = 30.dp, bottom = 8.dp)
-                                )
-                            } else {
-                                Column(
-                                    modifier = Modifier
-                                        .fillMaxWidth()
-                                        .padding(start = 0.dp),
-                                    verticalArrangement = Arrangement.spacedBy(10.dp)
-                                ) {
-                                    areaProjects.forEach { project ->
-                                        val projectTasks = allTasks.filter { it.projectId == project.id }
-                                        val completedCount = projectTasks.count { it.isCompleted }
-                                        val totalCount = projectTasks.size
-
-                                        Row(
-                                            modifier = Modifier
-                                                .fillMaxWidth()
-                                                .clip(RoundedCornerShape(10.dp))
-                                                .clickable { onProjectClick(project) }
-                                                .padding(vertical = 6.dp, horizontal = 6.dp),
-                                            verticalAlignment = Alignment.CenterVertically
-                                        ) {
-                                            ProjectProgressArc(
-                                                completed = completedCount,
-                                                total = totalCount,
-                                                modifier = Modifier.size(22.dp)
-                                            )
-                                            Spacer(modifier = Modifier.width(7.dp))
-                                            Text(
-                                                text = project.title,
-                                                style = MaterialTheme.typography.displaySmall.copy(
-                                                    color = textPrimaryColor,
-                                                    fontWeight = FontWeight.Normal
-                                                ),
-                                                modifier = Modifier.weight(1f),
-                                                maxLines = 1,
-                                                overflow = TextOverflow.Ellipsis
-                                            )
-                                        }
-                                    }
-                                }
-                            }
+                        } else {
+                            Spacer(modifier = Modifier.width(44.dp))
                         }
                     }
-                }
-            }
 
-            // Projects with "No Area" (Без области)
-            val noAreaProjects = projects.filter { it.areaId == null }
-            if (noAreaProjects.isNotEmpty()) {
-                item {
-                    val isExpanded = expandedStates["no_area"] ?: true
-                    Column(modifier = Modifier.fillMaxWidth().padding(top = 12.dp)) {
-                        Row(
+                    // [ИЗМЕНЕНИЕ]: Дочерние проекты отображаются только если область раскрыта и в ней действительно есть проекты (без заглушек вроде "No projects")
+                    if (isExpanded && hasProjects) {
+                        Column(
                             modifier = Modifier
                                 .fillMaxWidth()
-                                .clip(RoundedCornerShape(10.dp))
-                                .clickable { expandedStates["no_area"] = !isExpanded }
-                                .padding(vertical = 6.dp, horizontal = 6.dp),
-                            verticalAlignment = Alignment.CenterVertically
+                                .padding(start = 0.dp),
+                            verticalArrangement = Arrangement.spacedBy(10.dp)
                         ) {
-                            Icon(
-                                imageVector = Icons.Outlined.Layers,
-                                contentDescription = "Без области",
-                                tint = textSecondaryColor,
-                                modifier = Modifier.size(22.dp)
-                            )
-                            Spacer(modifier = Modifier.width(7.dp))
-                            Text(
-                                text = "Без области",
-                                style = MaterialTheme.typography.displaySmall.copy(
-                                    color = textPrimaryColor,
-                                    fontWeight = FontWeight.Bold
-                                ),
-                                modifier = Modifier.weight(1f)
-                            )
-                            Icon(
-                                imageVector = if (isExpanded) Icons.Default.KeyboardArrowDown else Icons.Default.KeyboardArrowRight,
-                                contentDescription = "Toggle",
-                                tint = textSecondaryColor,
-                                modifier = Modifier.size(22.dp)
-                            )
-                        }
+                            areaProjects.forEach { project ->
+                                val projectTasks = tasksByProject[project.id] ?: emptyList()
+                                val completedCount = projectTasks.count { it.isCompleted }
+                                val totalCount = projectTasks.size
 
-                        if (isExpanded) {
-                            Column(
-                                modifier = Modifier
-                                    .fillMaxWidth()
-                                    .padding(start = 0.dp),
-                                verticalArrangement = Arrangement.spacedBy(10.dp)
-                            ) {
-                                noAreaProjects.forEach { project ->
-                                    val projectTasks = allTasks.filter { it.projectId == project.id }
-                                    val completedCount = projectTasks.count { it.isCompleted }
-                                    val totalCount = projectTasks.size
-
-                                    Row(
-                                        modifier = Modifier
-                                            .fillMaxWidth()
-                                            .clip(RoundedCornerShape(10.dp))
-                                            .clickable { onProjectClick(project) }
-                                            .padding(vertical = 6.dp, horizontal = 6.dp),
-                                        verticalAlignment = Alignment.CenterVertically
-                                    ) {
-                                        ProjectProgressArc(
-                                            completed = completedCount,
-                                            total = totalCount,
-                                            modifier = Modifier.size(22.dp)
-                                        )
-                                        Spacer(modifier = Modifier.width(7.dp))
-                                        Text(
-                                            text = project.title,
-                                            style = MaterialTheme.typography.displaySmall.copy(
-                                                color = textPrimaryColor,
-                                                fontWeight = FontWeight.Normal
-                                            ),
-                                            modifier = Modifier.weight(1f),
-                                            maxLines = 1,
-                                            overflow = TextOverflow.Ellipsis
-                                        )
-                                    }
+                                Row(
+                                    modifier = Modifier
+                                        .fillMaxWidth()
+                                        .clip(RoundedCornerShape(10.dp))
+                                        .clickable { onProjectClick(project) }
+                                        .padding(vertical = 6.dp, horizontal = 6.dp),
+                                    verticalAlignment = Alignment.CenterVertically
+                                ) {
+                                    ProjectProgressArc(
+                                        completed = completedCount,
+                                        total = totalCount,
+                                        modifier = Modifier.size(22.dp)
+                                    )
+                                    Spacer(modifier = Modifier.width(7.dp))
+                                    Text(
+                                        text = project.title,
+                                        style = MaterialTheme.typography.displaySmall.copy(
+                                            color = textPrimaryColor,
+                                            fontWeight = FontWeight.Normal
+                                        ),
+                                        modifier = Modifier.weight(1f),
+                                        maxLines = 1,
+                                        overflow = TextOverflow.Ellipsis
+                                    )
                                 }
                             }
                         }
