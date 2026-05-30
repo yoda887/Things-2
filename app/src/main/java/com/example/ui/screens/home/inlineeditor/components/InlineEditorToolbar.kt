@@ -28,7 +28,7 @@ import java.util.*
 
 @Composable
 fun InlineEditorToolbar(
-    dueDate: Long?,
+    startDate: Long?,
     section: TaskSection,
     isTonight: Boolean,
     onShowWhenDialogChange: (Boolean) -> Unit,
@@ -50,33 +50,33 @@ fun InlineEditorToolbar(
         modifier = Modifier.fillMaxWidth(),
         verticalAlignment = Alignment.CenterVertically
     ) {
-        val hasActiveDate = dueDate != null || section == TaskSection.TODAY || section == TaskSection.SOMEDAY
+        val hasActiveDate = startDate != null || section == TaskSection.TODAY || section == TaskSection.SOMEDAY
         if (hasActiveDate) {
             val activeDateLabel = when {
-                dueDate != null && isTodayDate(dueDate) -> {
+                startDate != null && isTodayDate(startDate) -> {
                     if (isTonight) "This Evening" else "Today"
                 }
-                dueDate == null && section == TaskSection.TODAY -> {
+                startDate == null && section == TaskSection.TODAY -> {
                     if (isTonight) "This Evening" else "Today"
                 }
                 section == TaskSection.SOMEDAY -> "Someday"
                 else -> {
-                    val targetCal = Calendar.getInstance().apply { timeInMillis = dueDate!! }
+                    val targetCal = Calendar.getInstance().apply { timeInMillis = startDate!! }
                     val currentYear = Calendar.getInstance().get(Calendar.YEAR)
                     val formatPattern = if (targetCal.get(Calendar.YEAR) == currentYear) {
                         "EEE, MMM d"
                     } else {
                         "EEE, MMM d, yyyy"
                     }
-                    SimpleDateFormat(formatPattern, Locale.US).format(Date(dueDate!!))
+                    SimpleDateFormat(formatPattern, Locale.US).format(Date(startDate!!))
                 }
             }
 
             val activeDateIcon = when {
-                dueDate != null && isTodayDate(dueDate) -> {
+                startDate != null && isTodayDate(startDate) -> {
                     if (isTonight) Icons.Outlined.Brightness3 else Icons.Default.Star
                 }
-                dueDate == null && section == TaskSection.TODAY -> {
+                startDate == null && section == TaskSection.TODAY -> {
                     if (isTonight) Icons.Outlined.Brightness3 else Icons.Default.Star
                 }
                 section == TaskSection.SOMEDAY -> Icons.Outlined.Archive
@@ -84,10 +84,10 @@ fun InlineEditorToolbar(
             }
 
             val activeDateColor = when {
-                dueDate != null && isTodayDate(dueDate) -> {
+                startDate != null && isTodayDate(startDate) -> {
                     if (isTonight) ThingsBlue else ThingsTodayStar
                 }
-                dueDate == null && section == TaskSection.TODAY -> {
+                startDate == null && section == TaskSection.TODAY -> {
                     if (isTonight) ThingsBlue else ThingsTodayStar
                 }
                 section == TaskSection.SOMEDAY -> ThingsSomedayGrey

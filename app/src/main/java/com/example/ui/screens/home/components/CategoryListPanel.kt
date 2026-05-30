@@ -171,18 +171,18 @@ fun ThingsCategoryListPanel(
     val listTasks = remember(tasks, screen, project, area) {
         tasks.filter { task ->
             when (screen) {
-                ActiveScreen.INBOX -> task.section == TaskSection.INBOX && !task.isCompleted
-                ActiveScreen.TODAY -> task.section == TaskSection.TODAY && !task.isCompleted
-                ActiveScreen.UPCOMING -> task.section == TaskSection.UPCOMING && !task.isCompleted
-                ActiveScreen.ANYTIME -> task.section == TaskSection.ANYTIME && !task.isCompleted
-                ActiveScreen.SOMEDAY -> task.section == TaskSection.SOMEDAY && !task.isCompleted
+                ActiveScreen.INBOX -> task.isInbox && !task.isCompleted
+                ActiveScreen.TODAY -> task.isToday
+                ActiveScreen.UPCOMING -> task.isUpcoming
+                ActiveScreen.ANYTIME -> task.isAnytime
+                ActiveScreen.SOMEDAY -> task.isSomeday
                 ActiveScreen.LOGBOOK -> task.isCompleted
                 ActiveScreen.PROJECT_DETAIL -> task.projectId == project?.id && !task.isCompleted
                 // [ИЗМЕНЕНИЕ]: Фильтруем строго по типу задачи (task.type == 0), чтобы проекты не дублировались и не вызывали ошибку duplicate key
                 ActiveScreen.AREA_DETAIL -> task.areaId == area?.id && task.type == 0 && !task.isCompleted
                 else -> false
             }
-        }.sortedBy { it.creationDate }
+        }.sortedBy { it.sortOrder }
     }
 
     val calendarEvents by viewModel.calendarEvents.collectAsState()
@@ -248,11 +248,7 @@ fun ThingsCategoryListPanel(
             
             // Находим все задачи на этот день
             val dayTasks = localTasksList.filter { task ->
-                if (task.dueDate == null) {
-                    offset == 0
-                } else {
-                    task.dueDate in dayStart..dayEnd
-                }
+                task.startDate != null && task.startDate in dayStart..dayEnd
             }
             
             if (dayEvents.isNotEmpty() || dayTasks.isNotEmpty()) {
@@ -284,7 +280,7 @@ fun ThingsCategoryListPanel(
     }
 
     val makeDragModifier = { task: Item ->
-        Modifier.pointerInput(task.id, task.creationDate) {
+        Modifier.pointerInput(task.id, task.sortOrder) {
             detectDragGesturesAfterLongPress(
                 onDragStart = {
                     draggedTaskId = task.id
@@ -383,10 +379,10 @@ fun ThingsCategoryListPanel(
                                     
                                     val tomorrowStart = upcomingDays.firstOrNull()?.dateMillis ?: 0L
                                     
-                                    val isCurrentlyInHoveredDay = if (movedItem.dueDate == null) {
+                                    val isCurrentlyInHoveredDay = if (movedItem.startDate == null) {
                                         timestamp == tomorrowStart
                                     } else {
-                                        movedItem.dueDate!! in timestamp..(timestamp + 24 * 3600 * 1000 - 1)
+                                        movedItem.startDate!! in timestamp..(timestamp + 24 * 3600 * 1000 - 1)
                                     }
                                     
                                     var targetTimestamp = if (isCurrentlyInHoveredDay && draggedItemInfo.offset > hoveredItem.offset) {
@@ -404,13 +400,13 @@ fun ThingsCategoryListPanel(
                                         set(Calendar.HOUR_OF_DAY, 12)
                                         set(Calendar.MINUTE, 0)
                                     }
-                                    val newDueDate = cal.timeInMillis
+                                    val newStartDate = cal.timeInMillis
                                     
-                                    val oldDueDateDayStart = if (movedItem.dueDate == null) {
+                                    val oldStartDateDayStart = if (movedItem.startDate == null) {
                                         tomorrowStart
                                     } else {
                                         Calendar.getInstance().apply {
-                                            timeInMillis = movedItem.dueDate!!
+                                            timeInMillis = movedItem.startDate!!
                                             set(Calendar.HOUR_OF_DAY, 0)
                                             set(Calendar.MINUTE, 0)
                                             set(Calendar.SECOND, 0)
@@ -426,10 +422,10 @@ fun ThingsCategoryListPanel(
                                         set(Calendar.MILLISECOND, 0)
                                     }.timeInMillis
                                     
-                                    if (oldDueDateDayStart != targetDayStart) {
-                                        movedItem = movedItem.copy(dueDate = newDueDate)
+                                    if (oldStartDateDayStart != targetDayStart) {
+                                        movedItem = movedItem.copy(startDate = newStartDate)
                                         
-                                        var toIndex = newList.indexOfFirst { it.dueDate != null && it.dueDate >= targetDayStart }
+                                        var toIndex = newList.indexOfFirst { it.startDate != null && it.startDate >= targetDayStart }
                                         if (toIndex == -1) {
                                             toIndex = newList.size
                                         }
@@ -455,8 +451,8 @@ fun ThingsCategoryListPanel(
                                         if (hoveredItemTask.isTonight != movedItem.isTonight) {
                                             movedItem = movedItem.copy(isTonight = hoveredItemTask.isTonight)
                                         }
-                                        if (screen == ActiveScreen.UPCOMING && movedItem.dueDate != hoveredItemTask.dueDate) {
-                                            movedItem = movedItem.copy(dueDate = hoveredItemTask.dueDate)
+                                        if (screen == ActiveScreen.UPCOMING && movedItem.startDate != hoveredItemTask.startDate) {
+                                            movedItem = movedItem.copy(startDate = hoveredItemTask.startDate)
                                         }
                                     }
                                     
@@ -475,13 +471,17 @@ fun ThingsCategoryListPanel(
                     }
                 },
                 onDragEnd = {
-                    val baseTime = System.currentTimeMillis() - localTasksList.size * 1000L
                     val updatedList = localTasksList.mapIndexed { index, t ->
-                        val newTime = baseTime + index * 1000L
-                        t.copy(creationDate = newTime)
+                        val original = filteredTasks.firstOrNull { it.id == t.id }
+                        if (original != null && (original.sortOrder != index || original.isTonight != t.isTonight || original.startDate != t.startDate)) {
+                            t.copy(sortOrder = index, modificationDate = System.currentTimeMillis())
+                        } else {
+                            t.copy(sortOrder = index)
+                        }
                     }
                     val changedTasks = updatedList.filter { t ->
-                        t != filteredTasks.firstOrNull { it.id == t.id }
+                        val original = filteredTasks.firstOrNull { it.id == t.id }
+                        original == null || original.sortOrder != t.sortOrder || original.isTonight != t.isTonight || original.startDate != t.startDate
                     }
                     localTasksList = updatedList
                     if (changedTasks.isNotEmpty()) {
@@ -888,7 +888,7 @@ fun ThingsCategoryListPanel(
                                     ThingsTaskInlineEditor(
                                         task = task,
                                         projects = projects,
-                                        onSave = { title, notes, section, isTonight, dueDate, tags, projectId, checklist, priority ->
+                                        onSave = { title, notes, section, isTonight, startDate, tags, projectId, checklist, priority ->
                                             val startVal = when (section) {
                                                 TaskSection.INBOX -> 0
                                                 TaskSection.TODAY -> 1
@@ -901,7 +901,7 @@ fun ThingsCategoryListPanel(
                                                 notes = notes,
                                                 start = startVal,
                                                 isTonight = isTonight,
-                                                dueDate = dueDate,
+                                                startDate = startDate,
                                                 cachedTags = tags.joinToString(", "),
                                                 projectId = projectId,
                                                 priority = priority

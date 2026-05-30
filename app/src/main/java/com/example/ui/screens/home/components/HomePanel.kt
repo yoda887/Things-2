@@ -57,8 +57,8 @@ fun ThingsHomePanel(
     var rawTokenInput by remember { mutableStateOf(googleToken) }
     var isSyncConfigExpanded by remember { mutableStateOf(false) }
 
-    val inboxCount = allTasks.count { it.type == 0 && it.start == 0 && !it.isCompleted }
-    val todayCount = allTasks.count { it.type == 0 && it.start == 1 && !it.isCompleted }
+    val inboxCount = allTasks.count { it.isInbox && !it.isCompleted }
+    val todayCount = allTasks.count { it.isToday }
 
     val tasksByProject = remember(allTasks) {
         allTasks.groupBy { it.projectId }

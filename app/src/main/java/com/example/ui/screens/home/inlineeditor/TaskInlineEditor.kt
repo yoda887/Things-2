@@ -31,7 +31,7 @@ fun ThingsTaskInlineEditor(
         notes: String,
         section: TaskSection,
         isTonight: Boolean,
-        dueDate: Long?,
+        startDate: Long?,
         tags: List<String>,
         projectId: String?,
         checklist: List<ChecklistItem>,
@@ -44,7 +44,7 @@ fun ThingsTaskInlineEditor(
     var notes by remember { mutableStateOf<String>(task.notes) }
     var section by remember { mutableStateOf<TaskSection>(task.section) }
     var isTonight by remember { mutableStateOf<Boolean>(task.isTonight) }
-    var dueDate by remember { mutableStateOf<Long?>(task.dueDate) }
+    var startDate by remember { mutableStateOf<Long?>(task.startDate) }
     var tagInput by remember { mutableStateOf<String>(task.tags.joinToString(", ")) }
     var checklist by remember { mutableStateOf<List<ChecklistItem>>(task.checklist) }
     var priority by remember { mutableStateOf<Int>(task.priority) }
@@ -63,7 +63,7 @@ fun ThingsTaskInlineEditor(
     val currentNotes by rememberUpdatedState(notes)
     val currentSection by rememberUpdatedState(section)
     val currentIsTonight by rememberUpdatedState(isTonight)
-    val currentDueDate by rememberUpdatedState(dueDate)
+    val currentStartDate by rememberUpdatedState(startDate)
     val currentTagInput by rememberUpdatedState(tagInput)
     val currentChecklist by rememberUpdatedState(checklist)
     val currentPriority by rememberUpdatedState(priority)
@@ -84,7 +84,7 @@ fun ThingsTaskInlineEditor(
                         currentNotes,
                         currentSection,
                         currentIsTonight,
-                        currentDueDate,
+                        currentStartDate,
                         tagList,
                         task.projectId, // preserve original project
                         currentChecklist,
@@ -130,7 +130,7 @@ fun ThingsTaskInlineEditor(
                             notes,
                             section,
                             isTonight,
-                            dueDate,
+                            startDate,
                             tagList,
                             task.projectId,
                             checklist,
@@ -170,7 +170,7 @@ fun ThingsTaskInlineEditor(
 
             // Bottom Actions & Toolbar matching the image closely
             InlineEditorToolbar(
-                dueDate = dueDate,
+                startDate = startDate,
                 section = section,
                 isTonight = isTonight,
                 onShowWhenDialogChange = { showWhenDialog = it },
@@ -231,7 +231,7 @@ fun ThingsTaskInlineEditor(
                                     notes,
                                     section,
                                     isTonight,
-                                    dueDate,
+                                    startDate,
                                     tagList,
                                     task.projectId,
                                     checklist,
@@ -247,15 +247,15 @@ fun ThingsTaskInlineEditor(
     }
 
     if (showWhenDialog) {
-        ThingsWhenDialog(
-            dueDate = dueDate,
-            onDueDateChange = { dueDate = it },
-            section = section,
-            onSectionChange = { section = it },
-            isTonight = isTonight,
-            onIsTonightChange = { isTonight = it },
-            onShowCalendarHelperChange = { showCalendarHelper = it },
-            onDismissRequest = { showWhenDialog = false }
-        )
-    }
+         ThingsWhenDialog(
+             startDate = startDate,
+             onStartDateChange = { startDate = it },
+             section = section,
+             onSectionChange = { section = it },
+             isTonight = isTonight,
+             onIsTonightChange = { isTonight = it },
+             onShowCalendarHelperChange = { showCalendarHelper = it },
+             onDismissRequest = { showWhenDialog = false }
+         )
+     }
 }

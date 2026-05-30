@@ -45,8 +45,8 @@ sealed class CalendarCell {
 
 @Composable
 fun ThingsWhenDialog(
-    dueDate: Long?,
-    onDueDateChange: (Long?) -> Unit,
+    startDate: Long?,
+    onStartDateChange: (Long?) -> Unit,
     section: TaskSection,
     onSectionChange: (TaskSection) -> Unit,
     isTonight: Boolean,
@@ -64,9 +64,9 @@ fun ThingsWhenDialog(
             set(Calendar.SECOND, 0)
             set(Calendar.MILLISECOND, 0)
         }
-        if (dueDate != null && section == TaskSection.UPCOMING) {
+        if (startDate != null && section == TaskSection.UPCOMING) {
             val targetStartSunday = Calendar.getInstance().apply {
-                timeInMillis = dueDate
+                timeInMillis = startDate
                 set(Calendar.DAY_OF_WEEK, Calendar.SUNDAY)
                 set(Calendar.HOUR_OF_DAY, 0)
                 set(Calendar.MINUTE, 0)
@@ -88,9 +88,9 @@ fun ThingsWhenDialog(
         }
     }
 
-    val isTodayActive = dueDate != null && isTodayDate(dueDate) && section == TaskSection.TODAY && !isTonight
-    val isThisEveningActive = dueDate != null && isTodayDate(dueDate) && section == TaskSection.TODAY && isTonight
-    val isSomedayActive = dueDate == null && section == TaskSection.SOMEDAY
+    val isTodayActive = startDate != null && isTodayDate(startDate) && section == TaskSection.TODAY && !isTonight
+    val isThisEveningActive = startDate != null && isTodayDate(startDate) && section == TaskSection.TODAY && isTonight
+    val isSomedayActive = startDate == null && section == TaskSection.SOMEDAY
 
     val titleFontSize = MaterialTheme.typography.headlineSmall.fontSize
     val notesFontSize = MaterialTheme.typography.titleSmall.fontSize
@@ -149,12 +149,12 @@ fun ThingsWhenDialog(
                         .clip(RoundedCornerShape(8.dp))
                         .clickable {
                             if (isTodayActive) {
-                                onDueDateChange(null)
+                                onStartDateChange(null)
                                 onSectionChange(TaskSection.ANYTIME)
                                 onIsTonightChange(false)
                                 onShowCalendarHelperChange(false)
                             } else {
-                                onDueDateChange(System.currentTimeMillis())
+                                onStartDateChange(System.currentTimeMillis())
                                 onSectionChange(TaskSection.TODAY)
                                 onIsTonightChange(false)
                                 onShowCalendarHelperChange(true)
@@ -195,12 +195,12 @@ fun ThingsWhenDialog(
                         .clip(RoundedCornerShape(8.dp))
                         .clickable {
                             if (isThisEveningActive) {
-                                onDueDateChange(null)
+                                onStartDateChange(null)
                                 onSectionChange(TaskSection.ANYTIME)
                                 onIsTonightChange(false)
                                 onShowCalendarHelperChange(false)
                             } else {
-                                onDueDateChange(System.currentTimeMillis())
+                                onStartDateChange(System.currentTimeMillis())
                                 onSectionChange(TaskSection.TODAY)
                                 onIsTonightChange(true)
                                 onShowCalendarHelperChange(true)
@@ -355,7 +355,7 @@ fun ThingsWhenDialog(
                                         )
                                     }
                                     is CalendarCell.Day -> {
-                                        val isSelected = isSameDay(dueDate, cell.timestamp) && section == TaskSection.UPCOMING
+                                        val isSelected = isSameDay(startDate, cell.timestamp) && section == TaskSection.UPCOMING
                                         Box(
                                             modifier = Modifier
                                                 .fillMaxSize()
@@ -370,12 +370,12 @@ fun ThingsWhenDialog(
                                                 .clickable {
                                                     if (isSelected) {
                                                         // Toggle off -> Next state (ANYTIME)
-                                                        onDueDateChange(null)
+                                                        onStartDateChange(null)
                                                         onSectionChange(TaskSection.ANYTIME)
                                                         onIsTonightChange(false)
                                                         onShowCalendarHelperChange(false)
                                                     } else {
-                                                        onDueDateChange(cell.timestamp)
+                                                        onStartDateChange(cell.timestamp)
                                                         onSectionChange(if (isTodayDate(cell.timestamp)) TaskSection.TODAY else TaskSection.UPCOMING)
                                                         onIsTonightChange(false)
                                                         onShowCalendarHelperChange(true)
@@ -463,12 +463,12 @@ fun ThingsWhenDialog(
                         .clip(RoundedCornerShape(8.dp))
                         .clickable {
                             if (isSomedayActive) {
-                                onDueDateChange(null)
+                                onStartDateChange(null)
                                 onSectionChange(TaskSection.ANYTIME)
                                 onIsTonightChange(false)
                                 onShowCalendarHelperChange(false)
                             } else {
-                                onDueDateChange(null)
+                                onStartDateChange(null)
                                 onSectionChange(TaskSection.SOMEDAY)
                                 onIsTonightChange(false)
                                 onShowCalendarHelperChange(true)

@@ -50,7 +50,7 @@ fun ThingsTaskDetailsSheet(
         notes: String,
         section: TaskSection,
         isTonight: Boolean,
-        dueDate: Long?,
+        startDate: Long?,
         tags: List<String>,
         projectId: String?,
         checklist: List<ChecklistItem>
@@ -61,7 +61,7 @@ fun ThingsTaskDetailsSheet(
     var notes by remember { mutableStateOf(task?.notes ?: "") }
     var section by remember { mutableStateOf(task?.section ?: initialSection) }
     var isTonight by remember { mutableStateOf(task?.isTonight ?: false) }
-    var dueDate by remember { mutableStateOf(task?.dueDate) }
+    var startDate by remember { mutableStateOf(task?.startDate) }
     var tagInput by remember { mutableStateOf(task?.tags?.joinToString(", ") ?: "") }
     var selectedProjectId by remember { mutableStateOf(task?.projectId ?: initialProjectId) }
     var checklist by remember { mutableStateOf(task?.checklist ?: emptyList()) }
@@ -71,8 +71,8 @@ fun ThingsTaskDetailsSheet(
     
     var showProjectDropdown by remember { mutableStateOf(false) }
 
-    val formattedDate = remember(dueDate) {
-        dueDate?.let {
+    val formattedDate = remember(startDate) {
+        startDate?.let {
             SimpleDateFormat("MMM d, yyyy", Locale.getDefault()).format(Date(it))
         } ?: "No Date"
     }
@@ -149,7 +149,7 @@ fun ThingsTaskDetailsSheet(
                                 notes,
                                 section,
                                 isTonight,
-                                dueDate,
+                                startDate,
                                 tagList,
                                 selectedProjectId,
                                 checklist
@@ -383,7 +383,7 @@ fun ThingsTaskDetailsSheet(
                         style = sheetBodyStyle,
                         modifier = Modifier.clickable {
                             // Automatically select Today or flip date
-                            dueDate = if (dueDate == null) System.currentTimeMillis() else null
+                            startDate = if (startDate == null) System.currentTimeMillis() else null
                         }
                     )
                 }

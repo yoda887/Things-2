@@ -12,6 +12,8 @@ import androidx.compose.material.icons.filled.Reorder
 import androidx.compose.material.icons.outlined.CalendarToday
 import androidx.compose.material.icons.outlined.Description
 import androidx.compose.material.icons.outlined.FormatListBulleted
+import androidx.compose.material.icons.outlined.Flag
+import androidx.compose.material.icons.outlined.LocalOffer
 import androidx.compose.material3.Icon
 import androidx.compose.material3.Text
 import androidx.compose.runtime.*
@@ -124,30 +126,16 @@ fun TaskItemRow(
                     ),
                     maxLines = 1,
                     overflow = TextOverflow.Ellipsis,
-                    modifier = Modifier.weight(1f)
+                    modifier = Modifier.weight(1f, fill = false)
                 )
 
                 // Inline note/subtask icons representation
-                if (task.notes.isNotBlank() || task.checklist.isNotEmpty() || task.priority > 0) {
+                if (task.notes.isNotBlank() || task.checklist.isNotEmpty() || task.cachedTags.isNotBlank() || task.dueDate != null) {
                     Spacer(modifier = Modifier.width(6.dp))
                     Row(
                         horizontalArrangement = Arrangement.spacedBy(4.dp),
                         verticalAlignment = Alignment.CenterVertically
                     ) {
-                        if (task.priority > 0) {
-                            val flagColor = when (task.priority) {
-                                3 -> ThingsUpcomingRed
-                                2 -> ThingsTodayStar
-                                1 -> ThingsAnytimeTeal
-                                else -> textSecondaryColor.copy(alpha = 0.4f)
-                            }
-                            Icon(
-                                imageVector = Icons.Filled.Flag,
-                                contentDescription = "Priority Flag",
-                                tint = flagColor,
-                                modifier = Modifier.size(13.dp)
-                            )
-                        }
                         if (task.notes.isNotBlank()) {
                             Icon(
                                 imageVector = Icons.Outlined.Description,
@@ -163,6 +151,82 @@ fun TaskItemRow(
                                 tint = textSecondaryColor.copy(alpha = 0.4f),
                                 modifier = Modifier.size(13.dp)
                             )
+                        }
+                        if (task.cachedTags.isNotBlank()) {
+                            Icon(
+                                imageVector = Icons.Outlined.LocalOffer,
+                                contentDescription = "Has tags",
+                                tint = textSecondaryColor.copy(alpha = 0.4f),
+                                modifier = Modifier.size(13.dp)
+                            )
+                        }
+                        if (task.dueDate != null) {
+                            val delta = remember(task.dueDate) {
+                                val today = java.util.Calendar.getInstance().apply {
+                                    set(java.util.Calendar.HOUR_OF_DAY, 0)
+                                    set(java.util.Calendar.MINUTE, 0)
+                                    set(java.util.Calendar.SECOND, 0)
+                                    set(java.util.Calendar.MILLISECOND, 0)
+                                }
+                                val due = java.util.Calendar.getInstance().apply {
+                                    timeInMillis = task.dueDate
+                                    set(java.util.Calendar.HOUR_OF_DAY, 0)
+                                    set(java.util.Calendar.MINUTE, 0)
+                                    set(java.util.Calendar.SECOND, 0)
+                                    set(java.util.Calendar.MILLISECOND, 0)
+                                }
+                                val diffMillis = due.timeInMillis - today.timeInMillis
+                                if (diffMillis >= 0) {
+                                    (diffMillis / (24 * 60 * 60 * 1000L)).toInt()
+                                } else {
+                                    ((diffMillis - (24 * 60 * 60 * 1000L - 1)) / (24 * 60 * 60 * 1000L)).toInt()
+                                }
+                            }
+
+                            val lang = remember { java.util.Locale.getDefault().language }
+                            val relativeText = when (lang) {
+                                "uk" -> when {
+                                    delta < 0 -> "протерміновано"
+                                    delta == 0 -> "сьогодні"
+                                    delta == 1 -> "завтра"
+                                    else -> "через $delta дн."
+                                }
+                                "ru" -> when {
+                                    delta < 0 -> "просрочено"
+                                    delta == 0 -> "сегодня"
+                                    delta == 1 -> "завтра"
+                                    else -> "через $delta дн."
+                                }
+                                else -> when {
+                                    delta < 0 -> "overdue"
+                                    delta == 0 -> "today"
+                                    delta == 1 -> "tomorrow"
+                                    else -> "in $delta d."
+                                }
+                            }
+
+                            val isOverdueOrToday = delta <= 0
+                            val color = if (isOverdueOrToday) ThingsUpcomingRed else textSecondaryColor.copy(alpha = 0.4f)
+
+                            Row(
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+                                Icon(
+                                    imageVector = Icons.Outlined.Flag,
+                                    contentDescription = "Deadline Flag",
+                                    tint = color,
+                                    modifier = Modifier.size(13.dp)
+                                )
+                                Spacer(modifier = Modifier.width(3.dp))
+                                Text(
+                                    text = relativeText,
+                                    style = TextStyle(
+                                        fontSize = 11.sp,
+                                        color = color,
+                                        fontWeight = FontWeight.Normal
+                                    )
+                                )
+                            }
                         }
                     }
                 }
@@ -184,6 +248,8 @@ fun TaskItemRow(
                 )
             }
         }
+
+
 
         
         

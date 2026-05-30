@@ -15,7 +15,7 @@ import kotlinx.coroutines.flow.Flow
 @Dao
 interface TaskDao {
     // ITEMS (Single Table Inheritance: type 0=task, 1=project, 2=heading, 3=template)
-    @Query("SELECT * FROM items ORDER BY creationDate DESC")
+    @Query("SELECT * FROM items ORDER BY sortOrder ASC, creationDate DESC")
     fun getAllItems(): Flow<List<Item>>
 
     @Query("SELECT * FROM items WHERE id = :id")

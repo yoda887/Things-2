@@ -228,6 +228,24 @@ fun ThingsHomeScreen(viewModel: ThingsViewModel) {
                         TaskSection.SOMEDAY -> 3
                         TaskSection.UPCOMING -> 2
                     }
+                    val computedStartDate = when (targetScreen) {
+                        ActiveScreen.TODAY -> System.currentTimeMillis()
+                        ActiveScreen.UPCOMING -> {
+                            val earliestUpcomingTask = allTasksRaw
+                                .filter { it.isUpcoming }
+                                .minByOrNull { it.startDate ?: Long.MAX_VALUE }
+                            
+                            earliestUpcomingTask?.startDate ?: java.util.Calendar.getInstance().apply {
+                                add(java.util.Calendar.DAY_OF_YEAR, 1)
+                                set(java.util.Calendar.HOUR_OF_DAY, 0)
+                                set(java.util.Calendar.MINUTE, 0)
+                                set(java.util.Calendar.SECOND, 0)
+                                set(java.util.Calendar.MILLISECOND, 0)
+                            }.timeInMillis
+                        }
+                        else -> null
+                    }
+
                     val newTask = Item(
                         id = newTaskId,
                         type = 0,
@@ -235,6 +253,7 @@ fun ThingsHomeScreen(viewModel: ThingsViewModel) {
                         notes = "",
                         start = startValue,
                         projectId = initialProjectId,
+                        startDate = computedStartDate,
                         creationDate = System.currentTimeMillis()
                     )
 
@@ -337,10 +356,10 @@ fun ThingsHomeScreen(viewModel: ThingsViewModel) {
             initialProjectId = initialProjectId,
             projects = projects,
             onDismiss = { showAddDialog = false },
-            onSave = { title, notes, section, isTonight, dueDate, tags, projectId, checklistItems ->
+            onSave = { title, notes, section, isTonight, startDate, tags, projectId, checklistItems ->
                 if (taskToEdit == null) {
                     // Create Task
-                    viewModel.addTask(title, notes, section, isTonight, dueDate, tags, projectId, checklistItems)
+                    viewModel.addTask(title, notes, section, isTonight, startDate, tags, projectId, checklistItems)
                 } else {
                     // Update Task
                     val startVal = when (section) {
@@ -352,13 +371,13 @@ fun ThingsHomeScreen(viewModel: ThingsViewModel) {
                     }
                     viewModel.updateTask(
                         taskToEdit!!.copy(
-                            title = title,
-                            notes = notes,
-                            start = startVal,
-                            isTonight = isTonight,
-                            dueDate = dueDate,
-                            cachedTags = tags.joinToString(", "),
-                            projectId = projectId
+                             title = title,
+                             notes = notes,
+                             start = startVal,
+                             isTonight = isTonight,
+                             startDate = startDate, // update startDate, leave dueDate untouched
+                             cachedTags = tags.joinToString(", "),
+                             projectId = projectId
                         )
                     )
                     viewModel.updateChecklistItems(taskToEdit!!.id, checklistItems)

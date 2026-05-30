@@ -181,7 +181,7 @@ class ThingsViewModel(private val repository: TaskRepository) : ViewModel() {
         notes: String = "",
         section: TaskSection = TaskSection.INBOX,
         isTonight: Boolean = false,
-        dueDate: Long? = null,
+        startDate: Long? = null,
         tags: List<String> = emptyList(),
         projectId: String? = null,
         checklist: List<ChecklistItem> = emptyList(),
@@ -190,6 +190,7 @@ class ThingsViewModel(private val repository: TaskRepository) : ViewModel() {
         viewModelScope.launch {
             val itemId = UUID.randomUUID().toString()
             val cleanTags = tags.map { it.trim() }.filter { it.isNotEmpty() }
+            val computedStartDate = startDate ?: if (section == TaskSection.TODAY) System.currentTimeMillis() else null
             val item = Item(
                 id = itemId,
                 type = 0,
@@ -197,7 +198,8 @@ class ThingsViewModel(private val repository: TaskRepository) : ViewModel() {
                 notes = notes,
                 start = sectionToStartValue(section),
                 isTonight = isTonight,
-                dueDate = dueDate,
+                startDate = computedStartDate,
+                dueDate = null, // Newly created tasks always start with null dueDate
                 projectId = projectId,
                 priority = priority
             )
@@ -240,7 +242,7 @@ class ThingsViewModel(private val repository: TaskRepository) : ViewModel() {
             val isCompleting = !item.isCompleted
             val updated = item.copy(
                 status = if (isCompleting) 3 else 0,
-                completedDate = if (isCompleting) System.currentTimeMillis() else null
+                stopDate = if (isCompleting) System.currentTimeMillis() else null
             )
             repository.insertTask(updated)
         }
