@@ -888,7 +888,7 @@ fun ThingsCategoryListPanel(
                                     ThingsTaskInlineEditor(
                                         task = task,
                                         projects = projects,
-                                        onSave = { title, notes, section, isTonight, startDate, tags, projectId, checklist, priority ->
+                                        onSave = { title, notes, section, isTonight, startDate, dueDate, tags, projectId, checklist, priority ->
                                             val startVal = when (section) {
                                                 TaskSection.INBOX -> 0
                                                 TaskSection.TODAY -> 1
@@ -902,6 +902,7 @@ fun ThingsCategoryListPanel(
                                                 start = startVal,
                                                 isTonight = isTonight,
                                                 startDate = startDate,
+                                                dueDate = dueDate,
                                                 cachedTags = tags.joinToString(", "),
                                                 projectId = projectId,
                                                 priority = priority

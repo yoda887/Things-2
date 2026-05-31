@@ -38,9 +38,8 @@ fun InlineEditorToolbar(
     showChecklistHelper: Boolean,
     onShowChecklistHelperChange: (Boolean) -> Unit,
     checklist: List<ChecklistItem>,
-    showPriorityHelper: Boolean,
-    onShowPriorityHelperChange: (Boolean) -> Unit,
-    priority: Int
+    dueDate: Long?,
+    onShowDatePickerChange: (Boolean) -> Unit
 ) {
     val textPrimaryColor = Color(0xFF1C1C1E)
     val iconInactiveColor = Color(0xFFC7C7CC)
@@ -172,15 +171,15 @@ fun InlineEditorToolbar(
                 )
             }
 
-            // Flag (Priority)
-            if (!showPriorityHelper && priority == 0) {
+            // Flag (Deadline)
+            if (dueDate == null) {
                 Icon(
                     imageVector = Icons.Outlined.Flag,
-                    contentDescription = "Priority",
+                    contentDescription = "Set Deadline",
                     tint = iconInactiveColor,
                     modifier = Modifier
                         .size(22.dp)
-                        .clickable { onShowPriorityHelperChange(true) }
+                        .clickable { onShowDatePickerChange(true) }
                 )
             }
         }
