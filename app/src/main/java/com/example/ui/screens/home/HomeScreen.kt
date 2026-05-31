@@ -370,17 +370,18 @@ fun ThingsHomeScreen(viewModel: ThingsViewModel) {
                         TaskSection.UPCOMING -> 2
                     }
                     viewModel.updateTask(
-                        taskToEdit!!.copy(
+                        taskToEdit!!.copyTask(
                              title = title,
                              notes = notes,
                              start = startVal,
                              isTonight = isTonight,
                              startDate = startDate, // update startDate, leave dueDate untouched
                              cachedTags = tags.joinToString(", "),
-                             projectId = projectId
+                             projectId = projectId,
+                             checklist = checklistItems
                         )
                     )
-                    viewModel.updateChecklistItems(taskToEdit!!.id, checklistItems)
+                    
                 }
                 showAddDialog = false
             },

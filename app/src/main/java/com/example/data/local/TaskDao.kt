@@ -60,6 +60,9 @@ interface TaskDao {
 
     // CHECKLIST ITEMS
     @Query("SELECT * FROM checklist_items ORDER BY sortOrder ASC")
+    fun getAllChecklistItemsFlow(): Flow<List<ChecklistItem>>
+
+    @Query("SELECT * FROM checklist_items ORDER BY sortOrder ASC")
     suspend fun getAllChecklistItems(): List<ChecklistItem>
 
     @Query("SELECT * FROM checklist_items WHERE itemId = :itemId ORDER BY sortOrder ASC")
@@ -76,6 +79,18 @@ interface TaskDao {
 
     @Query("DELETE FROM checklist_items WHERE id = :id")
     suspend fun deleteChecklistItemById(id: String)
+
+    @Query("DELETE FROM checklist_items WHERE itemId = :itemId AND id NOT IN (:keptIds)")
+    suspend fun deleteRemovedChecklistItems(itemId: String, keptIds: List<String>)
+
+    @Query("UPDATE items SET checklistItemsCount = :total, openChecklistItemsCount = :open WHERE id = :itemId")
+    suspend fun updateChecklistCounters(itemId: String, total: Int, open: Int)
+
+    @Query("SELECT COUNT(*) FROM checklist_items WHERE itemId = :itemId")
+    suspend fun getTotalChecklistCount(itemId: String): Int
+
+    @Query("SELECT COUNT(*) FROM checklist_items WHERE itemId = :itemId AND isCompleted = 0")
+    suspend fun getOpenChecklistCount(itemId: String): Int
 
     // TAGS & ITEM TAGS
     @Query("SELECT * FROM tags ORDER BY sortOrder ASC")

@@ -130,7 +130,7 @@ fun TaskItemRow(
                 )
 
                 // Inline note/subtask icons representation
-                if (task.notes.isNotBlank() || task.checklist.isNotEmpty() || task.cachedTags.isNotBlank() || task.dueDate != null) {
+                if (task.notes.isNotBlank() || task.checklistItemsCount > 0 || task.cachedTags.isNotBlank() || task.dueDate != null) {
                     Spacer(modifier = Modifier.width(6.dp))
                     Row(
                         horizontalArrangement = Arrangement.spacedBy(4.dp),
@@ -144,7 +144,7 @@ fun TaskItemRow(
                                 modifier = Modifier.size(13.dp)
                             )
                         }
-                        if (task.checklist.isNotEmpty()) {
+                        if (task.checklistItemsCount > 0) {
                             Icon(
                                 imageVector = Icons.Outlined.FormatListBulleted,
                                 contentDescription = "Has checklist",

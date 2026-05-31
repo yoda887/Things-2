@@ -15,6 +15,7 @@ import com.example.data.remote.GoogleTasksService
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.map
+import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.withContext
 import retrofit2.Retrofit
 import retrofit2.converter.moshi.MoshiConverterFactory
@@ -22,12 +23,14 @@ import java.util.Calendar
 
 class TaskRepository(private val taskDao: TaskDao, private val context: Context) {
 
-    val allTasks: Flow<List<Item>> = taskDao.getAllItems().map { items ->
-        val checklistMap = taskDao.getAllChecklistItems().groupBy { it.itemId }
-        items.forEach { item ->
-            item.checklist = checklistMap[item.id] ?: emptyList()
+    val allTasks: Flow<List<Item>> = combine(
+        taskDao.getAllItems(),
+        taskDao.getAllChecklistItemsFlow()
+    ) { items, checklistItems ->
+        val checklistMap = checklistItems.groupBy { it.itemId }
+        items.map { item ->
+            item.copyTask(checklist = checklistMap[item.id] ?: emptyList())
         }
-        items
     }
 
     val allProjects: Flow<List<Item>> = allTasks.map { items ->
@@ -53,16 +56,9 @@ class TaskRepository(private val taskDao: TaskDao, private val context: Context)
     }
 
     suspend fun refreshChecklistCounters(itemId: String) = withContext(Dispatchers.IO) {
-        val checklist = taskDao.getChecklistItemsByItemId(itemId)
-        val item = taskDao.getItemById(itemId)
-        if (item != null) {
-            taskDao.insertItem(
-                item.copy(
-                    checklistItemsCount = checklist.size,
-                    openChecklistItemsCount = checklist.count { !it.isCompleted }
-                )
-            )
-        }
+        val total = taskDao.getTotalChecklistCount(itemId)
+        val open = taskDao.getOpenChecklistCount(itemId)
+        taskDao.updateChecklistCounters(itemId, total, open)
     }
 
     suspend fun fetchLocalCalendarEvents(): Result<List<Item>> = withContext(Dispatchers.IO) {
@@ -254,24 +250,13 @@ class TaskRepository(private val taskDao: TaskDao, private val context: Context)
 
     suspend fun insertTask(item: Item) = withContext(Dispatchers.IO) {
         taskDao.insertItem(item)
-        // If there's an active in-memory checklist, persist to db
-        if (item.checklist.isNotEmpty()) {
-            val entities = item.checklist.map { it.copy(itemId = item.id) }
-            taskDao.deleteChecklistItemsByItemId(item.id)
-            taskDao.insertChecklistItems(entities)
-        }
-        refreshChecklistCounters(item.id)
+        updateChecklistItems(item.id, item.checklist)
     }
 
     suspend fun insertTasks(items: List<Item>) = withContext(Dispatchers.IO) {
         taskDao.insertItems(items)
         for (item in items) {
-            if (item.checklist.isNotEmpty()) {
-                val entities = item.checklist.map { it.copy(itemId = item.id) }
-                taskDao.deleteChecklistItemsByItemId(item.id)
-                taskDao.insertChecklistItems(entities)
-            }
-            refreshChecklistCounters(item.id)
+            updateChecklistItems(item.id, item.checklist)
         }
     }
 
@@ -327,9 +312,17 @@ class TaskRepository(private val taskDao: TaskDao, private val context: Context)
 
     // Checklist update helper
     suspend fun updateChecklistItems(itemId: String, list: List<ChecklistItem>) = withContext(Dispatchers.IO) {
-        val entities = list.map { it.copy(itemId = itemId) }
-        taskDao.deleteChecklistItemsByItemId(itemId)
-        taskDao.insertChecklistItems(entities)
+        if (list.isEmpty()) {
+            taskDao.deleteChecklistItemsByItemId(itemId)
+        } else {
+            val entities = list.mapIndexed { index, item ->
+                item.copy(itemId = itemId, sortOrder = index)
+            }
+            val keptIds = entities.map { it.id }
+            
+            taskDao.deleteRemovedChecklistItems(itemId, keptIds)
+            taskDao.insertChecklistItems(entities)
+        }
         refreshChecklistCounters(itemId)
     }
 

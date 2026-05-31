@@ -57,19 +57,19 @@ fun ThingsTaskDetailsSheet(
     ) -> Unit,
     onDelete: (() -> Unit)? = null
 ) {
-    var title by remember { mutableStateOf(task?.title ?: "") }
-    var notes by remember { mutableStateOf(task?.notes ?: "") }
-    var section by remember { mutableStateOf(task?.section ?: initialSection) }
-    var isTonight by remember { mutableStateOf(task?.isTonight ?: false) }
-    var startDate by remember { mutableStateOf(task?.startDate) }
-    var tagInput by remember { mutableStateOf(task?.tags?.joinToString(", ") ?: "") }
-    var selectedProjectId by remember { mutableStateOf(task?.projectId ?: initialProjectId) }
-    var checklist by remember { mutableStateOf(task?.checklist ?: emptyList()) }
+    var title by remember(task?.id) { mutableStateOf(task?.title ?: "") }
+    var notes by remember(task?.id) { mutableStateOf(task?.notes ?: "") }
+    var section by remember(task?.id) { mutableStateOf(task?.section ?: initialSection) }
+    var isTonight by remember(task?.id) { mutableStateOf(task?.isTonight ?: false) }
+    var startDate by remember(task?.id) { mutableStateOf(task?.startDate) }
+    var tagInput by remember(task?.id) { mutableStateOf(task?.tags?.joinToString(", ") ?: "") }
+    var selectedProjectId by remember(task?.id) { mutableStateOf(task?.projectId ?: initialProjectId) }
+    var checklist by remember(task?.id, task?.checklist) { mutableStateOf(task?.checklist ?: emptyList()) }
     
     // Checklist state
-    var newChecklistItemTitle by remember { mutableStateOf("") }
+    var newChecklistItemTitle by remember(task?.id) { mutableStateOf("") }
     
-    var showProjectDropdown by remember { mutableStateOf(false) }
+    var showProjectDropdown by remember(task?.id) { mutableStateOf(false) }
 
     val formattedDate = remember(startDate) {
         startDate?.let {

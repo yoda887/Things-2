@@ -240,7 +240,7 @@ class ThingsViewModel(private val repository: TaskRepository) : ViewModel() {
     fun toggleTaskCompletion(item: Item) {
         viewModelScope.launch {
             val isCompleting = !item.isCompleted
-            val updated = item.copy(
+            val updated = item.copyTask(
                 status = if (isCompleting) 3 else 0,
                 stopDate = if (isCompleting) System.currentTimeMillis() else null
             )

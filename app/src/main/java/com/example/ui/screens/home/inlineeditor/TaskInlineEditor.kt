@@ -57,22 +57,22 @@ fun ThingsTaskInlineEditor(
     onDelete: (() -> Unit)? = null,
     onDone: () -> Unit = {}
 ) {
-    var title by remember { mutableStateOf<String>(task.title) }
-    var notes by remember { mutableStateOf<String>(task.notes) }
-    var section by remember { mutableStateOf<TaskSection>(task.section) }
-    var isTonight by remember { mutableStateOf<Boolean>(task.isTonight) }
-    var startDate by remember { mutableStateOf<Long?>(task.startDate) }
-    var dueDate by remember { mutableStateOf<Long?>(task.dueDate) }
-    var tagInput by remember { mutableStateOf<String>(task.tags.joinToString(", ")) }
-    var checklist by remember { mutableStateOf<List<ChecklistItem>>(task.checklist) }
-    var priority by remember { mutableStateOf<Int>(task.priority) }
+    var title by remember(task.id) { mutableStateOf<String>(task.title) }
+    var notes by remember(task.id) { mutableStateOf<String>(task.notes) }
+    var section by remember(task.id) { mutableStateOf<TaskSection>(task.section) }
+    var isTonight by remember(task.id) { mutableStateOf<Boolean>(task.isTonight) }
+    var startDate by remember(task.id) { mutableStateOf<Long?>(task.startDate) }
+    var dueDate by remember(task.id) { mutableStateOf<Long?>(task.dueDate) }
+    var tagInput by remember(task.id) { mutableStateOf<String>(task.tags.joinToString(", ")) }
+    var checklist by remember(task.id, task.checklist) { mutableStateOf<List<ChecklistItem>>(task.checklist) }
+    var priority by remember(task.id) { mutableStateOf<Int>(task.priority) }
 
     // Helpers visibility states
-    var showCalendarHelper by remember { mutableStateOf(false) }
-    var showWhenDialog by remember { mutableStateOf(false) }
-    var showTagHelper by remember { mutableStateOf(false) }
-    var showChecklistHelper by remember { mutableStateOf(task.checklist.isNotEmpty()) }
-    var showDatePicker by remember { mutableStateOf(false) }
+    var showCalendarHelper by remember(task.id) { mutableStateOf(false) }
+    var showWhenDialog by remember(task.id) { mutableStateOf(false) }
+    var showTagHelper by remember(task.id) { mutableStateOf(false) }
+    var showChecklistHelper by remember(task.id, task.checklist) { mutableStateOf(task.checklist.isNotEmpty()) }
+    var showDatePicker by remember(task.id) { mutableStateOf(false) }
 
     var isDeleted by remember { mutableStateOf(false) }
     var isSavedManually by remember { mutableStateOf(false) }

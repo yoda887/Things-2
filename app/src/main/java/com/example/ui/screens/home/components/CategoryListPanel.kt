@@ -333,7 +333,7 @@ fun ThingsCategoryListPanel(
                                     val newList = localTasksList.toMutableList()
                                     var movedItem = newList.removeAt(fromIndex)
                                     if (!movedItem.isTonight) {
-                                        movedItem = movedItem.copy(isTonight = true)
+                                        movedItem = movedItem.copyTask(isTonight = true)
                                         val firstEveningIndex = newList.indexOfFirst { it.isTonight }
                                         val toIndex = if (firstEveningIndex != -1) firstEveningIndex else newList.size
                                         newList.add(toIndex, movedItem)
@@ -342,7 +342,7 @@ fun ThingsCategoryListPanel(
                                         val distance = (hoveredItem.offset + hoveredItem.size) - draggedItemInfo.offset - draggedItemInfo.size
                                         dragAccumulatedOffset -= distance
                                     } else {
-                                        movedItem = movedItem.copy(isTonight = false)
+                                        movedItem = movedItem.copyTask(isTonight = false)
                                         val firstEveningIndex = newList.indexOfFirst { it.isTonight }
                                         val toIndex = if (firstEveningIndex != -1) firstEveningIndex else newList.size
                                         newList.add(toIndex, movedItem)
@@ -361,7 +361,7 @@ fun ThingsCategoryListPanel(
                                     val newList = localTasksList.toMutableList()
                                     var movedItem = newList.removeAt(fromIndex)
                                     if (movedItem.isTonight) {
-                                        movedItem = movedItem.copy(isTonight = false)
+                                        movedItem = movedItem.copyTask(isTonight = false)
                                         val toIndex = 0
                                         newList.add(toIndex, movedItem)
                                         localTasksList = newList
@@ -423,7 +423,7 @@ fun ThingsCategoryListPanel(
                                     }.timeInMillis
                                     
                                     if (oldStartDateDayStart != targetDayStart) {
-                                        movedItem = movedItem.copy(startDate = newStartDate)
+                                        movedItem = movedItem.copyTask(startDate = newStartDate)
                                         
                                         var toIndex = newList.indexOfFirst { it.startDate != null && it.startDate >= targetDayStart }
                                         if (toIndex == -1) {
@@ -449,10 +449,10 @@ fun ThingsCategoryListPanel(
                                     val hoveredItemTask = localTasksList.firstOrNull { it.id == hoveredItem.key }
                                     if (hoveredItemTask != null) {
                                         if (hoveredItemTask.isTonight != movedItem.isTonight) {
-                                            movedItem = movedItem.copy(isTonight = hoveredItemTask.isTonight)
+                                            movedItem = movedItem.copyTask(isTonight = hoveredItemTask.isTonight)
                                         }
                                         if (screen == ActiveScreen.UPCOMING && movedItem.startDate != hoveredItemTask.startDate) {
-                                            movedItem = movedItem.copy(startDate = hoveredItemTask.startDate)
+                                            movedItem = movedItem.copyTask(startDate = hoveredItemTask.startDate)
                                         }
                                     }
                                     
@@ -474,9 +474,9 @@ fun ThingsCategoryListPanel(
                     val updatedList = localTasksList.mapIndexed { index, t ->
                         val original = filteredTasks.firstOrNull { it.id == t.id }
                         if (original != null && (original.sortOrder != index || original.isTonight != t.isTonight || original.startDate != t.startDate)) {
-                            t.copy(sortOrder = index, modificationDate = System.currentTimeMillis())
+                            t.copyTask(sortOrder = index, modificationDate = System.currentTimeMillis())
                         } else {
-                            t.copy(sortOrder = index)
+                            t.copyTask(sortOrder = index)
                         }
                     }
                     val changedTasks = updatedList.filter { t ->
@@ -896,7 +896,7 @@ fun ThingsCategoryListPanel(
                                                 TaskSection.SOMEDAY -> 3
                                                 TaskSection.UPCOMING -> 2
                                             }
-                                            val updatedTask = task.copy(
+                                            val updatedTask = task.copyTask(
                                                 title = title,
                                                 notes = notes,
                                                 start = startVal,
@@ -905,10 +905,11 @@ fun ThingsCategoryListPanel(
                                                 dueDate = dueDate,
                                                 cachedTags = tags.joinToString(", "),
                                                 projectId = projectId,
-                                                priority = priority
+                                                priority = priority,
+                                                checklist = checklist
                                             )
                                             viewModel.updateTask(updatedTask)
-                                            viewModel.updateChecklistItems(task.id, checklist)
+                                            
                                             onInlineExpandedTaskIdChange(null)
                                         },
                                         onDelete = {

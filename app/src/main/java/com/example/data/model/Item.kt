@@ -246,6 +246,142 @@ data class Item(
     @get:Ignore
     val tags: List<String>
         get() = if (cachedTags.isBlank()) emptyList() else cachedTags.split(", ").map { it.trim() }
+
+    /**
+     * Helper to perform item copying while preserving ignored fields like checklist
+     */
+    fun copyTask(
+        id: String = this.id,
+        type: Int = this.type,
+        title: String = this.title,
+        notes: String = this.notes,
+        status: Int = this.status,
+        start: Int = this.start,
+        isTonight: Boolean = this.isTonight,
+        stopDate: Long? = this.stopDate,
+        dueDate: Long? = this.dueDate,
+        areaId: String? = this.areaId,
+        projectId: String? = this.projectId,
+        headingId: String? = this.headingId,
+        cachedTags: String = this.cachedTags,
+        checklistItemsCount: Int = this.checklistItemsCount,
+        openChecklistItemsCount: Int = this.openChecklistItemsCount,
+        googleTaskId: String? = this.googleTaskId,
+        googleTaskListId: String? = this.googleTaskListId,
+        creationDate: Long = this.creationDate,
+        calendarColor: Int? = this.calendarColor,
+        calendarDisplayName: String? = this.calendarDisplayName,
+        eventStartMillis: Long? = this.eventStartMillis,
+        isAllDay: Boolean = this.isAllDay,
+        priority: Int = this.priority,
+        trashed: Boolean = this.trashed,
+        startDate: Long? = this.startDate,
+        modificationDate: Long = this.modificationDate,
+        sortOrder: Int = this.sortOrder,
+        checklist: List<ChecklistItem> = this.checklist
+    ): Item {
+        return this.copy(
+            id = id,
+            type = type,
+            title = title,
+            notes = notes,
+            status = status,
+            start = start,
+            isTonight = isTonight,
+            stopDate = stopDate,
+            dueDate = dueDate,
+            areaId = areaId,
+            projectId = projectId,
+            headingId = headingId,
+            cachedTags = cachedTags,
+            checklistItemsCount = checklistItemsCount,
+            openChecklistItemsCount = openChecklistItemsCount,
+            googleTaskId = googleTaskId,
+            googleTaskListId = googleTaskListId,
+            creationDate = creationDate,
+            calendarColor = calendarColor,
+            calendarDisplayName = calendarDisplayName,
+            eventStartMillis = eventStartMillis,
+            isAllDay = isAllDay,
+            priority = priority,
+            trashed = trashed,
+            startDate = startDate,
+            modificationDate = modificationDate,
+            sortOrder = sortOrder
+        ).apply {
+            this.checklist = checklist
+        }
+    }
+
+    override fun equals(other: Any?): Boolean {
+        if (this === other) return true
+        if (javaClass != other?.javaClass) return false
+
+        other as Item
+
+        if (id != other.id) return false
+        if (type != other.type) return false
+        if (title != other.title) return false
+        if (notes != other.notes) return false
+        if (status != other.status) return false
+        if (start != other.start) return false
+        if (isTonight != other.isTonight) return false
+        if (stopDate != other.stopDate) return false
+        if (dueDate != other.dueDate) return false
+        if (areaId != other.areaId) return false
+        if (projectId != other.projectId) return false
+        if (headingId != other.headingId) return false
+        if (cachedTags != other.cachedTags) return false
+        if (checklistItemsCount != other.checklistItemsCount) return false
+        if (openChecklistItemsCount != other.openChecklistItemsCount) return false
+        if (googleTaskId != other.googleTaskId) return false
+        if (googleTaskListId != other.googleTaskListId) return false
+        if (creationDate != other.creationDate) return false
+        if (calendarColor != other.calendarColor) return false
+        if (calendarDisplayName != other.calendarDisplayName) return false
+        if (eventStartMillis != other.eventStartMillis) return false
+        if (isAllDay != other.isAllDay) return false
+        if (priority != other.priority) return false
+        if (trashed != other.trashed) return false
+        if (startDate != other.startDate) return false
+        if (modificationDate != other.modificationDate) return false
+        if (sortOrder != other.sortOrder) return false
+        if (checklist != other.checklist) return false
+
+        return true
+    }
+
+    override fun hashCode(): Int {
+        var result = id.hashCode()
+        result = 31 * result + type
+        result = 31 * result + title.hashCode()
+        result = 31 * result + notes.hashCode()
+        result = 31 * result + status
+        result = 31 * result + start
+        result = 31 * result + isTonight.hashCode()
+        result = 31 * result + (stopDate?.hashCode() ?: 0)
+        result = 31 * result + (dueDate?.hashCode() ?: 0)
+        result = 31 * result + (areaId?.hashCode() ?: 0)
+        result = 31 * result + (projectId?.hashCode() ?: 0)
+        result = 31 * result + (headingId?.hashCode() ?: 0)
+        result = 31 * result + cachedTags.hashCode()
+        result = 31 * result + checklistItemsCount
+        result = 31 * result + openChecklistItemsCount
+        result = 31 * result + (googleTaskId?.hashCode() ?: 0)
+        result = 31 * result + (googleTaskListId?.hashCode() ?: 0)
+        result = 31 * result + creationDate.hashCode()
+        result = 31 * result + (calendarColor ?: 0)
+        result = 31 * result + (calendarDisplayName?.hashCode() ?: 0)
+        result = 31 * result + (eventStartMillis?.hashCode() ?: 0)
+        result = 31 * result + isAllDay.hashCode()
+        result = 31 * result + priority
+        result = 31 * result + trashed.hashCode()
+        result = 31 * result + (startDate?.hashCode() ?: 0)
+        result = 31 * result + modificationDate.hashCode()
+        result = 31 * result + sortOrder
+        result = 31 * result + checklist.hashCode()
+        return result
+    }
 }
 
 @Entity(
