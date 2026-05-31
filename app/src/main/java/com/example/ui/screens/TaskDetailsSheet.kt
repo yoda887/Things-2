@@ -31,6 +31,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.example.data.model.ChecklistItem
 import com.example.data.model.Item
+import com.example.data.model.ItemWithChecklist
 import com.example.data.model.TaskSection
 import com.example.ui.theme.*
 import com.example.ui.components.ThingsCheckbox
@@ -40,7 +41,7 @@ import java.util.*
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun ThingsTaskDetailsSheet(
-    task: Item?, // If null, we are in "Create Mode"
+    task: ItemWithChecklist?, // If null, we are in "Create Mode"
     initialSection: TaskSection = TaskSection.INBOX,
     initialProjectId: String? = null,
     projects: List<Item>,
@@ -57,19 +58,19 @@ fun ThingsTaskDetailsSheet(
     ) -> Unit,
     onDelete: (() -> Unit)? = null
 ) {
-    var title by remember(task?.id) { mutableStateOf(task?.title ?: "") }
-    var notes by remember(task?.id) { mutableStateOf(task?.notes ?: "") }
-    var section by remember(task?.id) { mutableStateOf(task?.section ?: initialSection) }
-    var isTonight by remember(task?.id) { mutableStateOf(task?.isTonight ?: false) }
-    var startDate by remember(task?.id) { mutableStateOf(task?.startDate) }
-    var tagInput by remember(task?.id) { mutableStateOf(task?.tags?.joinToString(", ") ?: "") }
-    var selectedProjectId by remember(task?.id) { mutableStateOf(task?.projectId ?: initialProjectId) }
-    var checklist by remember(task?.id, task?.checklist) { mutableStateOf(task?.checklist ?: emptyList()) }
+    var title by remember(task?.item?.id) { mutableStateOf(task?.item?.title ?: "") }
+    var notes by remember(task?.item?.id) { mutableStateOf(task?.item?.notes ?: "") }
+    var section by remember(task?.item?.id) { mutableStateOf(task?.item?.section ?: initialSection) }
+    var isTonight by remember(task?.item?.id) { mutableStateOf(task?.item?.isTonight ?: false) }
+    var startDate by remember(task?.item?.id) { mutableStateOf(task?.item?.startDate) }
+    var tagInput by remember(task?.item?.id) { mutableStateOf(task?.item?.tags?.joinToString(", ") ?: "") }
+    var selectedProjectId by remember(task?.item?.id) { mutableStateOf(task?.item?.projectId ?: initialProjectId) }
+    var checklist by remember(task?.item?.id, task?.checklist) { mutableStateOf<List<ChecklistItem>>(task?.checklist ?: emptyList()) }
     
     // Checklist state
-    var newChecklistItemTitle by remember(task?.id) { mutableStateOf("") }
+    var newChecklistItemTitle by remember(task?.item?.id) { mutableStateOf("") }
     
-    var showProjectDropdown by remember(task?.id) { mutableStateOf(false) }
+    var showProjectDropdown by remember(task?.item?.id) { mutableStateOf(false) }
 
     val formattedDate = remember(startDate) {
         startDate?.let {
@@ -293,7 +294,7 @@ fun ThingsTaskDetailsSheet(
                             keyboardOptions = KeyboardOptions(imeAction = ImeAction.Done),
                             keyboardActions = KeyboardActions(onDone = {
                                 if (newChecklistItemTitle.isNotBlank()) {
-                                    checklist = checklist + ChecklistItem(itemId = task?.id ?: "", title = newChecklistItemTitle.trim())
+                                    checklist = checklist + ChecklistItem(itemId = task?.item?.id ?: "", title = newChecklistItemTitle.trim())
                                     newChecklistItemTitle = ""
                                 }
                             }),

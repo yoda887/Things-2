@@ -27,6 +27,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.core.content.ContextCompat
 import com.example.data.model.Item
+import com.example.data.model.ItemWithChecklist
 import com.example.data.model.TaskSection
 import com.example.data.model.Area
 import com.example.ui.screens.home.components.ThingsHomePanel
@@ -83,7 +84,7 @@ fun ThingsHomeScreen(viewModel: ThingsViewModel) {
     var activeScreen by remember { mutableStateOf(ActiveScreen.HOME) }
     var selectedProject by remember { mutableStateOf<Item?>(null) }
     var selectedArea by remember { mutableStateOf<Area?>(null) }
-    var taskToEdit by remember { mutableStateOf<Item?>(null) }
+    var taskToEdit by remember { mutableStateOf<ItemWithChecklist?>(null) }
     var showAddDialog by remember { mutableStateOf(false) }
     var showAddProjectDialog by remember { mutableStateOf(false) }
     var showAddAreaDialog by remember { mutableStateOf(false) }
@@ -232,10 +233,10 @@ fun ThingsHomeScreen(viewModel: ThingsViewModel) {
                         ActiveScreen.TODAY -> System.currentTimeMillis()
                         ActiveScreen.UPCOMING -> {
                             val earliestUpcomingTask = allTasksRaw
-                                .filter { it.isUpcoming }
-                                .minByOrNull { it.startDate ?: Long.MAX_VALUE }
+                                .filter { it.item.isUpcoming }
+                                .minByOrNull { it.item.startDate ?: Long.MAX_VALUE }
                             
-                            earliestUpcomingTask?.startDate ?: java.util.Calendar.getInstance().apply {
+                            earliestUpcomingTask?.item?.startDate ?: java.util.Calendar.getInstance().apply {
                                 add(java.util.Calendar.DAY_OF_YEAR, 1)
                                 set(java.util.Calendar.HOUR_OF_DAY, 0)
                                 set(java.util.Calendar.MINUTE, 0)
@@ -322,7 +323,7 @@ fun ThingsHomeScreen(viewModel: ThingsViewModel) {
                         onTagSelect = { viewModel.selectTag(it) },
                         onTaskToggle = { viewModel.toggleTaskCompletion(it) },
                         onTaskClick = { editTask ->
-                            inlineExpandedTaskId = editTask.id
+                            inlineExpandedTaskId = editTask.item.id
                         },
                         projects = projects,
                         viewModel = viewModel,
@@ -349,15 +350,16 @@ fun ThingsHomeScreen(viewModel: ThingsViewModel) {
             else -> TaskSection.INBOX
         }
         val initialProjectId = if (activeScreen == ActiveScreen.PROJECT_DETAIL) selectedProject?.id else null
+        val currentTaskToEdit = taskToEdit
 
         ThingsTaskDetailsSheet(
-            task = taskToEdit,
+            task = currentTaskToEdit,
             initialSection = initialSection,
             initialProjectId = initialProjectId,
             projects = projects,
             onDismiss = { showAddDialog = false },
             onSave = { title, notes, section, isTonight, startDate, tags, projectId, checklistItems ->
-                if (taskToEdit == null) {
+                if (currentTaskToEdit == null) {
                     // Create Task
                     viewModel.addTask(title, notes, section, isTonight, startDate, tags, projectId, checklistItems)
                 } else {
@@ -369,24 +371,22 @@ fun ThingsHomeScreen(viewModel: ThingsViewModel) {
                         TaskSection.SOMEDAY -> 3
                         TaskSection.UPCOMING -> 2
                     }
-                    viewModel.updateTask(
-                        taskToEdit!!.copyTask(
-                             title = title,
-                             notes = notes,
-                             start = startVal,
-                             isTonight = isTonight,
-                             startDate = startDate, // update startDate, leave dueDate untouched
-                             cachedTags = tags.joinToString(", "),
-                             projectId = projectId,
-                             checklist = checklistItems
-                        )
+                    val updatedTask = currentTaskToEdit.item.copy(
+                         title = title,
+                         notes = notes,
+                         start = startVal,
+                         isTonight = isTonight,
+                         startDate = startDate,
+                         cachedTags = tags.joinToString(", "),
+                         projectId = projectId
                     )
+                    viewModel.updateTask(updatedTask, checklistItems)
                     
                 }
                 showAddDialog = false
             },
             onDelete = {
-                taskToEdit?.let { viewModel.deleteTask(it) }
+                currentTaskToEdit?.let { viewModel.deleteTask(it) }
                 showAddDialog = false
             }
         )

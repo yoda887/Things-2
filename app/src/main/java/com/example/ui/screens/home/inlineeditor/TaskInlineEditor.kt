@@ -18,6 +18,7 @@ import androidx.compose.ui.unit.sp
 import androidx.compose.material.icons.outlined.Flag
 import com.example.data.model.ChecklistItem
 import com.example.data.model.Item
+import com.example.data.model.ItemWithChecklist
 import com.example.data.model.TaskSection
 import com.example.ui.theme.ThingsBlue
 import com.example.ui.theme.ThingsUpcomingRed
@@ -40,7 +41,7 @@ import java.text.SimpleDateFormat
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun ThingsTaskInlineEditor(
-    task: Item,
+    task: ItemWithChecklist,
     projects: List<Item>,
     onSave: (
         title: String,
@@ -57,22 +58,22 @@ fun ThingsTaskInlineEditor(
     onDelete: (() -> Unit)? = null,
     onDone: () -> Unit = {}
 ) {
-    var title by remember(task.id) { mutableStateOf<String>(task.title) }
-    var notes by remember(task.id) { mutableStateOf<String>(task.notes) }
-    var section by remember(task.id) { mutableStateOf<TaskSection>(task.section) }
-    var isTonight by remember(task.id) { mutableStateOf<Boolean>(task.isTonight) }
-    var startDate by remember(task.id) { mutableStateOf<Long?>(task.startDate) }
-    var dueDate by remember(task.id) { mutableStateOf<Long?>(task.dueDate) }
-    var tagInput by remember(task.id) { mutableStateOf<String>(task.tags.joinToString(", ")) }
-    var checklist by remember(task.id, task.checklist) { mutableStateOf<List<ChecklistItem>>(task.checklist) }
-    var priority by remember(task.id) { mutableStateOf<Int>(task.priority) }
+    var title by remember(task.item.id) { mutableStateOf<String>(task.item.title) }
+    var notes by remember(task.item.id) { mutableStateOf<String>(task.item.notes) }
+    var section by remember(task.item.id) { mutableStateOf<TaskSection>(task.item.section) }
+    var isTonight by remember(task.item.id) { mutableStateOf<Boolean>(task.item.isTonight) }
+    var startDate by remember(task.item.id) { mutableStateOf<Long?>(task.item.startDate) }
+    var dueDate by remember(task.item.id) { mutableStateOf<Long?>(task.item.dueDate) }
+    var tagInput by remember(task.item.id) { mutableStateOf<String>(task.item.tags.joinToString(", ")) }
+    var checklist by remember(task.item.id, task.checklist) { mutableStateOf<List<ChecklistItem>>(task.checklist) }
+    var priority by remember(task.item.id) { mutableStateOf<Int>(task.item.priority) }
 
     // Helpers visibility states
-    var showCalendarHelper by remember(task.id) { mutableStateOf(false) }
-    var showWhenDialog by remember(task.id) { mutableStateOf(false) }
-    var showTagHelper by remember(task.id) { mutableStateOf(false) }
-    var showChecklistHelper by remember(task.id, task.checklist) { mutableStateOf(task.checklist.isNotEmpty()) }
-    var showDatePicker by remember(task.id) { mutableStateOf(false) }
+    var showCalendarHelper by remember(task.item.id) { mutableStateOf(false) }
+    var showWhenDialog by remember(task.item.id) { mutableStateOf(false) }
+    var showTagHelper by remember(task.item.id) { mutableStateOf(false) }
+    var showChecklistHelper by remember(task.item.id, task.checklist) { mutableStateOf(task.checklist.isNotEmpty()) }
+    var showDatePicker by remember(task.item.id) { mutableStateOf(false) }
 
     var isDeleted by remember { mutableStateOf(false) }
     var isSavedManually by remember { mutableStateOf(false) }
@@ -106,7 +107,7 @@ fun ThingsTaskInlineEditor(
                         currentStartDate,
                         currentDueDate,
                         tagList,
-                        task.projectId, // preserve original project
+                        task.item.projectId, // preserve original project
                         currentChecklist,
                         currentPriority
                     )
@@ -133,46 +134,46 @@ fun ThingsTaskInlineEditor(
                 .padding(horizontal = 16.dp, vertical = 14.dp)
         ) {
             // Main Top Content: Checkbox, Title and Notes
-            InlineMainInputRow(
-                title = title,
-                onTitleChange = { title = it },
-                notes = notes,
-                onNotesChange = { notes = it },
-                isCompleted = task.isCompleted,
-                onCheckboxClick = {
-                    isSavedManually = true
-                    if (title.isBlank() && notes.isBlank() && checklist.isEmpty()) {
-                        onDelete?.invoke()
-                    } else {
-                        val tagList = tagInput.split(",").map { it.trim() }.filter { it.isNotEmpty() }
-                        onSave(
-                            title,
-                            notes,
-                            section,
-                            isTonight,
-                            startDate,
-                            dueDate,
-                            tagList,
-                            task.projectId,
-                            checklist,
-                            priority
-                        )
+                InlineMainInputRow(
+                    title = title,
+                    onTitleChange = { title = it },
+                    notes = notes,
+                    onNotesChange = { notes = it },
+                    isCompleted = task.item.isCompleted,
+                    onCheckboxClick = {
+                        isSavedManually = true
+                        if (title.isBlank() && notes.isBlank() && checklist.isEmpty()) {
+                            onDelete?.invoke()
+                        } else {
+                            val tagList = tagInput.split(",").map { it.trim() }.filter { it.isNotEmpty() }
+                            onSave(
+                                title,
+                                notes,
+                                section,
+                                isTonight,
+                                startDate,
+                                dueDate,
+                                tagList,
+                                task.item.projectId,
+                                checklist,
+                                priority
+                            )
+                        }
+                        onDone()
                     }
-                    onDone()
-                }
-            )
+                )
 
-            // Tag Helper: Sleek input block
-            InlineTagField(
-                tagInput = tagInput,
-                onTagInputChange = { tagInput = it },
-                showTagHelper = showTagHelper,
-                onShowTagHelperChange = { showTagHelper = it }
-            )
+                // Tag Helper: Sleek input block
+                InlineTagField(
+                    tagInput = tagInput,
+                    onTagInputChange = { tagInput = it },
+                    showTagHelper = showTagHelper,
+                    onShowTagHelperChange = { showTagHelper = it }
+                )
 
-            // Checklist Items Panel
-            InlineChecklistPanel(
-                itemId = task.id,
+                // Checklist Items Panel
+                InlineChecklistPanel(
+                    itemId = task.item.id,
                 checklist = checklist,
                 onChecklistChange = { checklist = it },
                 showChecklistHelper = showChecklistHelper,
@@ -478,7 +479,7 @@ fun ThingsTaskInlineEditor(
                                     startDate,
                                     dueDate,
                                     tagList,
-                                    task.projectId,
+                                    task.item.projectId,
                                     checklist,
                                     priority
                                 )

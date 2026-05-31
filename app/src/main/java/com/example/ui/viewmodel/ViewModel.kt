@@ -5,6 +5,7 @@ import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.viewModelScope
 import com.example.data.model.Area
 import com.example.data.model.Item
+import com.example.data.model.ItemWithChecklist
 import com.example.data.model.Tag
 import com.example.data.model.ItemTag
 import com.example.data.model.ChecklistItem
@@ -127,7 +128,7 @@ class ThingsViewModel(private val repository: TaskRepository) : ViewModel() {
 
     val calendarEvents = MutableStateFlow<List<Item>>(emptyList())
 
-    val tasks: StateFlow<List<Item>> = repository.allTasks
+    val tasks: StateFlow<List<ItemWithChecklist>> = repository.allTasks
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
 
     val projects: StateFlow<List<Item>> = repository.allProjects
@@ -143,17 +144,17 @@ class ThingsViewModel(private val repository: TaskRepository) : ViewModel() {
     val syncError = MutableStateFlow<String?>(null)
     val googleAccessToken = MutableStateFlow("")
 
-    val filteredTasks: StateFlow<List<Item>> = combine(
+    val filteredTasks: StateFlow<List<ItemWithChecklist>> = combine(
         tasks,
         searchQuery,
         selectedTagFilter
     ) { itemList, query, tag ->
-        itemList.filter { item ->
+        itemList.filter { wrapper ->
             val matchesQuery = query.isEmpty() ||
-                    item.title.contains(query, ignoreCase = true) ||
-                    item.notes.contains(query, ignoreCase = true)
+                    wrapper.item.title.contains(query, ignoreCase = true) ||
+                    wrapper.item.notes.contains(query, ignoreCase = true)
             
-            val matchesTag = tag == null || item.cachedTags.contains(tag, ignoreCase = true)
+            val matchesTag = tag == null || wrapper.item.cachedTags.contains(tag, ignoreCase = true)
             
             matchesQuery && matchesTag
         }
@@ -161,8 +162,8 @@ class ThingsViewModel(private val repository: TaskRepository) : ViewModel() {
 
     val allTags: StateFlow<Set<String>> = tasks
         .combine(searchQuery) { taskList, _ ->
-            taskList.flatMap { item ->
-                if (item.cachedTags.isBlank()) emptyList() else item.cachedTags.split(", ").map { it.trim() }
+            taskList.flatMap { wrapper ->
+                if (wrapper.item.cachedTags.isBlank()) emptyList() else wrapper.item.cachedTags.split(", ").map { it.trim() }
             }.filter { it.isNotBlank() }.toSet()
         }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptySet())
 
@@ -231,50 +232,57 @@ class ThingsViewModel(private val repository: TaskRepository) : ViewModel() {
         }
     }
 
+    fun updateTask(item: Item, checklist: List<ChecklistItem>) {
+        viewModelScope.launch {
+            repository.insertTask(item, checklist)
+        }
+    }
+
     fun updateTasks(items: List<Item>) {
         viewModelScope.launch {
             repository.insertTasks(items)
         }
     }
 
-    fun toggleTaskCompletion(item: Item) {
+    fun toggleTaskCompletion(wrapper: ItemWithChecklist) {
         viewModelScope.launch {
+            val item = wrapper.item
             val isCompleting = !item.isCompleted
-            val updated = item.copyTask(
+            val updated = item.copy(
                 status = if (isCompleting) 3 else 0,
                 stopDate = if (isCompleting) System.currentTimeMillis() else null
             )
-            repository.insertTask(updated)
+            repository.insertTask(updated, wrapper.checklist)
         }
     }
 
-    fun toggleChecklistItem(item: Item, itemId: String) {
+    fun toggleChecklistItem(wrapper: ItemWithChecklist, itemId: String) {
         viewModelScope.launch {
-            val updatedChecklist = item.checklist.map {
+            val updatedChecklist = wrapper.checklist.map {
                 if (it.id == itemId) it.copy(isCompleted = !it.isCompleted) else it
             }
-            repository.updateChecklistItems(item.id, updatedChecklist)
+            repository.updateChecklistItems(wrapper.item.id, updatedChecklist)
         }
     }
 
-    fun addChecklistItemToTask(item: Item, title: String) {
+    fun addChecklistItemToTask(wrapper: ItemWithChecklist, title: String) {
         if (title.isBlank()) return
         viewModelScope.launch {
-            val updatedChecklist = item.checklist + ChecklistItem(itemId = item.id, title = title)
-            repository.updateChecklistItems(item.id, updatedChecklist)
+            val updatedChecklist = wrapper.checklist + ChecklistItem(itemId = wrapper.item.id, title = title)
+            repository.updateChecklistItems(wrapper.item.id, updatedChecklist)
         }
     }
 
-    fun deleteChecklistItemFromTask(item: Item, itemId: String) {
+    fun deleteChecklistItemFromTask(wrapper: ItemWithChecklist, itemId: String) {
         viewModelScope.launch {
-            val updatedChecklist = item.checklist.filter { it.id != itemId }
-            repository.updateChecklistItems(item.id, updatedChecklist)
+            val updatedChecklist = wrapper.checklist.filter { it.id != itemId }
+            repository.updateChecklistItems(wrapper.item.id, updatedChecklist)
         }
     }
 
-    fun deleteTask(item: Item) {
+    fun deleteTask(wrapper: ItemWithChecklist) {
         viewModelScope.launch {
-            repository.deleteTask(item)
+            repository.deleteTask(wrapper.item)
         }
     }
 

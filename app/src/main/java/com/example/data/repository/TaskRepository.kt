@@ -12,6 +12,7 @@ import com.example.data.model.ChecklistItem
 import com.example.data.model.TaskSection
 import com.example.data.remote.GoogleTask
 import com.example.data.remote.GoogleTasksService
+import com.example.data.model.ItemWithChecklist
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.map
@@ -23,17 +24,20 @@ import java.util.Calendar
 
 class TaskRepository(private val taskDao: TaskDao, private val context: Context) {
 
-    val allTasks: Flow<List<Item>> = combine(
+    val allTasks: Flow<List<ItemWithChecklist>> = combine(
         taskDao.getAllItems(),
         taskDao.getAllChecklistItemsFlow()
     ) { items, checklistItems ->
         val checklistMap = checklistItems.groupBy { it.itemId }
         items.map { item ->
-            item.copyTask(checklist = checklistMap[item.id] ?: emptyList())
+            ItemWithChecklist(
+                item = item,
+                checklist = checklistMap[item.id] ?: emptyList()
+            )
         }
     }
 
-    val allProjects: Flow<List<Item>> = allTasks.map { items ->
+    val allProjects: Flow<List<Item>> = taskDao.getAllItems().map { items ->
         items.filter { it.type == 1 }
     }
 
@@ -248,16 +252,13 @@ class TaskRepository(private val taskDao: TaskDao, private val context: Context)
         }
     }
 
-    suspend fun insertTask(item: Item) = withContext(Dispatchers.IO) {
+    suspend fun insertTask(item: Item, checklist: List<ChecklistItem> = emptyList()) = withContext(Dispatchers.IO) {
         taskDao.insertItem(item)
-        updateChecklistItems(item.id, item.checklist)
+        updateChecklistItems(item.id, checklist)
     }
 
     suspend fun insertTasks(items: List<Item>) = withContext(Dispatchers.IO) {
         taskDao.insertItems(items)
-        for (item in items) {
-            updateChecklistItems(item.id, item.checklist)
-        }
     }
 
     suspend fun deleteTask(item: Item) = withContext(Dispatchers.IO) {

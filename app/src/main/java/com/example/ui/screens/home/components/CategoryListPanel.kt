@@ -40,6 +40,7 @@ import androidx.compose.ui.zIndex
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.layout.layout
 import com.example.data.model.Item
+import com.example.data.model.ItemWithChecklist
 import com.example.data.model.TaskSection
 import com.example.data.model.Area
 import com.example.ui.components.ProjectProgressArc
@@ -58,8 +59,8 @@ data class UpcomingDay(
     val dateMillis: Long,
     val dayOfMonth: String,
     val dayOfWeekLabel: String,
-    val calendarEvents: List<Item>,
-    val tasks: List<Item>
+    val calendarEvents: List<ItemWithChecklist>,
+    val tasks: List<ItemWithChecklist>
 )
 
 data class UpcomingHeaderItem(
@@ -152,15 +153,15 @@ fun UpcomingCalendarEventRow(
 fun ThingsCategoryListPanel(
     screen: ActiveScreen,
     project: Item?,
-    tasks: List<Item>,
+    tasks: List<ItemWithChecklist>,
     allTags: Set<String>,
     selectedTag: String?,
     textPrimaryColor: Color,
     textSecondaryColor: Color,
     dividerColor: Color,
     onTagSelect: (String?) -> Unit,
-    onTaskToggle: (Item) -> Unit,
-    onTaskClick: (Item) -> Unit,
+    onTaskToggle: (ItemWithChecklist) -> Unit,
+    onTaskClick: (ItemWithChecklist) -> Unit,
     projects: List<Item>,
     viewModel: ThingsViewModel,
     inlineExpandedTaskId: String?,
@@ -169,7 +170,8 @@ fun ThingsCategoryListPanel(
     onProjectClick: (Item) -> Unit = {}
 ) {
     val listTasks = remember(tasks, screen, project, area) {
-        tasks.filter { task ->
+        tasks.filter { wrapper ->
+            val task = wrapper.item
             when (screen) {
                 ActiveScreen.INBOX -> task.isInbox && !task.isCompleted
                 ActiveScreen.TODAY -> task.isToday
@@ -182,7 +184,7 @@ fun ThingsCategoryListPanel(
                 ActiveScreen.AREA_DETAIL -> task.areaId == area?.id && task.type == 0 && !task.isCompleted
                 else -> false
             }
-        }.sortedBy { it.sortOrder }
+        }.sortedBy { it.item.sortOrder }
     }
 
     val calendarEvents by viewModel.calendarEvents.collectAsState()
@@ -196,7 +198,7 @@ fun ThingsCategoryListPanel(
     val subHeaderFontSize = MaterialTheme.typography.headlineSmall.fontSize
 
     val filteredTasks = remember(listTasks, selectedTag) {
-        if (selectedTag == null) listTasks else listTasks.filter { it.tags.contains(selectedTag) }
+        if (selectedTag == null) listTasks else listTasks.filter { it.item.tags.contains(selectedTag) }
     }
 
     val lazyListState = rememberLazyListState()
@@ -244,11 +246,11 @@ fun ThingsCategoryListPanel(
             // Находим все календарные события на этот день
             val dayEvents = calendarEvents.filter { event ->
                 event.eventStartMillis != null && event.eventStartMillis in dayStart..dayEnd
-            }
+            }.map { ItemWithChecklist(item = it, checklist = emptyList()) }
             
             // Находим все задачи на этот день
-            val dayTasks = localTasksList.filter { task ->
-                task.startDate != null && task.startDate in dayStart..dayEnd
+            val dayTasks = localTasksList.filter { wrapper ->
+                wrapper.item.startDate != null && wrapper.item.startDate in dayStart..dayEnd
             }
             
             if (dayEvents.isNotEmpty() || dayTasks.isNotEmpty()) {
@@ -279,11 +281,12 @@ fun ThingsCategoryListPanel(
         localTasksList = filteredTasks
     }
 
-    val makeDragModifier = { task: Item ->
-        Modifier.pointerInput(task.id, task.sortOrder) {
+    val makeDragModifier = { task: ItemWithChecklist ->
+        val taskItem = task.item
+        Modifier.pointerInput(taskItem.id, taskItem.sortOrder) {
             detectDragGesturesAfterLongPress(
                 onDragStart = {
-                    draggedTaskId = task.id
+                    draggedTaskId = taskItem.id
                     dragAccumulatedOffset = 0f
                 },
                 onDrag = { change, dragAmount ->
@@ -313,17 +316,17 @@ fun ThingsCategoryListPanel(
                         }
                         spacing
                     }
-                    val draggedItemInfo = visibleItems.firstOrNull { it.key == task.id }
+                    val draggedItemInfo = visibleItems.firstOrNull { it.key == taskItem.id }
                     if (draggedItemInfo != null) {
                         val dragCenterY = draggedItemInfo.offset + draggedItemInfo.size / 2f + dragAccumulatedOffset
                         val hoveredItem = visibleItems.firstOrNull { item ->
                             val itemKey = item.key as? String
-                            itemKey != null && itemKey != task.id &&
+                            itemKey != null && itemKey != taskItem.id &&
                             dragCenterY > item.offset &&
                             dragCenterY < item.offset + item.size
                         }
                         if (hoveredItem != null) {
-                            val fromIndex = localTasksList.indexOfFirst { it.id == task.id }
+                            val fromIndex = localTasksList.indexOfFirst { it.item.id == taskItem.id }
                             val cleanKey = (hoveredItem.key as? String) ?: ""
                             val isHdr = cleanKey.startsWith("hdr_")
                             val isEv = cleanKey.startsWith("ev_")
@@ -332,9 +335,12 @@ fun ThingsCategoryListPanel(
                                 if (fromIndex != -1) {
                                     val newList = localTasksList.toMutableList()
                                     var movedItem = newList.removeAt(fromIndex)
-                                    if (!movedItem.isTonight) {
-                                        movedItem = movedItem.copyTask(isTonight = true)
-                                        val firstEveningIndex = newList.indexOfFirst { it.isTonight }
+                                    if (!movedItem.item.isTonight) {
+                                        movedItem = ItemWithChecklist(
+                                            item = movedItem.item.copy(isTonight = true),
+                                            checklist = movedItem.checklist
+                                        )
+                                        val firstEveningIndex = newList.indexOfFirst { it.item.isTonight }
                                         val toIndex = if (firstEveningIndex != -1) firstEveningIndex else newList.size
                                         newList.add(toIndex, movedItem)
                                         localTasksList = newList
@@ -342,8 +348,11 @@ fun ThingsCategoryListPanel(
                                         val distance = (hoveredItem.offset + hoveredItem.size) - draggedItemInfo.offset - draggedItemInfo.size
                                         dragAccumulatedOffset -= distance
                                     } else {
-                                        movedItem = movedItem.copyTask(isTonight = false)
-                                        val firstEveningIndex = newList.indexOfFirst { it.isTonight }
+                                        movedItem = ItemWithChecklist(
+                                            item = movedItem.item.copy(isTonight = false),
+                                            checklist = movedItem.checklist
+                                        )
+                                        val firstEveningIndex = newList.indexOfFirst { it.item.isTonight }
                                         val toIndex = if (firstEveningIndex != -1) firstEveningIndex else newList.size
                                         newList.add(toIndex, movedItem)
                                         localTasksList = newList
@@ -360,8 +369,11 @@ fun ThingsCategoryListPanel(
                                 if (fromIndex != -1) {
                                     val newList = localTasksList.toMutableList()
                                     var movedItem = newList.removeAt(fromIndex)
-                                    if (movedItem.isTonight) {
-                                        movedItem = movedItem.copyTask(isTonight = false)
+                                    if (movedItem.item.isTonight) {
+                                        movedItem = ItemWithChecklist(
+                                            item = movedItem.item.copy(isTonight = false),
+                                            checklist = movedItem.checklist
+                                        )
                                         val toIndex = 0
                                         newList.add(toIndex, movedItem)
                                         localTasksList = newList
@@ -379,10 +391,10 @@ fun ThingsCategoryListPanel(
                                     
                                     val tomorrowStart = upcomingDays.firstOrNull()?.dateMillis ?: 0L
                                     
-                                    val isCurrentlyInHoveredDay = if (movedItem.startDate == null) {
+                                    val isCurrentlyInHoveredDay = if (movedItem.item.startDate == null) {
                                         timestamp == tomorrowStart
                                     } else {
-                                        movedItem.startDate!! in timestamp..(timestamp + 24 * 3600 * 1000 - 1)
+                                        movedItem.item.startDate!! in timestamp..(timestamp + 24 * 3600 * 1000 - 1)
                                     }
                                     
                                     var targetTimestamp = if (isCurrentlyInHoveredDay && draggedItemInfo.offset > hoveredItem.offset) {
@@ -402,11 +414,11 @@ fun ThingsCategoryListPanel(
                                     }
                                     val newStartDate = cal.timeInMillis
                                     
-                                    val oldStartDateDayStart = if (movedItem.startDate == null) {
+                                    val oldStartDateDayStart = if (movedItem.item.startDate == null) {
                                         tomorrowStart
                                     } else {
                                         Calendar.getInstance().apply {
-                                            timeInMillis = movedItem.startDate!!
+                                            timeInMillis = movedItem.item.startDate!!
                                             set(Calendar.HOUR_OF_DAY, 0)
                                             set(Calendar.MINUTE, 0)
                                             set(Calendar.SECOND, 0)
@@ -423,9 +435,12 @@ fun ThingsCategoryListPanel(
                                     }.timeInMillis
                                     
                                     if (oldStartDateDayStart != targetDayStart) {
-                                        movedItem = movedItem.copyTask(startDate = newStartDate)
+                                        movedItem = ItemWithChecklist(
+                                            item = movedItem.item.copy(startDate = newStartDate),
+                                            checklist = movedItem.checklist
+                                        )
                                         
-                                        var toIndex = newList.indexOfFirst { it.startDate != null && it.startDate >= targetDayStart }
+                                        var toIndex = newList.indexOfFirst { it.item.startDate != null && it.item.startDate!! >= targetDayStart }
                                         if (toIndex == -1) {
                                             toIndex = newList.size
                                         }
@@ -441,18 +456,24 @@ fun ThingsCategoryListPanel(
                                     }
                                 }
                             } else {
-                                val toIndex = localTasksList.indexOfFirst { it.id == hoveredItem.key }
+                                val toIndex = localTasksList.indexOfFirst { it.item.id == hoveredItem.key }
                                 if (fromIndex != -1 && toIndex != -1) {
                                     val newList = localTasksList.toMutableList()
                                     var movedItem = newList.removeAt(fromIndex)
                                     
-                                    val hoveredItemTask = localTasksList.firstOrNull { it.id == hoveredItem.key }
+                                    val hoveredItemTask = localTasksList.firstOrNull { it.item.id == hoveredItem.key }
                                     if (hoveredItemTask != null) {
-                                        if (hoveredItemTask.isTonight != movedItem.isTonight) {
-                                            movedItem = movedItem.copyTask(isTonight = hoveredItemTask.isTonight)
+                                        if (hoveredItemTask.item.isTonight != movedItem.item.isTonight) {
+                                            movedItem = ItemWithChecklist(
+                                                item = movedItem.item.copy(isTonight = hoveredItemTask.item.isTonight),
+                                                checklist = movedItem.checklist
+                                            )
                                         }
-                                        if (screen == ActiveScreen.UPCOMING && movedItem.startDate != hoveredItemTask.startDate) {
-                                            movedItem = movedItem.copyTask(startDate = hoveredItemTask.startDate)
+                                        if (screen == ActiveScreen.UPCOMING && movedItem.item.startDate != hoveredItemTask.item.startDate) {
+                                            movedItem = ItemWithChecklist(
+                                                item = movedItem.item.copy(startDate = hoveredItemTask.item.startDate),
+                                                checklist = movedItem.checklist
+                                            )
                                         }
                                     }
                                     
@@ -472,20 +493,26 @@ fun ThingsCategoryListPanel(
                 },
                 onDragEnd = {
                     val updatedList = localTasksList.mapIndexed { index, t ->
-                        val original = filteredTasks.firstOrNull { it.id == t.id }
-                        if (original != null && (original.sortOrder != index || original.isTonight != t.isTonight || original.startDate != t.startDate)) {
-                            t.copyTask(sortOrder = index, modificationDate = System.currentTimeMillis())
+                        val original = filteredTasks.firstOrNull { it.item.id == t.item.id }
+                        if (original != null && (original.item.sortOrder != index || original.item.isTonight != t.item.isTonight || original.item.startDate != t.item.startDate)) {
+                            ItemWithChecklist(
+                                item = t.item.copy(sortOrder = index, modificationDate = System.currentTimeMillis()),
+                                checklist = t.checklist
+                            )
                         } else {
-                            t.copyTask(sortOrder = index)
+                            ItemWithChecklist(
+                                item = t.item.copy(sortOrder = index),
+                                checklist = t.checklist
+                            )
                         }
                     }
                     val changedTasks = updatedList.filter { t ->
-                        val original = filteredTasks.firstOrNull { it.id == t.id }
-                        original == null || original.sortOrder != t.sortOrder || original.isTonight != t.isTonight || original.startDate != t.startDate
+                        val original = filteredTasks.firstOrNull { it.item.id == t.item.id }
+                        original == null || original.item.sortOrder != t.item.sortOrder || original.item.isTonight != t.item.isTonight || original.item.startDate != t.item.startDate
                     }
                     localTasksList = updatedList
                     if (changedTasks.isNotEmpty()) {
-                        viewModel.updateTasks(changedTasks)
+                        viewModel.updateTasks(changedTasks.map { it.item })
                     }
                     draggedTaskId = null
                     dragAccumulatedOffset = 0f
@@ -498,8 +525,8 @@ fun ThingsCategoryListPanel(
         }
     }
 
-    val standardToday = remember(localTasksList) { localTasksList.filter { !it.isTonight } }
-    val eveningToday = remember(localTasksList) { localTasksList.filter { it.isTonight } }
+    val standardToday = remember(localTasksList) { localTasksList.filter { !it.item.isTonight } }
+    val eveningToday = remember(localTasksList) { localTasksList.filter { it.item.isTonight } }
 
     val anyExpanded = inlineExpandedTaskId != null
     val globalDimAlpha by animateFloatAsState(targetValue = if (anyExpanded) 0.3f else 1f, label = "globalDim")
@@ -622,8 +649,8 @@ fun ThingsCategoryListPanel(
                         )
                     }
                     ActiveScreen.PROJECT_DETAIL -> {
-                        val completedCount = tasks.count { it.projectId == project?.id && it.isCompleted }
-                        val totalCount = tasks.count { it.projectId == project?.id }
+                        val completedCount = tasks.count { it.item.projectId == project?.id && it.item.isCompleted }
+                        val totalCount = tasks.count { it.item.projectId == project?.id }
                         ProjectProgressArc(
                             completed = completedCount,
                             total = totalCount,
@@ -720,7 +747,7 @@ fun ThingsCategoryListPanel(
             ActiveScreen.UPCOMING -> upcomingDays.isNotEmpty()
             ActiveScreen.AREA_DETAIL -> {
                 val areaProjCount = projects.count { it.areaId == area?.id }
-                val areaTasksCount = displayTasks.count { it.areaId == area?.id && (it.projectId == null || it.projectId == "") }
+                val areaTasksCount = displayTasks.count { it.item.areaId == area?.id && (it.item.projectId == null || it.item.projectId == "") }
                 areaProjCount > 0 || areaTasksCount > 0
             }
             else -> displayTasks.isNotEmpty()
@@ -763,7 +790,7 @@ fun ThingsCategoryListPanel(
                     upcomingDays.forEach { day ->
                         add(UpcomingHeaderItem(day.dateMillis, day.dayOfMonth, day.dayOfWeekLabel))
                         day.calendarEvents.forEach { event ->
-                            add(UpcomingEventItem(event, day.dateMillis))
+                            add(UpcomingEventItem(event.item, day.dateMillis))
                         }
                         day.tasks.forEach { task ->
                             add(task)
@@ -775,7 +802,7 @@ fun ThingsCategoryListPanel(
                         add("projects_heading")
                         addAll(areaProjects)
                     }
-                    val areaDirectTasks = displayTasks.filter { it.areaId == area?.id && (it.projectId == null || it.projectId == "") }
+                    val areaDirectTasks = displayTasks.filter { it.item.areaId == area?.id && (it.item.projectId == null || it.item.projectId == "") }
                     if (areaDirectTasks.isNotEmpty()) {
                         add("tasks_heading")
                         addAll(areaDirectTasks)
@@ -787,6 +814,7 @@ fun ThingsCategoryListPanel(
 
             items(flattened, key = { item ->
                 when (item) {
+                    is ItemWithChecklist -> item.item.id
                     is Item -> item.id
                     is UpcomingHeaderItem -> "hdr_${item.dateMillis}"
                     is UpcomingEventItem -> "ev_${item.event.id}_${item.dateMillis}"
@@ -794,13 +822,119 @@ fun ThingsCategoryListPanel(
                 }
             }) { item ->
                 when (item) {
+                    is ItemWithChecklist -> {
+                        val taskWrapper = item
+                        val task = taskWrapper.item
+                        val isDragTask = draggedTaskId == task.id
+                        val isExpanded = inlineExpandedTaskId == task.id
+                        val shouldDim = inlineExpandedTaskId != null && !isExpanded
+                        
+                        val dimAlpha by animateFloatAsState(
+                            targetValue = if (shouldDim) 0.3f else 1f,
+                            label = "dimAlpha_${task.id}"
+                        )
+                        val dragScale by animateFloatAsState(
+                            targetValue = if (isDragTask) 1.04f else 1.0f,
+                            label = "dragScale_${task.id}"
+                        )
+                        val dragElevation by animateDpAsState(
+                            targetValue = if (isDragTask) 8.dp else (if (isExpanded) 8.dp else 0.dp),
+                            label = "dragElev_${task.id}"
+                        )
+                        val zIndexValToUse = if (isDragTask) 100f else (if (isExpanded) 1f else 0f)
+                        val translationYVal = if (isDragTask) dragAccumulatedOffset else 0f
+                        
+                        val containerBgColor = if (isExpanded || isDragTask) MaterialTheme.colorScheme.background else Color.Transparent
+                        
+                        Column(
+                            modifier = (if (isDragTask) Modifier else Modifier.animateItem())
+                                .zIndex(zIndexValToUse)
+                                .graphicsLayer {
+                                    translationY = translationYVal
+                                    scaleX = dragScale
+                                    scaleY = dragScale
+                                    alpha = dimAlpha
+                                }
+                                .layout { measurable, constraints ->
+                                    val paddingPx = 4.dp.roundToPx()
+                                    val extendedConstraints = constraints.copy(
+                                        minWidth = (constraints.minWidth + paddingPx * 2).coerceAtMost(constraints.maxWidth + paddingPx * 2),
+                                        maxWidth = (constraints.maxWidth + paddingPx * 2)
+                                    )
+                                    val placeable = measurable.measure(extendedConstraints)
+                                    layout(placeable.width - paddingPx * 2, placeable.height) {
+                                        placeable.place(-paddingPx, 0)
+                                    }
+                                }
+                                .shadow(dragElevation, RoundedCornerShape(8.dp))
+                                .background(containerBgColor, RoundedCornerShape(8.dp))
+                                .animateContentSize(animationSpec = spring(
+                                    dampingRatio = Spring.DampingRatioLowBouncy,
+                                    stiffness = Spring.StiffnessMediumLow
+                                ))
+                        ) {
+                            if (isExpanded) {
+                                ThingsTaskInlineEditor(
+                                    task = taskWrapper,
+                                    projects = projects,
+                                    onSave = { title, notes, section, isTonight, startDate, dueDate, tags, projectId, checklist, priority ->
+                                        val startVal = when (section) {
+                                            TaskSection.INBOX -> 0
+                                            TaskSection.TODAY -> 1
+                                            TaskSection.ANYTIME -> 2
+                                            TaskSection.SOMEDAY -> 3
+                                            TaskSection.UPCOMING -> 2
+                                        }
+                                        val updatedTask = task.copy(
+                                            title = title,
+                                            notes = notes,
+                                            start = startVal,
+                                            isTonight = isTonight,
+                                            startDate = startDate,
+                                            dueDate = dueDate,
+                                            cachedTags = tags.joinToString(", "),
+                                            projectId = projectId,
+                                            priority = priority
+                                        )
+                                        viewModel.updateTask(updatedTask, checklist)
+                                        
+                                        onInlineExpandedTaskIdChange(null)
+                                    },
+                                    onDelete = {
+                                        viewModel.deleteTask(taskWrapper)
+                                        onInlineExpandedTaskIdChange(null)
+                                    },
+                                    onDone = {
+                                        onInlineExpandedTaskIdChange(null)
+                                    }
+                                )
+                            } else {
+                                TaskItemRow(
+                                    modifier = Modifier,
+                                    task = taskWrapper.item,
+                                    textPrimaryColor = textPrimaryColor,
+                                    textSecondaryColor = textSecondaryColor,
+                                    dividerColor = dividerColor,
+                                    onToggle = { onTaskToggle(taskWrapper) },
+                                    onClick = { 
+                                        onInlineExpandedTaskIdChange(task.id)
+                                    },
+                                    projects = projects,
+                                    showTodayIndicator = screen == ActiveScreen.TODAY && !task.isTonight,
+                                    isDragging = false,
+                                    dragOffsetY = 0f,
+                                    dragModifier = makeDragModifier(taskWrapper)
+                                )
+                            }
+                        }
+                    }
                     is Item -> {
                         val task = item
                         if (task.type == 1) {
                             // [ИЗМЕНЕНИЕ]: Отрисовка строки проекта в списке проектов области
                             // Использует скругление углов 10.dp для достижения полной идентичности с главным экраном!
-                            val projectTasks = tasks.filter { it.projectId == task.id }
-                            val completedCount = projectTasks.count { it.isCompleted }
+                            val projectTasks = tasks.filter { it.item.projectId == task.id }
+                            val completedCount = projectTasks.count { it.item.isCompleted }
                             val totalCount = projectTasks.size
                             val shouldDim = inlineExpandedTaskId != null
                             val dimAlpha by animateFloatAsState(
@@ -834,110 +968,6 @@ fun ThingsCategoryListPanel(
                                     maxLines = 1,
                                     overflow = TextOverflow.Ellipsis
                                 )
-                            }
-                        } else {
-                            val isDragTask = draggedTaskId == task.id
-                            val isExpanded = inlineExpandedTaskId == task.id
-                            val shouldDim = inlineExpandedTaskId != null && !isExpanded
-                            
-                            val dimAlpha by animateFloatAsState(
-                                targetValue = if (shouldDim) 0.3f else 1f,
-                                label = "dimAlpha_${task.id}"
-                            )
-                            val dragScale by animateFloatAsState(
-                                targetValue = if (isDragTask) 1.04f else 1.0f,
-                                label = "dragScale_${task.id}"
-                            )
-                            val dragElevation by animateDpAsState(
-                                targetValue = if (isDragTask) 8.dp else (if (isExpanded) 8.dp else 0.dp),
-                                label = "dragElev_${task.id}"
-                            )
-                            val zIndexValToUse = if (isDragTask) 100f else (if (isExpanded) 1f else 0f)
-                            val translationYVal = if (isDragTask) dragAccumulatedOffset else 0f
-                            
-                            val containerBgColor = if (isExpanded || isDragTask) MaterialTheme.colorScheme.background else Color.Transparent
-                            
-                            Column(
-                                modifier = (if (isDragTask) Modifier else Modifier.animateItem())
-                                    .zIndex(zIndexValToUse)
-                                    .graphicsLayer {
-                                        translationY = translationYVal
-                                        scaleX = dragScale
-                                        scaleY = dragScale
-                                        alpha = dimAlpha
-                                    }
-                                    .layout { measurable, constraints ->
-                                        val paddingPx = 4.dp.roundToPx()
-                                        val extendedConstraints = constraints.copy(
-                                            minWidth = (constraints.minWidth + paddingPx * 2).coerceAtMost(constraints.maxWidth + paddingPx * 2),
-                                            maxWidth = (constraints.maxWidth + paddingPx * 2)
-                                        )
-                                        val placeable = measurable.measure(extendedConstraints)
-                                        layout(placeable.width - paddingPx * 2, placeable.height) {
-                                            placeable.place(-paddingPx, 0)
-                                        }
-                                    }
-                                    .shadow(dragElevation, RoundedCornerShape(8.dp))
-                                    .background(containerBgColor, RoundedCornerShape(8.dp))
-                                    .animateContentSize(animationSpec = spring(
-                                        dampingRatio = Spring.DampingRatioLowBouncy,
-                                        stiffness = Spring.StiffnessMediumLow
-                                    ))
-                            ) {
-                                if (isExpanded) {
-                                    ThingsTaskInlineEditor(
-                                        task = task,
-                                        projects = projects,
-                                        onSave = { title, notes, section, isTonight, startDate, dueDate, tags, projectId, checklist, priority ->
-                                            val startVal = when (section) {
-                                                TaskSection.INBOX -> 0
-                                                TaskSection.TODAY -> 1
-                                                TaskSection.ANYTIME -> 2
-                                                TaskSection.SOMEDAY -> 3
-                                                TaskSection.UPCOMING -> 2
-                                            }
-                                            val updatedTask = task.copyTask(
-                                                title = title,
-                                                notes = notes,
-                                                start = startVal,
-                                                isTonight = isTonight,
-                                                startDate = startDate,
-                                                dueDate = dueDate,
-                                                cachedTags = tags.joinToString(", "),
-                                                projectId = projectId,
-                                                priority = priority,
-                                                checklist = checklist
-                                            )
-                                            viewModel.updateTask(updatedTask)
-                                            
-                                            onInlineExpandedTaskIdChange(null)
-                                        },
-                                        onDelete = {
-                                            viewModel.deleteTask(task)
-                                            onInlineExpandedTaskIdChange(null)
-                                        },
-                                        onDone = {
-                                            onInlineExpandedTaskIdChange(null)
-                                        }
-                                    )
-                                } else {
-                                    TaskItemRow(
-                                        modifier = Modifier,
-                                        task = task,
-                                        textPrimaryColor = textPrimaryColor,
-                                        textSecondaryColor = textSecondaryColor,
-                                        dividerColor = dividerColor,
-                                        onToggle = { onTaskToggle(task) },
-                                        onClick = { 
-                                            onInlineExpandedTaskIdChange(task.id)
-                                        },
-                                        projects = projects,
-                                        showTodayIndicator = screen == ActiveScreen.TODAY && !task.isTonight,
-                                        isDragging = false,
-                                        dragOffsetY = 0f,
-                                        dragModifier = makeDragModifier(task)
-                                    )
-                                }
                             }
                         }
                     }

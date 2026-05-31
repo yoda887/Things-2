@@ -24,6 +24,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.example.data.model.Area
 import com.example.data.model.Item
+import com.example.data.model.ItemWithChecklist
 import com.example.data.model.TaskSection
 import com.example.ui.components.ProjectProgressArc
 import com.example.ui.screens.home.ActiveScreen
@@ -32,7 +33,7 @@ import com.example.ui.theme.*
 
 @Composable
 fun ThingsHomePanel(
-    allTasks: List<Item>,
+    allTasks: List<ItemWithChecklist>,
     projects: List<Item>,
     searchQuery: String,
     googleToken: String,
@@ -57,11 +58,11 @@ fun ThingsHomePanel(
     var rawTokenInput by remember { mutableStateOf(googleToken) }
     var isSyncConfigExpanded by remember { mutableStateOf(false) }
 
-    val inboxCount = allTasks.count { it.isInbox && !it.isCompleted }
-    val todayCount = allTasks.count { it.isToday }
+    val inboxCount = allTasks.count { it.item.isInbox && !it.item.isCompleted }
+    val todayCount = allTasks.count { it.item.isToday }
 
     val tasksByProject = remember(allTasks) {
-        allTasks.groupBy { it.projectId }
+        allTasks.groupBy { it.item.projectId }
     }
 
     val expandedStates = remember { mutableStateMapOf<String, Boolean>() }
@@ -82,7 +83,7 @@ fun ThingsHomePanel(
 
     if (projectToDelete != null) {
         val proj = projectToDelete!!
-        val taskCountInProj = allTasks.count { it.projectId == proj.id }
+        val taskCountInProj = allTasks.count { it.item.projectId == proj.id }
         AlertDialog(
             onDismissRequest = { projectToDelete = null },
             title = { Text("Удалить проект?", fontWeight = FontWeight.Bold, color = textPrimaryColor) },
@@ -252,7 +253,7 @@ fun ThingsHomePanel(
         noAreaProjects.forEach { project ->
             item {
                 val projectTasks = tasksByProject[project.id] ?: emptyList()
-                val completedCount = projectTasks.count { it.isCompleted }
+                val completedCount = projectTasks.count { it.item.isCompleted }
                 val totalCount = projectTasks.size
 
                 Row(
@@ -353,7 +354,7 @@ fun ThingsHomePanel(
                         ) {
                             areaProjects.forEach { project ->
                                 val projectTasks = tasksByProject[project.id] ?: emptyList()
-                                val completedCount = projectTasks.count { it.isCompleted }
+                                val completedCount = projectTasks.count { it.item.isCompleted }
                                 val totalCount = projectTasks.size
 
                                 Row(
