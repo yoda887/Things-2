@@ -23,6 +23,7 @@ import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import com.example.ui.theme.ThingsBlue
+import com.example.ui.theme.dimens
 
 @Composable
 fun InlineMainInputRow(
@@ -37,7 +38,7 @@ fun InlineMainInputRow(
     val textSecondaryColor = Color(0xFF747679) // dark grey font
 
     val titleFontSize = MaterialTheme.typography.headlineSmall.fontSize
-    val notesFontSize = MaterialTheme.typography.titleSmall.fontSize
+    val notesFontSize = MaterialTheme.typography.bodyMedium.fontSize
 
     Row(
         modifier = Modifier.fillMaxWidth(),
@@ -47,7 +48,7 @@ fun InlineMainInputRow(
         ThingsCheckbox(
             checked = isCompleted,
             onCheckedChange = { onCheckboxClick() },
-            size = 19.dp,
+            size = MaterialTheme.dimens.mainCheckboxSize,
             uncheckedColor = Color(0xFFC7C7CC),
             modifier = Modifier.padding(end = 12.dp, top = 2.dp)
         )
@@ -88,6 +89,7 @@ fun InlineMainInputRow(
             BasicTextField(
                 value = notes,
                 onValueChange = onNotesChange,
+                minLines = 2,
                 textStyle = TextStyle(
                     fontSize = notesFontSize,
                     fontWeight = FontWeight.Normal,
@@ -96,7 +98,7 @@ fun InlineMainInputRow(
                 cursorBrush = SolidColor(ThingsBlue),
                 modifier = Modifier
                     .fillMaxWidth()
-                    .heightIn(min = 24.dp)
+                    .heightIn(min = 44.dp)
                     .testTag("task_notes_input"),
                 decorationBox = { innerTextField ->
                     if (notes.isEmpty()) {

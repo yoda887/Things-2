@@ -5,10 +5,14 @@ import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Delete
+import androidx.compose.foundation.layout.ExperimentalLayoutApi
+import androidx.compose.foundation.layout.FlowRow
+
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.text.TextStyle
@@ -33,12 +37,15 @@ import com.example.ui.theme.ThingsSomedayGrey
 import com.example.ui.screens.home.inlineeditor.utils.isTodayDate
 import com.example.ui.screens.home.inlineeditor.components.*
 import com.example.ui.screens.home.inlineeditor.dialogs.ThingsWhenDialog
+import com.example.ui.screens.home.inlineeditor.dialogs.ThingsTagDialog
 import java.util.Calendar
 import java.util.Locale
 import java.util.Date
 import java.text.SimpleDateFormat
+import androidx.compose.foundation.background
 
-@OptIn(ExperimentalMaterial3Api::class)
+@OptIn(ExperimentalMaterial3Api::class, ExperimentalLayoutApi::class)
+
 @Composable
 fun ThingsTaskInlineEditor(
     task: ItemWithChecklist,
@@ -56,7 +63,9 @@ fun ThingsTaskInlineEditor(
         priority: Int
     ) -> Unit,
     onDelete: (() -> Unit)? = null,
-    onDone: () -> Unit = {}
+    onDone: () -> Unit = {},
+    allSavedTags: List<String> = emptyList(),
+    onNewTagCreated: (String) -> Unit = {}
 ) {
     var title by remember(task.item.id) { mutableStateOf<String>(task.item.title) }
     var notes by remember(task.item.id) { mutableStateOf<String>(task.item.notes) }
@@ -71,7 +80,8 @@ fun ThingsTaskInlineEditor(
     // Helpers visibility states
     var showCalendarHelper by remember(task.item.id) { mutableStateOf(false) }
     var showWhenDialog by remember(task.item.id) { mutableStateOf(false) }
-    var showTagHelper by remember(task.item.id) { mutableStateOf(false) }
+    //var showTagHelper by remember(task.item.id) { mutableStateOf(false) }
+    var showTagDialog by remember(task.item.id) { mutableStateOf(false) }
     var showChecklistHelper by remember(task.item.id, task.checklist) { mutableStateOf(task.checklist.isNotEmpty()) }
     var showDatePicker by remember(task.item.id) { mutableStateOf(false) }
 
@@ -131,7 +141,7 @@ fun ThingsTaskInlineEditor(
         Column(
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(horizontal = 16.dp, vertical = 14.dp)
+                .padding(horizontal = 16.dp, vertical = 16.dp)
         ) {
             // Main Top Content: Checkbox, Title and Notes
                 InlineMainInputRow(
@@ -163,13 +173,7 @@ fun ThingsTaskInlineEditor(
                     }
                 )
 
-                // Tag Helper: Sleek input block
-                InlineTagField(
-                    tagInput = tagInput,
-                    onTagInputChange = { tagInput = it },
-                    showTagHelper = showTagHelper,
-                    onShowTagHelperChange = { showTagHelper = it }
-                )
+               
 
                 // Checklist Items Panel
                 InlineChecklistPanel(
@@ -180,12 +184,12 @@ fun ThingsTaskInlineEditor(
                 onShowChecklistHelperChange = { showChecklistHelper = it }
             )
 
-            Spacer(modifier = Modifier.height(14.dp))
+            Spacer(modifier = Modifier.height(16.dp))
 
             // Bottom Actions & Toolbar matching the image closely
             val textPrimaryColor = Color(0xFF1C1C1E)
             val iconInactiveColor = Color(0xFFC7C7CC)
-            val bodyFontSize = MaterialTheme.typography.bodyLarge.fontSize
+            val bodyFontSize = MaterialTheme.typography.bodyMedium.fontSize
 
             val hasActiveDate = startDate != null || section == TaskSection.TODAY || section == TaskSection.SOMEDAY
 
@@ -243,16 +247,53 @@ fun ThingsTaskInlineEditor(
             ) {
                 // Column containing BOTH date and duedate on the left
                 Column(
-                    modifier = Modifier.weight(1f),
+                    modifier = Modifier
+                        .weight(1f)
+                        .padding(start = 28.dp),
                     verticalArrangement = Arrangement.Center
                 ) {
+                    // 0. Active Tags Chips
+                    val activeTags = remember(tagInput) {
+                        tagInput.split(",")
+                            .map { it.trim() }
+                            .filter { it.isNotEmpty() }
+                    }
+                    if (activeTags.isNotEmpty()) {
+                        FlowRow(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(top = 4.dp, bottom = 12.dp),
+                            horizontalArrangement = Arrangement.spacedBy(8.dp),
+                            verticalArrangement = Arrangement.spacedBy(6.dp)
+                        ) {
+                            activeTags.forEach { tag ->
+                                Box(
+                                    modifier = Modifier
+                                        .clip(RoundedCornerShape(10.dp))
+                                        .background(Color(0xFFD1EAE2)) // light-teal background
+                                        .clickable { showTagDialog = true }
+                                        .padding(horizontal = 10.dp, vertical = 4.dp)
+                                ) {
+                                    Text(
+                                        text = tag,
+                                        style = TextStyle(
+                                            color = Color(0xFF2C7D64), // dark-teal text
+                                            fontSize = 12.sp,
+                                            fontWeight = FontWeight.Medium
+                                        )
+                                    )
+                                }
+                            }
+                        }
+                    }
+
                     // 1. Date Indicator Row
                     if (hasActiveDate) {
                         Row(
                             verticalAlignment = Alignment.CenterVertically,
                             modifier = Modifier
                                 .clickable { showWhenDialog = true }
-                                .padding(vertical = 4.dp)
+                                .padding(vertical = 6.dp)
                         ) {
                             Icon(
                                 imageVector = activeDateIcon,
@@ -274,7 +315,7 @@ fun ThingsTaskInlineEditor(
 
                     // Spacer between date indicator and duedate indicator
                     if (hasActiveDate && dueDate != null) {
-                        Spacer(modifier = Modifier.height(6.dp))
+                        Spacer(modifier = Modifier.height(12.dp))
                     }
 
                     // 2. Due Date (Deadline) Indicator Row
@@ -343,7 +384,7 @@ fun ThingsTaskInlineEditor(
                             verticalAlignment = Alignment.CenterVertically,
                             modifier = Modifier
                                 .clickable { showDatePicker = true }
-                                .padding(vertical = 4.dp)
+                                .padding(vertical = 6.dp)
                         ) {
                             Icon(
                                 imageVector = Icons.Outlined.Flag,
@@ -393,15 +434,16 @@ fun ThingsTaskInlineEditor(
                     }
 
                     // Tag
-                    if (!showTagHelper && tagInput.trim().isEmpty()) {
-                        Icon(
-                            imageVector = Icons.Outlined.LocalOffer,
-                            contentDescription = "Tags",
-                            tint = iconInactiveColor,
-                            modifier = Modifier
-                                .size(22.dp)
-                                .clickable { showTagHelper = true }
-                        )
+                    if (tagInput.trim().isEmpty()) {
+                       
+                    Icon(
+                        imageVector = Icons.Outlined.LocalOffer,
+                        contentDescription = "Tags",
+                        tint = iconInactiveColor,
+                        modifier = Modifier
+                            .size(22.dp)
+                            .clickable { showTagDialog = true }
+                    )
                     }
 
                     // Checklist toggle
@@ -510,6 +552,22 @@ fun ThingsTaskInlineEditor(
             initialSelectedDateMillis = dueDate,
             onDateSelected = { dueDate = it },
             onDismiss = { showDatePicker = false }
+        )
+    }
+
+    if (showTagDialog) {
+        ThingsTagDialog(
+            activeTags = remember(tagInput) {
+                tagInput.split(",")
+                    .map { it.trim() }
+                    .filter { it.isNotEmpty() }
+            },
+            allSavedTags = allSavedTags,
+            onNewTagCreated = onNewTagCreated,
+            onTagsSelected = { selected ->
+                tagInput = selected.joinToString(", ")
+            },
+            onDismissRequest = { showTagDialog = false }
         )
     }
 }

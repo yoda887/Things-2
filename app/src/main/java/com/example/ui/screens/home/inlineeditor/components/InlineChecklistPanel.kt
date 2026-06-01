@@ -13,10 +13,12 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.Close
+import androidx.compose.material.icons.filled.Reorder
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import com.example.ui.components.ThingsCheckbox
+import androidx.compose.material3.HorizontalDivider
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -42,7 +44,7 @@ fun InlineChecklistPanel(
 
     val textPrimaryColor = Color(0xFF1C1C1E)
     val textSecondaryColor = Color(0xFF747679)
-    val bodyFontSize = MaterialTheme.typography.bodyLarge.fontSize
+    val bodyFontSize = MaterialTheme.typography.bodyMedium.fontSize
 
     var newChecklistItemTitle by remember { mutableStateOf("") }
 
@@ -54,13 +56,16 @@ fun InlineChecklistPanel(
         Column(
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(start = 32.dp, top = 10.dp)
+                .padding(start = 28.dp, top = 8.dp)
         ) {
+            if (checklist.isNotEmpty()) {
+                HorizontalDivider(color = Color(0xFFE5E5EA), thickness = 0.5.dp)
+            }
             checklist.forEachIndexed { index, item ->
                 Row(
                     modifier = Modifier
                         .fillMaxWidth()
-                        .padding(vertical = 3.dp),
+                        .padding(vertical = 6.dp),
                     verticalAlignment = Alignment.CenterVertically
                 ) {
                     ThingsCheckbox(
@@ -98,24 +103,29 @@ fun InlineChecklistPanel(
                     )
 
                     Icon(
-                        imageVector = Icons.Default.Close,
-                        contentDescription = "Remove Item",
-                        tint = textSecondaryColor.copy(alpha = 0.4f),
+                        //imageVector = Icons.Default.Close,
+                        //contentDescription = "Remove Item",
+                        //tint = textSecondaryColor.copy(alpha = 0.4f),
+                        imageVector = Icons.Default.Reorder,
+                        contentDescription = "Reorder Item",
+                        tint = textSecondaryColor.copy(alpha = 0.3f),
                         modifier = Modifier
-                            .size(14.dp)
-                            .clickable {
-                                val updated = checklist.filterIndexed { idx, _ -> idx != index }
-                                onChecklistChange(updated)
-                            }
+                            .size(16.dp)
+                            //.clickable {
+                              //  val updated = checklist.filterIndexed { idx, _ -> idx != index }
+                                //onChecklistChange(updated)
+                            //}
                     )
                 }
+                HorizontalDivider(color = Color(0xFFE5E5EA), thickness = 0.5.dp)
+           
             }
 
             // Add inline checklist item
             Row(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .padding(vertical = 4.dp),
+                    .padding(vertical = 6.dp),
                 verticalAlignment = Alignment.CenterVertically
             ) {
                 Icon(

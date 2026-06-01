@@ -85,17 +85,17 @@ fun rememberThingsTypography(): Typography {
             fontWeight = FontWeight.Normal,
             fontSize = (15 * scaleFactor).sp
         ),
-        // Default text / TextField input / Task details body - 14.sp base (scaled)
+        // Default text / TextField input / Task details body - increased to 18.sp base
         bodyLarge = TextStyle(
             fontFamily = FontFamily.Default,
             fontWeight = FontWeight.Normal,
-            fontSize = (14 * scaleFactor).sp
+            fontSize = (18 * scaleFactor).sp
         ),
-        // Helper text / Project description / Main tags - 13.sp base (scaled)
+        // Helper text / Project description / Main tags - increased to 16.sp base
         bodyMedium = TextStyle(
             fontFamily = FontFamily.Default,
             fontWeight = FontWeight.Normal,
-            fontSize = (13 * scaleFactor).sp
+            fontSize = (16 * scaleFactor).sp
         ),
         // Task List secondary / Date subtitle - 12.5.sp base (scaled)
         bodySmall = TextStyle(
@@ -103,11 +103,11 @@ fun rememberThingsTypography(): Typography {
             fontWeight = FontWeight.Normal,
             fontSize = (12.5f * scaleFactor).sp
         ),
-        // Clickable buttons / Action trigger text - 13.sp base (scaled, bold)
+        // Clickable buttons / Action trigger text - increased to 18.sp base
         labelLarge = TextStyle(
             fontFamily = FontFamily.Default,
             fontWeight = FontWeight.Bold,
-            fontSize = (13 * scaleFactor).sp
+            fontSize = (18 * scaleFactor).sp
         ),
         // Smaller UI Labels / Subtitle stamps / Badges - 12.sp base (scaled)
         labelMedium = TextStyle(

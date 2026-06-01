@@ -402,7 +402,7 @@ fun ThingsWhenDialog(
                                                         text = cell.day.toString(),
                                                         style = TextStyle(
                                                             color = Color.White,
-                                                            fontSize = 13.sp,
+                                                            fontSize = 18.sp,
                                                             fontWeight = FontWeight.Medium
                                                         )
                                                     )
@@ -432,7 +432,7 @@ fun ThingsWhenDialog(
                                                             text = cell.day.toString(),
                                                             style = TextStyle(
                                                                 color = Color.White,
-                                                                fontSize = 13.sp,
+                                                                fontSize = 18.sp,
                                                                 fontWeight = FontWeight.Medium
                                                             )
                                                         )
@@ -442,7 +442,7 @@ fun ThingsWhenDialog(
                                                         text = cell.day.toString(),
                                                         style = TextStyle(
                                                             color = Color.White,
-                                                            fontSize = 14.sp,
+                                                            fontSize = 18.sp,
                                                             fontWeight = FontWeight.Normal
                                                         )
                                                     )

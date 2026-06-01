@@ -17,6 +17,7 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.launch
 import java.util.UUID
 import java.util.Calendar
@@ -166,6 +167,19 @@ class ThingsViewModel(private val repository: TaskRepository) : ViewModel() {
                 if (wrapper.item.cachedTags.isBlank()) emptyList() else wrapper.item.cachedTags.split(", ").map { it.trim() }
             }.filter { it.isNotBlank() }.toSet()
         }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptySet())
+
+    val allSavedTags: StateFlow<List<String>> = repository.getAllTagsFlow()
+        .map { tags -> tags.map { it.title } }
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
+
+    fun insertTag(tagTitle: String) {
+        viewModelScope.launch {
+            val titleTrimmed = tagTitle.trim()
+            if (titleTrimmed.isNotBlank()) {
+                repository.insertTag(Tag(title = titleTrimmed))
+            }
+        }
+    }
 
     private fun sectionToStartValue(section: TaskSection): Int {
         return when (section) {

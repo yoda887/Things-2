@@ -311,6 +311,10 @@ class TaskRepository(private val taskDao: TaskDao, private val context: Context)
         taskDao.getAllTags()
     }
 
+    fun getAllTagsFlow(): Flow<List<Tag>> {
+        return taskDao.getAllTagsFlow()
+    }
+
     // Checklist update helper
     suspend fun updateChecklistItems(itemId: String, list: List<ChecklistItem>) = withContext(Dispatchers.IO) {
         if (list.isEmpty()) {

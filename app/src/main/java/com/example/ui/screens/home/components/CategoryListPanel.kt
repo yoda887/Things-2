@@ -188,6 +188,7 @@ fun ThingsCategoryListPanel(
     }
 
     val calendarEvents by viewModel.calendarEvents.collectAsState()
+    val allSavedTags by viewModel.allSavedTags.collectAsState()
 
     val configuration = LocalConfiguration.current
     val isLargeScreen = configuration.screenWidthDp >= 600
@@ -877,6 +878,8 @@ fun ThingsCategoryListPanel(
                                 ThingsTaskInlineEditor(
                                     task = taskWrapper,
                                     projects = projects,
+                                    allSavedTags = allSavedTags,
+                                    onNewTagCreated = { viewModel.insertTag(it) },
                                     onSave = { title, notes, section, isTonight, startDate, dueDate, tags, projectId, checklist, priority ->
                                         val startVal = when (section) {
                                             TaskSection.INBOX -> 0

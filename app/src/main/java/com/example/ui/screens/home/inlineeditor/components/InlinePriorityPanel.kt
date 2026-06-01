@@ -60,7 +60,7 @@ fun InlinePriorityPanel(
         Row(
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(start = 32.dp, top = 10.dp)
+                .padding(start = 28.dp, top = 10.dp)
                 .clip(RoundedCornerShape(6.dp))
                 .background(helperBgColor)
                 .padding(horizontal = 8.dp, vertical = 6.dp),
