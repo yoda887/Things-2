@@ -23,6 +23,7 @@ import androidx.compose.material.icons.outlined.Flag
 import com.example.data.model.ChecklistItem
 import com.example.data.model.Item
 import com.example.data.model.ItemWithChecklist
+import com.example.data.model.Tag
 import com.example.data.model.TaskSection
 import com.example.ui.theme.ThingsBlue
 import com.example.ui.theme.ThingsUpcomingRed
@@ -65,7 +66,8 @@ fun ThingsTaskInlineEditor(
     onDelete: (() -> Unit)? = null,
     onDone: () -> Unit = {},
     allSavedTags: List<String> = emptyList(),
-    onNewTagCreated: (String) -> Unit = {}
+    allSavedTagObjects: List<Tag> = emptyList(),
+    onNewTagCreated: (String, String?) -> Unit = { _, _ -> }
 ) {
     var title by remember(task.item.id) { mutableStateOf<String>(task.item.title) }
     var notes by remember(task.item.id) { mutableStateOf<String>(task.item.notes) }
@@ -563,6 +565,7 @@ fun ThingsTaskInlineEditor(
                     .filter { it.isNotEmpty() }
             },
             allSavedTags = allSavedTags,
+            allSavedTagObjects = allSavedTagObjects,
             onNewTagCreated = onNewTagCreated,
             onTagsSelected = { selected ->
                 tagInput = selected.joinToString(", ")

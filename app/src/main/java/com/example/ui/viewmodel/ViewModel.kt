@@ -172,12 +172,33 @@ class ThingsViewModel(private val repository: TaskRepository) : ViewModel() {
         .map { tags -> tags.map { it.title } }
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
 
-    fun insertTag(tagTitle: String) {
+    val allSavedTagObjects: StateFlow<List<Tag>> = repository.getAllTagsFlow()
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
+
+    fun insertTag(tagTitle: String, parentId: String? = null) {
         viewModelScope.launch {
             val titleTrimmed = tagTitle.trim()
             if (titleTrimmed.isNotBlank()) {
-                repository.insertTag(Tag(title = titleTrimmed))
+                repository.insertTag(Tag(title = titleTrimmed, parentId = parentId))
             }
+        }
+    }
+
+    fun createGroup(groupName: String) {
+        viewModelScope.launch {
+            repository.createGroup(groupName)
+        }
+    }
+
+    fun createTagInGroup(tagName: String, parentId: String?) {
+        viewModelScope.launch {
+            repository.createTagInGroup(tagName, parentId)
+        }
+    }
+
+    fun moveTagToGroup(tagId: String, newGroupId: String?) {
+        viewModelScope.launch {
+            repository.moveTagToGroup(tagId, newGroupId)
         }
     }
 

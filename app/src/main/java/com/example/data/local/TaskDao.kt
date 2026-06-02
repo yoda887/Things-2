@@ -96,6 +96,12 @@ interface TaskDao {
     @Query("SELECT * FROM tags ORDER BY sortOrder ASC")
     fun getAllTagsFlow(): Flow<List<Tag>>
 
+    @Query("SELECT * FROM tags WHERE parentId IS NULL ORDER BY sortOrder ASC")
+    fun observeGroups(): Flow<List<Tag>>
+
+    @Query("SELECT * FROM tags WHERE parentId = :parentId ORDER BY sortOrder ASC")
+    fun observeByParent(parentId: String): Flow<List<Tag>>
+
     @Query("SELECT * FROM tags ORDER BY sortOrder ASC")
     suspend fun getAllTags(): List<Tag>
 

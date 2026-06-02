@@ -291,6 +291,33 @@ class TaskRepository(private val taskDao: TaskDao, private val context: Context)
         taskDao.insertTag(tag)
     }
 
+    suspend fun createGroup(groupName: String): Tag = withContext(Dispatchers.IO) {
+        val group = Tag(title = groupName, parentId = null)
+        taskDao.insertTag(group)
+        group
+    }
+
+    suspend fun createTagInGroup(tagName: String, parentId: String?): Tag = withContext(Dispatchers.IO) {
+        val tag = Tag(title = tagName, parentId = parentId)
+        taskDao.insertTag(tag)
+        tag
+    }
+
+    suspend fun moveTagToGroup(tagId: String, newGroupId: String?) = withContext(Dispatchers.IO) {
+        val tag = taskDao.getTagById(tagId)
+        if (tag != null) {
+            taskDao.insertTag(tag.copy(parentId = newGroupId))
+        }
+    }
+
+    fun observeGroups(): Flow<List<Tag>> {
+        return taskDao.observeGroups()
+    }
+
+    fun observeByParent(parentId: String): Flow<List<Tag>> {
+        return taskDao.observeByParent(parentId)
+    }
+
     suspend fun deleteTag(tag: Tag) = withContext(Dispatchers.IO) {
         taskDao.deleteTag(tag)
     }

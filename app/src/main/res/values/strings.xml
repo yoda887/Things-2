@@ -1,3 +1,17 @@
 <resources>
     <string name="app_name">Things</string>
+    <string name="tag_dialog_title">Tags</string>
+    <string name="tag_dialog_done">Done</string>
+    <string name="tag_dialog_cancel">Cancel</string>
+    <string name="tag_dialog_new_tag">New Tag</string>
+    <string name="tag_dialog_save">Save</string>
+    <string name="tag_dialog_manage_tags">Manage Tags</string>
+    <string name="tag_dialog_group">Group</string>
+    <string name="tag_dialog_no_tag">No Tag</string>
+    <string name="tag_dialog_select_group">Select Group</string>
+    <string name="tag_dialog_placeholder">Tag</string>
+    <string name="tag_dialog_group_home">Home</string>
+    <string name="tag_dialog_group_work">Work</string>
+    <string name="tag_dialog_group_urgent">Urgent</string>
+    <string name="tag_dialog_group_personal">Personal</string>
 </resources>

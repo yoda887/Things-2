@@ -8,5 +8,6 @@ import java.util.UUID
 data class Tag(
     @PrimaryKey val id: String = UUID.randomUUID().toString(),
     val title: String,
-    val sortOrder: Int = 0
+    val sortOrder: Int = 0,
+    val parentId: String? = null
 )

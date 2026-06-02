@@ -43,6 +43,7 @@ import com.example.data.model.Item
 import com.example.data.model.ItemWithChecklist
 import com.example.data.model.TaskSection
 import com.example.data.model.Area
+import com.example.data.model.Tag
 import com.example.ui.components.ProjectProgressArc
 import com.example.ui.screens.home.ActiveScreen
 import com.example.ui.screens.home.subcomponents.TaskItemRow
@@ -189,6 +190,7 @@ fun ThingsCategoryListPanel(
 
     val calendarEvents by viewModel.calendarEvents.collectAsState()
     val allSavedTags by viewModel.allSavedTags.collectAsState()
+    val allSavedTagObjects by viewModel.allSavedTagObjects.collectAsState()
 
     val configuration = LocalConfiguration.current
     val isLargeScreen = configuration.screenWidthDp >= 600
@@ -879,7 +881,8 @@ fun ThingsCategoryListPanel(
                                     task = taskWrapper,
                                     projects = projects,
                                     allSavedTags = allSavedTags,
-                                    onNewTagCreated = { viewModel.insertTag(it) },
+                                    allSavedTagObjects = allSavedTagObjects,
+                                    onNewTagCreated = { title, parentId -> viewModel.insertTag(title, parentId) },
                                     onSave = { title, notes, section, isTonight, startDate, dueDate, tags, projectId, checklist, priority ->
                                         val startVal = when (section) {
                                             TaskSection.INBOX -> 0
