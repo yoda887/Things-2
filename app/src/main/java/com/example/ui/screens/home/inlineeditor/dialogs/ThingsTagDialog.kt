@@ -7,6 +7,7 @@ import androidx.compose.animation.slideInVertically
 import androidx.compose.animation.slideOutVertically
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.ExperimentalFoundationApi
+import androidx.compose.foundation.LocalOverscrollConfiguration
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
@@ -15,6 +16,8 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.gestures.detectDragGesturesAfterLongPress
+import androidx.compose.foundation.gestures.detectTapGestures
+import androidx.compose.foundation.gestures.scrollBy
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.Edit
@@ -106,33 +109,22 @@ fun ThingsTagDialog(
     onTagsSelected: (List<String>) -> Unit,
     onDismissRequest: () -> Unit
 ) {
-    // Standard default tags list
-    val defaultTags = remember {
-        listOf("Errand", "Home", "Office", "Important", "Pending", "Phone", "Books", "Diane", "Marc")
-    }
-
     // Map database tags by title
     val dbTagsByTitle = remember(allSavedTagObjects) {
         allSavedTagObjects.associateBy { it.title }
     }
 
-    var deletedDefaultTags by remember { mutableStateOf(emptySet<String>()) }
     var deletedTags by remember { mutableStateOf(emptySet<String>()) }
 
     // Combined available tags list (transformed into Tag objects)
-    val availableTagObjects = remember(allSavedTagObjects, activeTags, deletedDefaultTags, deletedTags) {
+    val availableTagObjects = remember(allSavedTagObjects, activeTags, deletedTags) {
         val activeTagObjects = activeTags
             .filter { it !in deletedTags }
             .map { title ->
                 dbTagsByTitle[title] ?: Tag(id = title, title = title, parentId = null)
             }
-        val defaultTagObjects = defaultTags
-            .filter { it !in deletedDefaultTags && it !in deletedTags }
-            .map { title ->
-                dbTagsByTitle[title] ?: Tag(id = title, title = title, parentId = null)
-            }
-        (defaultTagObjects + allSavedTagObjects + activeTagObjects)
-            .filter { it.title !in deletedDefaultTags && it.title !in deletedTags }
+        (allSavedTagObjects + activeTagObjects)
+            .filter { it.title !in deletedTags }
             .distinctBy { it.title }
     }
 
@@ -180,12 +172,18 @@ fun ThingsTagDialog(
     var draggedTagId by remember { mutableStateOf<String?>(null) }
     var draggedGroupIds by remember { mutableStateOf<Set<String>>(emptySet()) }
     var dragAccumulatedOffset by remember { mutableStateOf(0f) }
+    var currentDragPosition by remember { mutableStateOf(0f) }
+    var grabOffset by remember { mutableStateOf(0f) }
     var localManageTags by remember { mutableStateOf(flatTagList) }
 
     LaunchedEffect(flatTagList) {
         val localIds = localManageTags.map { it.first.id }.toSet()
         val flatIds = flatTagList.map { it.first.id }.toSet()
-        if (localIds != flatIds) {
+        val parentIdsChanged = localManageTags.any { localPair ->
+            val flatPair = flatTagList.find { it.first.id == localPair.first.id }
+            flatPair != null && flatPair.first.parentId != localPair.first.parentId
+        }
+        if (localIds != flatIds || parentIdsChanged) {
             localManageTags = flatTagList
         } else {
             val newLocal = localManageTags.map { localPair ->
@@ -193,6 +191,151 @@ fun ThingsTagDialog(
                 updatedPair ?: localPair
             }
             localManageTags = newLocal.toMutableList()
+        }
+    }
+
+    val getBlock = { parentId: String, list: List<Pair<Tag, Boolean>> ->
+        val startIndex = list.indexOfFirst { it.first.id == parentId }
+        if (startIndex != -1) {
+            val block = mutableListOf(list[startIndex])
+            for (i in startIndex + 1 until list.size) {
+                if (list[i].second) {
+                    block.add(list[i])
+                } else {
+                    break
+                }
+            }
+            block
+        } else {
+            emptyList()
+        }
+    }
+
+    val evaluateSwap: (String) -> Unit = { tagId ->
+        val visibleItems = lazyListState.layoutInfo.visibleItemsInfo
+        val detectedSpacing = run {
+            var spacing = 0f
+            try {
+                spacing = lazyListState.layoutInfo.mainAxisItemSpacing.toFloat()
+            } catch (e: Exception) {
+            }
+            spacing
+        }
+        val draggedItemInfo = visibleItems.firstOrNull { it.key == tagId }
+        val currentIndex = localManageTags.indexOfFirst { it.first.id == tagId }
+        
+        if (draggedItemInfo != null && draggedItemInfo.index == currentIndex) {
+            val dragCenterY = currentDragPosition - grabOffset
+            
+            val hoveredItem = visibleItems.firstOrNull { item ->
+                val itemKey = item.key as? String
+                itemKey != null && itemKey !in draggedGroupIds &&
+                dragCenterY > item.offset &&
+                dragCenterY < item.offset + item.size
+            }
+            
+            if (hoveredItem != null) {
+                val hoveredTagId = hoveredItem.key as String
+                val hoveredItemPair = localManageTags.find { it.first.id == hoveredTagId }
+                val draggedItemPair = localManageTags.find { it.first.id == tagId }
+
+                if (hoveredItemPair != null && draggedItemPair != null) {
+                    if (!draggedItemPair.second) {
+                        // 1. DRAGGING A PARENT (Block swap)
+                        val hoveredParentId = if (hoveredItemPair.second) hoveredItemPair.first.parentId!! else hoveredItemPair.first.id
+                        if (hoveredParentId != tagId) {
+                            val block1 = getBlock(tagId, localManageTags)
+                            val block2 = getBlock(hoveredParentId, localManageTags)
+                            
+                            val index1 = localManageTags.indexOf(block1.first())
+                            val index2 = localManageTags.indexOf(block2.first())
+                            
+                            val standardHeight = draggedItemInfo.size.toFloat() + detectedSpacing
+                            val b2Top = draggedItemInfo.offset.toFloat() + (index2 - currentIndex) * standardHeight
+                            val hysteresis = 0.15f * standardHeight
+                            
+                            val shouldSwap = if (index1 < index2) {
+                                dragCenterY > b2Top + hysteresis
+                            } else {
+                                val b2Bottom = b2Top + block2.size * standardHeight
+                                dragCenterY < b2Bottom - hysteresis
+                            }
+                            
+                            if (shouldSwap) {
+                                val newList = localManageTags.toMutableList()
+                                newList.removeAll(block1)
+                                val insertIndex = newList.indexOf(block2.first()) + if (index1 < index2) block2.size else 0
+                                newList.addAll(insertIndex, block1)
+                                localManageTags = newList
+                                
+                                val distance = if (index1 < index2) block2.size * standardHeight else -(block2.size * standardHeight)
+                                dragAccumulatedOffset -= distance
+                            }
+                        }
+                    } else {
+                        // 2. DRAGGING A CHILD (Single item swap within same parent group)
+                        if (hoveredItemPair.second && hoveredItemPair.first.parentId == draggedItemPair.first.parentId) {
+                            val index1 = localManageTags.indexOf(draggedItemPair)
+                            val index2 = localManageTags.indexOf(hoveredItemPair)
+                            
+                            val standardHeight = draggedItemInfo.size.toFloat() + detectedSpacing
+                            val b2Top = draggedItemInfo.offset.toFloat() + (index2 - currentIndex) * standardHeight
+                            val hysteresis = 0.15f * standardHeight
+                            
+                            val shouldSwap = if (index1 < index2) {
+                                dragCenterY > b2Top + hysteresis
+                            } else {
+                                dragCenterY < b2Top + standardHeight - hysteresis
+                            }
+                            
+                            if (shouldSwap) {
+                                val newList = localManageTags.toMutableList()
+                                val movedItem = newList.removeAt(index1)
+                                newList.add(index2, movedItem)
+                                localManageTags = newList
+                                
+                                val distance = if (index1 < index2) standardHeight else -standardHeight
+                                dragAccumulatedOffset -= distance
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    LaunchedEffect(draggedTagId) {
+        while (draggedTagId != null) {
+            val id = draggedTagId ?: break
+            val viewportHeight = lazyListState.layoutInfo.viewportSize.height.toFloat()
+            if (viewportHeight > 0f) {
+                val scrollThreshold = 150f
+                var scrollAmount = 0f
+                
+                if (currentDragPosition < scrollThreshold) {
+                    scrollAmount = (currentDragPosition - scrollThreshold) * 0.15f
+                } else if (currentDragPosition > viewportHeight - scrollThreshold) {
+                    scrollAmount = (currentDragPosition - (viewportHeight - scrollThreshold)) * 0.15f
+                }
+                
+                if (scrollAmount != 0f) {
+                    val consumed = lazyListState.scrollBy(scrollAmount)
+                    dragAccumulatedOffset += consumed
+                    
+                    val visibleItems = lazyListState.layoutInfo.visibleItemsInfo
+                    val draggedItemInfo = visibleItems.firstOrNull { it.key == id }
+                    if (draggedItemInfo != null) {
+                        val minOffset = -draggedItemInfo.offset.toFloat()
+                        val maxOffset = viewportHeight - (draggedItemInfo.offset + draggedItemInfo.size).toFloat()
+                        if (minOffset <= maxOffset) {
+                            dragAccumulatedOffset = dragAccumulatedOffset.coerceIn(minOffset, maxOffset)
+                        }
+                    }
+                    
+                    evaluateSwap(id)
+                }
+            }
+            delay(16L)
         }
     }
 
@@ -223,7 +366,6 @@ fun ThingsTagDialog(
                     }
                     
                     deletedTags = deletedTags + newlyDeleted
-                    deletedDefaultTags = deletedDefaultTags + newlyDeleted.filter { defaultTags.contains(it) }
                     selectedTags = selectedTags - newlyDeleted
                     
                     tagToDeleteWithChildren = null
@@ -243,16 +385,24 @@ fun ThingsTagDialog(
         onDismissRequest = onDismissRequest,
         properties = DialogProperties(usePlatformDefaultWidth = false)
     ) {
-
-        Card(
-            shape = RoundedCornerShape(RoundedCornerSize),
-            colors = CardDefaults.cardColors(
-                containerColor = DialogBackgroundColor
-            ),
+        Box(
             modifier = Modifier
-                .width(DialogWidth)
-                .wrapContentHeight()
+                .fillMaxSize()
+                .pointerInput(Unit) {
+                    detectTapGestures(onTap = { onDismissRequest() })
+                },
+            contentAlignment = Alignment.Center
         ) {
+            Card(
+                shape = RoundedCornerShape(RoundedCornerSize),
+                colors = CardDefaults.cardColors(
+                    containerColor = DialogBackgroundColor
+                ),
+                modifier = Modifier
+                    .width(DialogWidth)
+                    .wrapContentHeight()
+                    .pointerInput(Unit) { detectTapGestures() }
+            ) {
             Box(
                 modifier = Modifier
                     .fillMaxWidth()
@@ -488,7 +638,6 @@ fun ThingsTagDialog(
                                             onNewTagCreated(name, selectedGroup?.id)
                                             selectedTags = selectedTags + name
                                             deletedTags = deletedTags - name
-                                            deletedDefaultTags = deletedDefaultTags - name
                                         }
                                         currentScreen = createScreenReturnTarget
                                         newTagName = ""
@@ -751,223 +900,178 @@ fun ThingsTagDialog(
                             }
                         }
 
-                        // Drag & Drop Reorderable list modifier
-                        val makeDragModifier = { itemPair: Pair<Tag, Boolean> ->
-                            val tag = itemPair.first
-                            Modifier.pointerInput(tag.id) {
-                                detectDragGesturesAfterLongPress(
-                                    onDragStart = {
-                                        draggedTagId = tag.id
-                                        dragAccumulatedOffset = 0f
-                                        val currentPair = localManageTags.find { it.first.id == tag.id }
-                                        if (currentPair != null && !currentPair.second) {
-                                            // Parent dragged: whole block
-                                            draggedGroupIds = getBlock(tag.id, localManageTags).map { it.first.id }.toSet()
-                                        } else {
-                                            // Child dragged: just itself
-                                            draggedGroupIds = setOf(tag.id)
+                        // Drag & Drop Reorderable list modifier on LazyColumn
+                        val manageDragModifier = Modifier.pointerInput(Unit) {
+                            detectDragGesturesAfterLongPress(
+                                onDragStart = { offset ->
+                                    val visibleItems = lazyListState.layoutInfo.visibleItemsInfo
+                                    val hitItem = visibleItems.firstOrNull { item ->
+                                        offset.y >= item.offset && offset.y <= item.offset + item.size
+                                    }
+                                    val tagId = hitItem?.key as? String
+                                    if (tagId != null) {
+                                        val currentPair = localManageTags.find { it.first.id == tagId }
+                                        if (currentPair != null) {
+                                            val tag = currentPair.first
+                                            draggedTagId = tag.id
+                                            dragAccumulatedOffset = 0f
+                                            currentDragPosition = offset.y
+                                            grabOffset = offset.y - (hitItem.offset + hitItem.size / 2f)
+                                            if (!currentPair.second) {
+                                                // Parent dragged: whole block
+                                                draggedGroupIds = getBlock(tag.id, localManageTags).map { it.first.id }.toSet()
+                                            } else {
+                                                // Child dragged: just itself
+                                                draggedGroupIds = setOf(tag.id)
+                                            }
                                         }
-                                    },
-                                    onDrag = { change, dragAmount ->
+                                    }
+                                },
+                                onDrag = { change, dragAmount ->
+                                    val id = draggedTagId
+                                    if (id != null) {
                                         change.consume()
-                                        dragAccumulatedOffset += dragAmount.y
-
-                                        val visibleItems = lazyListState.layoutInfo.visibleItemsInfo
-                                        val detectedSpacing = run {
-                                            var spacing = 0f
-                                            try {
-                                                spacing = lazyListState.layoutInfo.mainAxisItemSpacing.toFloat()
-                                            } catch (e: Exception) {
-                                                // ignore
-                                            }
-                                            spacing
-                                        }
-                                        val draggedItemInfo = visibleItems.firstOrNull { it.key == tag.id }
-                                        val currentIndex = localManageTags.indexOfFirst { it.first.id == tag.id }
                                         
-                                        // Synchronization Guard: only process swaps if layout matches local state
-                                        if (draggedItemInfo != null && draggedItemInfo.index == currentIndex) {
-                                            val dragCenterY = draggedItemInfo.offset + draggedItemInfo.size / 2f + dragAccumulatedOffset
-                                            val hoveredItem = visibleItems.firstOrNull { item ->
-                                                val itemKey = item.key as? String
-                                                itemKey != null && itemKey !in draggedGroupIds &&
-                                                dragCenterY > item.offset &&
-                                                dragCenterY < item.offset + item.size
-                                            }
+                                        val visibleItems = lazyListState.layoutInfo.visibleItemsInfo
+                                        val draggedItemInfo = visibleItems.firstOrNull { it.key == id }
+                                        if (draggedItemInfo != null) {
+                                            val viewportHeight = lazyListState.layoutInfo.viewportSize.height.toFloat()
                                             
-                                            if (hoveredItem != null) {
-                                                val hoveredTagId = hoveredItem.key as String
-                                                val hoveredItemPair = localManageTags.find { it.first.id == hoveredTagId }
-                                                val draggedItemPair = localManageTags.find { it.first.id == tag.id }
-
-                                                if (hoveredItemPair != null && draggedItemPair != null) {
-                                                    if (!draggedItemPair.second) {
-                                                        // 1. DRAGGING A PARENT (Block swap)
-                                                        val hoveredParentId = if (hoveredItemPair.second) hoveredItemPair.first.parentId!! else hoveredItemPair.first.id
-                                                        if (hoveredParentId != tag.id) {
-                                                            val block1 = getBlock(tag.id, localManageTags)
-                                                            val block2 = getBlock(hoveredParentId, localManageTags)
-                                                            
-                                                            val index1 = localManageTags.indexOf(block1.first())
-                                                            val index2 = localManageTags.indexOf(block2.first())
-                                                            
-                                                            val standardHeight = draggedItemInfo.size.toFloat() + detectedSpacing
-                                                            val b2Top = draggedItemInfo.offset.toFloat() + (index2 - currentIndex) * standardHeight
-                                                            val b2Center = b2Top + (block2.size * standardHeight) / 2f
-                                                            
-                                                            val shouldSwap = if (index1 < index2) dragCenterY > b2Center else dragCenterY < b2Center
-                                                            
-                                                            if (shouldSwap) {
-                                                                val newList = localManageTags.toMutableList()
-                                                                newList.removeAll(block1)
-                                                                val insertIndex = newList.indexOf(block2.first()) + if (index1 < index2) block2.size else 0
-                                                                newList.addAll(insertIndex, block1)
-                                                                localManageTags = newList
-                                                                
-                                                                val distance = if (index1 < index2) block2.size * standardHeight else -(block2.size * standardHeight)
-                                                                dragAccumulatedOffset -= distance
-                                                            }
-                                                        }
-                                                    } else {
-                                                        // 2. DRAGGING A CHILD (Single item swap within same parent group)
-                                                        if (hoveredItemPair.second && hoveredItemPair.first.parentId == draggedItemPair.first.parentId) {
-                                                            val index1 = localManageTags.indexOf(draggedItemPair)
-                                                            val index2 = localManageTags.indexOf(hoveredItemPair)
-                                                            
-                                                            val standardHeight = draggedItemInfo.size.toFloat() + detectedSpacing
-                                                            val b2Top = draggedItemInfo.offset.toFloat() + (index2 - currentIndex) * standardHeight
-                                                            val b2Center = b2Top + standardHeight / 2f
-                                                            
-                                                            val shouldSwap = if (index1 < index2) dragCenterY > b2Center else dragCenterY < b2Center
-                                                            
-                                                            if (shouldSwap) {
-                                                                val newList = localManageTags.toMutableList()
-                                                                val movedItem = newList.removeAt(index1)
-                                                                newList.add(index2, movedItem)
-                                                                localManageTags = newList
-                                                                
-                                                                val distance = if (index1 < index2) standardHeight else -standardHeight
-                                                                dragAccumulatedOffset -= distance
-                                                            }
-                                                        }
-                                                    }
-                                                }
+                                            // Clamp currentDragPosition to [halfSize, viewportHeight - halfSize]
+                                            val halfSize = draggedItemInfo.size / 2f
+                                            currentDragPosition = change.position.y.coerceIn(halfSize, viewportHeight - halfSize)
+                                            
+                                            var newOffset = dragAccumulatedOffset + dragAmount.y
+                                            val minOffset = -draggedItemInfo.offset.toFloat()
+                                            val maxOffset = viewportHeight - (draggedItemInfo.offset + draggedItemInfo.size).toFloat()
+                                            if (minOffset <= maxOffset) {
+                                                newOffset = newOffset.coerceIn(minOffset, maxOffset)
                                             }
+                                            dragAccumulatedOffset = newOffset
+                                        } else {
+                                            currentDragPosition = change.position.y
+                                            dragAccumulatedOffset += dragAmount.y
                                         }
-                                    },
-                                    onDragEnd = {
+                                        
+                                        evaluateSwap(id)
+                                    }
+                                },
+                                onDragEnd = {
+                                    val id = draggedTagId
+                                    if (id != null) {
                                         val updatedTags = localManageTags.map { it.first }
                                         onUpdateTagsOrder(updatedTags)
-                                        draggedTagId = null
-                                        draggedGroupIds = emptySet()
-                                        dragAccumulatedOffset = 0f
-                                    },
-                                    onDragCancel = {
-                                        draggedTagId = null
-                                        draggedGroupIds = emptySet()
-                                        dragAccumulatedOffset = 0f
                                     }
-                                )
-                            }
+                                    draggedTagId = null
+                                    draggedGroupIds = emptySet()
+                                    dragAccumulatedOffset = 0f
+                                },
+                                onDragCancel = {
+                                    draggedTagId = null
+                                    draggedGroupIds = emptySet()
+                                    dragAccumulatedOffset = 0f
+                                }
+                            )
                         }
 
-                        LazyColumn(
-                            state = lazyListState,
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .weight(1f),
-                            verticalArrangement = Arrangement.spacedBy(4.dp)
+                        CompositionLocalProvider(
+                            LocalOverscrollConfiguration provides null
                         ) {
-                            items(localManageTags, key = { it.first.id }) { item ->
-                                val tag = item.first
-                                val isChild = item.second
-                                
-                                val isDragged = tag.id in draggedGroupIds
-                                val dragOffset = if (isDragged) dragAccumulatedOffset else 0f
-                                val isPrimaryDraggedItem = draggedTagId == tag.id
-                                val rowBg = if (isPrimaryDraggedItem) DarkButtonBgColor.copy(alpha = 0.8f) else Color.Transparent
+                            LazyColumn(
+                                state = lazyListState,
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .weight(1f)
+                                    .then(manageDragModifier),
+                                verticalArrangement = Arrangement.spacedBy(4.dp)
+                            ) {
+                                items(localManageTags, key = { it.first.id }) { item ->
+                                    val tag = item.first
+                                    val isChild = item.second
+                                    
+                                    val isDragged = tag.id in draggedGroupIds
+                                    val dragOffset = if (isDragged) dragAccumulatedOffset else 0f
+                                    val isPrimaryDraggedItem = draggedTagId == tag.id
+                                    val rowBg = if (isPrimaryDraggedItem) DarkButtonBgColor.copy(alpha = 0.8f) else Color.Transparent
 
-                                Row(
-                                    modifier = Modifier
-                                        .fillMaxWidth()
-                                        .then(if (!isDragged) Modifier.animateItem() else Modifier)
-                                        .graphicsLayer {
-                                            translationY = dragOffset
+                                    Row(
+                                        modifier = Modifier
+                                            .fillMaxWidth()
+                                            .then(if (!isDragged) Modifier.animateItem() else Modifier)
+                                            .graphicsLayer {
+                                                translationY = dragOffset
+                                            }
+                                            .background(rowBg, RoundedCornerShape(8.dp))
+                                            .padding(
+                                                start = if (isChild) RowPaddingStartChild else RowPaddingStartNormal,
+                                                end = RowPaddingEnd,
+                                                top = RowPaddingTop,
+                                                bottom = RowPaddingBottom
+                                            ),
+                                        verticalAlignment = Alignment.CenterVertically
+                                    ) {
+                                        // Delete button on the left (Red circle with white trash icon)
+                                        Box(
+                                            modifier = Modifier
+                                                .size(DeleteButtonSize)
+                                                .clip(androidx.compose.foundation.shape.CircleShape)
+                                                .background(DeleteButtonBgColor)
+                                                .clickable {
+                                                    val children = availableTagObjects.filter { it.parentId == tag.id }
+                                                    if (children.isNotEmpty()) {
+                                                        tagToDeleteWithChildren = tag
+                                                        childTagsToDelete = children
+                                                    } else {
+                                                        onDeleteTag(tag)
+                                                        deletedTags = deletedTags + tag.title
+                                                        if (selectedTags.contains(tag.title)) {
+                                                            selectedTags = selectedTags - tag.title
+                                                        }
+                                                    }
+                                                },
+                                            contentAlignment = Alignment.Center
+                                        ) {
+                                            Icon(
+                                                imageVector = Icons.Default.Delete,
+                                                contentDescription = "Delete",
+                                                tint = Color.White,
+                                                modifier = Modifier.size(ButtonIconSize)
+                                            )
                                         }
-                                        .background(rowBg, RoundedCornerShape(8.dp))
-                                        .then(makeDragModifier(item))
-                                        .padding(
-                                            start = if (isChild) RowPaddingStartChild else RowPaddingStartNormal,
-                                            end = RowPaddingEnd,
-                                            top = RowPaddingTop,
-                                            bottom = RowPaddingBottom
-                                        ),
-                                    verticalAlignment = Alignment.CenterVertically
-                                ) {
-                                    // Delete button on the left (Red circle with white trash icon)
-                                    Box(
-                                        modifier = Modifier
-                                            .size(DeleteButtonSize)
-                                            .clip(androidx.compose.foundation.shape.CircleShape)
-                                            .background(DeleteButtonBgColor)
-                                            .clickable {
-                                                val children = availableTagObjects.filter { it.parentId == tag.id }
-                                                if (children.isNotEmpty()) {
-                                                    tagToDeleteWithChildren = tag
-                                                    childTagsToDelete = children
-                                                } else {
-                                                    onDeleteTag(tag)
-                                                    deletedTags = deletedTags + tag.title
-                                                    if (defaultTags.contains(tag.title)) {
-                                                        deletedDefaultTags = deletedDefaultTags + tag.title
-                                                    }
-                                                    if (selectedTags.contains(tag.title)) {
-                                                        selectedTags = selectedTags - tag.title
-                                                    }
-                                                }
-                                            },
-                                        contentAlignment = Alignment.Center
-                                    ) {
-                                        Icon(
-                                            imageVector = Icons.Default.Delete,
-                                            contentDescription = "Delete",
-                                            tint = Color.White,
-                                            modifier = Modifier.size(ButtonIconSize)
+
+                                        Spacer(modifier = Modifier.width(12.dp))
+
+                                        // Tag Title
+                                        Text(
+                                            text = tag.title,
+                                            style = MaterialTheme.typography.labelLarge.copy(
+                                                color = Color.White,
+                                                fontWeight = FontWeight.Normal
+                                            ),
+                                            modifier = Modifier.weight(1f)
                                         )
-                                    }
 
-                                    Spacer(modifier = Modifier.width(12.dp))
-
-                                    // Tag Title
-                                    Text(
-                                        text = tag.title,
-                                        style = MaterialTheme.typography.labelLarge.copy(
-                                            color = Color.White,
-                                            fontWeight = FontWeight.Normal
-                                        ),
-                                        modifier = Modifier.weight(1f)
-                                    )
-
-                                    // Blue edit pencil button on the right
-                                    Box(
-                                        modifier = Modifier
-                                            .size(EditButtonSize)
-                                            .clip(androidx.compose.foundation.shape.CircleShape)
-                                            .background(ThingsBlue)
-                                            .clickable {
-                                                editingTag = tag
-                                                editTagName = tag.title
-                                                selectedGroup = allSavedTagObjects.firstOrNull { it.id == tag.parentId }
-                                                currentScreen = DialogScreen.EDIT
-                                            },
-                                        contentAlignment = Alignment.Center
-                                    ) {
-                                        Icon(
-                                            imageVector = Icons.Default.Edit,
-                                            contentDescription = "Edit",
-                                            tint = Color.White,
-                                            modifier = Modifier.size(ButtonIconSize)
-                                        )
+                                        // Blue edit pencil button on the right
+                                        Box(
+                                            modifier = Modifier
+                                                .size(EditButtonSize)
+                                                .clip(androidx.compose.foundation.shape.CircleShape)
+                                                .background(ThingsBlue)
+                                                .clickable {
+                                                    editingTag = tag
+                                                    editTagName = tag.title
+                                                    selectedGroup = allSavedTagObjects.firstOrNull { it.id == tag.parentId }
+                                                    currentScreen = DialogScreen.EDIT
+                                                },
+                                            contentAlignment = Alignment.Center
+                                        ) {
+                                            Icon(
+                                                imageVector = Icons.Default.Edit,
+                                                contentDescription = "Edit",
+                                                tint = Color.White,
+                                                modifier = Modifier.size(ButtonIconSize)
+                                            )
+                                        }
                                     }
                                 }
                             }
@@ -1068,20 +1172,9 @@ fun ThingsTagDialog(
                                                 selectedTags = (selectedTags - tagToEdit.title) + name
                                             }
 
-                                            val isDefault = defaultTags.contains(tagToEdit.title) && !allSavedTagObjects.any { it.id == tagToEdit.id }
-                                            if (isDefault) {
-                                                // Hide the old default tag
-                                                deletedDefaultTags = deletedDefaultTags + tagToEdit.title
-                                                // Create a new custom tag
-                                                onNewTagCreated(name, selectedGroup?.id)
-                                                deletedTags = deletedTags - name
-                                                deletedDefaultTags = deletedDefaultTags - name
-                                            } else {
-                                                // Update the existing custom tag
-                                                onUpdateTag(tagToEdit.copy(title = name, parentId = selectedGroup?.id))
-                                                deletedTags = (deletedTags + tagToEdit.title) - name
-                                                deletedDefaultTags = deletedDefaultTags - name
-                                            }
+                                            // Update the existing custom tag
+                                            onUpdateTag(tagToEdit.copy(title = name, parentId = selectedGroup?.id))
+                                            deletedTags = (deletedTags + tagToEdit.title) - name
                                         }
                                         currentScreen = DialogScreen.MANAGE
                                         editingTag = null
@@ -1178,6 +1271,7 @@ fun ThingsTagDialog(
                     }
                 }
             }
+        }
         }
     }
 }
