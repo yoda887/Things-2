@@ -203,11 +203,11 @@ fun ThingsTagDialog(
                     val parent = tagToDeleteWithChildren!!
                     val children = childTagsToDelete
                     
+                    // TaskRepository will handle deleting children from DB and items
                     onDeleteTag(parent)
-                    var newlyDeleted = setOf(parent.title)
                     
+                    var newlyDeleted = setOf(parent.title)
                     children.forEach { child ->
-                        onDeleteTag(child)
                         newlyDeleted = newlyDeleted + child.title
                     }
                     

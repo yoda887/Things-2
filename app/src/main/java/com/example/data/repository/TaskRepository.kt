@@ -336,12 +336,27 @@ class TaskRepository(private val taskDao: TaskDao, private val context: Context)
 
     suspend fun deleteTag(tag: Tag) = withContext(Dispatchers.IO) {
         val allItems = taskDao.getAllItemsSync()
-        taskDao.deleteTag(tag)
+        val allTags = taskDao.getAllTags()
+        
+        val tagsToDelete = mutableSetOf<Tag>()
+        fun addTagAndChildren(t: Tag) {
+            if (tagsToDelete.add(t)) {
+                val children = allTags.filter { it.parentId == t.id }
+                children.forEach { addTagAndChildren(it) }
+            }
+        }
+        addTagAndChildren(tag)
+        
+        val titlesToDelete = tagsToDelete.map { it.title.lowercase() }
+        
+        for (t in tagsToDelete) {
+            taskDao.deleteTag(t)
+        }
         
         for (item in allItems) {
             val currentTags = item.tags
-            if (currentTags.any { it.equals(tag.title, ignoreCase = true) }) {
-                val newTags = currentTags.filter { !it.equals(tag.title, ignoreCase = true) }
+            if (currentTags.any { titlesToDelete.contains(it.lowercase()) }) {
+                val newTags = currentTags.filter { !titlesToDelete.contains(it.lowercase()) }
                 val newCachedString = newTags.joinToString(", ")
                 taskDao.insertItem(item.copy(cachedTags = newCachedString))
             }
