@@ -178,11 +178,22 @@ fun ThingsTagDialog(
     val focusRequester = remember { FocusRequester() }
     val lazyListState = rememberLazyListState()
     var draggedTagId by remember { mutableStateOf<String?>(null) }
+    var draggedGroupIds by remember { mutableStateOf<Set<String>>(emptySet()) }
     var dragAccumulatedOffset by remember { mutableStateOf(0f) }
-    var localManageTags by remember(flatTagList) { mutableStateOf(flatTagList) }
+    var localManageTags by remember { mutableStateOf(flatTagList) }
 
     LaunchedEffect(flatTagList) {
-        localManageTags = flatTagList
+        val localIds = localManageTags.map { it.first.id }.toSet()
+        val flatIds = flatTagList.map { it.first.id }.toSet()
+        if (localIds != flatIds) {
+            localManageTags = flatTagList
+        } else {
+            val newLocal = localManageTags.map { localPair ->
+                val updatedPair = flatTagList.find { it.first.id == localPair.first.id }
+                updatedPair ?: localPair
+            }
+            localManageTags = newLocal.toMutableList()
+        }
     }
 
     // Focus immediately when switching to creation or edit mode
@@ -723,6 +734,23 @@ fun ThingsTagDialog(
                             }
                         }
 
+                        val getBlock = { parentId: String, list: List<Pair<Tag, Boolean>> ->
+                            val startIndex = list.indexOfFirst { it.first.id == parentId }
+                            if (startIndex != -1) {
+                                val block = mutableListOf(list[startIndex])
+                                for (i in startIndex + 1 until list.size) {
+                                    if (list[i].second) {
+                                        block.add(list[i])
+                                    } else {
+                                        break
+                                    }
+                                }
+                                block
+                            } else {
+                                emptyList()
+                            }
+                        }
+
                         // Drag & Drop Reorderable list modifier
                         val makeDragModifier = { itemPair: Pair<Tag, Boolean> ->
                             val tag = itemPair.first
@@ -731,6 +759,14 @@ fun ThingsTagDialog(
                                     onDragStart = {
                                         draggedTagId = tag.id
                                         dragAccumulatedOffset = 0f
+                                        val currentPair = localManageTags.find { it.first.id == tag.id }
+                                        if (currentPair != null && !currentPair.second) {
+                                            // Parent dragged: whole block
+                                            draggedGroupIds = getBlock(tag.id, localManageTags).map { it.first.id }.toSet()
+                                        } else {
+                                            // Child dragged: just itself
+                                            draggedGroupIds = setOf(tag.id)
+                                        }
                                     },
                                     onDrag = { change, dragAmount ->
                                         change.consume()
@@ -747,29 +783,74 @@ fun ThingsTagDialog(
                                             spacing
                                         }
                                         val draggedItemInfo = visibleItems.firstOrNull { it.key == tag.id }
-                                        if (draggedItemInfo != null) {
+                                        val currentIndex = localManageTags.indexOfFirst { it.first.id == tag.id }
+                                        
+                                        // Synchronization Guard: only process swaps if layout matches local state
+                                        if (draggedItemInfo != null && draggedItemInfo.index == currentIndex) {
                                             val dragCenterY = draggedItemInfo.offset + draggedItemInfo.size / 2f + dragAccumulatedOffset
                                             val hoveredItem = visibleItems.firstOrNull { item ->
                                                 val itemKey = item.key as? String
-                                                itemKey != null && itemKey != tag.id &&
+                                                itemKey != null && itemKey !in draggedGroupIds &&
                                                 dragCenterY > item.offset &&
                                                 dragCenterY < item.offset + item.size
                                             }
+                                            
                                             if (hoveredItem != null) {
-                                                val fromIndex = localManageTags.indexOfFirst { it.first.id == tag.id }
-                                                val toIndex = localManageTags.indexOfFirst { it.first.id == hoveredItem.key }
-                                                if (fromIndex != -1 && toIndex != -1) {
-                                                    val newList = localManageTags.toMutableList()
-                                                    val movedItem = newList.removeAt(fromIndex)
-                                                    newList.add(toIndex, movedItem)
-                                                    localManageTags = newList
-                                                    
-                                                    val distance = if (hoveredItem.offset > draggedItemInfo.offset) {
-                                                        hoveredItem.size.toFloat() + detectedSpacing
+                                                val hoveredTagId = hoveredItem.key as String
+                                                val hoveredItemPair = localManageTags.find { it.first.id == hoveredTagId }
+                                                val draggedItemPair = localManageTags.find { it.first.id == tag.id }
+
+                                                if (hoveredItemPair != null && draggedItemPair != null) {
+                                                    if (!draggedItemPair.second) {
+                                                        // 1. DRAGGING A PARENT (Block swap)
+                                                        val hoveredParentId = if (hoveredItemPair.second) hoveredItemPair.first.parentId!! else hoveredItemPair.first.id
+                                                        if (hoveredParentId != tag.id) {
+                                                            val block1 = getBlock(tag.id, localManageTags)
+                                                            val block2 = getBlock(hoveredParentId, localManageTags)
+                                                            
+                                                            val index1 = localManageTags.indexOf(block1.first())
+                                                            val index2 = localManageTags.indexOf(block2.first())
+                                                            
+                                                            val standardHeight = draggedItemInfo.size.toFloat() + detectedSpacing
+                                                            val b2Top = draggedItemInfo.offset.toFloat() + (index2 - currentIndex) * standardHeight
+                                                            val b2Center = b2Top + (block2.size * standardHeight) / 2f
+                                                            
+                                                            val shouldSwap = if (index1 < index2) dragCenterY > b2Center else dragCenterY < b2Center
+                                                            
+                                                            if (shouldSwap) {
+                                                                val newList = localManageTags.toMutableList()
+                                                                newList.removeAll(block1)
+                                                                val insertIndex = newList.indexOf(block2.first()) + if (index1 < index2) block2.size else 0
+                                                                newList.addAll(insertIndex, block1)
+                                                                localManageTags = newList
+                                                                
+                                                                val distance = if (index1 < index2) block2.size * standardHeight else -(block2.size * standardHeight)
+                                                                dragAccumulatedOffset -= distance
+                                                            }
+                                                        }
                                                     } else {
-                                                        -(hoveredItem.size.toFloat() + detectedSpacing)
+                                                        // 2. DRAGGING A CHILD (Single item swap within same parent group)
+                                                        if (hoveredItemPair.second && hoveredItemPair.first.parentId == draggedItemPair.first.parentId) {
+                                                            val index1 = localManageTags.indexOf(draggedItemPair)
+                                                            val index2 = localManageTags.indexOf(hoveredItemPair)
+                                                            
+                                                            val standardHeight = draggedItemInfo.size.toFloat() + detectedSpacing
+                                                            val b2Top = draggedItemInfo.offset.toFloat() + (index2 - currentIndex) * standardHeight
+                                                            val b2Center = b2Top + standardHeight / 2f
+                                                            
+                                                            val shouldSwap = if (index1 < index2) dragCenterY > b2Center else dragCenterY < b2Center
+                                                            
+                                                            if (shouldSwap) {
+                                                                val newList = localManageTags.toMutableList()
+                                                                val movedItem = newList.removeAt(index1)
+                                                                newList.add(index2, movedItem)
+                                                                localManageTags = newList
+                                                                
+                                                                val distance = if (index1 < index2) standardHeight else -standardHeight
+                                                                dragAccumulatedOffset -= distance
+                                                            }
+                                                        }
                                                     }
-                                                    dragAccumulatedOffset -= distance
                                                 }
                                             }
                                         }
@@ -778,10 +859,12 @@ fun ThingsTagDialog(
                                         val updatedTags = localManageTags.map { it.first }
                                         onUpdateTagsOrder(updatedTags)
                                         draggedTagId = null
+                                        draggedGroupIds = emptySet()
                                         dragAccumulatedOffset = 0f
                                     },
                                     onDragCancel = {
                                         draggedTagId = null
+                                        draggedGroupIds = emptySet()
                                         dragAccumulatedOffset = 0f
                                     }
                                 )
@@ -799,13 +882,15 @@ fun ThingsTagDialog(
                                 val tag = item.first
                                 val isChild = item.second
                                 
-                                val isDragged = draggedTagId == tag.id
+                                val isDragged = tag.id in draggedGroupIds
                                 val dragOffset = if (isDragged) dragAccumulatedOffset else 0f
-                                val rowBg = if (isDragged) DarkButtonBgColor.copy(alpha = 0.8f) else Color.Transparent
+                                val isPrimaryDraggedItem = draggedTagId == tag.id
+                                val rowBg = if (isPrimaryDraggedItem) DarkButtonBgColor.copy(alpha = 0.8f) else Color.Transparent
 
                                 Row(
                                     modifier = Modifier
                                         .fillMaxWidth()
+                                        .then(if (!isDragged) Modifier.animateItem() else Modifier)
                                         .graphicsLayer {
                                             translationY = dragOffset
                                         }

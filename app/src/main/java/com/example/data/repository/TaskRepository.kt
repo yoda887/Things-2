@@ -306,6 +306,10 @@ class TaskRepository(private val taskDao: TaskDao, private val context: Context)
         }
     }
 
+    suspend fun updateTagsOrder(tags: List<Tag>) = withContext(Dispatchers.IO) {
+        taskDao.insertTags(tags)
+    }
+
 
     suspend fun createGroup(groupName: String): Tag = withContext(Dispatchers.IO) {
         val group = Tag(title = groupName, parentId = null)

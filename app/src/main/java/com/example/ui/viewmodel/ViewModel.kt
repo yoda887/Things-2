@@ -228,9 +228,8 @@ class ThingsViewModel(private val repository: TaskRepository) : ViewModel() {
      */
     fun updateTagsOrder(tags: List<Tag>) {
         viewModelScope.launch {
-            tags.forEachIndexed { index, tag ->
-                repository.insertTag(tag.copy(sortOrder = index))
-            }
+            val updatedTags = tags.mapIndexed { index, tag -> tag.copy(sortOrder = index) }
+            repository.updateTagsOrder(updatedTags)
         }
     }
 

@@ -111,6 +111,9 @@ interface TaskDao {
     @Insert(onConflict = OnConflictStrategy.REPLACE)
     suspend fun insertTag(tag: Tag)
 
+    @Insert(onConflict = OnConflictStrategy.REPLACE)
+    suspend fun insertTags(tags: List<Tag>)
+
     @Delete
     suspend fun deleteTag(tag: Tag)
 
