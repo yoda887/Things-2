@@ -202,6 +202,39 @@ class ThingsViewModel(private val repository: TaskRepository) : ViewModel() {
         }
     }
 
+    /**
+     * Deletes a tag from the database.
+     * @param tag The tag entity to be deleted.
+     */
+    fun deleteTag(tag: Tag) {
+        viewModelScope.launch {
+            repository.deleteTag(tag)
+        }
+    }
+
+    /**
+     * Updates an existing tag or inserts a new one in the database.
+     * @param tag The tag entity to update.
+     */
+    fun updateTag(tag: Tag) {
+        viewModelScope.launch {
+            repository.insertTag(tag)
+        }
+    }
+
+    /**
+     * Updates the sort order of all provided tags in the database sequentially.
+     * @param tags List of tags containing their new sorted positions.
+     */
+    fun updateTagsOrder(tags: List<Tag>) {
+        viewModelScope.launch {
+            tags.forEachIndexed { index, tag ->
+                repository.insertTag(tag.copy(sortOrder = index))
+            }
+        }
+    }
+
+
     private fun sectionToStartValue(section: TaskSection): Int {
         return when (section) {
             TaskSection.INBOX -> 0

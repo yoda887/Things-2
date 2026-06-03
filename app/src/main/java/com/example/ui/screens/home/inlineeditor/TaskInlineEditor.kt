@@ -67,7 +67,10 @@ fun ThingsTaskInlineEditor(
     onDone: () -> Unit = {},
     allSavedTags: List<String> = emptyList(),
     allSavedTagObjects: List<Tag> = emptyList(),
-    onNewTagCreated: (String, String?) -> Unit = { _, _ -> }
+    onNewTagCreated: (String, String?) -> Unit = { _, _ -> },
+    onDeleteTag: (Tag) -> Unit = {},
+    onUpdateTag: (Tag) -> Unit = {},
+    onUpdateTagsOrder: (List<Tag>) -> Unit = {}
 ) {
     var title by remember(task.item.id) { mutableStateOf<String>(task.item.title) }
     var notes by remember(task.item.id) { mutableStateOf<String>(task.item.notes) }
@@ -567,6 +570,9 @@ fun ThingsTaskInlineEditor(
             allSavedTags = allSavedTags,
             allSavedTagObjects = allSavedTagObjects,
             onNewTagCreated = onNewTagCreated,
+            onDeleteTag = onDeleteTag,
+            onUpdateTag = onUpdateTag,
+            onUpdateTagsOrder = onUpdateTagsOrder,
             onTagsSelected = { selected ->
                 tagInput = selected.joinToString(", ")
             },

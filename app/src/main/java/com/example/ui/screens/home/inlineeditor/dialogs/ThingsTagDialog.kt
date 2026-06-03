@@ -12,7 +12,12 @@ import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.gestures.detectDragGesturesAfterLongPress
+import androidx.compose.ui.input.pointer.pointerInput
+import androidx.compose.material.icons.filled.Delete
+import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.Close
@@ -28,6 +33,7 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontWeight
@@ -36,21 +42,33 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
+
 import com.example.R
 import com.example.data.model.Tag
 import com.example.ui.theme.ThingsBlue
+import com.example.ui.theme.ThingsUpcomingRed
 import kotlinx.coroutines.delay
 
 // Private Theme Color Constants inside the file to avoid hardcoding inline
 private val DialogBackgroundColor = Color(0xFF22242C)
 private val ItemMutedColor = Color(0xFF8E8E93)
 private val DarkButtonBgColor = Color(0xFF2C2E38)
+private val DeleteButtonBgColor = ThingsUpcomingRed
 
 // Private Dimensions
 private val DialogWidth = 320.dp
-private val DialogHeight = 380.dp
+private val DialogHeight = 480.dp
 private val RoundedCornerSize = 16.dp
 private val InnerContentPadding = 16.dp
+private val RowPaddingStartNormal = 4.dp
+private val RowPaddingStartChild = 28.dp
+private val RowPaddingEnd = 4.dp
+private val RowPaddingTop = 8.dp
+private val RowPaddingBottom = 8.dp
+private val ButtonIconSize = 16.dp
+private val EditButtonSize = 28.dp
+private val DeleteButtonSize = 28.dp
+private val TextButtonFontSize = 16.sp
 
 /**
  * Screen states for the ThingsTagDialog options.
@@ -58,7 +76,9 @@ private val InnerContentPadding = 16.dp
 enum class DialogScreen {
     LIST,
     CREATE,
-    SELECT_GROUP
+    SELECT_GROUP,
+    MANAGE,
+    EDIT
 }
 
 /**
@@ -80,6 +100,9 @@ fun ThingsTagDialog(
     allSavedTags: List<String> = emptyList(),
     allSavedTagObjects: List<Tag> = emptyList(),
     onNewTagCreated: (String, String?) -> Unit = { _, _ -> },
+    onDeleteTag: (Tag) -> Unit = {},
+    onUpdateTag: (Tag) -> Unit = {},
+    onUpdateTagsOrder: (List<Tag>) -> Unit = {},
     onTagsSelected: (List<String>) -> Unit,
     onDismissRequest: () -> Unit
 ) {
@@ -93,15 +116,21 @@ fun ThingsTagDialog(
         allSavedTagObjects.associateBy { it.title }
     }
 
+    var deletedDefaultTags by remember { mutableStateOf(emptySet<String>()) }
+
     // Combined available tags list (transformed into Tag objects)
-    val availableTagObjects = remember(allSavedTagObjects, activeTags) {
+    val availableTagObjects = remember(allSavedTagObjects, activeTags, deletedDefaultTags) {
         val activeTagObjects = activeTags.map { title ->
             dbTagsByTitle[title] ?: Tag(id = title, title = title, parentId = null)
         }
-        val defaultTagObjects = defaultTags.map { title ->
-            dbTagsByTitle[title] ?: Tag(id = title, title = title, parentId = null)
-        }
-        (defaultTagObjects + allSavedTagObjects + activeTagObjects).distinctBy { it.title }
+        val defaultTagObjects = defaultTags
+            .filter { it !in deletedDefaultTags }
+            .map { title ->
+                dbTagsByTitle[title] ?: Tag(id = title, title = title, parentId = null)
+            }
+        (defaultTagObjects + allSavedTagObjects + activeTagObjects)
+            .filter { it.title !in deletedDefaultTags }
+            .distinctBy { it.title }
     }
 
     // Build the flat list of tuples (Tag, isChild: Boolean)
@@ -136,11 +165,23 @@ fun ThingsTagDialog(
     var currentScreen by remember { mutableStateOf(DialogScreen.LIST) }
     var selectedGroup: Tag? by remember { mutableStateOf<Tag?>(null) }
     var newTagName by remember { mutableStateOf("") }
+    var editTagName by remember { mutableStateOf("") }
+    var editingTag: Tag? by remember { mutableStateOf<Tag?>(null) }
+    var createScreenReturnTarget by remember { mutableStateOf(DialogScreen.LIST) }
+    var groupSelectionTargetScreen by remember { mutableStateOf(DialogScreen.CREATE) }
     val focusRequester = remember { FocusRequester() }
+    val lazyListState = rememberLazyListState()
+    var draggedTagId by remember { mutableStateOf<String?>(null) }
+    var dragAccumulatedOffset by remember { mutableStateOf(0f) }
+    var localManageTags by remember(flatTagList) { mutableStateOf(flatTagList) }
 
-    // Focus immediately when switching to creation mode
+    LaunchedEffect(flatTagList) {
+        localManageTags = flatTagList
+    }
+
+    // Focus immediately when switching to creation or edit mode
     LaunchedEffect(currentScreen) {
-        if (currentScreen == DialogScreen.CREATE) {
+        if (currentScreen == DialogScreen.CREATE || currentScreen == DialogScreen.EDIT) {
             delay(100L) // Allow slide animation to prepare
             focusRequester.requestFocus()
         }
@@ -150,6 +191,7 @@ fun ThingsTagDialog(
         onDismissRequest = onDismissRequest,
         properties = DialogProperties(usePlatformDefaultWidth = false)
     ) {
+
         Card(
             shape = RoundedCornerShape(RoundedCornerSize),
             colors = CardDefaults.cardColors(
@@ -261,9 +303,8 @@ fun ThingsTagDialog(
 
                                     Text(
                                         text = tag.title,
-                                        style = TextStyle(
+                                        style = MaterialTheme.typography.labelLarge.copy(
                                             color = Color.White,
-                                            fontSize = 16.sp,
                                             fontWeight = if (isSelected) FontWeight.SemiBold else FontWeight.Normal
                                         ),
                                         modifier = Modifier.weight(1f)
@@ -289,7 +330,7 @@ fun ThingsTagDialog(
                             horizontalArrangement = Arrangement.spacedBy(10.dp)
                         ) {
                             Button(
-                                onClick = { /* Opens Tag Manager */ },
+                                onClick = { currentScreen = DialogScreen.MANAGE },
                                 colors = ButtonDefaults.buttonColors(
                                     containerColor = DarkButtonBgColor,
                                     contentColor = Color.White
@@ -300,13 +341,15 @@ fun ThingsTagDialog(
                             ) {
                                 Text(
                                     text = stringResource(id = R.string.tag_dialog_manage_tags),
-                                    fontSize = 14.sp,
-                                    fontWeight = FontWeight.Medium
+                                    style = MaterialTheme.typography.labelLarge.copy(fontWeight = FontWeight.Medium)
                                 )
                             }
 
                             Button(
-                                onClick = { currentScreen = DialogScreen.CREATE },
+                                onClick = {
+                                    createScreenReturnTarget = DialogScreen.LIST
+                                    currentScreen = DialogScreen.CREATE
+                                },
                                 colors = ButtonDefaults.buttonColors(
                                     containerColor = DarkButtonBgColor,
                                     contentColor = Color.White
@@ -317,8 +360,7 @@ fun ThingsTagDialog(
                             ) {
                                 Text(
                                     text = stringResource(id = R.string.tag_dialog_new_tag),
-                                    fontSize = 14.sp,
-                                    fontWeight = FontWeight.Medium
+                                    style = MaterialTheme.typography.labelLarge.copy(fontWeight = FontWeight.Medium)
                                 )
                             }
                         }
@@ -359,7 +401,7 @@ fun ThingsTagDialog(
                                     .clip(androidx.compose.foundation.shape.CircleShape)
                                     .background(DarkButtonBgColor)
                                     .clickable {
-                                        currentScreen = DialogScreen.LIST
+                                        currentScreen = createScreenReturnTarget
                                         newTagName = ""
                                         selectedGroup = null
                                     },
@@ -394,7 +436,7 @@ fun ThingsTagDialog(
                                             onNewTagCreated(name, selectedGroup?.id)
                                             selectedTags = selectedTags + name
                                         }
-                                        currentScreen = DialogScreen.LIST
+                                        currentScreen = createScreenReturnTarget
                                         newTagName = ""
                                         selectedGroup = null
                                     },
@@ -437,6 +479,7 @@ fun ThingsTagDialog(
                                 .fillMaxWidth()
                                 .clip(RoundedCornerShape(8.dp))
                                 .clickable {
+                                    groupSelectionTargetScreen = DialogScreen.CREATE
                                     currentScreen = DialogScreen.SELECT_GROUP
                                 }
                                 .padding(vertical = 12.dp, horizontal = 4.dp),
@@ -457,12 +500,6 @@ fun ThingsTagDialog(
                             ) {
                                 Text(
                                     text = selectedGroup?.title ?: stringResource(id = R.string.tag_dialog_no_tag),
-                                        
-
-
-
-
-                                        
                                     style = TextStyle(
                                         color = ThingsBlue,
                                         fontSize = 16.sp,
@@ -515,7 +552,7 @@ fun ThingsTagDialog(
                                     .clip(androidx.compose.foundation.shape.CircleShape)
                                     .background(DarkButtonBgColor)
                                     .clickable {
-                                        currentScreen = DialogScreen.CREATE
+                                        currentScreen = groupSelectionTargetScreen
                                     },
                                 contentAlignment = Alignment.Center
                             ) {
@@ -558,16 +595,15 @@ fun ThingsTagDialog(
                                         .clip(RoundedCornerShape(8.dp))
                                         .clickable {
                                             selectedGroup = if (option.id == "No Tag") null else option
-                                            currentScreen = DialogScreen.CREATE
+                                            currentScreen = groupSelectionTargetScreen
                                         }
                                         .padding(vertical = 12.dp, horizontal = 8.dp),
                                     verticalAlignment = Alignment.CenterVertically
                                 ) {
                                     Text(
                                         text = if (option.id == "No Tag") stringResource(id = R.string.tag_dialog_no_tag) else option.title,
-                                        style = TextStyle(
+                                        style = MaterialTheme.typography.labelLarge.copy(
                                             color = Color.White,
-                                            fontSize = 16.sp,
                                             fontWeight = if (isSelected) FontWeight.SemiBold else FontWeight.Normal
                                         ),
                                         modifier = Modifier.weight(1f)
@@ -583,6 +619,423 @@ fun ThingsTagDialog(
                                 }
                             }
                         }
+                    }
+                }
+
+                // ----------------------------------------------------
+                // SCREEN 4: Manage Tags Screen
+                // ----------------------------------------------------
+                androidx.compose.animation.AnimatedVisibility(
+                    visible = currentScreen == DialogScreen.MANAGE,
+                    enter = slideInVertically(
+                        initialOffsetY = { it },
+                        animationSpec = tween(300)
+                    ) + fadeIn(animationSpec = tween(150)),
+                    exit = slideOutVertically(
+                        targetOffsetY = { it },
+                        animationSpec = tween(300)
+                    ) + fadeOut(animationSpec = tween(150))
+                ) {
+                    Column(
+                        modifier = Modifier
+                            .fillMaxSize()
+                            .background(DialogBackgroundColor)
+                            .padding(InnerContentPadding),
+                        verticalArrangement = Arrangement.spacedBy(16.dp)
+                    ) {
+                        // Header
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.SpaceBetween,
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Box(modifier = Modifier.size(36.dp))
+
+                            Text(
+                                text = stringResource(id = R.string.tag_dialog_manage_tags),
+                                style = TextStyle(
+                                    color = Color.White,
+                                    fontSize = 20.sp,
+                                    fontWeight = FontWeight.Bold
+                                ),
+                                textAlign = TextAlign.Center
+                            )
+
+                            Box(
+                                modifier = Modifier
+                                    .size(36.dp)
+                                    .clip(androidx.compose.foundation.shape.CircleShape)
+                                    .background(DarkButtonBgColor)
+                                    .clickable {
+                                        currentScreen = DialogScreen.LIST
+                                    },
+                                contentAlignment = Alignment.Center
+                            ) {
+                                Icon(
+                                    imageVector = Icons.Default.Close,
+                                    contentDescription = "Done",
+                                    tint = Color.White,
+                                    modifier = Modifier.size(18.dp)
+                                )
+                            }
+                        }
+
+                        // Drag & Drop Reorderable list modifier
+                        val makeDragModifier = { itemPair: Pair<Tag, Boolean> ->
+                            val tag = itemPair.first
+                            Modifier.pointerInput(tag.id) {
+                                detectDragGesturesAfterLongPress(
+                                    onDragStart = {
+                                        draggedTagId = tag.id
+                                        dragAccumulatedOffset = 0f
+                                    },
+                                    onDrag = { change, dragAmount ->
+                                        change.consume()
+                                        dragAccumulatedOffset += dragAmount.y
+
+                                        val visibleItems = lazyListState.layoutInfo.visibleItemsInfo
+                                        val detectedSpacing = run {
+                                            var spacing = 0f
+                                            try {
+                                                spacing = lazyListState.layoutInfo.mainAxisItemSpacing.toFloat()
+                                            } catch (e: Exception) {
+                                                // ignore
+                                            }
+                                            spacing
+                                        }
+                                        val draggedItemInfo = visibleItems.firstOrNull { it.key == tag.id }
+                                        if (draggedItemInfo != null) {
+                                            val dragCenterY = draggedItemInfo.offset + draggedItemInfo.size / 2f + dragAccumulatedOffset
+                                            val hoveredItem = visibleItems.firstOrNull { item ->
+                                                val itemKey = item.key as? String
+                                                itemKey != null && itemKey != tag.id &&
+                                                dragCenterY > item.offset &&
+                                                dragCenterY < item.offset + item.size
+                                            }
+                                            if (hoveredItem != null) {
+                                                val fromIndex = localManageTags.indexOfFirst { it.first.id == tag.id }
+                                                val toIndex = localManageTags.indexOfFirst { it.first.id == hoveredItem.key }
+                                                if (fromIndex != -1 && toIndex != -1) {
+                                                    val newList = localManageTags.toMutableList()
+                                                    val movedItem = newList.removeAt(fromIndex)
+                                                    newList.add(toIndex, movedItem)
+                                                    localManageTags = newList
+                                                    
+                                                    val distance = if (hoveredItem.offset > draggedItemInfo.offset) {
+                                                        hoveredItem.size.toFloat() + detectedSpacing
+                                                    } else {
+                                                        -(hoveredItem.size.toFloat() + detectedSpacing)
+                                                    }
+                                                    dragAccumulatedOffset -= distance
+                                                }
+                                            }
+                                        }
+                                    },
+                                    onDragEnd = {
+                                        val updatedTags = localManageTags.map { it.first }
+                                        onUpdateTagsOrder(updatedTags)
+                                        draggedTagId = null
+                                        dragAccumulatedOffset = 0f
+                                    },
+                                    onDragCancel = {
+                                        draggedTagId = null
+                                        dragAccumulatedOffset = 0f
+                                    }
+                                )
+                            }
+                        }
+
+                        LazyColumn(
+                            state = lazyListState,
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .weight(1f),
+                            verticalArrangement = Arrangement.spacedBy(4.dp)
+                        ) {
+                            items(localManageTags, key = { it.first.id }) { item ->
+                                val tag = item.first
+                                val isChild = item.second
+                                
+                                val isDragged = draggedTagId == tag.id
+                                val dragOffset = if (isDragged) dragAccumulatedOffset else 0f
+                                val rowBg = if (isDragged) DarkButtonBgColor.copy(alpha = 0.8f) else Color.Transparent
+
+                                Row(
+                                    modifier = Modifier
+                                        .fillMaxWidth()
+                                        .graphicsLayer {
+                                            translationY = dragOffset
+                                        }
+                                        .background(rowBg, RoundedCornerShape(8.dp))
+                                        .then(makeDragModifier(item))
+                                        .padding(
+                                            start = if (isChild) RowPaddingStartChild else RowPaddingStartNormal,
+                                            end = RowPaddingEnd,
+                                            top = RowPaddingTop,
+                                            bottom = RowPaddingBottom
+                                        ),
+                                    verticalAlignment = Alignment.CenterVertically
+                                ) {
+                                    // Delete button on the left (Red circle with white trash icon)
+                                    Box(
+                                        modifier = Modifier
+                                            .size(DeleteButtonSize)
+                                            .clip(androidx.compose.foundation.shape.CircleShape)
+                                            .background(DeleteButtonBgColor)
+                                            .clickable {
+                                                onDeleteTag(tag)
+                                                if (defaultTags.contains(tag.title)) {
+                                                    deletedDefaultTags = deletedDefaultTags + tag.title
+                                                }
+                                                if (selectedTags.contains(tag.title)) {
+                                                    selectedTags = selectedTags - tag.title
+                                                }
+                                            },
+                                        contentAlignment = Alignment.Center
+                                    ) {
+                                        Icon(
+                                            imageVector = Icons.Default.Delete,
+                                            contentDescription = "Delete",
+                                            tint = Color.White,
+                                            modifier = Modifier.size(ButtonIconSize)
+                                        )
+                                    }
+
+                                    Spacer(modifier = Modifier.width(12.dp))
+
+                                    // Tag Title
+                                    Text(
+                                        text = tag.title,
+                                        style = MaterialTheme.typography.labelLarge.copy(
+                                            color = Color.White,
+                                            fontWeight = FontWeight.Normal
+                                        ),
+                                        modifier = Modifier.weight(1f)
+                                    )
+
+                                    // Blue edit pencil button on the right
+                                    Box(
+                                        modifier = Modifier
+                                            .size(EditButtonSize)
+                                            .clip(androidx.compose.foundation.shape.CircleShape)
+                                            .background(ThingsBlue)
+                                            .clickable {
+                                                editingTag = tag
+                                                editTagName = tag.title
+                                                selectedGroup = allSavedTagObjects.firstOrNull { it.id == tag.parentId }
+                                                currentScreen = DialogScreen.EDIT
+                                            },
+                                        contentAlignment = Alignment.Center
+                                    ) {
+                                        Icon(
+                                            imageVector = Icons.Default.Edit,
+                                            contentDescription = "Edit",
+                                            tint = Color.White,
+                                            modifier = Modifier.size(ButtonIconSize)
+                                        )
+                                    }
+                                }
+                            }
+                        }
+
+                        // Bottom Actions: New Tag
+                        Button(
+                            onClick = {
+                                createScreenReturnTarget = DialogScreen.MANAGE
+                                currentScreen = DialogScreen.CREATE
+                            },
+                            colors = ButtonDefaults.buttonColors(
+                                containerColor = DarkButtonBgColor,
+                                contentColor = Color.White
+                            ),
+                            shape = RoundedCornerShape(8.dp),
+                            modifier = Modifier.fillMaxWidth(),
+                            contentPadding = PaddingValues(vertical = 10.dp)
+                        ) {
+                            Text(
+                                text = stringResource(id = R.string.tag_dialog_new_tag),
+                                style = MaterialTheme.typography.labelLarge.copy(fontWeight = FontWeight.Medium)
+                            )
+                        }
+                    }
+                }
+
+                // ----------------------------------------------------
+                // SCREEN 5: Edit Tag Screen
+                // ----------------------------------------------------
+                androidx.compose.animation.AnimatedVisibility(
+                    visible = currentScreen == DialogScreen.EDIT,
+                    enter = slideInVertically(
+                        initialOffsetY = { it },
+                        animationSpec = tween(300)
+                    ) + fadeIn(animationSpec = tween(150)),
+                    exit = slideOutVertically(
+                        targetOffsetY = { it },
+                        animationSpec = tween(300)
+                    ) + fadeOut(animationSpec = tween(150))
+                ) {
+                    Column(
+                        modifier = Modifier
+                            .fillMaxSize()
+                            .background(DialogBackgroundColor)
+                            .padding(InnerContentPadding),
+                        verticalArrangement = Arrangement.spacedBy(16.dp)
+                    ) {
+                        // Header
+                        val isSaveEnabled = editTagName.trim().isNotEmpty()
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.SpaceBetween,
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Box(
+                                modifier = Modifier
+                                    .size(36.dp)
+                                    .clip(androidx.compose.foundation.shape.CircleShape)
+                                    .background(DarkButtonBgColor)
+                                    .clickable {
+                                        currentScreen = DialogScreen.MANAGE
+                                        editingTag = null
+                                        editTagName = ""
+                                        selectedGroup = null
+                                    },
+                                contentAlignment = Alignment.Center
+                            ) {
+                                Icon(
+                                    imageVector = Icons.Default.Close,
+                                    contentDescription = "Cancel",
+                                    tint = Color.White,
+                                    modifier = Modifier.size(18.dp)
+                                )
+                            }
+
+                            Text(
+                                text = stringResource(id = R.string.tag_dialog_edit_tag),
+                                style = TextStyle(
+                                    color = Color.White,
+                                    fontSize = 20.sp,
+                                    fontWeight = FontWeight.Bold
+                                ),
+                                textAlign = TextAlign.Center
+                            )
+
+                            Box(
+                                modifier = Modifier
+                                    .size(36.dp)
+                                    .clip(androidx.compose.foundation.shape.CircleShape)
+                                    .background(if (isSaveEnabled) ThingsBlue else DarkButtonBgColor)
+                                    .clickable(enabled = isSaveEnabled) {
+                                        val name = editTagName.trim()
+                                        val tagToEdit = editingTag
+                                        if (name.isNotEmpty() && tagToEdit != null) {
+                                            // Update selectedTags if renamed
+                                            if (selectedTags.contains(tagToEdit.title)) {
+                                                selectedTags = (selectedTags - tagToEdit.title) + name
+                                            }
+
+                                            val isDefault = defaultTags.contains(tagToEdit.title) && !allSavedTagObjects.any { it.id == tagToEdit.id }
+                                            if (isDefault) {
+                                                // Hide the old default tag
+                                                deletedDefaultTags = deletedDefaultTags + tagToEdit.title
+                                                // Create a new custom tag
+                                                onNewTagCreated(name, selectedGroup?.id)
+                                            } else {
+                                                // Update the existing custom tag
+                                                onUpdateTag(tagToEdit.copy(title = name, parentId = selectedGroup?.id))
+                                            }
+                                        }
+                                        currentScreen = DialogScreen.MANAGE
+                                        editingTag = null
+                                        editTagName = ""
+                                        selectedGroup = null
+                                    },
+                                contentAlignment = Alignment.Center
+                            ) {
+                                Icon(
+                                    imageVector = Icons.Default.Check,
+                                    contentDescription = "Save",
+                                    tint = if (isSaveEnabled) Color.White else ItemMutedColor,
+                                    modifier = Modifier.size(18.dp)
+                                )
+                            }
+                        }
+
+                        // Frameless Tag Input Field with Dark Container
+                        OutlinedTextField(
+                            value = editTagName,
+                            onValueChange = { editTagName = it },
+                            placeholder = { Text(stringResource(id = R.string.tag_dialog_placeholder), color = ItemMutedColor) },
+                            singleLine = true,
+                            colors = OutlinedTextFieldDefaults.colors(
+                                focusedContainerColor = DarkButtonBgColor,
+                                unfocusedContainerColor = DarkButtonBgColor,
+                                disabledContainerColor = DarkButtonBgColor,
+                                focusedTextColor = Color.White,
+                                unfocusedTextColor = Color.White,
+                                focusedBorderColor = ThingsBlue,
+                                unfocusedBorderColor = Color.Transparent,
+                                cursorColor = ThingsBlue
+                            ),
+                            trailingIcon = {
+                                if (editTagName.isNotEmpty()) {
+                                    IconButton(onClick = { editTagName = "" }) {
+                                        Icon(
+                                            imageVector = Icons.Default.Close,
+                                            contentDescription = "Clear",
+                                            tint = ItemMutedColor
+                                        )
+                                    }
+                                }
+                            },
+                            shape = RoundedCornerShape(8.dp),
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .focusRequester(focusRequester)
+                        )
+
+                        // "Group" Action Picker
+                        Row(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .clip(RoundedCornerShape(8.dp))
+                                .clickable {
+                                    groupSelectionTargetScreen = DialogScreen.EDIT
+                                    currentScreen = DialogScreen.SELECT_GROUP
+                                }
+                                .padding(vertical = 12.dp, horizontal = 4.dp),
+                            horizontalArrangement = Arrangement.SpaceBetween,
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Text(
+                                text = stringResource(id = R.string.tag_dialog_group),
+                                style = TextStyle(
+                                    color = Color.White,
+                                    fontSize = 16.sp,
+                                    fontWeight = FontWeight.Normal
+                                )
+                            )
+                            Row(
+                                verticalAlignment = Alignment.CenterVertically,
+                                horizontalArrangement = Arrangement.spacedBy(4.dp)
+                            ) {
+                                Text(
+                                    text = selectedGroup?.title ?: stringResource(id = R.string.tag_dialog_no_tag),
+                                    style = TextStyle(
+                                        color = ThingsBlue,
+                                        fontSize = 16.sp,
+                                        fontWeight = FontWeight.Medium
+                                    )
+                                )
+                                Icon(
+                                    imageVector = Icons.Default.KeyboardArrowRight,
+                                    contentDescription = null,
+                                    tint = ThingsBlue,
+                                    modifier = Modifier.size(18.dp)
+                                )
+                            }
+                        }
+
+                        Spacer(modifier = Modifier.weight(1f))
                     }
                 }
             }

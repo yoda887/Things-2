@@ -14,4 +14,5 @@
     <string name="tag_dialog_group_work">Work</string>
     <string name="tag_dialog_group_urgent">Urgent</string>
     <string name="tag_dialog_group_personal">Personal</string>
+    <string name="tag_dialog_edit_tag">Edit Tag</string>
 </resources>

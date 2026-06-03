@@ -883,6 +883,9 @@ fun ThingsCategoryListPanel(
                                     allSavedTags = allSavedTags,
                                     allSavedTagObjects = allSavedTagObjects,
                                     onNewTagCreated = { title, parentId -> viewModel.insertTag(title, parentId) },
+                                    onDeleteTag = { tag -> viewModel.deleteTag(tag) },
+                                    onUpdateTag = { tag -> viewModel.updateTag(tag) },
+                                    onUpdateTagsOrder = { tags -> viewModel.updateTagsOrder(tags) },
                                     onSave = { title, notes, section, isTonight, startDate, dueDate, tags, projectId, checklist, priority ->
                                         val startVal = when (section) {
                                             TaskSection.INBOX -> 0
