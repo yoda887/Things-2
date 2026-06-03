@@ -117,19 +117,22 @@ fun ThingsTagDialog(
     }
 
     var deletedDefaultTags by remember { mutableStateOf(emptySet<String>()) }
+    var deletedTags by remember { mutableStateOf(emptySet<String>()) }
 
     // Combined available tags list (transformed into Tag objects)
-    val availableTagObjects = remember(allSavedTagObjects, activeTags, deletedDefaultTags) {
-        val activeTagObjects = activeTags.map { title ->
-            dbTagsByTitle[title] ?: Tag(id = title, title = title, parentId = null)
-        }
+    val availableTagObjects = remember(allSavedTagObjects, activeTags, deletedDefaultTags, deletedTags) {
+        val activeTagObjects = activeTags
+            .filter { it !in deletedTags }
+            .map { title ->
+                dbTagsByTitle[title] ?: Tag(id = title, title = title, parentId = null)
+            }
         val defaultTagObjects = defaultTags
-            .filter { it !in deletedDefaultTags }
+            .filter { it !in deletedDefaultTags && it !in deletedTags }
             .map { title ->
                 dbTagsByTitle[title] ?: Tag(id = title, title = title, parentId = null)
             }
         (defaultTagObjects + allSavedTagObjects + activeTagObjects)
-            .filter { it.title !in deletedDefaultTags }
+            .filter { it.title !in deletedDefaultTags && it.title !in deletedTags }
             .distinctBy { it.title }
     }
 
@@ -435,6 +438,8 @@ fun ThingsTagDialog(
                                         if (name.isNotEmpty()) {
                                             onNewTagCreated(name, selectedGroup?.id)
                                             selectedTags = selectedTags + name
+                                            deletedTags = deletedTags - name
+                                            deletedDefaultTags = deletedDefaultTags - name
                                         }
                                         currentScreen = createScreenReturnTarget
                                         newTagName = ""
@@ -784,6 +789,7 @@ fun ThingsTagDialog(
                                             .background(DeleteButtonBgColor)
                                             .clickable {
                                                 onDeleteTag(tag)
+                                                deletedTags = deletedTags + tag.title
                                                 if (defaultTags.contains(tag.title)) {
                                                     deletedDefaultTags = deletedDefaultTags + tag.title
                                                 }
@@ -939,9 +945,13 @@ fun ThingsTagDialog(
                                                 deletedDefaultTags = deletedDefaultTags + tagToEdit.title
                                                 // Create a new custom tag
                                                 onNewTagCreated(name, selectedGroup?.id)
+                                                deletedTags = deletedTags - name
+                                                deletedDefaultTags = deletedDefaultTags - name
                                             } else {
                                                 // Update the existing custom tag
                                                 onUpdateTag(tagToEdit.copy(title = name, parentId = selectedGroup?.id))
+                                                deletedTags = (deletedTags + tagToEdit.title) - name
+                                                deletedDefaultTags = deletedDefaultTags - name
                                             }
                                         }
                                         currentScreen = DialogScreen.MANAGE

@@ -297,12 +297,38 @@ class ThingsViewModel(private val repository: TaskRepository) : ViewModel() {
     fun updateTask(item: Item) {
         viewModelScope.launch {
             repository.insertTask(item)
+            val cleanTags = item.tags.map { it.trim() }.filter { it.isNotEmpty() }
+            val allTagsList = repository.getAllTags()
+            val tagObjects = cleanTags.map { title ->
+                val existing = allTagsList.firstOrNull { it.title.equals(title, ignoreCase = true) }
+                if (existing != null) {
+                    existing
+                } else {
+                    val newTag = Tag(title = title)
+                    repository.insertTag(newTag)
+                    newTag
+                }
+            }
+            repository.updateItemTags(item.id, tagObjects)
         }
     }
 
     fun updateTask(item: Item, checklist: List<ChecklistItem>) {
         viewModelScope.launch {
             repository.insertTask(item, checklist)
+            val cleanTags = item.tags.map { it.trim() }.filter { it.isNotEmpty() }
+            val allTagsList = repository.getAllTags()
+            val tagObjects = cleanTags.map { title ->
+                val existing = allTagsList.firstOrNull { it.title.equals(title, ignoreCase = true) }
+                if (existing != null) {
+                    existing
+                } else {
+                    val newTag = Tag(title = title)
+                    repository.insertTag(newTag)
+                    newTag
+                }
+            }
+            repository.updateItemTags(item.id, tagObjects)
         }
     }
 

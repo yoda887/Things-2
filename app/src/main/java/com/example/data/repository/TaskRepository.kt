@@ -288,8 +288,24 @@ class TaskRepository(private val taskDao: TaskDao, private val context: Context)
 
     // Tag management
     suspend fun insertTag(tag: Tag) = withContext(Dispatchers.IO) {
+        val oldTag = taskDao.getTagById(tag.id)
         taskDao.insertTag(tag)
+        
+        if (oldTag != null && oldTag.title != tag.title) {
+            val allItems = taskDao.getAllItemsSync()
+            for (item in allItems) {
+                val currentTags = item.tags
+                if (currentTags.any { it.equals(oldTag.title, ignoreCase = true) }) {
+                    val newTags = currentTags.map { 
+                        if (it.equals(oldTag.title, ignoreCase = true)) tag.title else it 
+                    }
+                    val newCachedString = newTags.joinToString(", ")
+                    taskDao.insertItem(item.copy(cachedTags = newCachedString))
+                }
+            }
+        }
     }
+
 
     suspend fun createGroup(groupName: String): Tag = withContext(Dispatchers.IO) {
         val group = Tag(title = groupName, parentId = null)
@@ -319,8 +335,19 @@ class TaskRepository(private val taskDao: TaskDao, private val context: Context)
     }
 
     suspend fun deleteTag(tag: Tag) = withContext(Dispatchers.IO) {
+        val allItems = taskDao.getAllItemsSync()
         taskDao.deleteTag(tag)
+        
+        for (item in allItems) {
+            val currentTags = item.tags
+            if (currentTags.any { it.equals(tag.title, ignoreCase = true) }) {
+                val newTags = currentTags.filter { !it.equals(tag.title, ignoreCase = true) }
+                val newCachedString = newTags.joinToString(", ")
+                taskDao.insertItem(item.copy(cachedTags = newCachedString))
+            }
+        }
     }
+
 
     suspend fun updateItemTags(itemId: String, tags: List<Tag>) = withContext(Dispatchers.IO) {
         taskDao.deleteItemTagsByItemId(itemId)

@@ -18,6 +18,9 @@ interface TaskDao {
     @Query("SELECT * FROM items ORDER BY sortOrder ASC, creationDate DESC")
     fun getAllItems(): Flow<List<Item>>
 
+    @Query("SELECT * FROM items ORDER BY sortOrder ASC, creationDate DESC")
+    suspend fun getAllItemsSync(): List<Item>
+
     @Query("SELECT * FROM items WHERE id = :id")
     suspend fun getItemById(id: String): Item?
 
@@ -122,4 +125,7 @@ interface TaskDao {
 
     @Query("DELETE FROM item_tags WHERE itemId = :itemId")
     suspend fun deleteItemTagsByItemId(itemId: String)
+
+    @Query("SELECT itemId FROM item_tags WHERE tagId = :tagId")
+    suspend fun getItemIdsByTagId(tagId: String): List<String>
 }
