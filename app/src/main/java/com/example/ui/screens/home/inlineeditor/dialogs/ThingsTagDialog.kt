@@ -165,6 +165,9 @@ fun ThingsTagDialog(
         mutableStateOf(activeTags.toSet())
     }
 
+    var tagToDeleteWithChildren by remember { mutableStateOf<Tag?>(null) }
+    var childTagsToDelete by remember { mutableStateOf<List<Tag>>(emptyList()) }
+
     var currentScreen by remember { mutableStateOf(DialogScreen.LIST) }
     var selectedGroup: Tag? by remember { mutableStateOf<Tag?>(null) }
     var newTagName by remember { mutableStateOf("") }
@@ -188,6 +191,41 @@ fun ThingsTagDialog(
             delay(100L) // Allow slide animation to prepare
             focusRequester.requestFocus()
         }
+    }
+
+    if (tagToDeleteWithChildren != null) {
+        AlertDialog(
+            onDismissRequest = { tagToDeleteWithChildren = null },
+            title = { Text(stringResource(id = R.string.delete_group_title)) },
+            text = { Text(stringResource(id = R.string.delete_group_message)) },
+            confirmButton = {
+                TextButton(onClick = {
+                    val parent = tagToDeleteWithChildren!!
+                    val children = childTagsToDelete
+                    
+                    onDeleteTag(parent)
+                    var newlyDeleted = setOf(parent.title)
+                    
+                    children.forEach { child ->
+                        onDeleteTag(child)
+                        newlyDeleted = newlyDeleted + child.title
+                    }
+                    
+                    deletedTags = deletedTags + newlyDeleted
+                    deletedDefaultTags = deletedDefaultTags + newlyDeleted.filter { defaultTags.contains(it) }
+                    selectedTags = selectedTags - newlyDeleted
+                    
+                    tagToDeleteWithChildren = null
+                }) {
+                    Text(stringResource(id = R.string.tag_dialog_delete), color = ThingsUpcomingRed)
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = { tagToDeleteWithChildren = null }) {
+                    Text(stringResource(id = R.string.tag_dialog_cancel))
+                }
+            }
+        )
     }
 
     Dialog(
@@ -788,13 +826,19 @@ fun ThingsTagDialog(
                                             .clip(androidx.compose.foundation.shape.CircleShape)
                                             .background(DeleteButtonBgColor)
                                             .clickable {
-                                                onDeleteTag(tag)
-                                                deletedTags = deletedTags + tag.title
-                                                if (defaultTags.contains(tag.title)) {
-                                                    deletedDefaultTags = deletedDefaultTags + tag.title
-                                                }
-                                                if (selectedTags.contains(tag.title)) {
-                                                    selectedTags = selectedTags - tag.title
+                                                val children = availableTagObjects.filter { it.parentId == tag.id }
+                                                if (children.isNotEmpty()) {
+                                                    tagToDeleteWithChildren = tag
+                                                    childTagsToDelete = children
+                                                } else {
+                                                    onDeleteTag(tag)
+                                                    deletedTags = deletedTags + tag.title
+                                                    if (defaultTags.contains(tag.title)) {
+                                                        deletedDefaultTags = deletedDefaultTags + tag.title
+                                                    }
+                                                    if (selectedTags.contains(tag.title)) {
+                                                        selectedTags = selectedTags - tag.title
+                                                    }
                                                 }
                                             },
                                         contentAlignment = Alignment.Center
