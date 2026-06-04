@@ -252,13 +252,13 @@ fun ThingsTagDialog(
                             
                             val standardHeight = draggedItemInfo.size.toFloat() + detectedSpacing
                             val b2Top = draggedItemInfo.offset.toFloat() + (index2 - currentIndex) * standardHeight
-                            val hysteresis = 0.15f * standardHeight
+                            val hysteresis = 0.05f * standardHeight
                             
+                            val centerThreshold = b2Top + (block2.size - block1.size + 1) * standardHeight / 2f
                             val shouldSwap = if (index1 < index2) {
-                                dragCenterY > b2Top + hysteresis
+                                dragCenterY > centerThreshold + hysteresis
                             } else {
-                                val b2Bottom = b2Top + block2.size * standardHeight
-                                dragCenterY < b2Bottom - hysteresis
+                                dragCenterY < centerThreshold - hysteresis
                             }
                             
                             if (shouldSwap) {
@@ -280,12 +280,13 @@ fun ThingsTagDialog(
                             
                             val standardHeight = draggedItemInfo.size.toFloat() + detectedSpacing
                             val b2Top = draggedItemInfo.offset.toFloat() + (index2 - currentIndex) * standardHeight
-                            val hysteresis = 0.15f * standardHeight
+                            val hysteresis = 0.05f * standardHeight
                             
+                            val centerThreshold = b2Top + standardHeight / 2f
                             val shouldSwap = if (index1 < index2) {
-                                dragCenterY > b2Top + hysteresis
+                                dragCenterY > centerThreshold + hysteresis
                             } else {
-                                dragCenterY < b2Top + standardHeight - hysteresis
+                                dragCenterY < centerThreshold - hysteresis
                             }
                             
                             if (shouldSwap) {
