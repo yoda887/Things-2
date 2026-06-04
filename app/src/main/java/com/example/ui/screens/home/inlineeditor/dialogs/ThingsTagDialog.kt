@@ -32,6 +32,7 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.zIndex
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
@@ -254,7 +255,7 @@ fun ThingsTagDialog(
                             val b2Top = draggedItemInfo.offset.toFloat() + (index2 - currentIndex) * standardHeight
                             val hysteresis = 0.05f * standardHeight
                             
-                            val centerThreshold = b2Top + (block2.size - block1.size + 1) * standardHeight / 2f
+                            val centerThreshold = b2Top + block2.size * standardHeight / 2f
                             val shouldSwap = if (index1 < index2) {
                                 dragCenterY > centerThreshold + hysteresis
                             } else {
@@ -478,7 +479,7 @@ fun ThingsTagDialog(
                                 Row(
                                     modifier = Modifier
                                         .fillMaxWidth()
-                                        .animateItemPlacement()
+                                        .animateItem()
                                         .clip(RoundedCornerShape(8.dp))
                                         .clickable {
                                             selectedTags = if (isSelected) {
@@ -938,9 +939,8 @@ fun ThingsTagDialog(
                                         if (draggedItemInfo != null) {
                                             val viewportHeight = lazyListState.layoutInfo.viewportSize.height.toFloat()
                                             
-                                            // Clamp currentDragPosition to [halfSize, viewportHeight - halfSize]
-                                            val halfSize = draggedItemInfo.size / 2f
-                                            currentDragPosition = change.position.y.coerceIn(halfSize, viewportHeight - halfSize)
+                                            // Clamp currentDragPosition to [0f, viewportHeight]
+                                            currentDragPosition = change.position.y.coerceIn(0f, viewportHeight)
                                             
                                             var newOffset = dragAccumulatedOffset + dragAmount.y
                                             val minOffset = -draggedItemInfo.offset.toFloat()
@@ -993,7 +993,7 @@ fun ThingsTagDialog(
                                     val isDragged = tag.id in draggedGroupIds
                                     val dragOffset = if (isDragged) dragAccumulatedOffset else 0f
                                     val isPrimaryDraggedItem = draggedTagId == tag.id
-                                    val rowBg = if (isPrimaryDraggedItem) DarkButtonBgColor.copy(alpha = 0.8f) else Color.Transparent
+                                    val rowBg = if (isDragged) DarkButtonBgColor.copy(alpha = 0.8f) else Color.Transparent
 
                                     Row(
                                         modifier = Modifier
@@ -1002,6 +1002,7 @@ fun ThingsTagDialog(
                                             .graphicsLayer {
                                                 translationY = dragOffset
                                             }
+                                            .zIndex(if (isDragged) 1f else 0f)
                                             .background(rowBg, RoundedCornerShape(8.dp))
                                             .padding(
                                                 start = if (isChild) RowPaddingStartChild else RowPaddingStartNormal,
