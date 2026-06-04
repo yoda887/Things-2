@@ -216,25 +216,23 @@ fun ThingsTagDialog(
         val visibleItems = lazyListState.layoutInfo.visibleItemsInfo
         val detectedSpacing = run {
             var spacing = 0f
-            try {
-                spacing = lazyListState.layoutInfo.mainAxisItemSpacing.toFloat()
-            } catch (e: Exception) {
-            }
+            try { spacing = lazyListState.layoutInfo.mainAxisItemSpacing.toFloat() } catch (e: Exception) {}
             spacing
         }
         val draggedItemInfo = visibleItems.firstOrNull { it.key == tagId }
         val currentIndex = localManageTags.indexOfFirst { it.first.id == tagId }
-        
+
         if (draggedItemInfo != null && draggedItemInfo.index == currentIndex) {
-            val dragCenterY = currentDragPosition - grabOffset
-            
+            // FIX 1: визуальный центр через layout offset + накопленный сдвиг
+            val dragCenterY = draggedItemInfo.offset.toFloat() + draggedItemInfo.size / 2f + dragAccumulatedOffset
+
             val hoveredItem = visibleItems.firstOrNull { item ->
                 val itemKey = item.key as? String
                 itemKey != null && itemKey !in draggedGroupIds &&
                 dragCenterY > item.offset &&
                 dragCenterY < item.offset + item.size
             }
-            
+
             if (hoveredItem != null) {
                 val hoveredTagId = hoveredItem.key as String
                 val hoveredItemPair = localManageTags.find { it.first.id == hoveredTagId }
@@ -247,28 +245,32 @@ fun ThingsTagDialog(
                         if (hoveredParentId != tagId) {
                             val block1 = getBlock(tagId, localManageTags)
                             val block2 = getBlock(hoveredParentId, localManageTags)
-                            
+
                             val index1 = localManageTags.indexOf(block1.first())
                             val index2 = localManageTags.indexOf(block2.first())
-                            
+
                             val standardHeight = draggedItemInfo.size.toFloat() + detectedSpacing
-                            val b2Top = draggedItemInfo.offset.toFloat() + (index2 - currentIndex) * standardHeight
-                            val hysteresis = 0.05f * standardHeight
-                            
+                            // FIX 3: реальный offset block2 из layoutInfo, аппроксимация как фолбэк
+                            val block2FirstId = block2.first().first.id
+                            val block2StartItem = visibleItems.firstOrNull { it.key == block2FirstId }
+                            val b2Top = block2StartItem?.offset?.toFloat()
+                                ?: (draggedItemInfo.offset.toFloat() + (index2 - currentIndex) * standardHeight)
+                            val hysteresis = 0.1f * standardHeight
+
                             val centerThreshold = b2Top + block2.size * standardHeight / 2f
                             val shouldSwap = if (index1 < index2) {
                                 dragCenterY > centerThreshold + hysteresis
                             } else {
                                 dragCenterY < centerThreshold - hysteresis
                             }
-                            
+
                             if (shouldSwap) {
                                 val newList = localManageTags.toMutableList()
                                 newList.removeAll(block1)
                                 val insertIndex = newList.indexOf(block2.first()) + if (index1 < index2) block2.size else 0
                                 newList.addAll(insertIndex, block1)
                                 localManageTags = newList
-                                
+
                                 val distance = if (index1 < index2) block2.size * standardHeight else -(block2.size * standardHeight)
                                 dragAccumulatedOffset -= distance
                             }
@@ -278,24 +280,25 @@ fun ThingsTagDialog(
                         if (hoveredItemPair.second && hoveredItemPair.first.parentId == draggedItemPair.first.parentId) {
                             val index1 = localManageTags.indexOf(draggedItemPair)
                             val index2 = localManageTags.indexOf(hoveredItemPair)
-                            
+
                             val standardHeight = draggedItemInfo.size.toFloat() + detectedSpacing
-                            val b2Top = draggedItemInfo.offset.toFloat() + (index2 - currentIndex) * standardHeight
-                            val hysteresis = 0.05f * standardHeight
-                            
+                            // FIX 2: реальный offset из уже найденного hoveredItem
+                            val b2Top = hoveredItem.offset.toFloat()
+                            val hysteresis = 0.1f * standardHeight
+
                             val centerThreshold = b2Top + standardHeight / 2f
                             val shouldSwap = if (index1 < index2) {
                                 dragCenterY > centerThreshold + hysteresis
                             } else {
                                 dragCenterY < centerThreshold - hysteresis
                             }
-                            
+
                             if (shouldSwap) {
                                 val newList = localManageTags.toMutableList()
                                 val movedItem = newList.removeAt(index1)
                                 newList.add(index2, movedItem)
                                 localManageTags = newList
-                                
+
                                 val distance = if (index1 < index2) standardHeight else -standardHeight
                                 dragAccumulatedOffset -= distance
                             }
@@ -885,22 +888,7 @@ fun ThingsTagDialog(
                             }
                         }
 
-                        val getBlock = { parentId: String, list: List<Pair<Tag, Boolean>> ->
-                            val startIndex = list.indexOfFirst { it.first.id == parentId }
-                            if (startIndex != -1) {
-                                val block = mutableListOf(list[startIndex])
-                                for (i in startIndex + 1 until list.size) {
-                                    if (list[i].second) {
-                                        block.add(list[i])
-                                    } else {
-                                        break
-                                    }
-                                }
-                                block
-                            } else {
-                                emptyList()
-                            }
-                        }
+
 
                         // Drag & Drop Reorderable list modifier on LazyColumn
                         val manageDragModifier = Modifier.pointerInput(Unit) {
