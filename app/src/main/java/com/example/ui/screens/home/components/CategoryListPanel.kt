@@ -61,13 +61,15 @@ data class UpcomingDay(
     val dayOfMonth: String,
     val dayOfWeekLabel: String,
     val calendarEvents: List<ItemWithChecklist>,
-    val tasks: List<ItemWithChecklist>
+    val tasks: List<ItemWithChecklist>,
+    val isMonthGroup: Boolean = false
 )
 
 data class UpcomingHeaderItem(
     val dateMillis: Long,
     val dayOfMonth: String,
-    val dayOfWeekLabel: String
+    val dayOfWeekLabel: String,
+    val isMonthGroup: Boolean = false
 )
 
 data class UpcomingEventItem(
@@ -232,7 +234,7 @@ fun ThingsCategoryListPanel(
         cal.set(Calendar.MILLISECOND, 0)
         val tomorrowStart = cal.timeInMillis
         
-        for (offset in 0 until 14) {
+        for (offset in 0 until 7) {
             val c = Calendar.getInstance()
             c.timeInMillis = tomorrowStart
             c.add(Calendar.DAY_OF_YEAR, offset)
@@ -256,26 +258,76 @@ fun ThingsCategoryListPanel(
                 wrapper.item.startDate != null && wrapper.item.startDate in dayStart..dayEnd
             }
             
-            if (dayEvents.isNotEmpty() || dayTasks.isNotEmpty()) {
-                val dayOfMonthLabel = Calendar.getInstance().apply { timeInMillis = dayStart }.get(Calendar.DAY_OF_MONTH).toString()
-                val dayOfWeekLabel = if (offset == 0) {
-                    "Tomorrow"
-                } else if (offset < 6) {
-                    SimpleDateFormat("EEEE", Locale.ENGLISH).format(Date(dayStart))
-                } else {
-                    SimpleDateFormat("MMMM", Locale.ENGLISH).format(Date(dayStart))
-                }
-                
-                daysList.add(
-                    UpcomingDay(
-                        dateMillis = dayStart,
-                        dayOfMonth = dayOfMonthLabel,
-                        dayOfWeekLabel = dayOfWeekLabel,
-                        calendarEvents = dayEvents,
-                        tasks = dayTasks
-                    )
-                )
+            val dayOfMonthLabel = Calendar.getInstance().apply { timeInMillis = dayStart }.get(Calendar.DAY_OF_MONTH).toString()
+            val dayOfWeekLabel = if (offset == 0) {
+                "Tomorrow"
+            } else if (offset < 6) {
+                SimpleDateFormat("EEEE", Locale.ENGLISH).format(Date(dayStart))
+            } else {
+                SimpleDateFormat("MMMM", Locale.ENGLISH).format(Date(dayStart))
             }
+            
+            daysList.add(
+                UpcomingDay(
+                    dateMillis = dayStart,
+                    dayOfMonth = dayOfMonthLabel,
+                    dayOfWeekLabel = dayOfWeekLabel,
+                    calendarEvents = dayEvents,
+                    tasks = dayTasks
+                )
+            )
+        }
+
+        val beyond7DaysStart = Calendar.getInstance().apply {
+            timeInMillis = tomorrowStart
+            add(Calendar.DAY_OF_YEAR, 7)
+        }.timeInMillis
+
+        val oneYearLaterStart = Calendar.getInstance().apply {
+            timeInMillis = tomorrowStart
+            add(Calendar.YEAR, 1)
+        }.timeInMillis
+
+        val futureEvents = calendarEvents.filter { event ->
+            event.eventStartMillis != null && event.eventStartMillis in beyond7DaysStart until oneYearLaterStart
+        }.map { ItemWithChecklist(item = it, checklist = emptyList()) }
+
+        val futureTasks = localTasksList.filter { wrapper ->
+            wrapper.item.startDate != null && wrapper.item.startDate in beyond7DaysStart until oneYearLaterStart
+        }
+
+        val monthFormat = SimpleDateFormat("MMMM yyyy", Locale.ENGLISH)
+        val getMonthKey = { time: Long -> 
+            Calendar.getInstance().apply { 
+                timeInMillis = time
+                set(Calendar.DAY_OF_MONTH, 1)
+                set(Calendar.HOUR_OF_DAY, 0)
+                set(Calendar.MINUTE, 0)
+                set(Calendar.SECOND, 0)
+                set(Calendar.MILLISECOND, 0)
+            }.timeInMillis
+        }
+
+        val allFutureItems = (futureEvents + futureTasks).groupBy { wrapper ->
+            val time = wrapper.item.eventStartMillis ?: wrapper.item.startDate ?: 0L
+            getMonthKey(time)
+        }.toSortedMap()
+
+        for ((monthStartTime, items) in allFutureItems) {
+            val monthLabel = monthFormat.format(Date(monthStartTime))
+            val monthEvents = items.filter { it.item.eventStartMillis != null }
+            val monthTasks = items.filter { it.item.startDate != null && it.item.eventStartMillis == null }
+            
+            daysList.add(
+                UpcomingDay(
+                    dateMillis = monthStartTime,
+                    dayOfMonth = "",
+                    dayOfWeekLabel = monthLabel,
+                    calendarEvents = monthEvents,
+                    tasks = monthTasks,
+                    isMonthGroup = true
+                )
+            )
         }
         daysList
     }
@@ -791,7 +843,7 @@ fun ThingsCategoryListPanel(
                     }
                 } else if (screen == ActiveScreen.UPCOMING) {
                     upcomingDays.forEach { day ->
-                        add(UpcomingHeaderItem(day.dateMillis, day.dayOfMonth, day.dayOfWeekLabel))
+                        add(UpcomingHeaderItem(day.dateMillis, day.dayOfMonth, day.dayOfWeekLabel, day.isMonthGroup))
                         day.calendarEvents.forEach { event ->
                             add(UpcomingEventItem(event.item, day.dateMillis))
                         }
@@ -987,40 +1039,68 @@ fun ThingsCategoryListPanel(
                             targetValue = if (shouldDim) 0.3f else 1f,
                             label = "dimAlpha_hdr_${header.dateMillis}"
                         )
-                        Row(
-                            modifier = Modifier
-                                .animateItem()
-                                .fillMaxWidth()
-                                .graphicsLayer { alpha = dimAlpha }
-                                .padding(top = 22.dp, bottom = 10.dp),
-                            verticalAlignment = Alignment.Bottom
-                        ) {
-                            Text(
-                                text = header.dayOfMonth,
-                                style = TextStyle(
-                                    fontSize = 32.sp,
-                                    fontWeight = FontWeight.Bold,
-                                    color = textPrimaryColor
-                                )
-                            )
-                            Spacer(modifier = Modifier.width(8.dp))
-                            Text(
-                                text = header.dayOfWeekLabel,
-                                style = TextStyle(
-                                    fontSize = 16.sp,
-                                    fontWeight = FontWeight.Bold,
-                                    color = textSecondaryColor.copy(alpha = 0.5f)
-                                ),
-                                modifier = Modifier.padding(bottom = 4.dp)
-                            )
-                            Spacer(modifier = Modifier.width(12.dp))
-                            Box(
+                        if (header.isMonthGroup) {
+                            Row(
                                 modifier = Modifier
-                                    .weight(1f)
-                                    .height(0.6.dp)
-                                    .background(dividerColor)
-                                    .padding(bottom = 4.dp)
-                            )
+                                    .animateItem()
+                                    .fillMaxWidth()
+                                    .graphicsLayer { alpha = dimAlpha }
+                                    .padding(top = 32.dp, bottom = 12.dp),
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+                                Text(
+                                    text = header.dayOfWeekLabel.uppercase(Locale.getDefault()),
+                                    style = TextStyle(
+                                        fontSize = 14.sp,
+                                        fontWeight = FontWeight.Bold,
+                                        color = textSecondaryColor.copy(alpha = 0.6f),
+                                        letterSpacing = 1.2.sp
+                                    )
+                                )
+                                Spacer(modifier = Modifier.width(12.dp))
+                                Box(
+                                    modifier = Modifier
+                                        .weight(1f)
+                                        .height(0.6.dp)
+                                        .background(dividerColor)
+                                )
+                            }
+                        } else {
+                            Row(
+                                modifier = Modifier
+                                    .animateItem()
+                                    .fillMaxWidth()
+                                    .graphicsLayer { alpha = dimAlpha }
+                                    .padding(top = 22.dp, bottom = 10.dp),
+                                verticalAlignment = Alignment.Bottom
+                            ) {
+                                Text(
+                                    text = header.dayOfMonth,
+                                    style = TextStyle(
+                                        fontSize = 32.sp,
+                                        fontWeight = FontWeight.Bold,
+                                        color = textPrimaryColor
+                                    )
+                                )
+                                Spacer(modifier = Modifier.width(8.dp))
+                                Text(
+                                    text = header.dayOfWeekLabel,
+                                    style = TextStyle(
+                                        fontSize = 16.sp,
+                                        fontWeight = FontWeight.Bold,
+                                        color = textSecondaryColor.copy(alpha = 0.5f)
+                                    ),
+                                    modifier = Modifier.padding(bottom = 4.dp)
+                                )
+                                Spacer(modifier = Modifier.width(12.dp))
+                                Box(
+                                    modifier = Modifier
+                                        .weight(1f)
+                                        .height(0.6.dp)
+                                        .background(dividerColor)
+                                        .padding(bottom = 4.dp)
+                                )
+                            }
                         }
                     }
                     is UpcomingEventItem -> {
