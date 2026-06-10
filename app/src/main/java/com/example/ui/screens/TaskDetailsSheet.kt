@@ -56,9 +56,10 @@ fun ThingsTaskDetailsSheet(
         projectId: String?,
         checklist: List<ChecklistItem>
     ) -> Unit,
-    onDelete: (() -> Unit)? = null
+    onDelete: (() -> Unit)? = null,
+    initialTitle: String = ""
 ) {
-    var title by remember(task?.item?.id) { mutableStateOf(task?.item?.title ?: "") }
+    var title by remember(task?.item?.id) { mutableStateOf(task?.item?.title ?: initialTitle) }
     var notes by remember(task?.item?.id) { mutableStateOf(task?.item?.notes ?: "") }
     var section by remember(task?.item?.id) { mutableStateOf(task?.item?.section ?: initialSection) }
     var isTonight by remember(task?.item?.id) { mutableStateOf(task?.item?.isTonight ?: false) }
@@ -460,6 +461,9 @@ fun ThingsTaskDetailsSheet(
                                 text = { Text(proj.name, color = textPrimaryColor) },
                                 onClick = {
                                     selectedProjectId = proj.id
+                                    if (section == TaskSection.INBOX) {
+                                        section = TaskSection.ANYTIME
+                                    }
                                     showProjectDropdown = false
                                 }
                             )

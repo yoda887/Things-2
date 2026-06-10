@@ -97,11 +97,11 @@ fun rememberThingsTypography(): Typography {
             fontWeight = FontWeight.Normal,
             fontSize = (16 * scaleFactor).sp
         ),
-        // Task List secondary / Date subtitle - 12.5.sp base (scaled)
+        // Task List secondary / Date subtitle - 14.sp base (scaled)
         bodySmall = TextStyle(
             fontFamily = FontFamily.Default,
             fontWeight = FontWeight.Normal,
-            fontSize = (12.5f * scaleFactor).sp
+            fontSize = (14 * scaleFactor).sp
         ),
         // Clickable buttons / Action trigger text - increased to 18.sp base
         labelLarge = TextStyle(

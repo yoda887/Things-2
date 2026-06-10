@@ -19,6 +19,7 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.TransformOrigin
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.text.TextStyle
@@ -32,6 +33,9 @@ import com.example.data.model.TaskSection
 import com.example.data.model.Area
 import com.example.ui.screens.home.components.ThingsHomePanel
 import com.example.ui.screens.home.components.ThingsCategoryListPanel
+import com.example.ui.screens.home.components.ThingsSearchOverlay
+import com.example.ui.screens.home.components.ThingsSearchScreen
+import com.example.ui.screens.home.components.SearchResultItem
 import com.example.ui.screens.ThingsTaskDetailsSheet
 import com.example.ui.theme.*
 import com.example.ui.viewmodel.ThingsViewModel
@@ -47,7 +51,7 @@ import kotlinx.coroutines.launch
 
 
 enum class ActiveScreen {
-    HOME, INBOX, TODAY, UPCOMING, ANYTIME, SOMEDAY, LOGBOOK, PROJECT_DETAIL, AREA_DETAIL
+    HOME, INBOX, TODAY, UPCOMING, ANYTIME, SOMEDAY, LOGBOOK, PROJECT_DETAIL, AREA_DETAIL, SEARCH
 }
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -89,6 +93,37 @@ fun ThingsHomeScreen(viewModel: ThingsViewModel) {
     var showAddProjectDialog by remember { mutableStateOf(false) }
     var showAddAreaDialog by remember { mutableStateOf(false) }
     var inlineExpandedTaskId by remember { mutableStateOf<String?>(null) }
+    var isSearchOverlayActive by remember { mutableStateOf(false) }
+    var newTaskTitlePrefill by remember { mutableStateOf("") }
+    
+    // [ИЗМЕНЕНИЕ]: Состояния для недавно искавшихся объектов и подсветки конкретной задачи
+    var recentSearchItems by remember { mutableStateOf<List<SearchResultItem>>(emptyList()) }
+    var highlightedTaskId by remember { mutableStateOf<String?>(null) }
+    
+    // [ИЗМЕНЕНИЕ]: Функция для сохранения недавно искавшихся и нажатых объектов в поиске
+    val addToRecent: (SearchResultItem) -> Unit = remember(recentSearchItems) {
+        { item ->
+            val current = recentSearchItems.toMutableList()
+            val existingIndex = current.indexOfFirst { existing ->
+                when {
+                    existing is SearchResultItem.TaskResult && item is SearchResultItem.TaskResult -> 
+                        existing.taskWrapper.item.id == item.taskWrapper.item.id
+                    existing is SearchResultItem.ProjectResult && item is SearchResultItem.ProjectResult -> 
+                        existing.project.id == item.project.id
+                    existing is SearchResultItem.AreaResult && item is SearchResultItem.AreaResult -> 
+                        existing.area.id == item.area.id
+                    existing is SearchResultItem.SmartListResult && item is SearchResultItem.SmartListResult -> 
+                        existing.screen == item.screen
+                    else -> false
+                }
+            }
+            if (existingIndex != -1) {
+                current.removeAt(existingIndex)
+            }
+            current.add(0, item)
+            recentSearchItems = current.take(10)
+        }
+    }
     
     // Project input fields
     var newProjectName by remember { mutableStateOf("") }
@@ -111,165 +146,83 @@ fun ThingsHomeScreen(viewModel: ThingsViewModel) {
             .fillMaxSize()
             .background(backgroundColor),
         containerColor = backgroundColor,
-        topBar = {
-            TopAppBar(
-                title = {
-                    if (activeScreen == ActiveScreen.HOME) {
-                        Text(
-                            text = "Things",
-                            style = TextStyle(
-                                fontSize = 24.sp,
-                                fontWeight = FontWeight.Bold,
-                                color = textPrimaryColor
-                            )
-                        )
-                    }
-                },
-                navigationIcon = {
-                    if (activeScreen != ActiveScreen.HOME) {
-                        IconButton(
-                            onClick = {
-                                activeScreen = ActiveScreen.HOME
-                                selectedProject = null
-                                selectedArea = null
-                                viewModel.selectTag(null)
-                            }
-                        ) {
-                            Icon(
-                                imageVector = Icons.Default.KeyboardArrowLeft,
-                                contentDescription = "Back",
-                                tint = ThingsBlue,
-                                modifier = Modifier.size(28.dp)
-                            )
-                        }
-                    }
-                },
-                actions = {
-                    if (activeScreen != ActiveScreen.HOME) {
-                        IconButton(
-                            onClick = {
-                                // Options / batch details shortcut
-                            }
-                        ) {
-                            Box(
-                                modifier = Modifier
-                                    .size(22.dp)
-                                    .border(1.dp, textSecondaryColor.copy(alpha = 0.4f), CircleShape),
-                                contentAlignment = Alignment.Center
-                            ) {
-                                Icon(
-                                    imageVector = Icons.Default.KeyboardArrowDown,
-                                    contentDescription = "Options",
-                                    tint = textSecondaryColor,
-                                    modifier = Modifier.size(14.dp)
-                                )
-                            }
-                        }
-                    } else {
-                        if (isSyncing) {
-                            CircularProgressIndicator(
-                                modifier = Modifier
-                                    .padding(end = 16.dp)
-                                    .size(20.dp),
-                                color = ThingsBlue,
-                                strokeWidth = 2.dp
-                            )
-                        } else {
-                            IconButton(
-                                onClick = {
-                                    scope.launch {
-                                        if (googleToken.isNotBlank()) {
-                                            viewModel.syncWithGoogle()
-                                        } else {
-                                            viewModel.setAccessToken("demo_token")
-                                            viewModel.syncWithGoogle()
-                                        }
-                                    }
-                                },
-                                modifier = Modifier.testTag("sync_shortcut_button")
-                            ) {
-                                Icon(
-                                    Icons.Default.Sync,
-                                    contentDescription = "Sync",
-                                    tint = if (syncError != null) ThingsUpcomingRed else textSecondaryColor
-                                )
-                            }
-                        }
-                    }
-                },
-                colors = TopAppBarDefaults.topAppBarColors(containerColor = backgroundColor)
-            )
-        },
+        // [ИЗМЕНЕНИЕ]: Тулбары перенесены внутрь панелей (ThingsCategoryListPanel), 
+        // чтобы индикатор поиска выезжал поверх них (Z-index/layering). 
+        // Поэтому на уровне главного Scaffold тулбар больше не отображается.
+        topBar = {},
         floatingActionButton = {
-            FloatingActionButton(
-                onClick = {
-                    val targetScreen = if (activeScreen == ActiveScreen.HOME || activeScreen == ActiveScreen.LOGBOOK) {
-                        ActiveScreen.INBOX
-                    } else {
-                        activeScreen
-                    }
-                    if (activeScreen != targetScreen) {
-                        activeScreen = targetScreen
-                    }
-
-                    val initialSection = when (targetScreen) {
-                        ActiveScreen.TODAY -> TaskSection.TODAY
-                        ActiveScreen.UPCOMING -> TaskSection.UPCOMING
-                        ActiveScreen.ANYTIME -> TaskSection.ANYTIME
-                        ActiveScreen.SOMEDAY -> TaskSection.SOMEDAY
-                        else -> TaskSection.INBOX
-                    }
-                    val initialProjectId = if (targetScreen == ActiveScreen.PROJECT_DETAIL) selectedProject?.id else null
-                    val newTaskId = java.util.UUID.randomUUID().toString()
-
-                    val startValue = when (initialSection) {
-                        TaskSection.INBOX -> 0
-                        TaskSection.TODAY -> 1
-                        TaskSection.ANYTIME -> 2
-                        TaskSection.SOMEDAY -> 3
-                        TaskSection.UPCOMING -> 2
-                    }
-                    val computedStartDate = when (targetScreen) {
-                        ActiveScreen.TODAY -> System.currentTimeMillis()
-                        ActiveScreen.UPCOMING -> {
-                            val earliestUpcomingTask = allTasksRaw
-                                .filter { it.item.isUpcoming }
-                                .minByOrNull { it.item.startDate ?: Long.MAX_VALUE }
-                            
-                            earliestUpcomingTask?.item?.startDate ?: java.util.Calendar.getInstance().apply {
-                                add(java.util.Calendar.DAY_OF_YEAR, 1)
-                                set(java.util.Calendar.HOUR_OF_DAY, 0)
-                                set(java.util.Calendar.MINUTE, 0)
-                                set(java.util.Calendar.SECOND, 0)
-                                set(java.util.Calendar.MILLISECOND, 0)
-                            }.timeInMillis
+            // [ИЗМЕНЕНИЕ]: Скрывать глобально на уровне HomeScreen, если открыт встроенный редактор (inlineExpandedTaskId != null)
+            if (inlineExpandedTaskId == null) {
+                FloatingActionButton(
+                    onClick = {
+                        val targetScreen = if (activeScreen == ActiveScreen.HOME || activeScreen == ActiveScreen.LOGBOOK) {
+                            ActiveScreen.INBOX
+                        } else {
+                            activeScreen
                         }
-                        else -> null
-                    }
+                        if (activeScreen != targetScreen) {
+                            activeScreen = targetScreen
+                        }
 
-                    val newTask = Item(
-                        id = newTaskId,
-                        type = 0,
-                        title = "",
-                        notes = "",
-                        start = startValue,
-                        projectId = initialProjectId,
-                        startDate = computedStartDate,
-                        creationDate = System.currentTimeMillis()
-                    )
+                        val initialSection = when (targetScreen) {
+                            ActiveScreen.TODAY -> TaskSection.TODAY
+                            ActiveScreen.UPCOMING -> TaskSection.UPCOMING
+                            ActiveScreen.ANYTIME -> TaskSection.ANYTIME
+                            ActiveScreen.SOMEDAY -> TaskSection.SOMEDAY
+                            else -> TaskSection.INBOX
+                        }
+                        val initialProjectId = if (targetScreen == ActiveScreen.PROJECT_DETAIL) selectedProject?.id else null
+                        val newTaskId = java.util.UUID.randomUUID().toString()
 
-                    viewModel.updateTask(newTask)
-                    inlineExpandedTaskId = newTaskId
-                },
-                containerColor = ThingsBlue,
-                contentColor = Color.White,
-                shape = CircleShape,
-                modifier = Modifier
-                    .padding(16.dp)
-                    .size(56.dp)
-                    .testTag("add_task_fab")
-            ) {
-                Icon(Icons.Default.Add, contentDescription = "Create Task", modifier = Modifier.size(28.dp))
+                        val startValue = when (initialSection) {
+                            TaskSection.INBOX -> 0
+                            TaskSection.TODAY -> 1
+                            TaskSection.ANYTIME -> 2
+                            TaskSection.SOMEDAY -> 3
+                            TaskSection.UPCOMING -> 2
+                        }
+                        val computedStartDate = when (targetScreen) {
+                            ActiveScreen.TODAY -> System.currentTimeMillis()
+                            ActiveScreen.UPCOMING -> {
+                                val earliestUpcomingTask = allTasksRaw
+                                    .filter { it.item.isUpcoming }
+                                    .minByOrNull { it.item.startDate ?: Long.MAX_VALUE }
+                                
+                                earliestUpcomingTask?.item?.startDate ?: java.util.Calendar.getInstance().apply {
+                                    add(java.util.Calendar.DAY_OF_YEAR, 1)
+                                    set(java.util.Calendar.HOUR_OF_DAY, 0)
+                                    set(java.util.Calendar.MINUTE, 0)
+                                    set(java.util.Calendar.SECOND, 0)
+                                    set(java.util.Calendar.MILLISECOND, 0)
+                                }.timeInMillis
+                            }
+                            else -> null
+                        }
+
+                        val newTask = Item(
+                            id = newTaskId,
+                            type = 0,
+                            title = "",
+                            notes = "",
+                            start = startValue,
+                            projectId = initialProjectId,
+                            startDate = computedStartDate,
+                            creationDate = System.currentTimeMillis()
+                        )
+
+                        viewModel.updateTask(newTask)
+                        inlineExpandedTaskId = newTaskId
+                    },
+                    containerColor = ThingsBlue,
+                    contentColor = Color.White,
+                    shape = CircleShape,
+                    modifier = Modifier
+                        .padding(16.dp)
+                        .size(56.dp)
+                        .testTag("add_task_fab")
+                ) {
+                    Icon(Icons.Default.Add, contentDescription = "Create Task", modifier = Modifier.size(28.dp))
+                }
             }
         }
     ) { innerPadding ->
@@ -309,6 +262,35 @@ fun ThingsHomeScreen(viewModel: ThingsViewModel) {
                         onSyncClick = { token ->
                             viewModel.setAccessToken(token)
                             viewModel.syncWithGoogle()
+                        },
+                        onSearchClick = { isSearchOverlayActive = true },
+                        // [ИЗМЕНЕНИЕ]: Передается флаг активности оверлея поиска
+                        isSearchOverlayActive = isSearchOverlayActive
+                    )
+                    ActiveScreen.SEARCH -> ThingsSearchScreen(
+                        searchQuery = searchQuery,
+                        onSearchQueryChange = { viewModel.setSearchQuery(it) },
+                        allTasks = allTasksRaw,
+                        projects = projects,
+                        areas = areas,
+                        textPrimaryColor = textPrimaryColor,
+                        textSecondaryColor = textSecondaryColor,
+                        dividerColor = dividerColor,
+                        onTaskClick = { clickedTask ->
+                            taskToEdit = clickedTask
+                            showAddDialog = true
+                        },
+                        onTaskToggle = { toggledTask ->
+                            viewModel.toggleTaskCompletion(toggledTask)
+                        },
+                        onBack = {
+                            activeScreen = ActiveScreen.HOME
+                            viewModel.setSearchQuery("")
+                        },
+                        onFabClick = {
+                            taskToEdit = null
+                            newTaskTitlePrefill = searchQuery
+                            showAddDialog = true
                         }
                     )
                     else -> ThingsCategoryListPanel(
@@ -333,9 +315,166 @@ fun ThingsHomeScreen(viewModel: ThingsViewModel) {
                         onProjectClick = { proj ->
                             selectedProject = proj
                             activeScreen = ActiveScreen.PROJECT_DETAIL
+                        },
+                        // [ИЗМЕНЕНИЕ]: Передача ID подсвечиваемой задачи
+                        highlightedTaskId = highlightedTaskId,
+                        // [ИЗМЕНЕНИЕ]: Передача обработчика свайпа вниз для открытия поиска
+                        onSearchClick = { isSearchOverlayActive = true },
+                        onBack = {
+                            activeScreen = ActiveScreen.HOME
+                            selectedProject = null
+                            selectedArea = null
+                            viewModel.selectTag(null)
                         }
                     )
                 }
+            }
+
+            // [ИЗМЕНЕНИЕ]: Отдельное затемняющее поле для заднего плана оверлея поиска, которое только меняет прозрачность независимо от масштаба карточки поиска
+            AnimatedVisibility(
+                visible = isSearchOverlayActive,
+                enter = fadeIn(
+                    animationSpec = spring(stiffness = androidx.compose.animation.core.Spring.StiffnessMedium)
+                ),
+                exit = fadeOut(
+                    animationSpec = spring(stiffness = androidx.compose.animation.core.Spring.StiffnessMedium)
+                )
+            ) {
+                Box(
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .background(Color.Black.copy(alpha = 0.45f))
+                        .clickable(
+                            interactionSource = remember { androidx.compose.foundation.interaction.MutableInteractionSource() },
+                            indication = null
+                        ) {
+                            isSearchOverlayActive = false
+                            viewModel.setSearchQuery("")
+                        }
+                )
+            }
+
+            // [ИЗМЕНЕНИЕ]: Полноэкранный оверлей поиска отображается с пружинной анимацией входа (масштаб + прозрачность), раскрываясь из области поля поиска (сверху по центру)
+            AnimatedVisibility(
+                visible = isSearchOverlayActive,
+                enter = fadeIn(
+                    animationSpec = spring(
+                        dampingRatio = androidx.compose.animation.core.Spring.DampingRatioMediumBouncy,
+                        stiffness = androidx.compose.animation.core.Spring.StiffnessMedium
+                    )
+                ) + scaleIn(
+                    animationSpec = spring(
+                        dampingRatio = androidx.compose.animation.core.Spring.DampingRatioMediumBouncy,
+                        stiffness = androidx.compose.animation.core.Spring.StiffnessMedium
+                    ),
+                    initialScale = 0.6f,
+                    transformOrigin = TransformOrigin(0.5f, 0.05f)
+                ),
+                exit = fadeOut(
+                    animationSpec = spring(
+                        stiffness = androidx.compose.animation.core.Spring.StiffnessMedium
+                    )
+                ) + scaleOut(
+                    animationSpec = spring(
+                        stiffness = androidx.compose.animation.core.Spring.StiffnessMedium
+                    ),
+                    targetScale = 0.6f,
+                    transformOrigin = TransformOrigin(0.5f, 0.05f)
+                )
+            ) {
+                ThingsSearchOverlay(
+                    searchQuery = searchQuery,
+                    onSearchQueryChange = { viewModel.setSearchQuery(it) },
+                    allTasks = allTasksRaw,
+                    projects = projects,
+                    areas = areas,
+                    textPrimaryColor = textPrimaryColor,
+                    textSecondaryColor = textSecondaryColor,
+                    cardSurfaceColor = cardSurfaceColor,
+                    dividerColor = dividerColor,
+                    onTaskToggle = { viewModel.toggleTaskCompletion(it) },
+                    onTaskClick = { task ->
+                        // [ИЗМЕНЕНИЕ]: Добавление задачи в недавно искавшиеся объекты
+                        addToRecent(SearchResultItem.TaskResult(task))
+
+                        // Найти расположение задачи
+                        val proj = projects.find { it.id == task.item.projectId }
+                        val area = areas.find { it.id == task.item.areaId ?: proj?.areaId }
+                        
+                        selectedProject = proj
+                        selectedArea = area
+                        
+                        // Определить активный экран
+                        activeScreen = when {
+                            task.item.projectId != null -> ActiveScreen.PROJECT_DETAIL
+                            task.item.areaId != null -> ActiveScreen.AREA_DETAIL
+                            task.item.isCompleted -> ActiveScreen.LOGBOOK
+                            task.item.isInbox -> ActiveScreen.INBOX
+                            task.item.isToday -> ActiveScreen.TODAY
+                            task.item.isUpcoming -> ActiveScreen.UPCOMING
+                            task.item.isAnytime -> ActiveScreen.ANYTIME
+                            task.item.isSomeday -> ActiveScreen.SOMEDAY
+                            else -> ActiveScreen.INBOX
+                        }
+                        
+                        // [ИЗМЕНЕНИЕ]: Кликнутая задача более не разворачивается для редактирования, а кратковременно подсвечивается
+                        highlightedTaskId = task.item.id
+                        scope.launch {
+                            kotlinx.coroutines.delay(1500)
+                            if (highlightedTaskId == task.item.id) {
+                                highlightedTaskId = null
+                            }
+                        }
+                        
+                        viewModel.setSearchQuery("")
+                        isSearchOverlayActive = false
+                    },
+                    onProjectClick = { proj ->
+                        // [ИЗМЕНЕНИЕ]: Добавление проекта в недавно искавшиеся объекты
+                        addToRecent(SearchResultItem.ProjectResult(proj))
+
+                        selectedProject = proj
+                        activeScreen = ActiveScreen.PROJECT_DETAIL
+                        viewModel.setSearchQuery("")
+                        isSearchOverlayActive = false
+                    },
+                    onAreaClick = { area ->
+                        // [ИЗМЕНЕНИЕ]: Добавление области в недавно искавшиеся объекты
+                        addToRecent(SearchResultItem.AreaResult(area))
+
+                        selectedArea = area
+                        activeScreen = ActiveScreen.AREA_DETAIL
+                        viewModel.setSearchQuery("")
+                        isSearchOverlayActive = false
+                    },
+                    onSmartListClick = { smartScreen ->
+                        // [ИЗМЕНЕНИЕ]: Добавление смарт-списка в недавно искавшиеся объекты
+                        val title = when (smartScreen) {
+                            ActiveScreen.TODAY -> "Today"
+                            ActiveScreen.INBOX -> "Inbox"
+                            ActiveScreen.UPCOMING -> "Upcoming"
+                            ActiveScreen.ANYTIME -> "Anytime"
+                            ActiveScreen.SOMEDAY -> "Someday"
+                            ActiveScreen.LOGBOOK -> "Logbook"
+                            else -> "List"
+                        }
+                        addToRecent(SearchResultItem.SmartListResult(title, smartScreen))
+
+                        activeScreen = smartScreen
+                        viewModel.setSearchQuery("")
+                        isSearchOverlayActive = false
+                    },
+                    onClose = {
+                        isSearchOverlayActive = false
+                        viewModel.setSearchQuery("")
+                    },
+                    // [ИЗМЕНЕНИЕ]: Передача списка недавно найденных/искавшихся объектов
+                    recentSearchItems = recentSearchItems,
+                    onContinueSearchClick = {
+                        isSearchOverlayActive = false
+                        activeScreen = ActiveScreen.SEARCH
+                    }
+                )
             }
         }
     }
@@ -357,7 +496,10 @@ fun ThingsHomeScreen(viewModel: ThingsViewModel) {
             initialSection = initialSection,
             initialProjectId = initialProjectId,
             projects = projects,
-            onDismiss = { showAddDialog = false },
+            onDismiss = { 
+                showAddDialog = false
+                newTaskTitlePrefill = ""
+            },
             onSave = { title, notes, section, isTonight, startDate, tags, projectId, checklistItems ->
                 if (currentTaskToEdit == null) {
                     // Create Task
@@ -384,11 +526,14 @@ fun ThingsHomeScreen(viewModel: ThingsViewModel) {
                     
                 }
                 showAddDialog = false
+                newTaskTitlePrefill = ""
             },
             onDelete = {
                 currentTaskToEdit?.let { viewModel.deleteTask(it) }
                 showAddDialog = false
-            }
+                newTaskTitlePrefill = ""
+            },
+            initialTitle = newTaskTitlePrefill
         )
     }
 

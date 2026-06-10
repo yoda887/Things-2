@@ -41,6 +41,7 @@ import kotlinx.coroutines.launch
  * elevation feedback transitions, note flags, and tag chips..
  */
 
+// [ИЗМЕНЕНИЕ]: Добавлен параметр isHighlighted для кратковременной подсветки задачи при клике из поиска
 @Composable
 fun TaskItemRow(
     modifier: Modifier = Modifier,
@@ -54,7 +55,10 @@ fun TaskItemRow(
     showTodayIndicator: Boolean = false,
     isDragging: Boolean = false,
     dragOffsetY: Float = 0f,
-    dragModifier: Modifier = Modifier
+    dragModifier: Modifier = Modifier,
+    isHighlighted: Boolean = false,
+    leftColumnWidth: androidx.compose.ui.unit.Dp = androidx.compose.material3.MaterialTheme.dimens.taskLeftColumnWidthDefault,
+    spacingToText: androidx.compose.ui.unit.Dp = androidx.compose.material3.MaterialTheme.dimens.taskSpacingToTextDefault
 ) {
     val isDark = false
     val titleFontSize = androidx.compose.material3.MaterialTheme.typography.titleMedium.fontSize
@@ -65,6 +69,17 @@ fun TaskItemRow(
 
     val scale by androidx.compose.animation.core.animateFloatAsState(if (isDragging) 1.04f else 1.0f)
     val elevation by androidx.compose.animation.core.animateDpAsState(if (isDragging) 6.dp else 0.dp)
+
+    // [ИЗМЕНЕНИЕ]: Анимация цвета подсветки при переходе из поискового оверлея
+    val highlightColor by androidx.compose.animation.animateColorAsState(
+        targetValue = if (isHighlighted) ThingsBlue.copy(alpha = 0.18f) else Color.Transparent,
+        animationSpec = androidx.compose.animation.core.tween(durationMillis = 600)
+    )
+
+    val rowBgColor = when {
+        isDragging -> if (isDark) Color(0xFF2C2C2E) else Color(0xFFF2F2F7)
+        else -> highlightColor
+    }
 
     val isCalendarTask = task.id.startsWith("cal_")
 
@@ -78,38 +93,43 @@ fun TaskItemRow(
                 scaleY = scale
             }
             .shadow(elevation, RoundedCornerShape(8.dp))
-            .background(if (isDragging) (if (isDark) Color(0xFF2C2C2E) else Color(0xFFF2F2F7)) else Color.Transparent, RoundedCornerShape(8.dp))
+            .background(rowBgColor, RoundedCornerShape(8.dp))
             .clip(RoundedCornerShape(8.dp))
             .then(dragModifier)
             .clickable(enabled = !isCalendarTask) { onClick() }
             .padding(start = 8.dp, end = 4.dp),
         verticalAlignment = Alignment.CenterVertically
     ) {
-        if (isCalendarTask) {
-            Icon(
-                imageVector = Icons.Outlined.CalendarToday,
-                contentDescription = "Calendar Event",
-                tint = ThingsBlue,
-                modifier = Modifier
-                    .size(16.dp)
-            )
-        } else {
-            ThingsCheckbox(
-                checked = localCompleted,
-                onCheckedChange = {
-                    localCompleted = !localCompleted
-                    scope.launch {
-                        delay(220)
-                        onToggle()
-                    }
-                },
-                size = 16.dp,
-                modifier = Modifier
-                    .testTag("task_checkbox")
-            )
+        Box(
+            modifier = Modifier.size(leftColumnWidth),
+            contentAlignment = Alignment.Center
+        ) {
+            if (isCalendarTask) {
+                Icon(
+                    imageVector = Icons.Outlined.CalendarToday,
+                    contentDescription = "Calendar Event",
+                    tint = ThingsBlue,
+                    modifier = Modifier
+                        .size(16.dp)
+                )
+            } else {
+                ThingsCheckbox(
+                    checked = localCompleted,
+                    onCheckedChange = {
+                        localCompleted = !localCompleted
+                        scope.launch {
+                            delay(220)
+                            onToggle()
+                        }
+                    },
+                    size = 16.dp,
+                    modifier = Modifier
+                        .testTag("task_checkbox")
+                )
+            }
         }
 
-        Spacer(modifier = Modifier.width(8.dp))
+        Spacer(modifier = Modifier.width(spacingToText))
 
         Column(modifier = Modifier.weight(1f)) {
             Row(

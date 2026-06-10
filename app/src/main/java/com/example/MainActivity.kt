@@ -25,16 +25,6 @@ class MainActivity : ComponentActivity() {
       AppDatabase::class.java,
       "things_database"
     )
-    .addCallback(object : androidx.room.RoomDatabase.Callback() {
-      override fun onCreate(db: androidx.sqlite.db.SupportSQLiteDatabase) {
-        super.onCreate(db)
-        val defaultTags = listOf("Errand", "Home", "Office", "Important", "Pending", "Phone", "Books", "Diane", "Marc")
-        defaultTags.forEachIndexed { index, title ->
-          val id = java.util.UUID.randomUUID().toString()
-          db.execSQL("INSERT OR IGNORE INTO tags (id, title, sortOrder, parentId) VALUES ('$id', '$title', $index, NULL)")
-        }
-      }
-    })
     .fallbackToDestructiveMigration()
     .build()
   }

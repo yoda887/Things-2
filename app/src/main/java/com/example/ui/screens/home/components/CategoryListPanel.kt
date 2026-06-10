@@ -1,5 +1,8 @@
 package com.example.ui.screens.home.components
 
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.delay
+
 import androidx.compose.animation.*
 import androidx.compose.animation.core.animateDpAsState
 import androidx.compose.animation.core.animateFloatAsState
@@ -16,6 +19,7 @@ import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.*
 import androidx.compose.material.icons.outlined.*
@@ -27,9 +31,15 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.clipToBounds
 import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.graphics.Color
+import androidx.compose.animation.core.Animatable
+import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.ui.input.nestedscroll.NestedScrollConnection
+import androidx.compose.ui.input.nestedscroll.NestedScrollSource
+import androidx.compose.ui.input.nestedscroll.nestedScroll
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.platform.LocalFocusManager
+import androidx.compose.ui.unit.Velocity
 import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.text.TextStyle
@@ -37,6 +47,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.zIndex
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.layout.layout
 import com.example.data.model.Item
@@ -48,12 +59,25 @@ import com.example.ui.components.ProjectProgressArc
 import com.example.ui.screens.home.ActiveScreen
 import com.example.ui.screens.home.subcomponents.TaskItemRow
 import com.example.ui.screens.home.inlineeditor.ThingsTaskInlineEditor
+import com.example.ui.screens.home.inlineeditor.dialogs.ThingsMoveDialog
 import com.example.ui.theme.*
 import com.example.ui.viewmodel.ThingsViewModel
+import androidx.compose.animation.*
+import androidx.compose.ui.window.Dialog
 import java.util.Calendar
 import java.util.Locale
 import java.util.Date
 import java.text.SimpleDateFormat
+
+// [ИЗМЕНЕНИЕ]: Константы размеров и описаний для нового тулбара (во избежание inline hardcoded values)
+private val BACK_ICON_SIZE = 28.dp
+private val OPTIONS_BOX_SIZE = 22.dp
+private val OPTIONS_ICON_SIZE = 14.dp
+private val TOP_APP_BAR_HEIGHT = 56.dp
+// [ИЗМЕНЕНИЕ]: Задержка перед фактическим удалением задачи (для плавного сворачивания редактора)
+private const val DELETE_ANIMATION_DELAY_MS = 300L
+private const val BACK_CONTENT_DESC = "Back"
+private const val OPTIONS_CONTENT_DESC = "Options"
 
 // [ИЗМЕНЕНИЕ]: Вспомогательный класс для представления задач и календарных событий, сгруппированных по дням
 data class UpcomingDay(
@@ -61,15 +85,13 @@ data class UpcomingDay(
     val dayOfMonth: String,
     val dayOfWeekLabel: String,
     val calendarEvents: List<ItemWithChecklist>,
-    val tasks: List<ItemWithChecklist>,
-    val isMonthGroup: Boolean = false
+    val tasks: List<ItemWithChecklist>
 )
 
 data class UpcomingHeaderItem(
     val dateMillis: Long,
     val dayOfMonth: String,
-    val dayOfWeekLabel: String,
-    val isMonthGroup: Boolean = false
+    val dayOfWeekLabel: String
 )
 
 data class UpcomingEventItem(
@@ -152,6 +174,7 @@ fun UpcomingCalendarEventRow(
     }
 }
 
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun ThingsCategoryListPanel(
     screen: ActiveScreen,
@@ -170,22 +193,33 @@ fun ThingsCategoryListPanel(
     inlineExpandedTaskId: String?,
     onInlineExpandedTaskIdChange: (String?) -> Unit,
     area: Area? = null,
-    onProjectClick: (Item) -> Unit = {}
+    onProjectClick: (Item) -> Unit = {},
+    // [ИЗМЕНЕНИЕ]: Добавлен параметр для кратковременной подсветки задачи, найденной при поиске
+    highlightedTaskId: String? = null,
+    // [ИЗМЕНЕНИЕ]: Добавлен коллбек для открытия UI поиска при свайпе вниз
+    onSearchClick: () -> Unit = {},
+    onBack: () -> Unit = {}
 ) {
-    val listTasks = remember(tasks, screen, project, area) {
+    // [ИЗМЕНЕНИЕ]: Добавляем inlineExpandedTaskId в ключи remember и исключаем активную (редактируемую/переносимую) задачу из фильтрации списка,
+    // чтобы она не исчезала с экрана в момент смены проекта/категории, а пропадала только после сворачивания редактора.
+    val listTasks = remember(tasks, screen, project, area, inlineExpandedTaskId) {
         tasks.filter { wrapper ->
             val task = wrapper.item
-            when (screen) {
-                ActiveScreen.INBOX -> task.isInbox && !task.isCompleted
-                ActiveScreen.TODAY -> task.isToday
-                ActiveScreen.UPCOMING -> task.isUpcoming
-                ActiveScreen.ANYTIME -> task.isAnytime
-                ActiveScreen.SOMEDAY -> task.isSomeday
-                ActiveScreen.LOGBOOK -> task.isCompleted
-                ActiveScreen.PROJECT_DETAIL -> task.projectId == project?.id && !task.isCompleted
-                // [ИЗМЕНЕНИЕ]: Фильтруем строго по типу задачи (task.type == 0), чтобы проекты не дублировались и не вызывали ошибку duplicate key
-                ActiveScreen.AREA_DETAIL -> task.areaId == area?.id && task.type == 0 && !task.isCompleted
-                else -> false
+            if (task.id == inlineExpandedTaskId) {
+                true
+            } else {
+                when (screen) {
+                    ActiveScreen.INBOX -> task.isInbox && !task.isCompleted
+                    ActiveScreen.TODAY -> task.isToday
+                    ActiveScreen.UPCOMING -> task.isUpcoming
+                    ActiveScreen.ANYTIME -> task.isAnytime
+                    ActiveScreen.SOMEDAY -> task.isSomeday
+                    ActiveScreen.LOGBOOK -> task.isCompleted
+                    ActiveScreen.PROJECT_DETAIL -> task.projectId == project?.id && !task.isCompleted
+                    // [ИЗМЕНЕНИЕ]: Фильтруем строго по типу задачи (task.type == 0), чтобы проекты не дублировались и не вызывали ошибку duplicate key
+                    ActiveScreen.AREA_DETAIL -> task.areaId == area?.id && task.type == 0 && !task.isCompleted
+                    else -> false
+                }
             }
         }.sortedBy { it.item.sortOrder }
     }
@@ -202,8 +236,14 @@ fun ThingsCategoryListPanel(
     val headerTitleFontSize = MaterialTheme.typography.displayLarge.fontSize
     val subHeaderFontSize = MaterialTheme.typography.headlineSmall.fontSize
 
-    val filteredTasks = remember(listTasks, selectedTag) {
-        if (selectedTag == null) listTasks else listTasks.filter { it.item.tags.contains(selectedTag) }
+    // [ИЗМЕНЕНИЕ]: Добавляем inlineExpandedTaskId в ключи remember и сохраняем активную задачу в отфильтрованном списке тегов,
+    // чтобы при редактировании тегов задача внезапно не исчезала из-за несовпадения выбранного тега.
+    val filteredTasks = remember(listTasks, selectedTag, inlineExpandedTaskId) {
+        if (selectedTag == null) {
+            listTasks
+        } else {
+            listTasks.filter { it.item.tags.contains(selectedTag) || it.item.id == inlineExpandedTaskId }
+        }
     }
 
     val lazyListState = rememberLazyListState()
@@ -212,6 +252,17 @@ fun ThingsCategoryListPanel(
     var localTasksList by remember { mutableStateOf(filteredTasks) }
 
     val focusManager = LocalFocusManager.current
+
+    // [ИЗМЕНЕНИЕ]: Переменные состояния для диалогов floating toolbar
+    var showMoveDialog by remember { mutableStateOf(false) }
+    var showDeleteConfirm by remember { mutableStateOf(false) }
+    var expandedDotsMenu by remember { mutableStateOf(false) }
+    // [ИЗМЕНЕНИЕ]: Реестр ID удаленных задач для предотвращения повторного авто-сохранения при закрытии inline editor
+    val deletedTaskIds = remember { mutableStateListOf<String>() }
+    val areasState by viewModel.areas.collectAsState()
+    val activeTask = remember(inlineExpandedTaskId, tasks) {
+        tasks.find { it.item.id == inlineExpandedTaskId }
+    }
 
     // [ИЗМЕНЕНИЕ]: Фильтруем календарные события на "Сегодня"
     val todayCalendarEvents = remember(calendarEvents) {
@@ -234,7 +285,7 @@ fun ThingsCategoryListPanel(
         cal.set(Calendar.MILLISECOND, 0)
         val tomorrowStart = cal.timeInMillis
         
-        for (offset in 0 until 7) {
+        for (offset in 0 until 14) {
             val c = Calendar.getInstance()
             c.timeInMillis = tomorrowStart
             c.add(Calendar.DAY_OF_YEAR, offset)
@@ -258,76 +309,26 @@ fun ThingsCategoryListPanel(
                 wrapper.item.startDate != null && wrapper.item.startDate in dayStart..dayEnd
             }
             
-            val dayOfMonthLabel = Calendar.getInstance().apply { timeInMillis = dayStart }.get(Calendar.DAY_OF_MONTH).toString()
-            val dayOfWeekLabel = if (offset == 0) {
-                "Tomorrow"
-            } else if (offset < 6) {
-                SimpleDateFormat("EEEE", Locale.ENGLISH).format(Date(dayStart))
-            } else {
-                SimpleDateFormat("MMMM", Locale.ENGLISH).format(Date(dayStart))
+            if (dayEvents.isNotEmpty() || dayTasks.isNotEmpty()) {
+                val dayOfMonthLabel = Calendar.getInstance().apply { timeInMillis = dayStart }.get(Calendar.DAY_OF_MONTH).toString()
+                val dayOfWeekLabel = if (offset == 0) {
+                    "Tomorrow"
+                } else if (offset < 6) {
+                    SimpleDateFormat("EEEE", Locale.ENGLISH).format(Date(dayStart))
+                } else {
+                    SimpleDateFormat("MMMM", Locale.ENGLISH).format(Date(dayStart))
+                }
+                
+                daysList.add(
+                    UpcomingDay(
+                        dateMillis = dayStart,
+                        dayOfMonth = dayOfMonthLabel,
+                        dayOfWeekLabel = dayOfWeekLabel,
+                        calendarEvents = dayEvents,
+                        tasks = dayTasks
+                    )
+                )
             }
-            
-            daysList.add(
-                UpcomingDay(
-                    dateMillis = dayStart,
-                    dayOfMonth = dayOfMonthLabel,
-                    dayOfWeekLabel = dayOfWeekLabel,
-                    calendarEvents = dayEvents,
-                    tasks = dayTasks
-                )
-            )
-        }
-
-        val beyond7DaysStart = Calendar.getInstance().apply {
-            timeInMillis = tomorrowStart
-            add(Calendar.DAY_OF_YEAR, 7)
-        }.timeInMillis
-
-        val oneYearLaterStart = Calendar.getInstance().apply {
-            timeInMillis = tomorrowStart
-            add(Calendar.YEAR, 1)
-        }.timeInMillis
-
-        val futureEvents = calendarEvents.filter { event ->
-            event.eventStartMillis != null && event.eventStartMillis in beyond7DaysStart until oneYearLaterStart
-        }.map { ItemWithChecklist(item = it, checklist = emptyList()) }
-
-        val futureTasks = localTasksList.filter { wrapper ->
-            wrapper.item.startDate != null && wrapper.item.startDate in beyond7DaysStart until oneYearLaterStart
-        }
-
-        val monthFormat = SimpleDateFormat("MMMM yyyy", Locale.ENGLISH)
-        val getMonthKey = { time: Long -> 
-            Calendar.getInstance().apply { 
-                timeInMillis = time
-                set(Calendar.DAY_OF_MONTH, 1)
-                set(Calendar.HOUR_OF_DAY, 0)
-                set(Calendar.MINUTE, 0)
-                set(Calendar.SECOND, 0)
-                set(Calendar.MILLISECOND, 0)
-            }.timeInMillis
-        }
-
-        val allFutureItems = (futureEvents + futureTasks).groupBy { wrapper ->
-            val time = wrapper.item.eventStartMillis ?: wrapper.item.startDate ?: 0L
-            getMonthKey(time)
-        }.toSortedMap()
-
-        for ((monthStartTime, items) in allFutureItems) {
-            val monthLabel = monthFormat.format(Date(monthStartTime))
-            val monthEvents = items.filter { it.item.eventStartMillis != null }
-            val monthTasks = items.filter { it.item.startDate != null && it.item.eventStartMillis == null }
-            
-            daysList.add(
-                UpcomingDay(
-                    dateMillis = monthStartTime,
-                    dayOfMonth = "",
-                    dayOfWeekLabel = monthLabel,
-                    calendarEvents = monthEvents,
-                    tasks = monthTasks,
-                    isMonthGroup = true
-                )
-            )
         }
         daysList
     }
@@ -583,27 +584,165 @@ fun ThingsCategoryListPanel(
     val standardToday = remember(localTasksList) { localTasksList.filter { !it.item.isTonight } }
     val eveningToday = remember(localTasksList) { localTasksList.filter { it.item.isTonight } }
 
+    // [ИЗМЕНЕНИЕ]: Выносим список flattened на уровень выше, чтобы к нему можно было обращаться для поиска индекса подсвеченной задачи
+    val displayTasks = localTasksList
+    val flattened = remember(screen, standardToday, eveningToday, draggedTaskId, upcomingDays, projects, area, displayTasks) {
+        buildList<Any> {
+            if (screen == ActiveScreen.TODAY) {
+                addAll(standardToday)
+                if (eveningToday.isNotEmpty() || draggedTaskId != null) {
+                    add("evening_header")
+                    addAll(eveningToday)
+                }
+            } else if (screen == ActiveScreen.UPCOMING) {
+                upcomingDays.forEach { day ->
+                    add(UpcomingHeaderItem(day.dateMillis, day.dayOfMonth, day.dayOfWeekLabel))
+                    day.calendarEvents.forEach { event ->
+                        add(UpcomingEventItem(event.item, day.dateMillis))
+                    }
+                    day.tasks.forEach { task ->
+                        add(task)
+                    }
+                }
+            } else if (screen == ActiveScreen.AREA_DETAIL) {
+                val areaProjects = projects.filter { it.areaId == area?.id }
+                if (areaProjects.isNotEmpty()) {
+                    add("projects_heading")
+                    addAll(areaProjects)
+                }
+                val areaDirectTasks = displayTasks.filter { it.item.areaId == area?.id && (it.item.projectId == null || it.item.projectId == "") }
+                if (areaDirectTasks.isNotEmpty()) {
+                    add("tasks_heading")
+                    addAll(areaDirectTasks)
+                }
+            } else {
+                addAll(displayTasks)
+            }
+        }
+    }
+
+    // [ИЗМЕНЕНИЕ]: Автоматическая и мгновенная прокрутка к найденной задаче по центру экрана при ее подсветке
+    val density = androidx.compose.ui.platform.LocalDensity.current
+    val itemHeightPx = with(density) { MaterialTheme.dimens.taskItemEstimatedHeight.roundToPx() }
+    LaunchedEffect(highlightedTaskId) {
+        if (highlightedTaskId != null) {
+            // Небольшая задержка, чтобы гарантировать вычисление layout
+            kotlinx.coroutines.delay(50)
+            val innerIndex = flattened.indexOfFirst { item ->
+                when (item) {
+                    is ItemWithChecklist -> item.item.id == highlightedTaskId
+                    is Item -> item.id == highlightedTaskId
+                    else -> false
+                }
+            }
+            if (innerIndex != -1) {
+                val headerOffset = run {
+                    var count = 1 // main_header
+                    if (screen == ActiveScreen.TODAY && todayCalendarEvents.isNotEmpty()) {
+                        count += 1
+                    }
+                    if (allTags.isNotEmpty()) {
+                        count += 1
+                    }
+                    count
+                }
+                val targetIndex = headerOffset + innerIndex
+                val viewportHeight = lazyListState.layoutInfo.viewportSize.height.let { 
+                    if (it > 0) it else with(density) { configuration.screenHeightDp.dp.roundToPx() }
+                }
+                val offset = - (viewportHeight / 2 - itemHeightPx / 2)
+                lazyListState.scrollToItem(targetIndex, offset)
+            }
+        }
+    }
+
     val anyExpanded = inlineExpandedTaskId != null
     val globalDimAlpha by animateFloatAsState(targetValue = if (anyExpanded) 0.3f else 1f, label = "globalDim")
 
-    LazyColumn(
-        state = lazyListState,
-        modifier = Modifier
-            .fillMaxSize()
-            .pointerInput(Unit) {
-                detectTapGestures(onTap = {
-                    onInlineExpandedTaskIdChange(null)
-                    focusManager.clearFocus()
-                })
+    // [ИЗМЕНЕНИЕ]: Реализация жеста pull-down с порогом 100.dp, лимитом свайпа 150.dp
+    // и вызовом поиска только после завершения возвращающей анимации
+    // Избегаем дублирования и повторно используем ранее объявленную переменную density
+    val coroutineScope = rememberCoroutineScope()
+    val pullOffset = remember { Animatable(0f) }
+    val thresholdPx = with(density) { 100.dp.toPx() }
+    val maxOffsetPx = with(density) { 150.dp.toPx() }
+
+    val nestedScrollConnection = remember {
+        object : NestedScrollConnection {
+            override fun onPreScroll(available: Offset, source: NestedScrollSource): Offset {
+                val delta = available.y
+                val currentOffset = pullOffset.value
+                return if (delta < 0 && currentOffset > 0f) {
+                    val newOffset = (currentOffset + delta).coerceAtLeast(0f)
+                    val consumed = newOffset - currentOffset
+                    coroutineScope.launch { pullOffset.snapTo(newOffset) }
+                    Offset(0f, consumed)
+                } else {
+                    Offset.Zero
+                }
             }
-            .padding(horizontal = 20.dp)
-            .testTag("tasks_lazy_list")
-    ) {
+
+            override fun onPostScroll(
+                consumed: Offset,
+                available: Offset,
+                source: NestedScrollSource
+            ): Offset {
+                val delta = available.y
+                val isAtTop = lazyListState.firstVisibleItemIndex == 0 && lazyListState.firstVisibleItemScrollOffset == 0
+                // [ИЗМЕНЕНИЕ]: Реагировать только на непосредственный жест пользователя, игнорируя инерционный скролл
+                return if (source == NestedScrollSource.UserInput && delta > 0 && isAtTop) {
+                    val newOffset = (pullOffset.value + delta * 0.5f).coerceAtMost(maxOffsetPx)
+                    coroutineScope.launch { pullOffset.snapTo(newOffset) }
+                    Offset(0f, delta)
+                } else {
+                    Offset.Zero
+                }
+            }
+
+            override suspend fun onPreFling(available: Velocity): Velocity {
+                val currentOffset = pullOffset.value
+                if (currentOffset > 0f) {
+                    // [ИЗМЕНЕНИЕ]: Вызываем поиск немедленно при отпускании, если порог превышен, 
+                    // наряду с запуском возвращающей анимации
+                    val triggered = currentOffset >= thresholdPx
+                    if (triggered) {
+                        onSearchClick()
+                    }
+                    pullOffset.animateTo(0f, spring())
+                    return available
+                }
+                return super.onPreFling(available)
+            }
+        }
+    }
+
+    val isDark = textPrimaryColor == ThingsTextPrimaryDark
+    // [ИЗМЕНЕНИЕ]: Убрали повторное добавление statusBarPadding к высоте App Bar,
+    // так как отступ статус-бара уже применен в родительском Scaffold главного экрана.
+    val topPaddingTotal = TOP_APP_BAR_HEIGHT
+
+    Box(modifier = Modifier.fillMaxSize()) {
+        LazyColumn(
+            state = lazyListState,
+            modifier = Modifier
+                .fillMaxSize()
+                .nestedScroll(nestedScrollConnection)
+                .graphicsLayer { translationY = pullOffset.value }
+                .pointerInput(Unit) {
+                    detectTapGestures(onTap = {
+                        onInlineExpandedTaskIdChange(null)
+                        focusManager.clearFocus()
+                    })
+                }
+                .padding(horizontal = 20.dp)
+                .testTag("tasks_lazy_list"),
+            contentPadding = PaddingValues(top = topPaddingTotal, bottom = 100.dp)
+        ) {
         item(key = "main_header") {
             Row(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .padding(top = 12.dp, bottom = 14.dp)
+                    .padding(top = MaterialTheme.dimens.mainHeaderPaddingTop, bottom = MaterialTheme.dimens.mainHeaderPaddingBottom)
                     .graphicsLayer { alpha = globalDimAlpha },
                 verticalAlignment = Alignment.CenterVertically
             ) {
@@ -751,7 +890,7 @@ fun ThingsCategoryListPanel(
                     textSecondaryColor = textSecondaryColor,
                     isDark = false
                 )
-                Spacer(modifier = Modifier.height(14.dp))
+                Spacer(modifier = Modifier.height(MaterialTheme.dimens.calendarBetweenSectionSpacing))
             }
         }
 
@@ -791,7 +930,7 @@ fun ThingsCategoryListPanel(
                         }
                     }
                 }
-                Spacer(modifier = Modifier.height(6.dp))
+                Spacer(modifier = Modifier.height(MaterialTheme.dimens.tagsBetweenSectionSpacing))
             }
         }
 
@@ -834,39 +973,6 @@ fun ThingsCategoryListPanel(
                 }
             }
         } else {
-            val flattened = buildList<Any> {
-                if (screen == ActiveScreen.TODAY) {
-                    addAll(standardToday)
-                    if (eveningToday.isNotEmpty() || draggedTaskId != null) {
-                        add("evening_header")
-                        addAll(eveningToday)
-                    }
-                } else if (screen == ActiveScreen.UPCOMING) {
-                    upcomingDays.forEach { day ->
-                        add(UpcomingHeaderItem(day.dateMillis, day.dayOfMonth, day.dayOfWeekLabel, day.isMonthGroup))
-                        day.calendarEvents.forEach { event ->
-                            add(UpcomingEventItem(event.item, day.dateMillis))
-                        }
-                        day.tasks.forEach { task ->
-                            add(task)
-                        }
-                    }
-                } else if (screen == ActiveScreen.AREA_DETAIL) {
-                    val areaProjects = projects.filter { it.areaId == area?.id }
-                    if (areaProjects.isNotEmpty()) {
-                        add("projects_heading")
-                        addAll(areaProjects)
-                    }
-                    val areaDirectTasks = displayTasks.filter { it.item.areaId == area?.id && (it.item.projectId == null || it.item.projectId == "") }
-                    if (areaDirectTasks.isNotEmpty()) {
-                        add("tasks_heading")
-                        addAll(areaDirectTasks)
-                    }
-                } else {
-                    addAll(displayTasks)
-                }
-            }
-
             items(flattened, key = { item ->
                 when (item) {
                     is ItemWithChecklist -> item.item.id
@@ -936,8 +1042,10 @@ fun ThingsCategoryListPanel(
                                     allSavedTagObjects = allSavedTagObjects,
                                     onNewTagCreated = { title, parentId -> viewModel.insertTag(title, parentId) },
                                     onDeleteTag = { tag -> viewModel.deleteTag(tag) },
+                                    // [ИЗМЕНЕНИЕ]: Вызываем обновленный updateTag, каскад автоматически обрабатывается в БД
                                     onUpdateTag = { tag -> viewModel.updateTag(tag) },
                                     onUpdateTagsOrder = { tags -> viewModel.updateTagsOrder(tags) },
+                                    isDeletedExternally = { deletedTaskIds.contains(task.id) },
                                     onSave = { title, notes, section, isTonight, startDate, dueDate, tags, projectId, checklist, priority ->
                                         val startVal = when (section) {
                                             TaskSection.INBOX -> 0
@@ -962,8 +1070,13 @@ fun ThingsCategoryListPanel(
                                         onInlineExpandedTaskIdChange(null)
                                     },
                                     onDelete = {
-                                        viewModel.deleteTask(taskWrapper)
+                                        // [ИЗМЕНЕНИЕ]: Добавляем задачу в реестр удаленных для этого списка
+                                        deletedTaskIds.add(task.id)
                                         onInlineExpandedTaskIdChange(null)
+                                        coroutineScope.launch {
+                                            delay(DELETE_ANIMATION_DELAY_MS)
+                                            viewModel.deleteTask(taskWrapper)
+                                        }
                                     },
                                     onDone = {
                                         onInlineExpandedTaskIdChange(null)
@@ -984,7 +1097,9 @@ fun ThingsCategoryListPanel(
                                     showTodayIndicator = screen == ActiveScreen.TODAY && !task.isTonight,
                                     isDragging = false,
                                     dragOffsetY = 0f,
-                                    dragModifier = makeDragModifier(taskWrapper)
+                                    dragModifier = makeDragModifier(taskWrapper),
+                                    // [ИЗМЕНЕНИЕ]: Передаем состояние подсветки
+                                    isHighlighted = task.id == highlightedTaskId
                                 )
                             }
                         }
@@ -1039,68 +1154,40 @@ fun ThingsCategoryListPanel(
                             targetValue = if (shouldDim) 0.3f else 1f,
                             label = "dimAlpha_hdr_${header.dateMillis}"
                         )
-                        if (header.isMonthGroup) {
-                            Row(
+                        Row(
+                            modifier = Modifier
+                                .animateItem()
+                                .fillMaxWidth()
+                                .graphicsLayer { alpha = dimAlpha }
+                                .padding(top = 22.dp, bottom = 10.dp),
+                            verticalAlignment = Alignment.Bottom
+                        ) {
+                            Text(
+                                text = header.dayOfMonth,
+                                style = TextStyle(
+                                    fontSize = 32.sp,
+                                    fontWeight = FontWeight.Bold,
+                                    color = textPrimaryColor
+                                )
+                            )
+                            Spacer(modifier = Modifier.width(8.dp))
+                            Text(
+                                text = header.dayOfWeekLabel,
+                                style = TextStyle(
+                                    fontSize = 16.sp,
+                                    fontWeight = FontWeight.Bold,
+                                    color = textSecondaryColor.copy(alpha = 0.5f)
+                                ),
+                                modifier = Modifier.padding(bottom = 4.dp)
+                            )
+                            Spacer(modifier = Modifier.width(12.dp))
+                            Box(
                                 modifier = Modifier
-                                    .animateItem()
-                                    .fillMaxWidth()
-                                    .graphicsLayer { alpha = dimAlpha }
-                                    .padding(top = 32.dp, bottom = 12.dp),
-                                verticalAlignment = Alignment.CenterVertically
-                            ) {
-                                Text(
-                                    text = header.dayOfWeekLabel.uppercase(Locale.getDefault()),
-                                    style = TextStyle(
-                                        fontSize = 14.sp,
-                                        fontWeight = FontWeight.Bold,
-                                        color = textSecondaryColor.copy(alpha = 0.6f),
-                                        letterSpacing = 1.2.sp
-                                    )
-                                )
-                                Spacer(modifier = Modifier.width(12.dp))
-                                Box(
-                                    modifier = Modifier
-                                        .weight(1f)
-                                        .height(0.6.dp)
-                                        .background(dividerColor)
-                                )
-                            }
-                        } else {
-                            Row(
-                                modifier = Modifier
-                                    .animateItem()
-                                    .fillMaxWidth()
-                                    .graphicsLayer { alpha = dimAlpha }
-                                    .padding(top = 22.dp, bottom = 10.dp),
-                                verticalAlignment = Alignment.Bottom
-                            ) {
-                                Text(
-                                    text = header.dayOfMonth,
-                                    style = TextStyle(
-                                        fontSize = 32.sp,
-                                        fontWeight = FontWeight.Bold,
-                                        color = textPrimaryColor
-                                    )
-                                )
-                                Spacer(modifier = Modifier.width(8.dp))
-                                Text(
-                                    text = header.dayOfWeekLabel,
-                                    style = TextStyle(
-                                        fontSize = 16.sp,
-                                        fontWeight = FontWeight.Bold,
-                                        color = textSecondaryColor.copy(alpha = 0.5f)
-                                    ),
-                                    modifier = Modifier.padding(bottom = 4.dp)
-                                )
-                                Spacer(modifier = Modifier.width(12.dp))
-                                Box(
-                                    modifier = Modifier
-                                        .weight(1f)
-                                        .height(0.6.dp)
-                                        .background(dividerColor)
-                                        .padding(bottom = 4.dp)
-                                )
-                            }
+                                    .weight(1f)
+                                    .height(0.6.dp)
+                                    .background(dividerColor)
+                                    .padding(bottom = 4.dp)
+                            )
                         }
                     }
                     is UpcomingEventItem -> {
@@ -1183,7 +1270,7 @@ fun ThingsCategoryListPanel(
                                 .animateItem()
                                 .graphicsLayer { alpha = dimAlpha }
                             ) {
-                                Spacer(modifier = Modifier.height(16.dp))
+                                Spacer(modifier = Modifier.height(MaterialTheme.dimens.eveningSectionSpacing))
                                 Row(
                                     modifier = Modifier
                                         .fillMaxWidth()
@@ -1221,5 +1308,311 @@ fun ThingsCategoryListPanel(
         item {
             Spacer(modifier = Modifier.height(72.dp))
         }
+    }
+
+    // LAYER 2: Fixed TopAppBar inside the scrollable pane to achieve desired layering (drawn on top of scrolling list)
+    // [ИЗМЕНЕНИЕ]: Сбросили windowInsets в 0, чтобы избежать двойного отступа от статус-бара (который уже учитывается в innerPadding главного Scaffold).
+    TopAppBar(
+        title = {
+            // Пустой заголовок, так как заголовок отображается крупно в начале списка (main_header) по стилю приложения
+        },
+        navigationIcon = {
+            IconButton(onClick = onBack) {
+                Icon(
+                    imageVector = Icons.Default.KeyboardArrowLeft,
+                    contentDescription = BACK_CONTENT_DESC,
+                    tint = ThingsBlue,
+                    modifier = Modifier.size(BACK_ICON_SIZE)
+                )
+            }
+        },
+        actions = {
+            IconButton(
+                onClick = {
+                    // Options / batch details shortcut
+                }
+            ) {
+                Box(
+                    modifier = Modifier
+                        .size(OPTIONS_BOX_SIZE)
+                        .border(1.dp, textSecondaryColor.copy(alpha = 0.4f), CircleShape),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Icon(
+                        imageVector = Icons.Default.KeyboardArrowDown,
+                        contentDescription = OPTIONS_CONTENT_DESC,
+                        tint = textSecondaryColor,
+                        modifier = Modifier.size(OPTIONS_ICON_SIZE)
+                    )
+                }
+            }
+        },
+        windowInsets = WindowInsets(0, 0, 0, 0),
+        colors = TopAppBarDefaults.topAppBarColors(
+            containerColor = if (isDark) ThingsBackgroundDark else ThingsBackgroundLight
+        )
+    )
+
+    // LAYER 3: PullToSearchIndicator (drawn above BOTH LazyColumn and TopAppBar)
+    if (pullOffset.value > 0f) {
+        Box(
+            modifier = Modifier
+                .fillMaxWidth()
+                .height(with(density) { pullOffset.value.toDp() } + 96.dp)
+                .offset(y = (-96).dp),
+            contentAlignment = Alignment.TopCenter
+        ) {
+            com.example.ui.components.PullToSearchIndicator(
+                pullOffset = pullOffset.value,
+                thresholdPx = thresholdPx
+            )
+        }
+    }
+
+    // [ИЗМЕНЕНИЕ]: Тулбар с подтверждающими диалогами для активной развертки
+    if (showMoveDialog && activeTask != null) {
+        ThingsMoveDialog(
+            currentProjectId = activeTask.item.projectId,
+            currentAreaId = activeTask.item.areaId,
+            currentIsInbox = activeTask.item.isInbox,
+            projects = projects,
+            areas = areasState,
+            onMove = { projectId, areaId, moveToInbox ->
+                val updatedTask = if (moveToInbox) {
+                    activeTask.item.copy(
+                        projectId = null,
+                        areaId = null,
+                        start = 0, // 0 = inbox
+                        startDate = null,
+                        dueDate = null,
+                        modificationDate = System.currentTimeMillis()
+                    )
+                } else {
+                    val newStart = if (activeTask.item.start == 0 && projectId != null) 2 else activeTask.item.start
+                    activeTask.item.copy(
+                        projectId = projectId,
+                        areaId = areaId,
+                        start = newStart,
+                        modificationDate = System.currentTimeMillis()
+                    )
+                }
+                viewModel.updateTask(updatedTask, activeTask.checklist)
+                showMoveDialog = false
+            },
+            onDismissRequest = { showMoveDialog = false }
+        )
+    }
+
+    if (showDeleteConfirm && activeTask != null) {
+        Dialog(onDismissRequest = { showDeleteConfirm = false }) {
+            Card(
+                shape = RoundedCornerShape(16.dp),
+                colors = CardDefaults.cardColors(containerColor = Color(0xFF22242C)),
+                modifier = Modifier
+                    .width(300.dp)
+                    .padding(16.dp)
+            ) {
+                Column(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(16.dp),
+                    horizontalAlignment = Alignment.CenterHorizontally
+                ) {
+                    Text(
+                        text = "Delete Task",
+                        color = Color.White,
+                        fontSize = 18.sp,
+                        fontWeight = FontWeight.Bold,
+                        textAlign = TextAlign.Center
+                    )
+                    Spacer(modifier = Modifier.height(12.dp))
+                    Text(
+                        text = "Are you sure you want to delete this task? This cannot be undone.",
+                        color = Color.LightGray,
+                        fontSize = 14.sp,
+                        textAlign = TextAlign.Center
+                    )
+                    Spacer(modifier = Modifier.height(20.dp))
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.SpaceBetween
+                    ) {
+                        TextButton(
+                            onClick = { showDeleteConfirm = false }
+                        ) {
+                            Text("Cancel", color = Color.White)
+                        }
+                        Button(
+                            onClick = {
+                                // [ИЗМЕНЕНИЕ]: Добавляем задачу в реестр удаленных при удалении из floating toolbar
+                                deletedTaskIds.add(activeTask.item.id)
+                                onInlineExpandedTaskIdChange(null)
+                                showDeleteConfirm = false
+                                coroutineScope.launch {
+                                    delay(DELETE_ANIMATION_DELAY_MS)
+                                    viewModel.deleteTask(activeTask)
+                                }
+                            },
+                            colors = ButtonDefaults.buttonColors(containerColor = ThingsUpcomingRed)
+                        ) {
+                            Text("Delete", color = Color.White)
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    // [ИЗМЕНЕНИЕ]: Плавающий тулбар в виде капсулы, появляющийся плавно при раскрытии задачи
+    AnimatedVisibility(
+        visible = inlineExpandedTaskId != null && activeTask != null,
+        enter = slideInVertically(initialOffsetY = { it }) + fadeIn(),
+        exit = slideOutVertically(targetOffsetY = { it }) + fadeOut(),
+        modifier = Modifier
+            .align(Alignment.BottomCenter)
+            .padding(bottom = MaterialTheme.dimens.floatingToolbarBottomPadding)
+    ) {
+        if (activeTask != null) {
+            Box(
+                modifier = Modifier
+                    .height(MaterialTheme.dimens.floatingToolbarHeight)
+                    .clip(RoundedCornerShape(MaterialTheme.dimens.floatingToolbarCornerRadius))
+                    .background(Color(0xFF232329))
+                    .padding(horizontal = 16.dp),
+                contentAlignment = Alignment.Center
+            ) {
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(16.dp)
+                ) {
+                    // 1. Move Button (touch target min 48x48dp)
+                    Row(
+                        modifier = Modifier
+                            .sizeIn(minWidth = 48.dp, minHeight = 48.dp)
+                            .clip(RoundedCornerShape(8.dp))
+                            .clickable { showMoveDialog = true }
+                            .padding(horizontal = 8.dp),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Icon(
+                            imageVector = Icons.Default.ArrowForward,
+                            contentDescription = "Move icon",
+                            tint = Color.White,
+                            modifier = Modifier.size(18.dp)
+                        )
+                        Spacer(modifier = Modifier.width(6.dp))
+                        Text(
+                            text = "Move",
+                            color = Color.White,
+                            fontWeight = FontWeight.Bold,
+                            fontSize = 15.sp
+                        )
+                    }
+
+                    // [ИЗМЕНЕНИЕ]: Вертикальный разделитель удален по запросу пользователя
+
+                    // 2. Trash (Delete) button (touch target min 48x48dp)
+                    Box(
+                        modifier = Modifier
+                            .sizeIn(minWidth = 48.dp, minHeight = 48.dp)
+                            .clip(CircleShape)
+                            .clickable { showDeleteConfirm = true },
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Icon(
+                            imageVector = Icons.Default.Delete,
+                            contentDescription = "Delete task",
+                            tint = Color.White,
+                            modifier = Modifier.size(20.dp)
+                        )
+                    }
+
+                    // [ИЗМЕНЕНИЕ]: Вертикальный разделитель удален по запросу пользователя
+
+                    // 3. Dots Menu Button with options (touch target min 48x48dp)
+                    Box {
+                        Box(
+                            modifier = Modifier
+                                .sizeIn(minWidth = 48.dp, minHeight = 48.dp)
+                                .clip(CircleShape)
+                                .clickable { expandedDotsMenu = !expandedDotsMenu },
+                            contentAlignment = Alignment.Center
+                        ) {
+                            Icon(
+                                imageVector = Icons.Default.MoreHoriz,
+                                contentDescription = "More options",
+                                tint = Color.White,
+                                modifier = Modifier.size(20.dp)
+                            )
+                        }
+
+                        DropdownMenu(
+                            expanded = expandedDotsMenu,
+                            onDismissRequest = { expandedDotsMenu = false },
+                            modifier = Modifier.background(Color(0xFF22242C))
+                        ) {
+                            DropdownMenuItem(
+                                leadingIcon = {
+                                    // [ИЗМЕНЕНИЕ]: Иконка копирования для опции Duplicate
+                                    Icon(
+                                        imageVector = Icons.Default.ContentCopy,
+                                        contentDescription = "Duplicate icon",
+                                        tint = Color.White
+                                    )
+                                },
+                                text = { Text("Duplicate", color = Color.White) },
+                                onClick = {
+                                    viewModel.duplicateTask(activeTask)
+                                    expandedDotsMenu = false
+                                }
+                            )
+                            DropdownMenuItem(
+                                leadingIcon = {
+                                    // [ИЗМЕНЕНИЕ]: Иконка обновления для опции Repeat
+                                    Icon(
+                                        imageVector = Icons.Default.Refresh,
+                                        contentDescription = "Repeat icon",
+                                        tint = Color.Gray
+                                    )
+                                },
+                                text = { Text("Repeat", color = Color.Gray) },
+                                onClick = {
+                                    expandedDotsMenu = false
+                                }
+                            )
+                            DropdownMenuItem(
+                                leadingIcon = {
+                                    // [ИЗМЕНЕНИЕ]: Иконка трансформации для опции Convert
+                                    Icon(
+                                        imageVector = Icons.Default.Transform,
+                                        contentDescription = "Convert icon",
+                                        tint = Color.Gray
+                                    )
+                                },
+                                text = { Text("Convert", color = Color.Gray) },
+                                onClick = {
+                                        expandedDotsMenu = false
+                                }
+                            )
+                            DropdownMenuItem(
+                                leadingIcon = {
+                                    // [ИЗМЕНЕНИЕ]: Иконка отправки для опции Share
+                                    Icon(
+                                        imageVector = Icons.Default.Share,
+                                        contentDescription = "Share icon",
+                                        tint = Color.Gray
+                                    )
+                                },
+                                text = { Text("Share", color = Color.Gray) },
+                                onClick = {
+                                    expandedDotsMenu = false
+                                }
+                            )
+                        }
+                    }
+                }
+            }
+        }
+    }
     }
 }

@@ -70,7 +70,8 @@ fun ThingsTaskInlineEditor(
     onNewTagCreated: (String, String?) -> Unit = { _, _ -> },
     onDeleteTag: (Tag) -> Unit = {},
     onUpdateTag: (Tag) -> Unit = {},
-    onUpdateTagsOrder: (List<Tag>) -> Unit = {}
+    onUpdateTagsOrder: (List<Tag>) -> Unit = {},
+    isDeletedExternally: () -> Boolean = { false }
 ) {
     var title by remember(task.item.id) { mutableStateOf<String>(task.item.title) }
     var notes by remember(task.item.id) { mutableStateOf<String>(task.item.notes) }
@@ -103,11 +104,27 @@ fun ThingsTaskInlineEditor(
     val currentChecklist by rememberUpdatedState(checklist)
     val currentPriority by rememberUpdatedState(priority)
     val currentOnSave by rememberUpdatedState(onSave)
+    val currentIsDeletedExternally by rememberUpdatedState(isDeletedExternally)
+    val currentProjectId by rememberUpdatedState(task.item.projectId)
+
+    // Synchronize inline editor state with external updates (e.g. from Move Dialog)
+    LaunchedEffect(task.item) {
+        section = task.item.section
+        isTonight = task.item.isTonight
+        startDate = task.item.startDate
+        dueDate = task.item.dueDate
+        tagInput = task.item.tags.joinToString(", ")
+        priority = task.item.priority
+    }
+
+    LaunchedEffect(task.checklist) {
+        checklist = task.checklist
+    }
 
     // Save changes automatically when focus is cleared or editor is disposed (e.g., clicking outside)
     DisposableEffect(Unit) {
         onDispose {
-            if (!isDeleted && !isSavedManually) {
+            if (!isDeleted && !currentIsDeletedExternally() && !isSavedManually) {
                 if (currentTitle.isBlank() && currentNotes.isBlank() && currentChecklist.isEmpty()) {
                     onDelete?.invoke()
                 } else {
@@ -122,7 +139,7 @@ fun ThingsTaskInlineEditor(
                         currentStartDate,
                         currentDueDate,
                         tagList,
-                        task.item.projectId, // preserve original project
+                        currentProjectId, // preserve original project safely
                         currentChecklist,
                         currentPriority
                     )

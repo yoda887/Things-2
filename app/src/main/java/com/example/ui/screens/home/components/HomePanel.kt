@@ -1,11 +1,16 @@
 package com.example.ui.screens.home.components
 
+import kotlinx.coroutines.launch
+
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.foundation.border
+import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.*
@@ -16,10 +21,18 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.animation.core.Animatable
+import androidx.compose.animation.core.spring
+import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.ui.input.nestedscroll.NestedScrollConnection
+import androidx.compose.ui.input.nestedscroll.NestedScrollSource
+import androidx.compose.ui.input.nestedscroll.nestedScroll
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.unit.Velocity
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.example.data.model.Area
@@ -53,7 +66,10 @@ fun ThingsHomePanel(
     onAddAreaClick: () -> Unit = {},
     onDeleteArea: (Area) -> Unit = {},
     onDeleteProject: (Item) -> Unit = {},
-    onAreaClick: (Area) -> Unit = {}
+    onAreaClick: (Area) -> Unit = {},
+    onSearchClick: () -> Unit = {},
+    // [ИЗМЕНЕНИЕ]: Добавлено состояние активности поискового оверлея
+    isSearchOverlayActive: Boolean = false
 ) {
     var rawTokenInput by remember { mutableStateOf(googleToken) }
     var isSyncConfigExpanded by remember { mutableStateOf(false) }
@@ -113,30 +129,135 @@ fun ThingsHomePanel(
         )
     }
 
-    LazyColumn(
-        modifier = Modifier
-            .fillMaxSize()
-            .padding(horizontal = 20.dp),
-        verticalArrangement = Arrangement.spacedBy(16.dp)
-    ) {
-        // Search Filter row
-        item {
-            OutlinedTextField(
-                value = searchQuery,
-                onValueChange = onSearchChange,
-                placeholder = { Text("Search list contents...", color = textSecondaryColor.copy(alpha = 0.6f)) },
-                leadingIcon = { Icon(Icons.Default.Search, contentDescription = "Search", tint = textSecondaryColor) },
-                singleLine = true,
+    // [ИЗМЕНЕНИЕ]: Начальный индекс изменен с 1 на 0 для немедленного отображения поиска
+    val lazyListState = rememberLazyListState(initialFirstVisibleItemIndex = 0)
+
+    // [ИЗМЕНЕНИЕ]: Блок автоматического "прилипания" (snapping) и авто-скролла при поиске удалены для поддержки свободного скролла поиска без авто-доводки.
+
+    // [ИЗМЕНЕНИЕ]: Реализация жеста pull-down с порогом 100.dp, лимитом свайпа 150.dp
+    // и вызовом поиска только после завершения возвращающей анимации
+    val density = androidx.compose.ui.platform.LocalDensity.current
+    val coroutineScope = rememberCoroutineScope()
+    val pullOffset = remember { Animatable(0f) }
+    val thresholdPx = with(density) { 100.dp.toPx() }
+    val maxOffsetPx = with(density) { 150.dp.toPx() }
+
+    val nestedScrollConnection = remember {
+        object : NestedScrollConnection {
+            override fun onPreScroll(available: Offset, source: NestedScrollSource): Offset {
+                val delta = available.y
+                val currentOffset = pullOffset.value
+                return if (delta < 0 && currentOffset > 0f) {
+                    val newOffset = (currentOffset + delta).coerceAtLeast(0f)
+                    val consumed = newOffset - currentOffset
+                    coroutineScope.launch { pullOffset.snapTo(newOffset) }
+                    Offset(0f, consumed)
+                } else {
+                    Offset.Zero
+                }
+            }
+
+            override fun onPostScroll(
+                consumed: Offset,
+                available: Offset,
+                source: NestedScrollSource
+            ): Offset {
+                val delta = available.y
+                val isAtTop = lazyListState.firstVisibleItemIndex == 0 && lazyListState.firstVisibleItemScrollOffset == 0
+                // [ИЗМЕНЕНИЕ]: Реагировать только на непосредственный жест пользователя, игнорируя инерционный скролл
+                return if (source == NestedScrollSource.UserInput && delta > 0 && isAtTop) {
+                    val newOffset = (pullOffset.value + delta * 0.5f).coerceAtMost(maxOffsetPx)
+                    coroutineScope.launch { pullOffset.snapTo(newOffset) }
+                    Offset(0f, delta)
+                } else {
+                    Offset.Zero
+                }
+            }
+
+            override suspend fun onPreFling(available: Velocity): Velocity {
+                val currentOffset = pullOffset.value
+                if (currentOffset > 0f) {
+                    // [ИЗМЕНЕНИЕ]: Вызываем поиск немедленно при отпускании, если порог превышен, 
+                    // наряду с запуском возвращающей анимации
+                    val triggered = currentOffset >= thresholdPx
+                    if (triggered) {
+                        onSearchClick()
+                    }
+                    pullOffset.animateTo(0f, spring())
+                    return available
+                }
+                return super.onPreFling(available)
+            }
+        }
+    }
+
+    Box(modifier = Modifier.fillMaxSize()) {
+        // [ИЗМЕНЕНИЕ]: Отображение динамического индикатора поиска в свободном пространстве свайпа
+        if (pullOffset.value > 0f) {
+            Box(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .padding(vertical = 4.dp)
-                    .testTag("home_search_input"),
-                shape = RoundedCornerShape(12.dp),
-                colors = OutlinedTextFieldDefaults.colors(
-                    focusedBorderColor = ThingsBlue,
-                    unfocusedBorderColor = dividerColor
+                    .height(with(density) { pullOffset.value.toDp() } + 96.dp)
+                    .offset(y = (-96).dp),
+                contentAlignment = Alignment.TopCenter
+            ) {
+                com.example.ui.components.PullToSearchIndicator(
+                    pullOffset = pullOffset.value,
+                    thresholdPx = thresholdPx
                 )
-            )
+            }
+        }
+
+        LazyColumn(
+            state = lazyListState,
+            modifier = Modifier
+                .fillMaxSize()
+                .nestedScroll(nestedScrollConnection)
+                .graphicsLayer { translationY = pullOffset.value }
+                .padding(horizontal = 20.dp),
+            verticalArrangement = Arrangement.spacedBy(16.dp)
+        ) {
+        // Search Filter row
+        item {
+            // [ИЗМЕНЕНИЕ]: Изменен размер замещающего Spacer до 52.dp в замену новой высоте капсулы 44.dp для бесшовного перехода
+            if (isSearchOverlayActive) {
+                Spacer(modifier = Modifier.fillMaxWidth().height(52.dp))
+            } else {
+                val isDark = isSystemInDarkTheme()
+                val inputBackground = if (isDark) Color(0xFF2C2C2E) else Color(0xFFF2F2F7)
+
+                // [ИЗМЕНЕНИЕ]: Поле поиска на стартовом окне визуально стилизовано под капсулу ввода в поисковом оверлее (без обводки, с фоном оверлея и высотой 44.dp)
+                Box(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(horizontal = 6.dp, vertical = 4.dp)
+                        .height(44.dp)
+                        .clip(RoundedCornerShape(22.dp))
+                        .background(inputBackground)
+                        .clickable { onSearchClick() }
+                        .padding(horizontal = 14.dp)
+                        .testTag("home_search_input"),
+                    contentAlignment = Alignment.CenterStart
+                ) {
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Icon(
+                            imageVector = Icons.Default.Search,
+                            contentDescription = "Search",
+                            tint = textSecondaryColor,
+                            modifier = Modifier.size(20.dp)
+                        )
+                        Spacer(modifier = Modifier.width(8.dp))
+                        Text(
+                            text = "Quick Find",
+                            color = textSecondaryColor.copy(alpha = 0.6f),
+                            fontSize = 16.sp,
+                            fontWeight = FontWeight.Normal
+                        )
+                    }
+                }
+            }
         }
 
         // Smart Lists Grid
@@ -476,5 +597,6 @@ fun ThingsHomePanel(
                 }
             }
         }
+    }
     }
 }

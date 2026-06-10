@@ -18,9 +18,6 @@ interface TaskDao {
     @Query("SELECT * FROM items ORDER BY sortOrder ASC, creationDate DESC")
     fun getAllItems(): Flow<List<Item>>
 
-    @Query("SELECT * FROM items ORDER BY sortOrder ASC, creationDate DESC")
-    suspend fun getAllItemsSync(): List<Item>
-
     @Query("SELECT * FROM items WHERE id = :id")
     suspend fun getItemById(id: String): Item?
 
@@ -111,14 +108,22 @@ interface TaskDao {
     @Insert(onConflict = OnConflictStrategy.REPLACE)
     suspend fun insertTag(tag: Tag)
 
-    @Insert(onConflict = OnConflictStrategy.REPLACE)
-    suspend fun insertTags(tags: List<Tag>)
-
     @Delete
     suspend fun deleteTag(tag: Tag)
 
+    // [ИЗМЕНЕНИЕ]: Добавлена поддержка пакетной вставки тегов
+    @Insert(onConflict = OnConflictStrategy.REPLACE)
+    suspend fun insertTags(tags: List<Tag>)
+
     @Query("SELECT * FROM tags WHERE id = :id")
     suspend fun getTagById(id: String): Tag?
+
+    // [ИЗМЕНЕНИЕ]: Добавлены методы для каскадной рекурсивной логики тегов
+    @Query("SELECT * FROM items ORDER BY sortOrder ASC, creationDate DESC")
+    suspend fun getAllItemsSync(): List<Item>
+
+    @Query("SELECT itemId FROM item_tags WHERE tagId = :tagId")
+    suspend fun getItemIdsByTagId(tagId: String): List<String>
 
     @Query("SELECT t.* FROM tags t INNER JOIN item_tags it ON t.id = it.tagId WHERE it.itemId = :itemId ORDER BY t.sortOrder ASC")
     suspend fun getTagsByItemId(itemId: String): List<Tag>
@@ -128,7 +133,4 @@ interface TaskDao {
 
     @Query("DELETE FROM item_tags WHERE itemId = :itemId")
     suspend fun deleteItemTagsByItemId(itemId: String)
-
-    @Query("SELECT itemId FROM item_tags WHERE tagId = :tagId")
-    suspend fun getItemIdsByTagId(tagId: String): List<String>
 }

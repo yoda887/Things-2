@@ -222,12 +222,15 @@ class ThingsViewModel(private val repository: TaskRepository) : ViewModel() {
         }
     }
 
+    // [ИЗМЕНЕНИЕ]: updateTagGlobally удален, так как каскадное обновление теперь автоматическое в репозитории.
+
     /**
      * Updates the sort order of all provided tags in the database sequentially.
      * @param tags List of tags containing their new sorted positions.
      */
     fun updateTagsOrder(tags: List<Tag>) {
         viewModelScope.launch {
+            // [ИЗМЕНЕНИЕ]: Пакетное обновление порядка тегов в репозитории с кэшированием индексов
             val updatedTags = tags.mapIndexed { index, tag -> tag.copy(sortOrder = index) }
             repository.updateTagsOrder(updatedTags)
         }
@@ -293,8 +296,12 @@ class ThingsViewModel(private val repository: TaskRepository) : ViewModel() {
         }
     }
 
+    /**
+     * Updates an existing task and dynamically resolves/creates tags from its cachedTags string.
+     */
     fun updateTask(item: Item) {
         viewModelScope.launch {
+            // [ИЗМЕНЕНИЕ]: Резолв тегов из строки при сохранении задачи в БД
             repository.insertTask(item)
             val cleanTags = item.tags.map { it.trim() }.filter { it.isNotEmpty() }
             val allTagsList = repository.getAllTags()
@@ -312,8 +319,12 @@ class ThingsViewModel(private val repository: TaskRepository) : ViewModel() {
         }
     }
 
+    /**
+     * Updates an existing task along with its checklist, resolving/creating tags from its cachedTags.
+     */
     fun updateTask(item: Item, checklist: List<ChecklistItem>) {
         viewModelScope.launch {
+            // [ИЗМЕНЕНИЕ]: Резолв тегов из строки при сохранении задачи с чек-листом
             repository.insertTask(item, checklist)
             val cleanTags = item.tags.map { it.trim() }.filter { it.isNotEmpty() }
             val allTagsList = repository.getAllTags()
@@ -376,6 +387,40 @@ class ThingsViewModel(private val repository: TaskRepository) : ViewModel() {
     fun deleteTask(wrapper: ItemWithChecklist) {
         viewModelScope.launch {
             repository.deleteTask(wrapper.item)
+        }
+    }
+
+    /**
+     * [ИЗМЕНЕНИЕ]: Создает дубликат задачи с новым ID, сохраняя все свойства, теги и чек-лист.
+     */
+    fun duplicateTask(wrapper: ItemWithChecklist) {
+        viewModelScope.launch {
+            val newId = java.util.UUID.randomUUID().toString()
+            val copiedItem = wrapper.item.copy(
+                id = newId,
+                googleTaskId = null,
+                googleTaskListId = null,
+                creationDate = System.currentTimeMillis(),
+                modificationDate = System.currentTimeMillis()
+            )
+            val newChecklist = wrapper.checklist.map {
+                it.copy(id = java.util.UUID.randomUUID().toString(), itemId = newId)
+            }
+            repository.insertTask(copiedItem, newChecklist)
+            
+            val cleanTags = copiedItem.tags.map { it.trim() }.filter { it.isNotEmpty() }
+            val allTagsList = repository.getAllTags()
+            val tagObjects = cleanTags.map { title ->
+                val existing = allTagsList.firstOrNull { it.title.equals(title, ignoreCase = true) }
+                if (existing != null) {
+                    existing
+                } else {
+                    val newTag = Tag(title = title)
+                    repository.insertTag(newTag)
+                    newTag
+                }
+            }
+            repository.updateItemTags(newId, tagObjects)
         }
     }
 

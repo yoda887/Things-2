@@ -66,6 +66,14 @@ class TaskRepository(private val taskDao: TaskDao, private val context: Context)
     }
 
     suspend fun fetchLocalCalendarEvents(): Result<List<Item>> = withContext(Dispatchers.IO) {
+        if (androidx.core.content.ContextCompat.checkSelfPermission(
+                context,
+                android.Manifest.permission.READ_CALENDAR
+            ) != android.content.pm.PackageManager.PERMISSION_GRANTED
+        ) {
+            Log.w("TaskRepository", "Calendar access permission not granted.")
+            return@withContext Result.success(emptyList())
+        }
         try {
             val events = mutableListOf<Item>()
             
@@ -246,6 +254,9 @@ class TaskRepository(private val taskDao: TaskDao, private val context: Context)
 
             Log.d("TaskRepository", "Fetched total ${events.size} local calendar events")
             Result.success(events)
+        } catch (e: SecurityException) {
+            Log.w("TaskRepository", "SecurityException: Calendar access permission not granted.")
+            Result.success(emptyList())
         } catch (e: Exception) {
             Log.e("TaskRepository", "Failed to fetch local calendar events", e)
             Result.failure(e)
@@ -287,6 +298,7 @@ class TaskRepository(private val taskDao: TaskDao, private val context: Context)
     }
 
     // Tag management
+    // [ИЗМЕНЕНИЕ]: insertTag c авто-обновлением имен во всех связанных задачах (каскадное обновление)
     suspend fun insertTag(tag: Tag) = withContext(Dispatchers.IO) {
         val oldTag = taskDao.getTagById(tag.id)
         taskDao.insertTag(tag)
@@ -305,11 +317,6 @@ class TaskRepository(private val taskDao: TaskDao, private val context: Context)
             }
         }
     }
-
-    suspend fun updateTagsOrder(tags: List<Tag>) = withContext(Dispatchers.IO) {
-        taskDao.insertTags(tags)
-    }
-
 
     suspend fun createGroup(groupName: String): Tag = withContext(Dispatchers.IO) {
         val group = Tag(title = groupName, parentId = null)
@@ -338,6 +345,7 @@ class TaskRepository(private val taskDao: TaskDao, private val context: Context)
         return taskDao.observeByParent(parentId)
     }
 
+    // [ИЗМЕНЕНИЕ]: Рекурсивное каскадное удаление тегов и дочерних элементов (in-memory)
     suspend fun deleteTag(tag: Tag) = withContext(Dispatchers.IO) {
         val allItems = taskDao.getAllItemsSync()
         val allTags = taskDao.getAllTags()
@@ -367,6 +375,10 @@ class TaskRepository(private val taskDao: TaskDao, private val context: Context)
         }
     }
 
+    // [ИЗМЕНЕНИЕ]: Добавлено пакетное обновление порядка тегов
+    suspend fun updateTagsOrder(tags: List<Tag>) = withContext(Dispatchers.IO) {
+        taskDao.insertTags(tags)
+    }
 
     suspend fun updateItemTags(itemId: String, tags: List<Tag>) = withContext(Dispatchers.IO) {
         taskDao.deleteItemTagsByItemId(itemId)
