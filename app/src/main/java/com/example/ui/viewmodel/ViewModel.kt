@@ -7,143 +7,57 @@ import com.example.data.model.Area
 import com.example.data.model.Item
 import com.example.data.model.ItemWithChecklist
 import com.example.data.model.Tag
-import com.example.data.model.ItemTag
 import com.example.data.model.ChecklistItem
 import com.example.data.model.TaskSection
-import com.example.data.repository.TaskRepository
+import com.example.domain.usecase.ThingsUseCases
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.stateIn
-import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.launch
-import java.util.UUID
-import java.util.Calendar
 
-class ThingsViewModel(private val repository: TaskRepository) : ViewModel() {
+/**
+ * ViewModel для управления состоянием UI приложения Things.
+ * Основан на принципах Clean Architecture и делегирует все бизнес-сценарии в [ThingsUseCases].
+ */
+class ThingsViewModel(
+    private val useCases: ThingsUseCases
+) : ViewModel() {
 
+    // --- 1. ПЕРЕНОСИМ СОСТОЯНИЯ СИНХРОНИЗАЦИИ ИЗ SYNCHELPER СЮДА ---
+    private val _isSyncing = MutableStateFlow(false)
+    val isSyncing: StateFlow<Boolean> = _isSyncing.asStateFlow()
+
+    private val _syncError = MutableStateFlow<String?>(null)
+    val syncError: StateFlow<String?> = _syncError.asStateFlow()
+
+    val googleAccessToken = MutableStateFlow("")
+
+    private val _calendarEvents = MutableStateFlow<List<Item>>(emptyList())
+    val calendarEvents: StateFlow<List<Item>> = _calendarEvents.asStateFlow()
+
+    // --- 2. ИНИЦИАЛИЗАЦИЯ (Без DatabaseSeeder) ---
     init {
         viewModelScope.launch {
-            try {
-                val currentTasks = repository.allTasks.first()
-                if (currentTasks.isEmpty()) {
-                    // Seed Areas
-                    val workArea = Area(id = "work_area", title = "Рабочие дела", sortOrder = 1)
-                    val personalArea = Area(id = "personal_area", title = "Личная жизнь", sortOrder = 2)
-                    repository.insertArea(workArea)
-                    repository.insertArea(personalArea)
-
-                    // Seed Projects (Item type = 1)
-                    val workProj = Item(
-                        id = "work_proj",
-                        type = 1,
-                        title = "Onboard James",
-                        notes = "Onboarding new hire",
-                        areaId = "work_area",
-                        creationDate = System.currentTimeMillis() - 50000
-                    )
-                    val partyProj = Item(
-                        id = "party_proj",
-                        type = 1,
-                        title = "Throw Party for Eve",
-                        notes = "Planning Eve's birthday party",
-                        areaId = "personal_area",
-                        creationDate = System.currentTimeMillis() - 40000
-                    )
-                    
-                    repository.insertProject(workProj)
-                    repository.insertProject(partyProj)
-                    
-                    val tom = Calendar.getInstance().apply { add(Calendar.DAY_OF_YEAR, 1) }
-                    val tomStart = Calendar.getInstance().apply {
-                        timeInMillis = tom.timeInMillis
-                        set(Calendar.HOUR_OF_DAY, 12)
-                        set(Calendar.MINUTE, 0)
-                        set(Calendar.SECOND, 0)
-                        set(Calendar.MILLISECOND, 0)
-                    }.timeInMillis
-
-                    val thur = Calendar.getInstance().apply { add(Calendar.DAY_OF_YEAR, 2) }
-                    val thurStart = Calendar.getInstance().apply {
-                        timeInMillis = thur.timeInMillis
-                        set(Calendar.HOUR_OF_DAY, 12)
-                        set(Calendar.MINUTE, 0)
-                        set(Calendar.SECOND, 0)
-                        set(Calendar.MILLISECOND, 0)
-                    }.timeInMillis
-
-                    val prepareQuestions = Item(
-                        id = "seed_prep_questions",
-                        type = 0,
-                        title = "Prepare interview questions",
-                        notes = "Review Candidate resume and portfolio",
-                        start = 1, // today's smart lists
-                        status = 0,
-                        dueDate = tomStart,
-                        projectId = "work_proj"
-                    )
-                    
-                    val reserveDinner = Item(
-                        id = "seed_reserve_dinner",
-                        type = 0,
-                        title = "Make reservation for dinner",
-                        notes = "Italian place by the corner",
-                        start = 1,
-                        status = 0,
-                        dueDate = tomStart,
-                        projectId = "party_proj"
-                    )
-
-                    val movieTickets = Item(
-                        id = "seed_movie_tickets",
-                        type = 0,
-                        title = "Buy movie tickets for Friday",
-                        notes = "IMAX 3D preferred",
-                        start = 1,
-                        status = 0,
-                        dueDate = thurStart,
-                        priority = 1
-                    )
-
-                    val signedContract = Item(
-                        id = "seed_signed_contract",
-                        type = 0,
-                        title = "Get copy of signed contract",
-                        notes = "Check compliance system",
-                        start = 1,
-                        status = 0,
-                        dueDate = thurStart,
-                        projectId = "work_proj"
-                    )
-
-                    repository.insertTasks(listOf(prepareQuestions, reserveDinner, movieTickets, signedContract))
-                    syncLocalCalendar()
-                }
-            } catch (e: Exception) {
-                e.printStackTrace()
-            }
+            // Просто загружаем календарь при старте
+            syncLocalCalendar()
         }
     }
 
-    val calendarEvents = MutableStateFlow<List<Item>>(emptyList())
-
-    val tasks: StateFlow<List<ItemWithChecklist>> = repository.allTasks
+    val tasks: StateFlow<List<ItemWithChecklist>> = useCases.observeAllTasks()
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
 
-    val projects: StateFlow<List<Item>> = repository.allProjects
+    val projects: StateFlow<List<Item>> = useCases.observeAllProjects()
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
 
-    val areas: StateFlow<List<Area>> = repository.allAreas
+    val areas: StateFlow<List<Area>> = useCases.observeAllAreas()
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
 
     val searchQuery = MutableStateFlow("")
     val selectedTagFilter = MutableStateFlow<String?>(null)
-
-    val isSyncing = MutableStateFlow(false)
-    val syncError = MutableStateFlow<String?>(null)
-    val googleAccessToken = MutableStateFlow("")
 
     val filteredTasks: StateFlow<List<ItemWithChecklist>> = combine(
         tasks,
@@ -168,82 +82,64 @@ class ThingsViewModel(private val repository: TaskRepository) : ViewModel() {
             }.filter { it.isNotBlank() }.toSet()
         }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptySet())
 
-    val allSavedTags: StateFlow<List<String>> = repository.getAllTagsFlow()
+    val allSavedTags: StateFlow<List<String>> = useCases.observeAllTags()
         .map { tags -> tags.map { it.title } }
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
 
-    val allSavedTagObjects: StateFlow<List<Tag>> = repository.getAllTagsFlow()
+    val allSavedTagObjects: StateFlow<List<Tag>> = useCases.observeAllTags()
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
 
     fun insertTag(tagTitle: String, parentId: String? = null) {
         viewModelScope.launch {
-            val titleTrimmed = tagTitle.trim()
-            if (titleTrimmed.isNotBlank()) {
-                repository.insertTag(Tag(title = titleTrimmed, parentId = parentId))
-            }
+            useCases.insertTag(tagTitle, parentId)
         }
     }
 
     fun createGroup(groupName: String) {
         viewModelScope.launch {
-            repository.createGroup(groupName)
+            useCases.createGroup(groupName)
         }
     }
 
     fun createTagInGroup(tagName: String, parentId: String?) {
         viewModelScope.launch {
-            repository.createTagInGroup(tagName, parentId)
+            useCases.createTagInGroup(tagName, parentId)
         }
     }
 
     fun moveTagToGroup(tagId: String, newGroupId: String?) {
         viewModelScope.launch {
-            repository.moveTagToGroup(tagId, newGroupId)
+            useCases.moveTagToGroup(tagId, newGroupId)
         }
     }
 
     /**
-     * Deletes a tag from the database.
-     * @param tag The tag entity to be deleted.
+     * Удаляет тег каскадно.
+     * @param tag тег для удаления
      */
     fun deleteTag(tag: Tag) {
         viewModelScope.launch {
-            repository.deleteTag(tag)
+            useCases.deleteTag(tag)
         }
     }
 
     /**
-     * Updates an existing tag or inserts a new one in the database.
-     * @param tag The tag entity to update.
+     * Обновляет тег в системе.
+     * @param tag тег для обновления
      */
     fun updateTag(tag: Tag) {
         viewModelScope.launch {
-            repository.insertTag(tag)
+            useCases.updateTag(tag)
         }
     }
 
-    // [ИЗМЕНЕНИЕ]: updateTagGlobally удален, так как каскадное обновление теперь автоматическое в репозитории.
-
     /**
-     * Updates the sort order of all provided tags in the database sequentially.
-     * @param tags List of tags containing their new sorted positions.
+     * Обновляет сортировку тегов.
+     * @param tags неупорядоченный список тегов
      */
     fun updateTagsOrder(tags: List<Tag>) {
         viewModelScope.launch {
-            // [ИЗМЕНЕНИЕ]: Пакетное обновление порядка тегов в репозитории с кэшированием индексов
-            val updatedTags = tags.mapIndexed { index, tag -> tag.copy(sortOrder = index) }
-            repository.updateTagsOrder(updatedTags)
-        }
-    }
-
-
-    private fun sectionToStartValue(section: TaskSection): Int {
-        return when (section) {
-            TaskSection.INBOX -> 0
-            TaskSection.TODAY -> 1
-            TaskSection.ANYTIME -> 2
-            TaskSection.SOMEDAY -> 3
-            TaskSection.UPCOMING -> 2 // standard fallback
+            useCases.updateTagsOrder(tags)
         }
     }
 
@@ -259,246 +155,151 @@ class ThingsViewModel(private val repository: TaskRepository) : ViewModel() {
         priority: Int = 0
     ) {
         viewModelScope.launch {
-            val itemId = UUID.randomUUID().toString()
-            val cleanTags = tags.map { it.trim() }.filter { it.isNotEmpty() }
-            val computedStartDate = startDate ?: if (section == TaskSection.TODAY) System.currentTimeMillis() else null
-            val item = Item(
-                id = itemId,
-                type = 0,
-                title = title.ifBlank { "Untitled To-Do" },
+            useCases.addTask(
+                title = title,
                 notes = notes,
-                start = sectionToStartValue(section),
+                section = section,
                 isTonight = isTonight,
-                startDate = computedStartDate,
-                dueDate = null, // Newly created tasks always start with null dueDate
+                startDate = startDate,
+                tags = tags,
                 projectId = projectId,
+                checklist = checklist,
                 priority = priority
             )
-            repository.insertTask(item)
-
-            if (cleanTags.isNotEmpty()) {
-                val tagList = cleanTags.map { Tag(title = it) }
-                for (t in tagList) {
-                    repository.insertTag(t)
-                }
-                repository.updateItemTags(itemId, tagList)
-            }
-            if (checklist.isNotEmpty()) {
-                val listEntities = checklist.map { it.copy(itemId = itemId) }
-                repository.updateChecklistItems(itemId, listEntities)
-            }
         }
     }
 
     fun updateChecklistItems(itemId: String, list: List<ChecklistItem>) {
         viewModelScope.launch {
-            repository.updateChecklistItems(itemId, list)
+            useCases.updateChecklistItems(itemId, list)
         }
     }
 
     /**
-     * Updates an existing task and dynamically resolves/creates tags from its cachedTags string.
+     * Обновляет выбранную задачу.
      */
     fun updateTask(item: Item) {
         viewModelScope.launch {
-            // [ИЗМЕНЕНИЕ]: Резолв тегов из строки при сохранении задачи в БД
-            repository.insertTask(item)
-            val cleanTags = item.tags.map { it.trim() }.filter { it.isNotEmpty() }
-            val allTagsList = repository.getAllTags()
-            val tagObjects = cleanTags.map { title ->
-                val existing = allTagsList.firstOrNull { it.title.equals(title, ignoreCase = true) }
-                if (existing != null) {
-                    existing
-                } else {
-                    val newTag = Tag(title = title)
-                    repository.insertTag(newTag)
-                    newTag
-                }
-            }
-            repository.updateItemTags(item.id, tagObjects)
+            useCases.updateTask(item)
         }
     }
 
     /**
-     * Updates an existing task along with its checklist, resolving/creating tags from its cachedTags.
+     * Обновляет выбранную задачу вместе с подпунктами чек-листа.
      */
     fun updateTask(item: Item, checklist: List<ChecklistItem>) {
         viewModelScope.launch {
-            // [ИЗМЕНЕНИЕ]: Резолв тегов из строки при сохранении задачи с чек-листом
-            repository.insertTask(item, checklist)
-            val cleanTags = item.tags.map { it.trim() }.filter { it.isNotEmpty() }
-            val allTagsList = repository.getAllTags()
-            val tagObjects = cleanTags.map { title ->
-                val existing = allTagsList.firstOrNull { it.title.equals(title, ignoreCase = true) }
-                if (existing != null) {
-                    existing
-                } else {
-                    val newTag = Tag(title = title)
-                    repository.insertTag(newTag)
-                    newTag
-                }
-            }
-            repository.updateItemTags(item.id, tagObjects)
+            useCases.updateTask(item, checklist)
         }
     }
 
     fun updateTasks(items: List<Item>) {
         viewModelScope.launch {
-            repository.insertTasks(items)
+            useCases.updateTask(items)
         }
     }
 
     fun toggleTaskCompletion(wrapper: ItemWithChecklist) {
         viewModelScope.launch {
-            val item = wrapper.item
-            val isCompleting = !item.isCompleted
-            val updated = item.copy(
-                status = if (isCompleting) 3 else 0,
-                stopDate = if (isCompleting) System.currentTimeMillis() else null
-            )
-            repository.insertTask(updated, wrapper.checklist)
+            useCases.toggleTaskCompletion(wrapper)
         }
     }
 
     fun toggleChecklistItem(wrapper: ItemWithChecklist, itemId: String) {
         viewModelScope.launch {
-            val updatedChecklist = wrapper.checklist.map {
-                if (it.id == itemId) it.copy(isCompleted = !it.isCompleted) else it
-            }
-            repository.updateChecklistItems(wrapper.item.id, updatedChecklist)
+            useCases.toggleChecklistItem(wrapper, itemId)
         }
     }
 
     fun addChecklistItemToTask(wrapper: ItemWithChecklist, title: String) {
         if (title.isBlank()) return
         viewModelScope.launch {
-            val updatedChecklist = wrapper.checklist + ChecklistItem(itemId = wrapper.item.id, title = title)
-            repository.updateChecklistItems(wrapper.item.id, updatedChecklist)
+            useCases.addChecklistItem(wrapper, title)
         }
     }
 
     fun deleteChecklistItemFromTask(wrapper: ItemWithChecklist, itemId: String) {
         viewModelScope.launch {
-            val updatedChecklist = wrapper.checklist.filter { it.id != itemId }
-            repository.updateChecklistItems(wrapper.item.id, updatedChecklist)
+            useCases.deleteChecklistItem(wrapper, itemId)
         }
     }
 
     fun deleteTask(wrapper: ItemWithChecklist) {
         viewModelScope.launch {
-            repository.deleteTask(wrapper.item)
+            useCases.deleteTask(wrapper.item)
         }
     }
 
     /**
-     * [ИЗМЕНЕНИЕ]: Создает дубликат задачи с новым ID, сохраняя все свойства, теги и чек-лист.
+     * Создает копию задачи с новым уникальным идентификатором.
      */
     fun duplicateTask(wrapper: ItemWithChecklist) {
         viewModelScope.launch {
-            val newId = java.util.UUID.randomUUID().toString()
-            val copiedItem = wrapper.item.copy(
-                id = newId,
-                googleTaskId = null,
-                googleTaskListId = null,
-                creationDate = System.currentTimeMillis(),
-                modificationDate = System.currentTimeMillis()
-            )
-            val newChecklist = wrapper.checklist.map {
-                it.copy(id = java.util.UUID.randomUUID().toString(), itemId = newId)
-            }
-            repository.insertTask(copiedItem, newChecklist)
-            
-            val cleanTags = copiedItem.tags.map { it.trim() }.filter { it.isNotEmpty() }
-            val allTagsList = repository.getAllTags()
-            val tagObjects = cleanTags.map { title ->
-                val existing = allTagsList.firstOrNull { it.title.equals(title, ignoreCase = true) }
-                if (existing != null) {
-                    existing
-                } else {
-                    val newTag = Tag(title = title)
-                    repository.insertTag(newTag)
-                    newTag
-                }
-            }
-            repository.updateItemTags(newId, tagObjects)
+            useCases.duplicateTask(wrapper)
         }
     }
 
-    // Projects Actions
+    // Сценарии работы с проектами
     fun addProject(name: String, notes: String = "", areaId: String? = null) {
         viewModelScope.launch {
-            val project = Item(
-                type = 1,
-                title = name.ifBlank { "New Project" },
-                notes = notes,
-                areaId = areaId
-            )
-            repository.insertProject(project)
+            useCases.addProject(name, notes, areaId)
         }
     }
 
     fun updateProject(project: Item) {
         viewModelScope.launch {
-            repository.insertProject(project)
+            useCases.updateProject(project)
         }
     }
 
     fun deleteProject(project: Item) {
         viewModelScope.launch {
-            repository.deleteProject(project)
+            useCases.deleteProject(project)
         }
     }
 
-    // Areas Actions
+    // Сценарии работы со сферами
     fun addArea(title: String) {
         viewModelScope.launch {
-            if (title.isNotBlank()) {
-                val area = Area(title = title)
-                repository.insertArea(area)
-            }
+            useCases.addArea(title)
         }
     }
 
     fun deleteArea(area: Area) {
         viewModelScope.launch {
-            repository.deleteArea(area)
+            useCases.deleteArea(area)
         }
     }
 
-    // Google Tasks Sync Interface Implementation
+    // --- 3. НОВАЯ ЛОГИКА СИНХРОНИЗАЦИИ ---
     fun setAccessToken(token: String) {
         googleAccessToken.value = token
     }
 
     fun syncLocalCalendar() {
         viewModelScope.launch {
-            val calendarResult = repository.fetchLocalCalendarEvents()
-            if (calendarResult.isSuccess) {
-                calendarEvents.value = calendarResult.getOrNull() ?: emptyList()
+            val result = useCases.fetchLocalCalendarEvents()
+            result.onSuccess { events ->
+                _calendarEvents.value = events
+            }.onFailure {
+                // Возможная обработка ошибки доступа к календарю
             }
         }
     }
 
     fun syncWithGoogle() {
-        val token = googleAccessToken.value
-        if (token.isBlank()) {
-            syncError.value = "Access token is empty. Please enter a Google Tasks OAuth access token."
-            return
-        }
-
         viewModelScope.launch {
-            isSyncing.value = true
-            syncError.value = null
+            _isSyncing.value = true
+            _syncError.value = null
             
-            // Sync tasks
-            val result = repository.syncWithGoogleTasks(token)
+            // Вызываем юзкейс, передавая токен напрямую
+            val result = useCases.syncGoogleTasks(googleAccessToken.value)
             
-            isSyncing.value = false
-            if (result.isSuccess) {
-                syncError.value = null
-            } else {
-                syncError.value = result.exceptionOrNull()?.message ?: "Sync failed"
+            result.onFailure { error ->
+                _syncError.value = error.localizedMessage ?: "Unknown sync error"
             }
+            
+            _isSyncing.value = false
         }
     }
 
@@ -510,11 +311,14 @@ class ThingsViewModel(private val repository: TaskRepository) : ViewModel() {
         selectedTagFilter.value = tag
     }
 
-    class Factory(private val repository: TaskRepository) : ViewModelProvider.Factory {
+    // --- 4. ОЧИЩЕННАЯ ФАБРИКА ---
+    class Factory(
+        private val useCases: ThingsUseCases
+    ) : ViewModelProvider.Factory {
         @Suppress("UNCHECKED_CAST")
         override fun <T : ViewModel> create(modelClass: Class<T>): T {
             if (modelClass.isAssignableFrom(ThingsViewModel::class.java)) {
-                return ThingsViewModel(repository) as T
+                return ThingsViewModel(useCases) as T
             }
             throw IllegalArgumentException("Unknown ViewModel class")
         }

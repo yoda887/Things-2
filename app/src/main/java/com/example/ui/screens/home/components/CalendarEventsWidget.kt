@@ -174,3 +174,92 @@ fun CalendarEventsWidget(
         }
     }
 }
+
+/**
+ * Модель данных для группировки события календаря с конкретной временной меткой в списке Upcoming.
+ */
+data class UpcomingEventItem(
+    val event: Item,
+    val dateMillis: Long
+)
+
+/**
+ * Компонент для отображения одного календарного события на экране предстоящих событий (Upcoming).
+ *
+ * @param event объект события календаря типа [Item].
+ * @param textSecondaryColor цвет для второстепенного текста.
+ * @param textPrimaryColor цвет для основного текста.
+ */
+@Composable
+fun UpcomingCalendarEventRow(
+    event: Item,
+    textSecondaryColor: Color,
+    textPrimaryColor: Color
+) {
+    val eventStart = event.eventStartMillis ?: 0L
+    val hasTime = !event.isAllDay && eventStart > 0
+    
+    val rawColor = event.calendarColor
+    val baseColor = remember(rawColor, event.calendarDisplayName, event.id) {
+        if (rawColor != null) {
+            Color(rawColor)
+        } else {
+            Color(0xFF63C655) // Приятный зеленый цвет, соответствующий iOS стилю
+        }
+    }
+    
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(vertical = 2.dp, horizontal = 4.dp),
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        if (hasTime) {
+            val timeString = remember(eventStart) { 
+                SimpleDateFormat("HH:mm", Locale.getDefault()).format(Date(eventStart)) 
+            }
+            Text(
+                text = timeString,
+                style = TextStyle(
+                    fontSize = 15.sp,
+                    fontWeight = FontWeight.Normal,
+                    color = baseColor
+                ),
+                modifier = Modifier.width(72.dp)
+            )
+            Spacer(modifier = Modifier.width(4.dp))
+            Text(
+                text = event.title,
+                style = TextStyle(
+                    fontSize = 15.sp,
+                    fontWeight = FontWeight.Normal,
+                    color = textPrimaryColor
+                ),
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis,
+                modifier = Modifier.weight(1f)
+            )
+        } else {
+            // All-day событие отображается зеленой вертикальной линией и текстом без времени
+            Box(
+                modifier = Modifier
+                    .width(3.dp)
+                    .height(11.dp)
+                    .clip(RoundedCornerShape(1.5.dp))
+                    .background(baseColor)
+            )
+            Spacer(modifier = Modifier.width(8.dp))
+            Text(
+                text = event.title,
+                style = TextStyle(
+                    fontSize = 15.sp,
+                    fontWeight = FontWeight.Normal,
+                    color = textPrimaryColor
+                ),
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis,
+                modifier = Modifier.weight(1f)
+            )
+        }
+    }
+}

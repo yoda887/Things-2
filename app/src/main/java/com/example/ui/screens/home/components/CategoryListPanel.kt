@@ -94,86 +94,6 @@ data class UpcomingHeaderItem(
     val dayOfWeekLabel: String
 )
 
-data class UpcomingEventItem(
-    val event: Item,
-    val dateMillis: Long
-)
-
-// [ИЗМЕНЕНИЕ]: Компонент для отображения одного календарного события на экране Upcoming
-@Composable
-fun UpcomingCalendarEventRow(
-    event: Item,
-    textSecondaryColor: Color,
-    textPrimaryColor: Color
-) {
-    val eventStart = event.eventStartMillis ?: 0L
-    val hasTime = !event.isAllDay && eventStart > 0
-    
-    val rawColor = event.calendarColor
-    val baseColor = remember(rawColor, event.calendarDisplayName, event.id) {
-        if (rawColor != null) {
-            Color(rawColor)
-        } else {
-            Color(0xFF63C655) // Приятный зеленый цвет, соответствующий iOS стилю
-        }
-    }
-    
-    Row(
-        modifier = Modifier
-            .fillMaxWidth()
-            .padding(vertical = 2.dp, horizontal = 4.dp),
-        verticalAlignment = Alignment.CenterVertically
-    ) {
-        if (hasTime) {
-            val timeString = remember(eventStart) { 
-                SimpleDateFormat("HH:mm", Locale.getDefault()).format(Date(eventStart)) 
-            }
-            Text(
-                text = timeString,
-                style = TextStyle(
-                    fontSize = 15.sp,
-                    fontWeight = FontWeight.Normal,
-                    color = baseColor
-                ),
-                modifier = Modifier.width(72.dp)
-            )
-            Spacer(modifier = Modifier.width(4.dp))
-            Text(
-                text = event.title,
-                style = TextStyle(
-                    fontSize = 15.sp,
-                    fontWeight = FontWeight.Normal,
-                    color = textPrimaryColor
-                ),
-                maxLines = 1,
-                overflow = TextOverflow.Ellipsis,
-                modifier = Modifier.weight(1f)
-            )
-        } else {
-            // All-day событие отображается зеленой вертикальной линией и текстом без времени
-            Box(
-                modifier = Modifier
-                    .width(3.dp)
-                    .height(11.dp)
-                    .clip(RoundedCornerShape(1.5.dp))
-                    .background(baseColor)
-            )
-            Spacer(modifier = Modifier.width(8.dp))
-            Text(
-                text = event.title,
-                style = TextStyle(
-                    fontSize = 15.sp,
-                    fontWeight = FontWeight.Normal,
-                    color = textPrimaryColor
-                ),
-                maxLines = 1,
-                overflow = TextOverflow.Ellipsis,
-                modifier = Modifier.weight(1f)
-            )
-        }
-    }
-}
-
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun ThingsCategoryListPanel(
@@ -256,7 +176,6 @@ fun ThingsCategoryListPanel(
     // [ИЗМЕНЕНИЕ]: Переменные состояния для диалогов floating toolbar
     var showMoveDialog by remember { mutableStateOf(false) }
     var showDeleteConfirm by remember { mutableStateOf(false) }
-    var expandedDotsMenu by remember { mutableStateOf(false) }
     // [ИЗМЕНЕНИЕ]: Реестр ID удаленных задач для предотвращения повторного авто-сохранения при закрытии inline editor
     val deletedTaskIds = remember { mutableStateListOf<String>() }
     val areasState by viewModel.areas.collectAsState()
@@ -1464,155 +1383,16 @@ fun ThingsCategoryListPanel(
     }
 
     // [ИЗМЕНЕНИЕ]: Плавающий тулбар в виде капсулы, появляющийся плавно при раскрытии задачи
-    AnimatedVisibility(
+    FloatingBottomCapsuleToolbar(
         visible = inlineExpandedTaskId != null && activeTask != null,
-        enter = slideInVertically(initialOffsetY = { it }) + fadeIn(),
-        exit = slideOutVertically(targetOffsetY = { it }) + fadeOut(),
-        modifier = Modifier
-            .align(Alignment.BottomCenter)
-            .padding(bottom = MaterialTheme.dimens.floatingToolbarBottomPadding)
-    ) {
-        if (activeTask != null) {
-            Box(
-                modifier = Modifier
-                    .height(MaterialTheme.dimens.floatingToolbarHeight)
-                    .clip(RoundedCornerShape(MaterialTheme.dimens.floatingToolbarCornerRadius))
-                    .background(Color(0xFF232329))
-                    .padding(horizontal = 16.dp),
-                contentAlignment = Alignment.Center
-            ) {
-                Row(
-                    verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.spacedBy(16.dp)
-                ) {
-                    // 1. Move Button (touch target min 48x48dp)
-                    Row(
-                        modifier = Modifier
-                            .sizeIn(minWidth = 48.dp, minHeight = 48.dp)
-                            .clip(RoundedCornerShape(8.dp))
-                            .clickable { showMoveDialog = true }
-                            .padding(horizontal = 8.dp),
-                        verticalAlignment = Alignment.CenterVertically
-                    ) {
-                        Icon(
-                            imageVector = Icons.Default.ArrowForward,
-                            contentDescription = "Move icon",
-                            tint = Color.White,
-                            modifier = Modifier.size(18.dp)
-                        )
-                        Spacer(modifier = Modifier.width(6.dp))
-                        Text(
-                            text = "Move",
-                            color = Color.White,
-                            fontWeight = FontWeight.Bold,
-                            fontSize = 15.sp
-                        )
-                    }
-
-                    // [ИЗМЕНЕНИЕ]: Вертикальный разделитель удален по запросу пользователя
-
-                    // 2. Trash (Delete) button (touch target min 48x48dp)
-                    Box(
-                        modifier = Modifier
-                            .sizeIn(minWidth = 48.dp, minHeight = 48.dp)
-                            .clip(CircleShape)
-                            .clickable { showDeleteConfirm = true },
-                        contentAlignment = Alignment.Center
-                    ) {
-                        Icon(
-                            imageVector = Icons.Default.Delete,
-                            contentDescription = "Delete task",
-                            tint = Color.White,
-                            modifier = Modifier.size(20.dp)
-                        )
-                    }
-
-                    // [ИЗМЕНЕНИЕ]: Вертикальный разделитель удален по запросу пользователя
-
-                    // 3. Dots Menu Button with options (touch target min 48x48dp)
-                    Box {
-                        Box(
-                            modifier = Modifier
-                                .sizeIn(minWidth = 48.dp, minHeight = 48.dp)
-                                .clip(CircleShape)
-                                .clickable { expandedDotsMenu = !expandedDotsMenu },
-                            contentAlignment = Alignment.Center
-                        ) {
-                            Icon(
-                                imageVector = Icons.Default.MoreHoriz,
-                                contentDescription = "More options",
-                                tint = Color.White,
-                                modifier = Modifier.size(20.dp)
-                            )
-                        }
-
-                        DropdownMenu(
-                            expanded = expandedDotsMenu,
-                            onDismissRequest = { expandedDotsMenu = false },
-                            modifier = Modifier.background(Color(0xFF22242C))
-                        ) {
-                            DropdownMenuItem(
-                                leadingIcon = {
-                                    // [ИЗМЕНЕНИЕ]: Иконка копирования для опции Duplicate
-                                    Icon(
-                                        imageVector = Icons.Default.ContentCopy,
-                                        contentDescription = "Duplicate icon",
-                                        tint = Color.White
-                                    )
-                                },
-                                text = { Text("Duplicate", color = Color.White) },
-                                onClick = {
-                                    viewModel.duplicateTask(activeTask)
-                                    expandedDotsMenu = false
-                                }
-                            )
-                            DropdownMenuItem(
-                                leadingIcon = {
-                                    // [ИЗМЕНЕНИЕ]: Иконка обновления для опции Repeat
-                                    Icon(
-                                        imageVector = Icons.Default.Refresh,
-                                        contentDescription = "Repeat icon",
-                                        tint = Color.Gray
-                                    )
-                                },
-                                text = { Text("Repeat", color = Color.Gray) },
-                                onClick = {
-                                    expandedDotsMenu = false
-                                }
-                            )
-                            DropdownMenuItem(
-                                leadingIcon = {
-                                    // [ИЗМЕНЕНИЕ]: Иконка трансформации для опции Convert
-                                    Icon(
-                                        imageVector = Icons.Default.Transform,
-                                        contentDescription = "Convert icon",
-                                        tint = Color.Gray
-                                    )
-                                },
-                                text = { Text("Convert", color = Color.Gray) },
-                                onClick = {
-                                        expandedDotsMenu = false
-                                }
-                            )
-                            DropdownMenuItem(
-                                leadingIcon = {
-                                    // [ИЗМЕНЕНИЕ]: Иконка отправки для опции Share
-                                    Icon(
-                                        imageVector = Icons.Default.Share,
-                                        contentDescription = "Share icon",
-                                        tint = Color.Gray
-                                    )
-                                },
-                                text = { Text("Share", color = Color.Gray) },
-                                onClick = {
-                                    expandedDotsMenu = false
-                                }
-                            )
-                        }
-                    }
-                }
+        onMoveClick = { showMoveDialog = true },
+        onDeleteClick = { showDeleteConfirm = true },
+        onDuplicateClick = {
+            if (activeTask != null) {
+                viewModel.duplicateTask(activeTask)
             }
-        }
-    }
+        },
+        modifier = Modifier.align(Alignment.BottomCenter)
+    )
     }
 }
