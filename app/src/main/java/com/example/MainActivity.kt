@@ -10,18 +10,14 @@ import androidx.compose.material3.Scaffold
 import androidx.compose.ui.Modifier
 import com.example.ui.screens.home.ThingsHomeScreen
 import com.example.ui.theme.MyApplicationTheme
-import com.example.ui.viewmodel.ThingsViewModel
+import dagger.hilt.android.AndroidEntryPoint
 
 /**
  * Главная Activity приложения, которая служит контейнером для Jetpack Compose интерфейса.
- * Подключается к [ThingsApplication] для получения графа зависимостей и инициализации [ThingsViewModel].
+ * Подключается к Hilt для получения зависимостей.
  */
-class MainActivity : ComponentActivity() {
-
-  private val viewModel: ThingsViewModel by viewModels {
-    val container = (application as ThingsApplication).container
-    ThingsViewModel.Factory(container.useCases)
-  }
+@AndroidEntryPoint(ComponentActivity::class)
+class MainActivity : Hilt_MainActivity() {
 
   override fun onCreate(savedInstanceState: Bundle?) {
     super.onCreate(savedInstanceState)
@@ -30,7 +26,7 @@ class MainActivity : ComponentActivity() {
       MyApplicationTheme {
         Scaffold(modifier = Modifier.fillMaxSize()) { innerPadding ->
           // Оставляем исходный вызов экрана HomeScreen без изменений
-          ThingsHomeScreen(viewModel = viewModel)
+          ThingsHomeScreen()
         }
       }
     }

@@ -39,6 +39,7 @@ import com.example.ui.screens.home.components.SearchResultItem
 import com.example.ui.screens.ThingsTaskDetailsSheet
 import com.example.ui.theme.*
 import com.example.ui.viewmodel.ThingsViewModel
+import androidx.hilt.navigation.compose.hiltViewModel
 import kotlinx.coroutines.launch
 
 
@@ -56,7 +57,7 @@ enum class ActiveScreen {
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun ThingsHomeScreen(viewModel: ThingsViewModel) {
+fun ThingsHomeScreen(viewModel: ThingsViewModel = hiltViewModel()) {
     val tasks by viewModel.filteredTasks.collectAsState()
     val allTasksRaw by viewModel.tasks.collectAsState()
     val projects by viewModel.projects.collectAsState()

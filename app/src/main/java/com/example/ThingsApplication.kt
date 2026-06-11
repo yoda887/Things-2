@@ -1,21 +1,16 @@
 package com.example
 
 import android.app.Application
-import com.example.di.AppContainer
+import dagger.hilt.android.HiltAndroidApp
 
 /**
  * Пользовательский класс Application приложения.
- * Инициализирует и удерживает долговечный контейнер зависимостей [AppContainer] в течение всего жизненного цикла процесса.
+ * Инициализируется Hilt для автоматического сопоставления зависимостей на уровне приложения.
  */
-class ThingsApplication : Application() {
-
-    /**
-     * Контейнер зависимостей приложения.
-     */
-    lateinit var container: AppContainer
+@HiltAndroidApp(Application::class)
+class ThingsApplication : Hilt_ThingsApplication() {
 
     override fun onCreate() {
         super.onCreate()
-        container = AppContainer(this)
     }
 }

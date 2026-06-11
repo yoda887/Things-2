@@ -1,5 +1,6 @@
 package com.example.data.repository
 
+import javax.inject.Inject
 import android.util.Log
 import com.example.data.local.LocalTaskDataSource
 import com.example.data.local.DeviceCalendarDataSource
@@ -27,7 +28,7 @@ import kotlinx.coroutines.withContext
  * @property remoteDataSource Удаленный источник данных (Google Tasks API)
  * @property calendarDataSource Источник данных календаря устройства
  */
-class TaskRepositoryImpl(
+class TaskRepositoryImpl @Inject constructor(
     private val localDataSource: LocalTaskDataSource,
     private val remoteDataSource: RemoteTaskDataSource,
     private val calendarDataSource: DeviceCalendarDataSource

@@ -3,6 +3,8 @@ package com.example.ui.viewmodel
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.viewModelScope
+import javax.inject.Inject
+import dagger.hilt.android.lifecycle.HiltViewModel
 import com.example.data.model.Area
 import com.example.data.model.Item
 import com.example.data.model.ItemWithChecklist
@@ -23,7 +25,8 @@ import kotlinx.coroutines.launch
  * ViewModel для управления состоянием UI приложения Things.
  * Основан на принципах Clean Architecture и делегирует все бизнес-сценарии в [ThingsUseCases].
  */
-class ThingsViewModel(
+@HiltViewModel
+class ThingsViewModel @Inject constructor(
     private val useCases: ThingsUseCases
 ) : ViewModel() {
 
@@ -309,18 +312,5 @@ class ThingsViewModel(
 
     fun selectTag(tag: String?) {
         selectedTagFilter.value = tag
-    }
-
-    // --- 4. ОЧИЩЕННАЯ ФАБРИКА ---
-    class Factory(
-        private val useCases: ThingsUseCases
-    ) : ViewModelProvider.Factory {
-        @Suppress("UNCHECKED_CAST")
-        override fun <T : ViewModel> create(modelClass: Class<T>): T {
-            if (modelClass.isAssignableFrom(ThingsViewModel::class.java)) {
-                return ThingsViewModel(useCases) as T
-            }
-            throw IllegalArgumentException("Unknown ViewModel class")
-        }
     }
 }
