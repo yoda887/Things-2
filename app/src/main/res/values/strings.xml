@@ -18,4 +18,8 @@
     <string name="delete_group_title">Delete Group?</string>
     <string name="delete_group_message">Deleting this group will also delete all its child tags. Are you sure you want to proceed?</string>
     <string name="tag_dialog_delete">Delete</string>
+    <string name="delete_task_confirm_title">Delete Task</string>
+    <string name="delete_task_confirm_message">Are you sure you want to delete this task? This cannot be undone.</string>
+    <string name="delete_task_confirm_cancel">Cancel</string>
+    <string name="delete_task_confirm_delete">Delete</string>
 </resources>

@@ -2,11 +2,12 @@ package com.example.domain.usecase.checklist
 
 import com.example.data.model.ItemWithChecklist
 import com.example.domain.repository.ITaskRepository
+import javax.inject.Inject
 
 /**
  * Сценарий использования (Use Case) для переключения состояния выполнения пункта чек-листа.
  */
-class ToggleChecklistItemUseCase(private val repository: ITaskRepository) {
+class ToggleChecklistItemUseCase @Inject constructor(private val repository: ITaskRepository) {
 
     /**
      * Находит нужный пункт чек-листа, меняет его состояние на противоположное и обновляет список.

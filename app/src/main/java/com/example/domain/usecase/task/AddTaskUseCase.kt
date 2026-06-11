@@ -4,13 +4,15 @@ import com.example.data.model.Item
 import com.example.data.model.ChecklistItem
 import com.example.data.model.Tag
 import com.example.data.model.TaskSection
+import com.example.data.model.toStartVal
 import com.example.domain.repository.ITaskRepository
 import java.util.UUID
+import javax.inject.Inject
 
 /**
  * Сценарий использования (Use Case) для создания новой задачи с опциональными подпунктами чек-листа и тегами.
  */
-class AddTaskUseCase(private val repository: ITaskRepository) {
+class AddTaskUseCase @Inject constructor(private val repository: ITaskRepository) {
 
     /**
      * Создает и добавляет задачу в базу данных.
@@ -28,13 +30,7 @@ class AddTaskUseCase(private val repository: ITaskRepository) {
     ) {
         val itemId = UUID.randomUUID().toString()
         val cleanTags = tags.map { it.trim() }.filter { it.isNotEmpty() }
-        val startValue = when (section) {
-            TaskSection.INBOX -> 0
-            TaskSection.TODAY -> 1
-            TaskSection.ANYTIME -> 2
-            TaskSection.SOMEDAY -> 3
-            TaskSection.UPCOMING -> 2
-        }
+        val startValue = section.toStartVal()
         val computedStartDate = startDate ?: if (section == TaskSection.TODAY) System.currentTimeMillis() else null
         val item = Item(
             id = itemId,

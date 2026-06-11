@@ -11,6 +11,19 @@ enum class TaskSection {
     INBOX, TODAY, UPCOMING, ANYTIME, SOMEDAY
 }
 
+/**
+ * Преобразует секцию UI/Домена во внутреннее значение `start` для Item.
+ */
+fun TaskSection.toStartVal(): Int {
+    return when (this) {
+        TaskSection.INBOX -> 0
+        TaskSection.TODAY -> 1
+        TaskSection.ANYTIME -> 2
+        TaskSection.UPCOMING -> 2 // Anytime и Upcoming делят один статус
+        TaskSection.SOMEDAY -> 3
+    }
+}
+
 @Entity(
     tableName = "items",
     foreignKeys = [

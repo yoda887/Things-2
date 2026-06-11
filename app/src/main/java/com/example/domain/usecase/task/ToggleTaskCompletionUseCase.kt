@@ -2,11 +2,12 @@ package com.example.domain.usecase.task
 
 import com.example.data.model.ItemWithChecklist
 import com.example.domain.repository.ITaskRepository
+import javax.inject.Inject
 
 /**
  * Сценарий использования (Use Case) для переключения статуса завершения задачи.
  */
-class ToggleTaskCompletionUseCase(private val repository: ITaskRepository) {
+class ToggleTaskCompletionUseCase @Inject constructor(private val repository: ITaskRepository) {
 
     /**
      * Меняет статус выполнения задачи на противоположный и обновляет её в репозитории.

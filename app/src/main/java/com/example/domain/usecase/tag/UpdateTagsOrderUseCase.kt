@@ -2,11 +2,12 @@ package com.example.domain.usecase.tag
 
 import com.example.data.model.Tag
 import com.example.domain.repository.ITaskRepository
+import javax.inject.Inject
 
 /**
  * Сценарий использования (Use Case) для изменения порядка сортировки тегов.
  */
-class UpdateTagsOrderUseCase(private val repository: ITaskRepository) {
+class UpdateTagsOrderUseCase @Inject constructor(private val repository: ITaskRepository) {
 
     /**
      * Пересчитывает индексы сортировки и сохраняет теги.

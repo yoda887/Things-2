@@ -4,12 +4,13 @@ import com.example.data.model.Item
 import com.example.data.model.ChecklistItem
 import com.example.data.model.Tag
 import com.example.domain.repository.ITaskRepository
+import javax.inject.Inject
 
 /**
  * Сценарий использования (Use Case) для обновления существующей задачи (или списка задач) в базе данных
  * с динамическим разрешением, созданием и прикреплением тегов.
  */
-class UpdateTaskUseCase(private val repository: ITaskRepository) {
+class UpdateTaskUseCase @Inject constructor(private val repository: ITaskRepository) {
 
     /**
      * Обновляет задачу базовой информацией.

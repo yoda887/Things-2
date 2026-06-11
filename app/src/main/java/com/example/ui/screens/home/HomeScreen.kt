@@ -33,6 +33,8 @@ import com.example.data.model.TaskSection
 import com.example.data.model.Area
 import com.example.ui.screens.home.components.ThingsHomePanel
 import com.example.ui.screens.home.components.ThingsCategoryListPanel
+import com.example.ui.screens.home.components.ThingsCategoryListState
+import com.example.ui.screens.home.components.ThingsCategoryListEvent
 import com.example.ui.screens.home.components.ThingsSearchOverlay
 import com.example.ui.screens.home.components.ThingsSearchScreen
 import com.example.ui.screens.home.components.SearchResultItem
@@ -141,6 +143,24 @@ fun ThingsHomeScreen(viewModel: ThingsViewModel = hiltViewModel()) {
     val textPrimaryColor = if (isDark) ThingsTextPrimaryDark else ThingsTextPrimaryLight
     val textSecondaryColor = if (isDark) ThingsTextSecondaryDark else ThingsTextSecondaryLight
     val dividerColor = if (isDark) ThingsDividerDark else ThingsDividerLight
+
+    val categoryListState by viewModel.categoryListState.collectAsState()
+
+    LaunchedEffect(activeScreen) {
+        viewModel.setScreen(activeScreen)
+    }
+    LaunchedEffect(selectedProject) {
+        viewModel.setProject(selectedProject)
+    }
+    LaunchedEffect(selectedArea) {
+        viewModel.setArea(selectedArea)
+    }
+    LaunchedEffect(inlineExpandedTaskId) {
+        viewModel.setInlineExpandedTaskId(inlineExpandedTaskId)
+    }
+    LaunchedEffect(highlightedTaskId) {
+        viewModel.setHighlightedTaskId(highlightedTaskId)
+    }
 
     Scaffold(
         modifier = Modifier
@@ -295,37 +315,96 @@ fun ThingsHomeScreen(viewModel: ThingsViewModel = hiltViewModel()) {
                         }
                     )
                     else -> ThingsCategoryListPanel(
-                        screen = screen,
-                        project = selectedProject,
-                        tasks = tasks,
-                        allTags = allTags,
-                        selectedTag = selectedTagFilter,
-                        textPrimaryColor = textPrimaryColor,
-                        textSecondaryColor = textSecondaryColor,
-                        dividerColor = dividerColor,
-                        onTagSelect = { viewModel.selectTag(it) },
-                        onTaskToggle = { viewModel.toggleTaskCompletion(it) },
-                        onTaskClick = { editTask ->
-                            inlineExpandedTaskId = editTask.item.id
-                        },
-                        projects = projects,
-                        viewModel = viewModel,
-                        inlineExpandedTaskId = inlineExpandedTaskId,
-                        onInlineExpandedTaskIdChange = { inlineExpandedTaskId = it },
-                        area = selectedArea,
-                        onProjectClick = { proj ->
-                            selectedProject = proj
-                            activeScreen = ActiveScreen.PROJECT_DETAIL
-                        },
-                        // [ИЗМЕНЕНИЕ]: Передача ID подсвечиваемой задачи
-                        highlightedTaskId = highlightedTaskId,
-                        // [ИЗМЕНЕНИЕ]: Передача обработчика свайпа вниз для открытия поиска
-                        onSearchClick = { isSearchOverlayActive = true },
-                        onBack = {
-                            activeScreen = ActiveScreen.HOME
-                            selectedProject = null
-                            selectedArea = null
-                            viewModel.selectTag(null)
+                        state = categoryListState.copy(
+                            textPrimaryColor = textPrimaryColor,
+                            textSecondaryColor = textSecondaryColor,
+                            dividerColor = dividerColor
+                        ),
+                        onEvent = { event ->
+                            when (event) {
+                                is ThingsCategoryListEvent.SelectTag -> {
+                                    viewModel.selectTag(event.tag)
+                                }
+                                is ThingsCategoryListEvent.ToggleTask -> {
+                                    viewModel.toggleTaskCompletion(event.task)
+                                }
+                                is ThingsCategoryListEvent.ClickTask -> {
+                                    inlineExpandedTaskId = event.task.item.id
+                                }
+                                is ThingsCategoryListEvent.ClickProject -> {
+                                    selectedProject = event.project
+                                    activeScreen = ActiveScreen.PROJECT_DETAIL
+                                }
+                                is ThingsCategoryListEvent.ChangeInlineExpandedTaskId -> {
+                                    inlineExpandedTaskId = event.taskId
+                                }
+                                ThingsCategoryListEvent.ClickSearch -> {
+                                    isSearchOverlayActive = true
+                                }
+                                ThingsCategoryListEvent.ClickBack -> {
+                                    activeScreen = ActiveScreen.HOME
+                                    selectedProject = null
+                                    selectedArea = null
+                                    viewModel.selectTag(null)
+                                }
+                                is ThingsCategoryListEvent.CreateTag -> {
+                                    viewModel.insertTag(event.title, event.parentId)
+                                }
+                                is ThingsCategoryListEvent.DeleteTag -> {
+                                    viewModel.deleteTag(event.tag)
+                                }
+                                is ThingsCategoryListEvent.UpdateTag -> {
+                                    viewModel.updateTag(event.tag)
+                                }
+                                is ThingsCategoryListEvent.UpdateTagsOrder -> {
+                                    viewModel.updateTagsOrder(event.tags)
+                                }
+                                is ThingsCategoryListEvent.SaveTask -> {
+                                    viewModel.updateTask(
+                                        task = event.taskWrapper.item,
+                                        checklist = event.checklist,
+                                        section = event.section,
+                                        title = event.title,
+                                        notes = event.notes,
+                                        isTonight = event.isTonight,
+                                        startDate = event.startDate,
+                                        dueDate = event.dueDate,
+                                        tags = event.tags,
+                                        projectId = event.projectId,
+                                        priority = event.priority
+                                    )
+                                }
+                                is ThingsCategoryListEvent.DeleteTask -> {
+                                    viewModel.deleteTask(event.taskWrapper)
+                                }
+                                is ThingsCategoryListEvent.DuplicateTask -> {
+                                    viewModel.duplicateTask(event.taskWrapper)
+                                }
+                                is ThingsCategoryListEvent.MoveTask -> {
+                                    val updatedTask = if (event.moveToInbox) {
+                                        event.taskWrapper.item.copy(
+                                            projectId = null,
+                                            areaId = null,
+                                            start = 0,
+                                            startDate = null,
+                                            dueDate = null,
+                                            modificationDate = System.currentTimeMillis()
+                                        )
+                                    } else {
+                                        val newStart = if (event.taskWrapper.item.start == 0 && event.projectId != null) 2 else event.taskWrapper.item.start
+                                        event.taskWrapper.item.copy(
+                                            projectId = event.projectId,
+                                            areaId = event.areaId,
+                                            start = newStart,
+                                            modificationDate = System.currentTimeMillis()
+                                        )
+                                    }
+                                    viewModel.updateTask(updatedTask, event.taskWrapper.checklist)
+                                }
+                                is ThingsCategoryListEvent.ReorderTasks -> {
+                                    viewModel.updateTasks(event.items)
+                                }
+                            }
                         }
                     )
                 }

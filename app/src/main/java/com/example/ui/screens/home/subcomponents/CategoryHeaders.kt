@@ -1,0 +1,327 @@
+package com.example.ui.screens.home.subcomponents
+
+import androidx.compose.foundation.background
+import androidx.compose.foundation.layout.*
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.*
+import androidx.compose.material.icons.outlined.*
+import androidx.compose.material3.*
+import androidx.compose.runtime.Composable
+import androidx.compose.ui.Alignment
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.ui.text.TextStyle
+import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
+import com.example.data.model.Area
+import com.example.data.model.Item
+import com.example.data.model.ItemWithChecklist
+import com.example.ui.components.ProjectProgressArc
+import com.example.ui.screens.home.ActiveScreen
+import com.example.ui.theme.*
+
+/**
+ * Компонент основного заголовка категории (Inbox, Today, Upcoming и т.д.).
+ */
+@Composable
+fun MainCategoryHeader(
+    screen: ActiveScreen,
+    project: Item?,
+    tasks: List<ItemWithChecklist>,
+    area: Area?,
+    scaleFactor: Float,
+    textPrimaryColor: Color,
+    globalDimAlpha: Float,
+    modifier: Modifier = Modifier
+) {
+    val headerEmojiFontSize = MaterialTheme.typography.displayMedium.fontSize
+    val headerTitleFontSize = MaterialTheme.typography.displayLarge.fontSize
+
+    Row(
+        modifier = modifier
+            .fillMaxWidth()
+            .padding(top = MaterialTheme.dimens.mainHeaderPaddingTop, bottom = MaterialTheme.dimens.mainHeaderPaddingBottom)
+            .graphicsLayer { alpha = globalDimAlpha },
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        when (screen) {
+            ActiveScreen.TODAY -> {
+                Text(
+                    text = "⭐",
+                    fontSize = headerEmojiFontSize,
+                    modifier = Modifier.padding(end = 12.dp)
+                )
+                Text(
+                    text = "Today",
+                    style = TextStyle(
+                        fontSize = headerTitleFontSize,
+                        fontWeight = FontWeight.Bold,
+                        color = textPrimaryColor
+                    )
+                )
+            }
+            ActiveScreen.INBOX -> {
+                Icon(
+                    imageVector = Icons.Outlined.Inbox,
+                    contentDescription = null,
+                    tint = Color(0xFF1B80FA),
+                    modifier = Modifier.size((32 * scaleFactor).dp).padding(end = 10.dp)
+                )
+                Text(
+                    text = "Inbox",
+                    style = TextStyle(
+                        fontSize = headerTitleFontSize,
+                        fontWeight = FontWeight.Bold,
+                        color = textPrimaryColor
+                    )
+                )
+            }
+            ActiveScreen.UPCOMING -> {
+                Icon(
+                    imageVector = Icons.Outlined.CalendarToday,
+                    contentDescription = null,
+                    tint = Color(0xFFF35F50),
+                    modifier = Modifier.size((32 * scaleFactor).dp).padding(end = 10.dp)
+                )
+                Text(
+                    text = "Upcoming",
+                    style = TextStyle(
+                        fontSize = headerTitleFontSize,
+                        fontWeight = FontWeight.Bold,
+                        color = textPrimaryColor
+                    )
+                )
+            }
+            ActiveScreen.ANYTIME -> {
+                Icon(
+                    imageVector = Icons.Outlined.Archive,
+                    contentDescription = null,
+                    tint = Color(0xFF2EB7CD),
+                    modifier = Modifier.size((32 * scaleFactor).dp).padding(end = 10.dp)
+                )
+                Text(
+                    text = "Anytime",
+                    style = TextStyle(
+                        fontSize = headerTitleFontSize,
+                        fontWeight = FontWeight.Bold,
+                        color = textPrimaryColor
+                    )
+                )
+            }
+            ActiveScreen.SOMEDAY -> {
+                Icon(
+                    imageVector = Icons.Outlined.Folder,
+                    contentDescription = null,
+                    tint = Color(0xFF8F93A3),
+                    modifier = Modifier.size((32 * scaleFactor).dp).padding(end = 10.dp)
+                )
+                Text(
+                    text = "Someday",
+                    style = TextStyle(
+                        fontSize = headerTitleFontSize,
+                        fontWeight = FontWeight.Bold,
+                        color = textPrimaryColor
+                    )
+                )
+            }
+            ActiveScreen.LOGBOOK -> {
+                Icon(
+                    imageVector = Icons.Outlined.AssignmentTurnedIn,
+                    contentDescription = null,
+                    tint = Color(0xFF2EC275),
+                    modifier = Modifier.size((32 * scaleFactor).dp).padding(end = 10.dp)
+                )
+                Text(
+                    text = "Logbook",
+                    style = TextStyle(
+                        fontSize = headerTitleFontSize,
+                        fontWeight = FontWeight.Bold,
+                        color = textPrimaryColor
+                    )
+                )
+            }
+            ActiveScreen.PROJECT_DETAIL -> {
+                val completedCount = tasks.count { it.item.projectId == project?.id && it.item.isCompleted }
+                val totalCount = tasks.count { it.item.projectId == project?.id }
+                ProjectProgressArc(
+                    completed = completedCount,
+                    total = totalCount,
+                    modifier = Modifier.size((26 * scaleFactor).dp)
+                )
+                Spacer(modifier = Modifier.width(12.dp))
+                Text(
+                    text = project?.name ?: "Project",
+                    style = TextStyle(
+                        fontSize = headerTitleFontSize,
+                        fontWeight = FontWeight.Bold,
+                        color = textPrimaryColor
+                    )
+                )
+            }
+            ActiveScreen.AREA_DETAIL -> {
+                Icon(
+                    imageVector = Icons.Outlined.Layers,
+                    contentDescription = null,
+                    tint = Color(0xFF1B80FA),
+                    modifier = Modifier.size((26 * scaleFactor).dp)
+                )
+                Spacer(modifier = Modifier.width(12.dp))
+                Text(
+                    text = area?.title ?: "Responsibility Area",
+                    style = TextStyle(
+                        fontSize = headerTitleFontSize,
+                        fontWeight = FontWeight.Bold,
+                        color = textPrimaryColor
+                    )
+                )
+            }
+            else -> {}
+        }
+    }
+}
+
+/**
+ * Вспомогательный заголовок для подразделов ("This Evening", "TASKS", "PROJECTS").
+ */
+@Composable
+fun SubCategoryHeader(
+    headerText: String,
+    textPrimaryColor: Color,
+    textSecondaryColor: Color,
+    dividerColor: Color,
+    dimAlpha: Float,
+    modifier: Modifier = Modifier
+) {
+    if (headerText == "projects_heading") {
+        Column(
+            modifier = modifier
+                .fillMaxWidth()
+                .graphicsLayer { alpha = dimAlpha }
+                .padding(top = 22.dp, bottom = 10.dp)
+        ) {
+            Text(
+                text = "PROJECTS",
+                style = TextStyle(
+                    fontSize = 11.sp,
+                    fontWeight = FontWeight.Bold,
+                    color = textSecondaryColor.copy(alpha = 0.5f),
+                    letterSpacing = 1.sp
+                )
+            )
+            Spacer(modifier = Modifier.height(6.dp))
+            Box(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(1.dp)
+                    .background(dividerColor)
+            )
+        }
+    } else if (headerText == "tasks_heading") {
+        Column(
+            modifier = modifier
+                .fillMaxWidth()
+                .graphicsLayer { alpha = dimAlpha }
+                .padding(top = 22.dp, bottom = 10.dp)
+        ) {
+            Text(
+                text = "TASKS",
+                style = TextStyle(
+                    fontSize = 11.sp,
+                    fontWeight = FontWeight.Bold,
+                    color = textSecondaryColor.copy(alpha = 0.5f),
+                    letterSpacing = 1.sp
+                )
+            )
+            Spacer(modifier = Modifier.height(6.dp))
+            Box(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(1.dp)
+                    .background(dividerColor)
+            )
+        }
+    } else {
+        Column(
+            modifier = modifier
+                .graphicsLayer { alpha = dimAlpha }
+        ) {
+            Spacer(modifier = Modifier.height(MaterialTheme.dimens.eveningSectionSpacing))
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(vertical = 6.dp),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Text(
+                    text = "🌙",
+                    fontSize = 18.sp,
+                    modifier = Modifier.padding(end = 8.dp)
+                )
+                Text(
+                    "This Evening",
+                    style = TextStyle(
+                        fontSize = 18.sp,
+                        fontWeight = FontWeight.Bold,
+                        color = textPrimaryColor
+                    )
+                )
+            }
+            Box(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(1.dp)
+                    .background(dividerColor)
+                    .padding(bottom = 6.dp)
+            )
+        }
+    }
+}
+
+/**
+ * Заголовок с датой на экране предстоящих событий (Upcoming). Renders tomorrow, day labels, divider line.
+ */
+@Composable
+fun UpcomingDateHeader(
+    dayOfMonth: String,
+    dayOfWeekLabel: String,
+    textPrimaryColor: Color,
+    textSecondaryColor: Color,
+    dividerColor: Color,
+    modifier: Modifier = Modifier
+) {
+    Row(
+        modifier = modifier
+            .fillMaxWidth()
+            .padding(top = 22.dp, bottom = 10.dp),
+        verticalAlignment = Alignment.Bottom
+    ) {
+        Text(
+            text = dayOfMonth,
+            style = TextStyle(
+                fontSize = 32.sp,
+                fontWeight = FontWeight.Bold,
+                color = textPrimaryColor
+            )
+        )
+        Spacer(modifier = Modifier.width(8.dp))
+        Text(
+            text = dayOfWeekLabel,
+            style = TextStyle(
+                fontSize = 16.sp,
+                fontWeight = FontWeight.Bold,
+                color = textSecondaryColor.copy(alpha = 0.5f)
+            ),
+            modifier = Modifier.padding(bottom = 4.dp)
+        )
+        Spacer(modifier = Modifier.width(12.dp))
+        Box(
+            modifier = Modifier
+                .weight(1f)
+                .height(0.6.dp)
+                .background(dividerColor)
+                .padding(bottom = 4.dp)
+        )
+    }
+}

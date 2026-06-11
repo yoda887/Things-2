@@ -1,11 +1,12 @@
 package com.example.domain.usecase.sync
 
 import com.example.domain.repository.ITaskRepository
+import javax.inject.Inject
 
 /**
  * Сценарий использования (Use Case) для выполнения двусторонней синхронизации с Google Tasks.
  */
-class SyncGoogleTasksUseCase(private val repository: ITaskRepository) {
+class SyncGoogleTasksUseCase @Inject constructor(private val repository: ITaskRepository) {
 
     /**
      * Вызывает метод синхронизации в репозитории с использованием переданного OAuth-токена.

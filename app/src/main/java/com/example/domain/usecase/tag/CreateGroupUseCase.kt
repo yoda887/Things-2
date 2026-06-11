@@ -2,11 +2,12 @@ package com.example.domain.usecase.tag
 
 import com.example.data.model.Tag
 import com.example.domain.repository.ITaskRepository
+import javax.inject.Inject
 
 /**
  * Сценарий использования (Use Case) для создания корневой группы тегов.
  */
-class CreateGroupUseCase(private val repository: ITaskRepository) {
+class CreateGroupUseCase @Inject constructor(private val repository: ITaskRepository) {
 
     /**
      * Создает группу с указанным именем в репозитории.

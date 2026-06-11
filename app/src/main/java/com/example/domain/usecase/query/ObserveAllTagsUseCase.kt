@@ -3,11 +3,12 @@ package com.example.domain.usecase.query
 import com.example.data.model.Tag
 import com.example.domain.repository.ITaskRepository
 import kotlinx.coroutines.flow.Flow
+import javax.inject.Inject
 
 /**
  * Сценарий чтения (Use Case) для наблюдения за всеми тегами в реальном времени.
  */
-class ObserveAllTagsUseCase(private val repository: ITaskRepository) {
+class ObserveAllTagsUseCase @Inject constructor(private val repository: ITaskRepository) {
 
     /**
      * Возвращает реактивный поток всех тегов.

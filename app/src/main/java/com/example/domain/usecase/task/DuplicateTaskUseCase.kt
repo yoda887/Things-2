@@ -4,11 +4,12 @@ import com.example.data.model.ItemWithChecklist
 import com.example.data.model.Tag
 import com.example.domain.repository.ITaskRepository
 import java.util.UUID
+import javax.inject.Inject
 
 /**
  * Сценарий использования (Use Case) для дублирования задачи со всеми свойствами, тегами и чек-листом.
  */
-class DuplicateTaskUseCase(private val repository: ITaskRepository) {
+class DuplicateTaskUseCase @Inject constructor(private val repository: ITaskRepository) {
 
     /**
      * Дублирует задачу, генерирует новые UUID и заново привязывает теги и пункты чек-листа.

@@ -3,11 +3,12 @@ package com.example.domain.usecase.checklist
 import com.example.data.model.ItemWithChecklist
 import com.example.data.model.ChecklistItem
 import com.example.domain.repository.ITaskRepository
+import javax.inject.Inject
 
 /**
  * Сценарий использования (Use Case) для добавления нового пункта в чек-лист конкретной задачи.
  */
-class AddChecklistItemUseCase(private val repository: ITaskRepository) {
+class AddChecklistItemUseCase @Inject constructor(private val repository: ITaskRepository) {
 
     /**
      * Создает пункт чек-листа и обновляет весь чек-лист для переданной задачи.

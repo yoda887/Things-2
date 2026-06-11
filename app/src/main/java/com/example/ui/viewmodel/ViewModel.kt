@@ -11,7 +11,17 @@ import com.example.data.model.ItemWithChecklist
 import com.example.data.model.Tag
 import com.example.data.model.ChecklistItem
 import com.example.data.model.TaskSection
-import com.example.domain.usecase.ThingsUseCases
+import com.example.domain.usecase.TaskUseCases
+import com.example.domain.usecase.TagUseCases
+import com.example.domain.usecase.ProjectUseCases
+import com.example.domain.usecase.AreaUseCases
+import com.example.domain.usecase.SyncUseCases
+import com.example.domain.usecase.ChecklistUseCases
+import com.example.domain.usecase.QueryUseCases
+import com.example.ui.screens.home.ActiveScreen
+import com.example.ui.screens.home.components.ThingsCategoryListState
+import com.example.ui.screens.home.components.computeUpcomingDays
+import com.example.data.model.toStartVal
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
@@ -23,11 +33,16 @@ import kotlinx.coroutines.launch
 
 /**
  * ViewModel для управления состоянием UI приложения Things.
- * Основан на принципах Clean Architecture и делегирует все бизнес-сценарии в [ThingsUseCases].
  */
 @HiltViewModel
 class ThingsViewModel @Inject constructor(
-    private val useCases: ThingsUseCases
+    private val taskUseCases: TaskUseCases,
+    private val tagUseCases: TagUseCases,
+    private val projectUseCases: ProjectUseCases,
+    private val areaUseCases: AreaUseCases,
+    private val syncUseCases: SyncUseCases,
+    private val checklistUseCases: ChecklistUseCases,
+    private val queryUseCases: QueryUseCases
 ) : ViewModel() {
 
     // --- 1. ПЕРЕНОСИМ СОСТОЯНИЯ СИНХРОНИЗАЦИИ ИЗ SYNCHELPER СЮДА ---
@@ -50,17 +65,52 @@ class ThingsViewModel @Inject constructor(
         }
     }
 
-    val tasks: StateFlow<List<ItemWithChecklist>> = useCases.observeAllTasks()
+    val tasks: StateFlow<List<ItemWithChecklist>> = queryUseCases.observeAllTasks()
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
 
-    val projects: StateFlow<List<Item>> = useCases.observeAllProjects()
+    val projects: StateFlow<List<Item>> = queryUseCases.observeAllProjects()
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
 
-    val areas: StateFlow<List<Area>> = useCases.observeAllAreas()
+    val areas: StateFlow<List<Area>> = queryUseCases.observeAllAreas()
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
 
     val searchQuery = MutableStateFlow("")
     val selectedTagFilter = MutableStateFlow<String?>(null)
+
+    private val _currentScreen = MutableStateFlow(ActiveScreen.INBOX)
+    val currentScreen: StateFlow<ActiveScreen> = _currentScreen.asStateFlow()
+
+    private val _currentProject = MutableStateFlow<Item?>(null)
+    val currentProject: StateFlow<Item?> = _currentProject.asStateFlow()
+
+    private val _currentArea = MutableStateFlow<Area?>(null)
+    val currentArea: StateFlow<Area?> = _currentArea.asStateFlow()
+
+    private val _inlineExpandedTaskId = MutableStateFlow<String?>(null)
+    val inlineExpandedTaskId: StateFlow<String?> = _inlineExpandedTaskId.asStateFlow()
+
+    private val _highlightedTaskId = MutableStateFlow<String?>(null)
+    val highlightedTaskId: StateFlow<String?> = _highlightedTaskId.asStateFlow()
+
+    fun setScreen(screen: ActiveScreen) {
+        _currentScreen.value = screen
+    }
+
+    fun setProject(project: Item?) {
+        _currentProject.value = project
+    }
+
+    fun setArea(area: Area?) {
+        _currentArea.value = area
+    }
+
+    fun setInlineExpandedTaskId(taskId: String?) {
+        _inlineExpandedTaskId.value = taskId
+    }
+
+    fun setHighlightedTaskId(taskId: String?) {
+        _highlightedTaskId.value = taskId
+    }
 
     val filteredTasks: StateFlow<List<ItemWithChecklist>> = combine(
         tasks,
@@ -85,34 +135,121 @@ class ThingsViewModel @Inject constructor(
             }.filter { it.isNotBlank() }.toSet()
         }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptySet())
 
-    val allSavedTags: StateFlow<List<String>> = useCases.observeAllTags()
+    val allSavedTags: StateFlow<List<String>> = queryUseCases.observeAllTags()
         .map { tags -> tags.map { it.title } }
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
 
-    val allSavedTagObjects: StateFlow<List<Tag>> = useCases.observeAllTags()
+    val allSavedTagObjects: StateFlow<List<Tag>> = queryUseCases.observeAllTags()
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
+
+    val categoryListState: StateFlow<ThingsCategoryListState> = combine(
+        listOf(
+            currentScreen,
+            currentProject,
+            currentArea,
+            inlineExpandedTaskId,
+            selectedTagFilter,
+            tasks,
+            projects,
+            areas,
+            calendarEvents,
+            allSavedTags,
+            allSavedTagObjects,
+            allTags,
+            highlightedTaskId
+        )
+    ) { array ->
+        val screen = array[0] as ActiveScreen
+        val project = array[1] as? Item
+        val area = array[2] as? Area
+        val expandedTaskId = array[3] as? String
+        val selectedTag = array[4] as? String
+        @Suppress("UNCHECKED_CAST")
+        val taskList = array[5] as List<ItemWithChecklist>
+        @Suppress("UNCHECKED_CAST")
+        val projectList = array[6] as List<Item>
+        @Suppress("UNCHECKED_CAST")
+        val areaList = array[7] as List<Area>
+        @Suppress("UNCHECKED_CAST")
+        val calEvents = array[8] as List<Item>
+        @Suppress("UNCHECKED_CAST")
+        val savedTags = array[9] as List<String>
+        @Suppress("UNCHECKED_CAST")
+        val savedTagObjs = array[10] as List<Tag>
+        @Suppress("UNCHECKED_CAST")
+        val allTagsSet = array[11] as Set<String>
+        val highlighted = array[12] as? String
+
+        val listTasks = taskList.filter { wrapper ->
+            val task = wrapper.item
+            if (task.id == expandedTaskId) {
+                true
+            } else {
+                when (screen) {
+                    ActiveScreen.INBOX -> task.isInbox && !task.isCompleted
+                    ActiveScreen.TODAY -> task.isToday
+                    ActiveScreen.UPCOMING -> task.isUpcoming
+                    ActiveScreen.ANYTIME -> task.isAnytime
+                    ActiveScreen.SOMEDAY -> task.isSomeday
+                    ActiveScreen.LOGBOOK -> task.isCompleted
+                    ActiveScreen.PROJECT_DETAIL -> task.projectId == project?.id && !task.isCompleted
+                    ActiveScreen.AREA_DETAIL -> task.areaId == area?.id && task.type == 0 && !task.isCompleted
+                    else -> false
+                }
+            }
+        }.sortedBy { it.item.sortOrder }
+
+        val displayTasks = if (selectedTag == null) {
+            listTasks
+        } else {
+            listTasks.filter { it.item.tags.contains(selectedTag) || it.item.id == expandedTaskId }
+        }
+
+        val standardToday = displayTasks.filter { !it.item.isTonight }
+        val eveningToday = displayTasks.filter { it.item.isTonight }
+        val upcomingDays = computeUpcomingDays(displayTasks, calEvents)
+
+        ThingsCategoryListState(
+            screen = screen,
+            project = project,
+            area = area,
+            inlineExpandedTaskId = expandedTaskId,
+            selectedTagFilter = selectedTag,
+            allTags = allTagsSet,
+            displayTasks = displayTasks,
+            standardToday = standardToday,
+            eveningToday = eveningToday,
+            upcomingDays = upcomingDays,
+            calendarEvents = calEvents,
+            allSavedTags = savedTags,
+            allSavedTagObjects = savedTagObjs,
+            areas = areaList,
+            projects = projectList,
+            highlightedTaskId = highlighted
+        )
+    }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), ThingsCategoryListState())
 
     fun insertTag(tagTitle: String, parentId: String? = null) {
         viewModelScope.launch {
-            useCases.insertTag(tagTitle, parentId)
+            tagUseCases.insertTag(tagTitle, parentId)
         }
     }
 
     fun createGroup(groupName: String) {
         viewModelScope.launch {
-            useCases.createGroup(groupName)
+            tagUseCases.createGroup(groupName)
         }
     }
 
     fun createTagInGroup(tagName: String, parentId: String?) {
         viewModelScope.launch {
-            useCases.createTagInGroup(tagName, parentId)
+            tagUseCases.createTagInGroup(tagName, parentId)
         }
     }
 
     fun moveTagToGroup(tagId: String, newGroupId: String?) {
         viewModelScope.launch {
-            useCases.moveTagToGroup(tagId, newGroupId)
+            tagUseCases.moveTagToGroup(tagId, newGroupId)
         }
     }
 
@@ -122,7 +259,7 @@ class ThingsViewModel @Inject constructor(
      */
     fun deleteTag(tag: Tag) {
         viewModelScope.launch {
-            useCases.deleteTag(tag)
+            tagUseCases.deleteTag(tag)
         }
     }
 
@@ -132,7 +269,7 @@ class ThingsViewModel @Inject constructor(
      */
     fun updateTag(tag: Tag) {
         viewModelScope.launch {
-            useCases.updateTag(tag)
+            tagUseCases.updateTag(tag)
         }
     }
 
@@ -142,7 +279,7 @@ class ThingsViewModel @Inject constructor(
      */
     fun updateTagsOrder(tags: List<Tag>) {
         viewModelScope.launch {
-            useCases.updateTagsOrder(tags)
+            tagUseCases.updateTagsOrder(tags)
         }
     }
 
@@ -158,7 +295,7 @@ class ThingsViewModel @Inject constructor(
         priority: Int = 0
     ) {
         viewModelScope.launch {
-            useCases.addTask(
+            taskUseCases.addTask(
                 title = title,
                 notes = notes,
                 section = section,
@@ -174,7 +311,7 @@ class ThingsViewModel @Inject constructor(
 
     fun updateChecklistItems(itemId: String, list: List<ChecklistItem>) {
         viewModelScope.launch {
-            useCases.updateChecklistItems(itemId, list)
+            checklistUseCases.updateChecklistItems(itemId, list)
         }
     }
 
@@ -183,7 +320,7 @@ class ThingsViewModel @Inject constructor(
      */
     fun updateTask(item: Item) {
         viewModelScope.launch {
-            useCases.updateTask(item)
+            taskUseCases.updateTask(item)
         }
     }
 
@@ -192,44 +329,78 @@ class ThingsViewModel @Inject constructor(
      */
     fun updateTask(item: Item, checklist: List<ChecklistItem>) {
         viewModelScope.launch {
-            useCases.updateTask(item, checklist)
+            taskUseCases.updateTask(item, checklist)
+        }
+    }
+
+    /**
+     * Сценарий сохранения полной структуры задачи из инлайн-редактора в UI-потоке.
+     * Сюда вынесен маппинг из UI во избежание нарушения чистоты слоев.
+     */
+    fun updateTask(
+        task: Item,
+        checklist: List<ChecklistItem>,
+        section: TaskSection,
+        title: String,
+        notes: String,
+        isTonight: Boolean,
+        startDate: Long?,
+        dueDate: Long?,
+        tags: List<String>,
+        projectId: String?,
+        priority: Int
+    ) {
+        viewModelScope.launch {
+            val updatedTask = task.copy(
+                title = title.ifBlank { "Untitled To-Do" },
+                notes = notes,
+                start = section.toStartVal(),
+                isTonight = isTonight,
+                startDate = startDate,
+                dueDate = dueDate,
+                cachedTags = tags.joinToString(", "),
+                projectId = projectId,
+                priority = priority,
+                modificationDate = System.currentTimeMillis()
+            )
+            taskUseCases.updateTask(updatedTask, checklist)
         }
     }
 
     fun updateTasks(items: List<Item>) {
         viewModelScope.launch {
-            useCases.updateTask(items)
+            taskUseCases.updateTask(items)
         }
     }
 
     fun toggleTaskCompletion(wrapper: ItemWithChecklist) {
         viewModelScope.launch {
-            useCases.toggleTaskCompletion(wrapper)
+            taskUseCases.toggleTaskCompletion(wrapper)
         }
     }
 
     fun toggleChecklistItem(wrapper: ItemWithChecklist, itemId: String) {
         viewModelScope.launch {
-            useCases.toggleChecklistItem(wrapper, itemId)
+            checklistUseCases.toggleChecklistItem(wrapper, itemId)
         }
     }
 
     fun addChecklistItemToTask(wrapper: ItemWithChecklist, title: String) {
         if (title.isBlank()) return
         viewModelScope.launch {
-            useCases.addChecklistItem(wrapper, title)
+            checklistUseCases.addChecklistItem(wrapper, title)
         }
     }
 
     fun deleteChecklistItemFromTask(wrapper: ItemWithChecklist, itemId: String) {
         viewModelScope.launch {
-            useCases.deleteChecklistItem(wrapper, itemId)
+            checklistUseCases.deleteChecklistItem(wrapper, itemId)
         }
     }
 
     fun deleteTask(wrapper: ItemWithChecklist) {
         viewModelScope.launch {
-            useCases.deleteTask(wrapper.item)
+            taskUseCases.deleteTask(wrapper.item)
         }
     }
 
@@ -238,39 +409,39 @@ class ThingsViewModel @Inject constructor(
      */
     fun duplicateTask(wrapper: ItemWithChecklist) {
         viewModelScope.launch {
-            useCases.duplicateTask(wrapper)
+            taskUseCases.duplicateTask(wrapper)
         }
     }
 
     // Сценарии работы с проектами
     fun addProject(name: String, notes: String = "", areaId: String? = null) {
         viewModelScope.launch {
-            useCases.addProject(name, notes, areaId)
+            projectUseCases.addProject(name, notes, areaId)
         }
     }
 
     fun updateProject(project: Item) {
         viewModelScope.launch {
-            useCases.updateProject(project)
+            projectUseCases.updateProject(project)
         }
     }
 
     fun deleteProject(project: Item) {
         viewModelScope.launch {
-            useCases.deleteProject(project)
+            projectUseCases.deleteProject(project)
         }
     }
 
     // Сценарии работы со сферами
     fun addArea(title: String) {
         viewModelScope.launch {
-            useCases.addArea(title)
+            areaUseCases.addArea(title)
         }
     }
 
     fun deleteArea(area: Area) {
         viewModelScope.launch {
-            useCases.deleteArea(area)
+            areaUseCases.deleteArea(area)
         }
     }
 
@@ -281,7 +452,7 @@ class ThingsViewModel @Inject constructor(
 
     fun syncLocalCalendar() {
         viewModelScope.launch {
-            val result = useCases.fetchLocalCalendarEvents()
+            val result = syncUseCases.fetchLocalCalendarEvents()
             result.onSuccess { events ->
                 _calendarEvents.value = events
             }.onFailure {
@@ -296,7 +467,7 @@ class ThingsViewModel @Inject constructor(
             _syncError.value = null
             
             // Вызываем юзкейс, передавая токен напрямую
-            val result = useCases.syncGoogleTasks(googleAccessToken.value)
+            val result = syncUseCases.syncGoogleTasks(googleAccessToken.value)
             
             result.onFailure { error ->
                 _syncError.value = error.localizedMessage ?: "Unknown sync error"

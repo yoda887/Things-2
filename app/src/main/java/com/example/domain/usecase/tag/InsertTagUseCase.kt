@@ -2,11 +2,12 @@ package com.example.domain.usecase.tag
 
 import com.example.data.model.Tag
 import com.example.domain.repository.ITaskRepository
+import javax.inject.Inject
 
 /**
  * Сценарий использования (Use Case) для вставки нового тега по названию.
  */
-class InsertTagUseCase(private val repository: ITaskRepository) {
+class InsertTagUseCase @Inject constructor(private val repository: ITaskRepository) {
 
     /**
      * Обрезает пробелы и добавляет тег, если имя не пустое.
