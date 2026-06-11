@@ -159,29 +159,7 @@ fun Modifier.taskDragAndDrop(
                                 
                                 val tomorrowStart = currentUpcomingDays.firstOrNull()?.dateMillis ?: 0L
                                 
-                                val isCurrentlyInHoveredDay = if (movedItem.item.startDate == null) {
-                                    timestamp == tomorrowStart
-                                } else {
-                                    movedItem.item.startDate!! in timestamp..(timestamp + 24 * 3600 * 1000 - 1)
-                                }
-                                
-                                var targetTimestamp = if (isCurrentlyInHoveredDay && draggedItemInfo.offset > hoveredItem.offset) {
-                                    timestamp - 24 * 3600 * 1000L
-                                } else {
-                                    timestamp
-                                }
-                                
-                                if (targetTimestamp < tomorrowStart) {
-                                    targetTimestamp = tomorrowStart
-                                }
-                                
-                                val cal = Calendar.getInstance().apply {
-                                    timeInMillis = targetTimestamp
-                                    set(Calendar.HOUR_OF_DAY, 12)
-                                    set(Calendar.MINUTE, 0)
-                                }
-                                val newStartDate = cal.timeInMillis
-                                
+                                // Начало дня для текущей перетаскиваемой задачи
                                 val oldStartDateDayStart = if (movedItem.item.startDate == null) {
                                     tomorrowStart
                                 } else {
@@ -193,9 +171,48 @@ fun Modifier.taskDragAndDrop(
                                         set(Calendar.MILLISECOND, 0)
                                     }.timeInMillis
                                 }
+
+                                val headerTop = hoveredItem.offset.toFloat()
+                                val headerBottom = (hoveredItem.offset + hoveredItem.size).toFloat()
+
+                                // Четко определяем целевую дату в зависимости от того, откуда пришел элемент относительно заголовка
+                                val targetTimestamp: Long = when {
+                                    oldStartDateDayStart == timestamp -> {
+                                        // Задача уже относится к текущему заголовку.
+                                        // Если переместили указатель выше верхней границы заголовка — переносим на предыдущий день.
+                                        if (dragCenterY < headerTop) {
+                                            timestamp - 24 * 3600 * 1000L
+                                        } else {
+                                            timestamp
+                                        }
+                                    }
+                                    oldStartDateDayStart < timestamp -> {
+                                        // Задача из более раннего дня (была выше заголовка).
+                                        // Переносим в этот день только если указатель зашел ниже верхней границы заголовка.
+                                        if (dragCenterY > headerTop) {
+                                            timestamp
+                                        } else {
+                                            oldStartDateDayStart
+                                        }
+                                    }
+                                    else -> {
+                                        // Задача из более позднего дня (была ниже заголовка).
+                                        // Переносим на предыдущий день, если утащили заголовок полностью вверх.
+                                        if (dragCenterY < headerTop) {
+                                            timestamp - 24 * 3600 * 1000L
+                                        } else if (dragCenterY <= headerBottom) {
+                                            // Если остановились прямо на заголовке — переносим в текущий день.
+                                            timestamp
+                                        } else {
+                                            oldStartDateDayStart
+                                        }
+                                    }
+                                }
+
+                                val clippedTargetTimestamp = if (targetTimestamp < tomorrowStart) tomorrowStart else targetTimestamp
                                 
                                 val targetDayStart = Calendar.getInstance().apply {
-                                    timeInMillis = targetTimestamp
+                                    timeInMillis = clippedTargetTimestamp
                                     set(Calendar.HOUR_OF_DAY, 0)
                                     set(Calendar.MINUTE, 0)
                                     set(Calendar.SECOND, 0)
@@ -203,6 +220,13 @@ fun Modifier.taskDragAndDrop(
                                 }.timeInMillis
                                 
                                 if (oldStartDateDayStart != targetDayStart) {
+                                    val cal = Calendar.getInstance().apply {
+                                        timeInMillis = clippedTargetTimestamp
+                                        set(Calendar.HOUR_OF_DAY, 12)
+                                        set(Calendar.MINUTE, 0)
+                                    }
+                                    val newStartDate = cal.timeInMillis
+
                                     movedItem = ItemWithChecklist(
                                         item = movedItem.item.copy(startDate = newStartDate),
                                         checklist = movedItem.checklist
