@@ -26,7 +26,8 @@ import com.example.data.model.TaskSection
 import com.example.data.model.ChecklistItem
 import com.example.ui.screens.home.ActiveScreen
 import com.example.ui.screens.home.components.ThingsCategoryListEvent
-import com.example.ui.screens.home.components.TaskDragDropState
+import com.example.ui.components.dragdrop.GenericDragDropState
+import com.example.ui.components.dragdrop.draggedTaskId
 import com.example.ui.screens.home.components.taskDragAndDrop
 import com.example.ui.screens.home.components.UpcomingDay
 import com.example.ui.screens.home.inlineeditor.ThingsTaskInlineEditor
@@ -44,7 +45,7 @@ private const val DELETE_ANIMATION_DELAY_MS = 300L
 @Composable
 fun AnimatedTaskItem(
     taskWrapper: ItemWithChecklist,
-    dragDropState: TaskDragDropState,
+    dragDropState: GenericDragDropState,
     inlineExpandedTaskId: String?,
     textPrimaryColor: Color,
     textSecondaryColor: Color,
@@ -174,7 +175,6 @@ fun AnimatedTaskItem(
                 dragModifier = Modifier.taskDragAndDrop(
                     state = dragDropState,
                     taskWrapper = taskWrapper,
-                    lazyListState = lazyListState,
                     screen = screen,
                     upcomingDays = upcomingDays,
                     localTasksList = localTasksList,

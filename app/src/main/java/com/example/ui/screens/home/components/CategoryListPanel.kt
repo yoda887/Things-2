@@ -56,6 +56,8 @@ import com.example.data.model.TaskSection
 import com.example.data.model.Area
 import com.example.data.model.Tag
 import com.example.ui.components.ProjectProgressArc
+import com.example.ui.components.dragdrop.rememberGenericDragDropState
+import com.example.ui.components.dragdrop.draggedTaskId
 import com.example.ui.screens.home.ActiveScreen
 import com.example.ui.screens.home.subcomponents.TaskItemRow
 import com.example.ui.screens.home.inlineeditor.ThingsTaskInlineEditor
@@ -113,7 +115,8 @@ fun ThingsCategoryListPanel(
     val scaleFactor = if (isLargeScreen) 1.25f else 1.0f
 
     val lazyListState = rememberLazyListState()
-    val dragDropState = rememberTaskDragDropState()
+    // Используем новое универсальное состояние жестов перетаскивания вместо старого TaskDragDropState
+    val dragDropState = rememberGenericDragDropState(lazyListState)
     
     var localTasksList by remember(state.displayTasks) { mutableStateOf(state.displayTasks) }
 
