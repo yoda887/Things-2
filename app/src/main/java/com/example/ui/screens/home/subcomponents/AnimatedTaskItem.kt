@@ -83,7 +83,8 @@ fun AnimatedTaskItem(
         label = "dragElev_${task.id}"
     )
     val zIndexValToUse = if (isDragTask) 100f else (if (isExpanded) 1f else 0f)
-    val translationYVal = if (isDragTask) dragDropState.dragAccumulatedOffset else 0f
+    // Извлечение значения из Animatable
+    val translationYVal = if (isDragTask) dragDropState.dragAccumulatedOffset.value else 0f
 
     val containerBgColor = if (isExpanded || isDragTask) MaterialTheme.colorScheme.background else Color.Transparent
 
