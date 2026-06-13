@@ -146,8 +146,9 @@ fun Modifier.taskDragAndDrop(
 
         if (oldDayStart == targetDayStart) return  // Нет смены даты; ничего менять не нужно.
 
-        // Направление движения пальца: истинно, если тащим вниз, ложно, если тащим вверх.
-        val movingDown = hoveredItem.offset > draggedItemInfo.offset
+        // Направление движения: истинно, если тащим вниз (в более поздний день), 
+        // ложно, если тащим вверх (в более ранний день).
+        val movingDown = targetDayStart > oldDayStart
 
         // Умный расчет позиции вставки (insertAt) в зависимости от направления перетаскивания:
         // - При движении вниз задача добавляется в самое начало целевого дня. Это соответствует физическому
@@ -158,7 +159,10 @@ fun Modifier.taskDragAndDrop(
             list.indexOfFirst { it.item.startDate != null && it.item.startDate!! >= targetDayStart }
                 .takeIf { it != -1 } ?: list.size
         } else {
-            val nextDayStart = targetDayStart + MS_PER_DAY
+            val nextDayStart = Calendar.getInstance().apply {
+                timeInMillis = targetDayStart
+                add(Calendar.DAY_OF_YEAR, 1)
+            }.timeInMillis
             val nextDayFirst = list.indexOfFirst { it.item.startDate != null && it.item.startDate!! >= nextDayStart }
             if (nextDayFirst != -1) nextDayFirst else list.size
         }
