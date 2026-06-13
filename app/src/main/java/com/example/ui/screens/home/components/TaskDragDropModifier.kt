@@ -146,9 +146,14 @@ fun Modifier.taskDragAndDrop(
 
         if (oldDayStart == targetDayStart) return  // Нет смены даты; ничего менять не нужно.
 
+        // Направление движения пальца: истинно, если тащим вниз, ложно, если тащим вверх.
         val movingDown = hoveredItem.offset > draggedItemInfo.offset
 
-        // Умная позиция вставки (в начало при движении вниз, в конец при движении вверх)
+        // Умный расчет позиции вставки (insertAt) в зависимости от направления перетаскивания:
+        // - При движении вниз задача добавляется в самое начало целевого дня. Это соответствует физическому
+        //   интуитивному поведению, когда задача «затыкает» день сверху при перетягивании на заголовок.
+        // - При движении вверх задача помещается в самый конец целевого дня. Таким образом, мы исключаем
+        //   хаотичные скачки («прыжки» элементов) и аккуратно выстраиваем логику следования элементов.
         val insertAt = if (movingDown) {
             list.indexOfFirst { it.item.startDate != null && it.item.startDate!! >= targetDayStart }
                 .takeIf { it != -1 } ?: list.size
@@ -158,7 +163,8 @@ fun Modifier.taskDragAndDrop(
             if (nextDayFirst != -1) nextDayFirst else list.size
         }
 
-        // Копируем точное время соседа для предотвращения "прыжков" времени
+        // Стратегия копирования точного времени соседа (referenceTask) для предотвращения «прыжков» во времени.
+        // Берем соседа в соответствии со стороной приземления, чтобы перенять его часы/минуты.
         val referenceTask = if (movingDown) list.getOrNull(insertAt) else list.getOrNull(insertAt - 1)
         val finalStartDate = if (referenceTask != null && referenceTask.item.startDate?.dayStart() == targetDayStart) {
             referenceTask.item.startDate
@@ -172,8 +178,11 @@ fun Modifier.taskDragAndDrop(
             }.timeInMillis
         }
 
-        // Выдаем временный экстремальный sortOrder.
-        // Это запретит Compose перебрасывать задачу в начало списка при равном startDate.
+        // Присвоение временного экстремального значения sortOrder:
+        // - При движении вниз выдаем значение -1, гарантируя, что задача превентивно встанет наверх.
+        // - При движении вверх выдаем значение 99999, позиционируя ее в конец целевого блока дня.
+        // Это запретит Jetpack Compose перебрасывать задачу в начало списка при равном значении startDate
+        // и согласует логическую позицию с физическим положением пальца на экране.
         moved = moved.copyWithStartDate(finalStartDate)
         moved = moved.copy(item = moved.item.copy(sortOrder = if (movingDown) -1 else 99999))
 
