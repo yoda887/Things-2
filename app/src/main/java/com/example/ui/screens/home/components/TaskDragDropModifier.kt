@@ -12,6 +12,7 @@ import com.example.ui.components.dragdrop.reorderableItem
 import com.example.ui.components.dragdrop.detectItemSpacing
 import kotlinx.coroutines.launch
 import java.util.Calendar
+import android.util.Log
 
 private const val MS_PER_DAY = 24 * 3600 * 1000L
 private const val MOVE_THRESHOLD = 0.5f
@@ -191,6 +192,10 @@ fun Modifier.taskDragAndDrop(
         moved = moved.copy(item = moved.item.copy(sortOrder = if (movingDown) -1 else 99999))
 
         list.add(insertAt, moved)
+        Log.d(
+    "DRAG_TEST",
+    "HEADER DROP old=${oldDayStart.dayStart()} target=${targetDayStart.dayStart()}"
+)
         currentOnLocalTasksListChange(list)
 
         // Точный расчет физического смещения (компенсация высоты пропущенных элементов)
@@ -205,15 +210,19 @@ fun Modifier.taskDragAndDrop(
             val isBypassed = when {
                 key.startsWith("hdr_") -> {
                     val ts = key.substringAfter("hdr_").toLongOrNull() ?: 0L
-                    if (movingDown) ts <= targetDayStart else ts > targetDayStart
+                    if (movingDown) (ts > oldDayStart && ts <= targetDayStart)
+                    else (ts > targetDayStart && ts < oldDayStart)
                 }
                 key.startsWith("ev_") -> {
                     val ts = key.substringAfterLast("_").toLongOrNull() ?: 0L
-                    if (movingDown) ts <= targetDayStart else ts > targetDayStart
+                    if (movingDown) (ts > oldDayStart && ts <= targetDayStart)
+                    else (ts > targetDayStart && ts < oldDayStart)
                 }
                 else -> { // Это другая задача
                     val idx = list.indexOfFirst { it.item.id == key }
-                    if (movingDown) (idx != -1 && idx < insertAt) else (idx != -1 && idx > insertAt)
+                    if (idx == -1) false
+                    else if (movingDown) idx in fromIndex until insertAt
+                    else idx in insertAt until fromIndex
                 }
             }
 
@@ -227,7 +236,7 @@ fun Modifier.taskDragAndDrop(
         }
 
         coroutineScope.launch {
-            state.adjustOffset(-distanceShifted)
+            //state.adjustOffset(-distanceShifted)
         }
     }
 
@@ -289,7 +298,11 @@ fun Modifier.taskDragAndDrop(
                 val overlapBottom = minOf(dragBottom, (item.offset + item.size).toFloat())
                 val overlapAmount = overlapBottom - overlapTop
 
-                overlapAmount > (item.size * MOVE_THRESHOLD)
+                if (key.startsWith("hdr_")) {
+                    overlapAmount > (item.size * 0.5f)
+                } else {
+                    dragCenterY >= item.offset.toFloat() && dragCenterY <= (item.offset + item.size).toFloat()
+                }
             }
             .maxByOrNull { candidate ->
                 val overlapTop = maxOf(dragTop, candidate.offset.toFloat())
