@@ -1,6 +1,0 @@
-{
-  "name": "Things",
-  "description": "A elegant minimalist Things iOS clone for complete task management with Google Tasks sync and tag filters.",
-  "requestFramePermissions": [],
-  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
-}

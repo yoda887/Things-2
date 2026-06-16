@@ -1,1 +1,5 @@
 /build
+
+# Игнорирование файлов сборки Gradle и ProGuard внутри модуля app
+build.gradle.kts
+proguard-rules.pro

@@ -108,6 +108,106 @@ fun detectItemSpacing(
     return 0f
 }
 
+private const val MOVE_THRESHOLD = 0.5f
+
+/**
+ * Универсальный модификатор для реализации Drag-and-Drop, абстрагированный от бизнес-логики.
+ * Отвечает ТОЛЬКО за жесты, математику пересечений и компенсацию визуального смещения (прыжков).
+ * 
+ * @param state Общее состояние перетаскивания списка [GenericDragDropState]
+ * @param key Уникальный ключ текущего перетаскиваемого элемента
+ * @param onMoveIfNecessary Функция обратного вызова, принимающая ключ тащимого элемента и ключ цели,
+ *                          на которую он наехал более чем на 50%. Возвращает true, если бизнес-логика
+ *                          разрешила перемещение и перестроила список.
+ * @param onDragEnd Функция обратного вызова при успешном завершении жеста.
+ */
+fun Modifier.universalDragAndDrop(
+    state: GenericDragDropState,
+    key: Any,
+    onMoveIfNecessary: (draggedKey: Any, targetKey: Any) -> Boolean,
+    onDragEnd: () -> Unit
+): Modifier = composed {
+    val coroutineScope = rememberCoroutineScope()
+    val lazyListState = state.lazyListState
+
+    val currentOnMoveIfNecessary by rememberUpdatedState(onMoveIfNecessary)
+    val currentOnDragEnd by rememberUpdatedState(onDragEnd)
+
+    /**
+     * Поиск элемента списка, с которым необходимо произвести обмен на основании геометрии.
+     */
+    fun checkSwap(
+        draggedKey: Any,
+        visibleItems: List<LazyListItemInfo>,
+        currentOffset: Float
+    ): LazyListItemInfo? {
+        val draggedItem = visibleItems.firstOrNull { it.key == draggedKey } ?: return null
+        
+        val dragTop = draggedItem.offset + currentOffset
+        val dragBottom = dragTop + draggedItem.size
+
+        return visibleItems.firstOrNull { target ->
+            if (target.key == draggedKey) return@firstOrNull false
+
+            val overlapTop = maxOf(dragTop, target.offset.toFloat())
+            val overlapBottom = minOf(dragBottom, (target.offset + target.size).toFloat())
+            val overlapAmount = overlapBottom - overlapTop
+
+            overlapAmount > (target.size * MOVE_THRESHOLD) // Универсальное правило 50%
+        }
+    }
+
+    /**
+     * Инициализирует проверку пересечения и последующий вызов бизнес-логики.
+     */
+    fun performIntersectionCheck() {
+        val visibleItems = lazyListState.layoutInfo.visibleItemsInfo
+        val targetItem = checkSwap(key, visibleItems, state.dragAccumulatedOffset.value)
+
+        if (targetItem != null) {
+            val draggedItem = visibleItems.firstOrNull { it.key == key } ?: return
+            
+            val spacing = detectItemSpacing(visibleItems)
+            val distanceToShift = if (targetItem.index > draggedItem.index) {
+                -(targetItem.size + spacing)
+            } else {
+                (targetItem.size + spacing)
+            }
+
+            // Запрашиваем бизнес-логику внешнего уровня
+            val swapAccepted = currentOnMoveIfNecessary(key, targetItem.key)
+
+            // Если список перестроился, компенсируем прыжок
+            if (swapAccepted) {
+                coroutineScope.launch {
+                    state.adjustOffset(distanceToShift)
+                }
+            }
+        }
+    }
+
+    this.reorderableItem(
+        state = state,
+        key = key,
+        onDragStart = {
+            // Резерв для обработки старта перетаскивания
+        },
+        onDrag = { _ ->
+            performIntersectionCheck()
+        },
+        onDragged = {
+            performIntersectionCheck()
+        },
+        onDragEnd = { runWithAnimation ->
+            currentOnDragEnd()
+            runWithAnimation()
+        },
+        onDragCancel = { runWithAnimation ->
+            runWithAnimation()
+        }
+    )
+}
+
 /**
  * Общий модификатор для перетаскивания элементов списка.
  * Управляет жестами долгого нажатия, физического драга по оси Y и умного авто-скролла.

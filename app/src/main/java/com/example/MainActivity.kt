@@ -16,8 +16,8 @@ import dagger.hilt.android.AndroidEntryPoint
  * Главная Activity приложения, которая служит контейнером для Jetpack Compose интерфейса.
  * Подключается к Hilt для получения зависимостей.
  */
-@AndroidEntryPoint(ComponentActivity::class)
-class MainActivity : Hilt_MainActivity() {
+@AndroidEntryPoint
+class MainActivity : ComponentActivity() {
 
   override fun onCreate(savedInstanceState: Bundle?) {
     super.onCreate(savedInstanceState)
