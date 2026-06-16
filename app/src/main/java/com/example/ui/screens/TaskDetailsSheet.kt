@@ -447,7 +447,7 @@ fun ThingsTaskDetailsSheet(
                     DropdownMenu(
                         expanded = showProjectDropdown,
                         onDismissRequest = { showProjectDropdown = false },
-                        containerColor = sheetBackground
+                        modifier = Modifier.background(sheetBackground)
                     ) {
                         DropdownMenuItem(
                             text = { Text("No Project", color = textPrimaryColor) },

@@ -52,6 +52,7 @@ fun AnimatedTaskItem(
     dividerColor: Color,
     highlightedTaskId: String?,
     projects: List<Item>,
+    areas: List<com.example.data.model.Area> = emptyList(),
     allSavedTags: List<String>,
     allSavedTagObjects: List<Tag>,
     deletedTaskIds: List<String>,
@@ -169,6 +170,7 @@ fun AnimatedTaskItem(
                     onEvent(ThingsCategoryListEvent.ChangeInlineExpandedTaskId(task.id))
                 },
                 projects = projects,
+                areas = areas,
                 showTodayIndicator = screen == ActiveScreen.TODAY && !task.isTonight,
                 isDragging = false,
                 dragOffsetY = 0f,
@@ -184,7 +186,8 @@ fun AnimatedTaskItem(
                         onEvent(ThingsCategoryListEvent.ReorderTasks(items))
                     }
                 ),
-                isHighlighted = task.id == highlightedTaskId
+                isHighlighted = task.id == highlightedTaskId,
+                screen = screen
             )
         }
     }

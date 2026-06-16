@@ -26,7 +26,7 @@ object DatabaseModule {
     @Singleton
     fun provideDatabase(
         @ApplicationContext context: Context,
-        localDataSourceProvider: Provider<LocalTaskDataSource>,
+        localDataSourceProvider: javax.inject.Provider<LocalTaskDataSource>,
         @ApplicationScope scope: CoroutineScope
     ): AppDatabase {
         return Room.databaseBuilder(

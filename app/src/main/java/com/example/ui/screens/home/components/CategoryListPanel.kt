@@ -303,6 +303,7 @@ fun ThingsCategoryListPanel(
                                 dividerColor = dividerColor,
                                 highlightedTaskId = highlightedTaskId,
                                 projects = projects,
+                                areas = areasState,
                                 allSavedTags = allSavedTags,
                                 allSavedTagObjects = allSavedTagObjects,
                                 deletedTaskIds = deletedTaskIds,

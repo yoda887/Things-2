@@ -323,6 +323,7 @@ fun ThingsSearchOverlay(
                                         textSecondary = textSecondary,
                                         allTasks = allTasks,
                                         projects = projects,
+                                        areas = areas,
                                         onTaskClick = onTaskClick,
                                         onProjectClick = onProjectClick,
                                         onAreaClick = onAreaClick,
@@ -482,6 +483,7 @@ fun ThingsSearchOverlay(
                                         textSecondary = textSecondary,
                                         allTasks = allTasks,
                                         projects = projects,
+                                        areas = areas,
                                         onTaskClick = onTaskClick,
                                         onProjectClick = onProjectClick,
                                         onAreaClick = onAreaClick,
@@ -599,6 +601,7 @@ fun SearchResultRow(
     textSecondary: Color,
     allTasks: List<ItemWithChecklist>,
     projects: List<Item>,
+    areas: List<Area> = emptyList(),
     onTaskClick: (ItemWithChecklist) -> Unit,
     onProjectClick: (Item) -> Unit,
     onAreaClick: (Area) -> Unit,
@@ -615,6 +618,7 @@ fun SearchResultRow(
                 onToggle = { onTaskToggle(result.taskWrapper) },
                 onClick = { onTaskClick(result.taskWrapper) },
                 projects = projects,
+                areas = areas,
                 leftColumnWidth = MaterialTheme.dimens.searchLeftColumnWidth,
                 spacingToText = MaterialTheme.dimens.searchSpacingToText
             )

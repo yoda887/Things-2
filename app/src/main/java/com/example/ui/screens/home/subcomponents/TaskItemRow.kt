@@ -9,6 +9,9 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Flag
 import androidx.compose.material.icons.filled.Reorder
+import androidx.compose.material.icons.filled.Star
+import androidx.compose.material.icons.filled.NightsStay
+import com.example.ui.screens.home.ActiveScreen
 import androidx.compose.material.icons.outlined.CalendarToday
 import androidx.compose.material.icons.outlined.Description
 import androidx.compose.material.icons.outlined.FormatListBulleted
@@ -58,7 +61,9 @@ fun TaskItemRow(
     dragModifier: Modifier = Modifier,
     isHighlighted: Boolean = false,
     leftColumnWidth: androidx.compose.ui.unit.Dp = androidx.compose.material3.MaterialTheme.dimens.taskLeftColumnWidthDefault,
-    spacingToText: androidx.compose.ui.unit.Dp = androidx.compose.material3.MaterialTheme.dimens.taskSpacingToTextDefault
+    spacingToText: androidx.compose.ui.unit.Dp = androidx.compose.material3.MaterialTheme.dimens.taskSpacingToTextDefault,
+    screen: ActiveScreen = ActiveScreen.INBOX,
+    areas: List<com.example.data.model.Area> = emptyList()
 ) {
     val isDark = false
     val titleFontSize = androidx.compose.material3.MaterialTheme.typography.titleMedium.fontSize
@@ -82,6 +87,14 @@ fun TaskItemRow(
     }
 
     val isCalendarTask = task.id.startsWith("cal_")
+
+    val dateIndicator = remember(task.startDate, task.isTonight) {
+        if (task.startDate != null) {
+            getStartDateIndicator(task.startDate, task.isTonight)
+        } else {
+            null
+        }
+    }
 
     Row(
         modifier = modifier
@@ -136,6 +149,56 @@ fun TaskItemRow(
                 verticalAlignment = Alignment.CenterVertically,
                 modifier = Modifier.fillMaxWidth()
             ) {
+                if (screen == ActiveScreen.PROJECT_DETAIL && dateIndicator != null) {
+                    when (dateIndicator) {
+                        is DateIndicatorResult.IconIndicator -> {
+                            Icon(
+                                imageVector = dateIndicator.icon,
+                                contentDescription = dateIndicator.contentDescription,
+                                tint = dateIndicator.color,
+                                modifier = Modifier.size(16.dp)
+                            )
+                        }
+                        is DateIndicatorResult.TextIndicator -> {
+                            val displayText = if (dateIndicator.text == "TOMORROW_PLACEHOLDER") {
+                                androidx.compose.ui.res.stringResource(com.example.R.string.tomorrow)
+                            } else {
+                                dateIndicator.text
+                            }
+                            
+                            // Determine dynamic colors for light/dark mode
+                            val isSystemDark = androidx.compose.foundation.isSystemInDarkTheme()
+                            val badgeTextColor = if (isSystemDark) {
+                                Color(0xFFE0E0E0) // Tailored light grey/silver to maintain solid contrast on dark backgrounds
+                            } else {
+                                Color(0xFF5F6368) // Dark grey for light backgrounds
+                            }
+                            val badgeBgColor = if (isSystemDark) {
+                                Color(0xFF2C2C2E) // Deep slate grey backing matching premium look feel
+                            } else {
+                                Color(0xFFECECEC) // Soft light grey backing
+                            }
+
+                            // Render task indicator as a clean, rounded badge
+                            Text(
+                                text = displayText,
+                                style = TextStyle(
+                                    fontSize = 11.sp,
+                                    fontWeight = FontWeight.Medium,
+                                    color = badgeTextColor
+                                ),
+                                modifier = Modifier
+                                    .background(
+                                        color = badgeBgColor,
+                                        shape = RoundedCornerShape(4.dp)
+                                    )
+                                    .padding(horizontal = 6.dp, vertical = 2.dp)
+                            )
+                        }
+                    }
+                    Spacer(modifier = Modifier.width(6.dp))
+                }
+
                 Text(
                     text = task.title,
                     style = TextStyle(
@@ -256,10 +319,23 @@ fun TaskItemRow(
             val project = remember(task.projectId, projects) {
                 projects.firstOrNull { it.id == task.projectId }
             }
-            if (project != null) {
+            val area = remember(task.areaId, areas) {
+                areas.firstOrNull { it.id == task.areaId }
+            }
+            if (project != null && screen != ActiveScreen.PROJECT_DETAIL) {
                 Spacer(modifier = Modifier.height(2.dp))
                 Text(
                     text = project.name,
+                    style = TextStyle(
+                        fontSize = subFontSize,
+                        color = textSecondaryColor.copy(alpha = 0.85f),
+                        fontWeight = FontWeight.Normal
+                    )
+                )
+            } else if (project == null && area != null && screen != ActiveScreen.AREA_DETAIL) {
+                Spacer(modifier = Modifier.height(2.dp))
+                Text(
+                    text = area.title,
                     style = TextStyle(
                         fontSize = subFontSize,
                         color = textSecondaryColor.copy(alpha = 0.85f),
@@ -277,3 +353,71 @@ fun TaskItemRow(
         
     }
 }
+
+sealed class DateIndicatorResult {
+    data class IconIndicator(
+        val icon: androidx.compose.ui.graphics.vector.ImageVector,
+        val color: androidx.compose.ui.graphics.Color,
+        val contentDescription: String
+    ) : DateIndicatorResult()
+    
+    data class TextIndicator(
+        val text: String
+    ) : DateIndicatorResult()
+}
+
+private fun getStartDateIndicator(startDate: Long, isTonight: Boolean): DateIndicatorResult {
+    val taskCal = java.util.Calendar.getInstance().apply { timeInMillis = startDate }
+    val todayCal = java.util.Calendar.getInstance()
+    val currentYear = todayCal.get(java.util.Calendar.YEAR)
+    
+    val isToday = taskCal.get(java.util.Calendar.YEAR) == todayCal.get(java.util.Calendar.YEAR) &&
+                  taskCal.get(java.util.Calendar.DAY_OF_YEAR) == todayCal.get(java.util.Calendar.DAY_OF_YEAR)
+                  
+    if (isToday) {
+        return if (isTonight) {
+            DateIndicatorResult.IconIndicator(
+                icon = androidx.compose.material.icons.Icons.Default.NightsStay,
+                color = androidx.compose.ui.graphics.Color(0xFF2196F3),
+                contentDescription = "Tonight"
+            )
+        } else {
+            DateIndicatorResult.IconIndicator(
+                icon = androidx.compose.material.icons.Icons.Default.Star,
+                color = androidx.compose.ui.graphics.Color(0xFFFFD700),
+                contentDescription = "Today"
+            )
+        }
+    }
+    
+    val tomorrowCal = java.util.Calendar.getInstance().apply {
+        timeInMillis = todayCal.timeInMillis
+        add(java.util.Calendar.DAY_OF_YEAR, 1)
+    }
+    val isTomorrow = taskCal.get(java.util.Calendar.YEAR) == tomorrowCal.get(java.util.Calendar.YEAR) &&
+                     taskCal.get(java.util.Calendar.DAY_OF_YEAR) == tomorrowCal.get(java.util.Calendar.DAY_OF_YEAR)
+                     
+    if (isTomorrow) {
+        return DateIndicatorResult.TextIndicator("TOMORROW_PLACEHOLDER")
+    }
+    
+    // Check if the task is in the same calendar week as today
+    val inSameCalendarWeek = taskCal.get(java.util.Calendar.YEAR) == todayCal.get(java.util.Calendar.YEAR) &&
+                             taskCal.get(java.util.Calendar.WEEK_OF_YEAR) == todayCal.get(java.util.Calendar.WEEK_OF_YEAR)
+                             
+    if (inSameCalendarWeek) {
+        val locale = java.util.Locale.getDefault()
+        val dayOfWeekStr = java.text.SimpleDateFormat("EEE", locale).format(taskCal.time)
+            .replaceFirstChar { if (it.isLowerCase()) it.titlecase(locale) else it.toString() }
+        return DateIndicatorResult.TextIndicator(dayOfWeekStr)
+    }
+    
+    if (taskCal.get(java.util.Calendar.YEAR) > currentYear) {
+        return DateIndicatorResult.TextIndicator(taskCal.get(java.util.Calendar.YEAR).toString())
+    }
+    
+    val locale = java.util.Locale.getDefault()
+    val monthAndDayStr = java.text.SimpleDateFormat("d MMM", locale).format(taskCal.time)
+    return DateIndicatorResult.TextIndicator(monthAndDayStr)
+}
+

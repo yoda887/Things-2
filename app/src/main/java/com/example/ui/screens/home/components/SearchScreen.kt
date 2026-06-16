@@ -273,7 +273,8 @@ fun ThingsSearchScreen(
                             dividerColor = dividerColor,
                             onTaskClick = onTaskClick,
                             onTaskToggle = onTaskToggle,
-                            projects = projects
+                            projects = projects,
+                            areas = areas
                         )
                     }
                 }
@@ -322,7 +323,8 @@ fun DeepSearchResultRow(
     dividerColor: Color,
     onTaskClick: (ItemWithChecklist) -> Unit,
     onTaskToggle: (ItemWithChecklist) -> Unit,
-    projects: List<Item>
+    projects: List<Item>,
+    areas: List<com.example.data.model.Area> = emptyList()
 ) {
     when (result) {
         is DeepSearchResult.TaskMatch -> {
@@ -390,11 +392,14 @@ fun DeepSearchResultRow(
                     }
                 }
 
-                // Subtitle: Project name and Section info if available
+                // Subtitle: Project/Area name and Section info if available
                 val project = remember(task.projectId, projects) {
                     projects.firstOrNull { it.id == task.projectId }
                 }
-                val contextText = remember(task, project) {
+                val area = remember(task.areaId, areas) {
+                    areas.firstOrNull { it.id == task.areaId }
+                }
+                val contextText = remember(task, project, area) {
                     buildString {
                         if (task.isCompleted) {
                             append("Logbook")
@@ -410,6 +415,9 @@ fun DeepSearchResultRow(
                         if (project != null) {
                             append(" • ")
                             append(project.title)
+                        } else if (area != null) {
+                            append(" • ")
+                            append(area.title)
                         }
                     }
                 }

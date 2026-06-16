@@ -22,4 +22,5 @@
     <string name="delete_task_confirm_message">Are you sure you want to delete this task? This cannot be undone.</string>
     <string name="delete_task_confirm_cancel">Cancel</string>
     <string name="delete_task_confirm_delete">Delete</string>
+    <string name="tomorrow">Tomorrow</string>
 </resources>
