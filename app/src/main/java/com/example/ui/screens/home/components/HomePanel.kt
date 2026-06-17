@@ -3,6 +3,10 @@ package com.example.ui.screens.home.components
 import kotlinx.coroutines.launch
 
 import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.expandVertically
+import androidx.compose.animation.shrinkVertically
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.foundation.border
@@ -40,6 +44,7 @@ import com.example.data.model.Item
 import com.example.data.model.ItemWithChecklist
 import com.example.data.model.TaskSection
 import com.example.ui.components.ProjectProgressArc
+import com.example.ui.components.AreaIconAnimated
 import com.example.ui.screens.home.ActiveScreen
 import com.example.ui.screens.home.subcomponents.SmartListRow
 import com.example.ui.theme.*
@@ -385,11 +390,16 @@ fun ThingsHomePanel(
                         .padding(vertical = 6.dp, horizontal = 6.dp),
                     verticalAlignment = Alignment.CenterVertically
                 ) {
-                    ProjectProgressArc(
-                        completed = completedCount,
-                        total = totalCount,
-                        modifier = Modifier.size(22.dp)
-                    )
+                    Box(
+                        modifier = Modifier.size(20.dp),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        ProjectProgressArc(
+                            completed = completedCount,
+                            total = totalCount,
+                            modifier = Modifier.size(20.dp)
+                        )
+                    }
                     Spacer(modifier = Modifier.width(7.dp))
                     Text(
                         text = project.title,
@@ -422,7 +432,13 @@ fun ThingsHomePanel(
 
             item {
                 val isExpanded = expandedStates[area.id] ?: true
-                Column(modifier = Modifier.fillMaxWidth()) {
+                // [ИЗМЕНЕНИЕ]: Уменьшен верхний отступ (top padding) до карточки области на 4.dp для компенсации увеличенной высоты иконки
+                Column(
+                    // [ИЗМЕНЕНИЕ]: Безопасно сдвигаем столбец на 4.dp вверх с помощью offset вместо отрицательного padding, чтобы избежать исключения IllegalArgumentException
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        //.offset(y = (-4).dp)
+                ) {
                     // Title block for Area
                     Row(
                         modifier = Modifier
@@ -432,11 +448,12 @@ fun ThingsHomePanel(
                             .padding(vertical = 2.dp, horizontal = 6.dp),
                         verticalAlignment = Alignment.CenterVertically
                     ) {
-                        Icon(
-                            imageVector = Icons.Outlined.Layers,
-                            contentDescription = area.title,
-                            tint = textSecondaryColor,
-                            modifier = Modifier.size(22.dp)
+                        // [ИЗМЕНЕНИЕ]: Ширина иконки области установлена равной 20.dp (как у проекта), а высота увеличена пропорционально до 28.dp
+                        // Используем анимированную иконку области, которая реагирует на состояние раскрытия (isClosed = !isExpanded)
+                        AreaIconAnimated(
+                            isClosed = !isExpanded,
+                            onToggle = {}, // Клик на иконку напрямую ничего не делает по требованию
+                            modifier = Modifier.size(width = 20.dp, height = 28.dp)
                         )
                         Spacer(modifier = Modifier.width(7.dp))
                         // [ИЗМЕНЕНИЕ]: Убрано переопределение fontWeight = FontWeight.Bold, чтобы начертание автоматически унаследовалось из базовой темы (FontWeight.Medium)
@@ -465,8 +482,14 @@ fun ThingsHomePanel(
                         }
                     }
 
-                    // [ИЗМЕНЕНИЕ]: Дочерние проекты отображаются только если область раскрыта и в ней действительно есть проекты (без заглушек вроде "No projects")
-                    if (isExpanded && hasProjects) {
+                    // [ИЗМЕНЕНИЕ]: Плавная анимация раскрытия и сворачивания списка проектов с использованием AnimatedVisibility.
+                    // Применяется плавное расширение по высоте (expandVertically) и появление (fadeIn) при открытии,
+                    // и сжатие по высоте (shrinkVertically) со скрытием (fadeOut) при закрытии.
+                    AnimatedVisibility(
+                        visible = isExpanded && hasProjects,
+                        enter = expandVertically() + fadeIn(),
+                        exit = shrinkVertically() + fadeOut()
+                    ) {
                         Column(
                             modifier = Modifier
                                 .fillMaxWidth()
@@ -486,11 +509,16 @@ fun ThingsHomePanel(
                                         .padding(vertical = 6.dp, horizontal = 6.dp),
                                     verticalAlignment = Alignment.CenterVertically
                                 ) {
-                                    ProjectProgressArc(
-                                        completed = completedCount,
-                                        total = totalCount,
-                                        modifier = Modifier.size(22.dp)
-                                    )
+                                    Box(
+                                        modifier = Modifier.size(20.dp),
+                                        contentAlignment = Alignment.Center
+                                    ) {
+                                        ProjectProgressArc(
+                                            completed = completedCount,
+                                            total = totalCount,
+                                            modifier = Modifier.size(20.dp)
+                                        )
+                                    }
                                     Spacer(modifier = Modifier.width(7.dp))
                                     Text(
                                         text = project.title,

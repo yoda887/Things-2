@@ -256,7 +256,8 @@ data class ThingsCategoryListState(
     val highlightedTaskId: String? = null,
     val textPrimaryColor: Color = Color.Unspecified,
     val textSecondaryColor: Color = Color.Unspecified,
-    val dividerColor: Color = Color.Unspecified
+    val dividerColor: Color = Color.Unspecified,
+    val allTasks: List<ItemWithChecklist> = emptyList()
 )
 
 /**

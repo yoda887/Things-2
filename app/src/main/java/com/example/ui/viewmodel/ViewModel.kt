@@ -225,7 +225,8 @@ class ThingsViewModel @Inject constructor(
             allSavedTagObjects = savedTagObjs,
             areas = areaList,
             projects = projectList,
-            highlightedTaskId = highlighted
+            highlightedTaskId = highlighted,
+            allTasks = taskList
         )
     }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), ThingsCategoryListState())
 

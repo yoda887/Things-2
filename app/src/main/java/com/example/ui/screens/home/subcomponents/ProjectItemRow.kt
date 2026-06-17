@@ -50,11 +50,16 @@ fun ProjectItemRow(
             .padding(vertical = 8.dp, horizontal = 6.dp),
         verticalAlignment = Alignment.CenterVertically
     ) {
-        ProjectProgressArc(
-            completed = completedCount,
-            total = totalCount,
-            modifier = Modifier.size(22.dp)
-        )
+        Box(
+            modifier = Modifier.size(20.dp),
+            contentAlignment = Alignment.Center
+        ) {
+            ProjectProgressArc(
+                completed = completedCount,
+                total = totalCount,
+                modifier = Modifier.size(20.dp)
+            )
+        }
         Spacer(modifier = Modifier.width(10.dp))
         Text(
             text = project.title,

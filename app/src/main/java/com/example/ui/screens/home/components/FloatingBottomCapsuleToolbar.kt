@@ -97,14 +97,14 @@ fun FloatingBottomCapsuleToolbar(
                         imageVector = Icons.Default.ArrowForward,
                         contentDescription = "Move icon",
                         tint = Color.White,
-                        modifier = Modifier.size(18.dp)
+                        modifier = Modifier.size(22.dp)
                     )
                     Spacer(modifier = Modifier.width(6.dp))
                     Text(
                         text = "Move",
                         color = Color.White,
                         fontWeight = FontWeight.Bold,
-                        fontSize = 15.sp
+                        fontSize = 18.sp
                     )
                 }
 
@@ -120,7 +120,7 @@ fun FloatingBottomCapsuleToolbar(
                         imageVector = Icons.Default.Delete,
                         contentDescription = "Delete task",
                         tint = Color.White,
-                        modifier = Modifier.size(20.dp)
+                        modifier = Modifier.size(24.dp)
                     )
                 }
 
@@ -137,7 +137,7 @@ fun FloatingBottomCapsuleToolbar(
                             imageVector = Icons.Default.MoreHoriz,
                             contentDescription = "More options",
                             tint = Color.White,
-                            modifier = Modifier.size(20.dp)
+                            modifier = Modifier.size(24.dp)
                         )
                     }
 
@@ -154,7 +154,7 @@ fun FloatingBottomCapsuleToolbar(
                                     tint = Color.White
                                 )
                             },
-                            text = { Text("Duplicate", color = Color.White) },
+                            text = { Text("Duplicate", color = Color.White, fontWeight = FontWeight.Normal) },
                             onClick = {
                                 onDuplicateClick()
                                 expandedDotsMenu = false
@@ -168,7 +168,7 @@ fun FloatingBottomCapsuleToolbar(
                                     tint = Color.Gray
                                 )
                             },
-                            text = { Text("Repeat", color = Color.Gray) },
+                            text = { Text("Repeat", color = Color.Gray, fontWeight = FontWeight.Normal) },
                             onClick = {
                                 expandedDotsMenu = false
                             }
@@ -181,7 +181,7 @@ fun FloatingBottomCapsuleToolbar(
                                     tint = Color.Gray
                                 )
                             },
-                            text = { Text("Convert", color = Color.Gray) },
+                            text = { Text("Convert", color = Color.Gray, fontWeight = FontWeight.Normal) },
                             onClick = {
                                 expandedDotsMenu = false
                             }
@@ -194,7 +194,7 @@ fun FloatingBottomCapsuleToolbar(
                                     tint = Color.Gray
                                 )
                             },
-                            text = { Text("Share", color = Color.Gray) },
+                            text = { Text("Share", color = Color.Gray, fontWeight = FontWeight.Normal) },
                             onClick = {
                                 expandedDotsMenu = false
                             }

@@ -19,12 +19,12 @@ debug.keystore
 
 # Игнорирование всех файлов сборки Gradle и конфигурации для GitHub
 # Только исходный код во фреймворке будет отправляться в Git
-build.gradle.kts
-settings.gradle.kts
-gradle.properties
-/gradle/
-gradlew
-gradlew.bat
+# build.gradle.kts
+# settings.gradle.kts
+# gradle.properties
+#/gradle/
+# gradlew
+# gradlew.bat
 metadata.json
 firebase-applet-config.json
 debug.keystore.base64

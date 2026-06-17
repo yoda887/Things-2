@@ -427,6 +427,7 @@ fun ThingsCategoryListPanel(
             currentIsInbox = activeTask.item.isInbox,
             projects = projects,
             areas = areasState,
+            allTasks = state.allTasks,
             onMove = { projectId, areaId, moveToInbox ->
                 onEvent(ThingsCategoryListEvent.MoveTask(activeTask, projectId, areaId, moveToInbox))
                 showMoveDialog = false
