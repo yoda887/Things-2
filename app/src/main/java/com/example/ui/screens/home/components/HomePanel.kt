@@ -12,6 +12,15 @@ import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.foundation.border
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.text.BasicTextField
+import androidx.compose.foundation.text.KeyboardActions
+import androidx.compose.foundation.text.KeyboardOptions
+import androidx.compose.ui.focus.FocusRequester
+import androidx.compose.ui.focus.focusRequester
+import androidx.compose.ui.focus.onFocusChanged
+import androidx.compose.ui.graphics.SolidColor
+import androidx.compose.ui.text.input.ImeAction
+import androidx.compose.ui.text.input.KeyboardCapitalization
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.rememberLazyListState
@@ -75,7 +84,13 @@ fun ThingsHomePanel(
     onAreaClick: (Area) -> Unit = {},
     onSearchClick: () -> Unit = {},
     // [ИЗМЕНЕНИЕ]: Добавлено состояние активности поискового оверлея
-    isSearchOverlayActive: Boolean = false
+    isSearchOverlayActive: Boolean = false,
+    editingProjectId: String? = null,
+    onEditingProjectIdChange: (String?) -> Unit = {},
+    editingAreaId: String? = null,
+    onEditingAreaIdChange: (String?) -> Unit = {},
+    onUpdateProject: (Item) -> Unit = {},
+    onUpdateArea: (Area) -> Unit = {}
 ) {
     var rawTokenInput by remember { mutableStateOf(googleToken) }
     var isSyncConfigExpanded by remember { mutableStateOf(false) }
@@ -327,50 +342,12 @@ fun ThingsHomePanel(
             }
         }
 
-        // AREAS & PROJECTS Header
+        // [ИЗМЕНЕНИЕ]: Горизонтальный разделитель между списком умных категорий и началом списка проектов/областей
         item {
-            Row(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(top = 24.dp),
-                horizontalArrangement = Arrangement.SpaceBetween,
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                Text(
-                    text = "AREAS & PROJECTS",
-                    style = TextStyle(
-                        fontSize = 11.sp,
-                        fontWeight = FontWeight.Bold,
-                        color = textSecondaryColor,
-                        letterSpacing = 1.sp
-                    ),
-                    modifier = Modifier.weight(1f)
-                )
-
-                // Add Area button
-                TextButton(
-                    onClick = onAddAreaClick,
-                    contentPadding = PaddingValues(horizontal = 8.dp, vertical = 2.dp),
-                    modifier = Modifier.testTag("add_area_button")
-                ) {
-                    Icon(Icons.Default.Add, contentDescription = "Add Area", tint = ThingsBlue, modifier = Modifier.size(14.dp))
-                    Spacer(modifier = Modifier.width(4.dp))
-                    Text("Area", color = ThingsBlue, fontSize = 12.sp, fontWeight = FontWeight.SemiBold)
-                }
-
-                Spacer(modifier = Modifier.width(6.dp))
-
-                // Add Project button
-                TextButton(
-                    onClick = onAddProjectClick,
-                    contentPadding = PaddingValues(horizontal = 8.dp, vertical = 2.dp),
-                    modifier = Modifier.testTag("add_project_button")
-                ) {
-                    Icon(Icons.Default.Add, contentDescription = "Add Project", tint = ThingsBlue, modifier = Modifier.size(14.dp))
-                    Spacer(modifier = Modifier.width(4.dp))
-                    Text("Project", color = ThingsBlue, fontSize = 12.sp, fontWeight = FontWeight.SemiBold)
-                }
-            }
+            HorizontalDivider(
+                color = dividerColor,
+                modifier = Modifier.padding(horizontal = 6.dp)
+            )
         }
 
         // Two-level Areas & Projects tree
@@ -382,12 +359,15 @@ fun ThingsHomePanel(
                 val projectTasks = tasksByProject[project.id] ?: emptyList()
                 val completedCount = projectTasks.count { it.item.isCompleted }
                 val totalCount = projectTasks.size
+                val isEditing = project.id == editingProjectId
 
+                // [ИЗМЕНЕНИЕ]: При inline-редактировании цвет фона становится полупрозрачным голубым
                 Row(
                     modifier = Modifier
                         .fillMaxWidth()
                         .clip(RoundedCornerShape(10.dp))
-                        .clickable { onProjectClick(project) }
+                        .background(if (isEditing) ThingsBlue.copy(alpha = 0.15f) else Color.Transparent)
+                        .clickable(enabled = !isEditing) { onProjectClick(project) }
                         .padding(vertical = 6.dp, horizontal = 6.dp),
                     verticalAlignment = Alignment.CenterVertically
                 ) {
@@ -402,36 +382,115 @@ fun ThingsHomePanel(
                         )
                     }
                     Spacer(modifier = Modifier.width(7.dp))
-                    Text(
-                        text = project.title,
-                        style = MaterialTheme.typography.displaySmall.copy(
-                            color = textPrimaryColor,
-                            fontWeight = FontWeight.Normal
-                        ),
-                        modifier = Modifier.weight(1f),
-                        maxLines = 1,
-                        overflow = TextOverflow.Ellipsis
-                    )
+                    if (isEditing) {
+                        // [ИЗМЕНЕНИЕ]: Поле встроенного inline-редактирования названия проекта с защитой от преждевременного удаления
+                        var textState by remember { mutableStateOf(project.title) }
+                        var hasFocused by remember { mutableStateOf(false) }
+                        val focusRequester = remember { FocusRequester() }
+
+                        BasicTextField(
+                            value = textState,
+                            onValueChange = { textState = it },
+                            textStyle = MaterialTheme.typography.displaySmall.copy(
+                                color = textPrimaryColor,
+                                fontWeight = FontWeight.Normal
+                            ),
+                            cursorBrush = SolidColor(ThingsBlue),
+                            modifier = Modifier
+                                .weight(1f)
+                                .focusRequester(focusRequester)
+                                .onFocusChanged { focusState ->
+                                    if (focusState.isFocused) {
+                                        hasFocused = true
+                                    } else if (hasFocused) {
+                                        hasFocused = false
+                                        val trimmed = textState.trim()
+                                        if (trimmed.isEmpty() && project.title.isEmpty()) {
+                                            onDeleteProject(project)
+                                        } else if (trimmed.isNotEmpty() && trimmed != project.title) {
+                                            onUpdateProject(project.copy(title = trimmed))
+                                        }
+                                        onEditingProjectIdChange(null)
+                                    }
+                                },
+                            singleLine = true,
+                            keyboardOptions = KeyboardOptions(
+                                imeAction = ImeAction.Done,
+                                capitalization = KeyboardCapitalization.Sentences
+                            ),
+                            keyboardActions = KeyboardActions(
+                                onDone = {
+                                    if (hasFocused) {
+                                        hasFocused = false
+                                        val trimmed = textState.trim()
+                                        if (trimmed.isEmpty()) {
+                                            onDeleteProject(project)
+                                        } else {
+                                            onUpdateProject(project.copy(title = trimmed))
+                                        }
+                                        onEditingProjectIdChange(null)
+                                    }
+                                }
+                            ),
+                            decorationBox = { innerTextField ->
+                                Box(modifier = Modifier.fillMaxWidth()) {
+                                    if (textState.isEmpty()) {
+                                        Text(
+                                            text = "New Project",
+                                            style = MaterialTheme.typography.displaySmall.copy(
+                                                color = textSecondaryColor.copy(alpha = 0.6f),
+                                                fontWeight = FontWeight.Normal
+                                            )
+                                        )
+                                    }
+                                    innerTextField()
+                                }
+                            }
+                        )
+
+                        LaunchedEffect(Unit) {
+                            focusRequester.requestFocus()
+                        }
+                    } else {
+                        Text(
+                            text = project.title,
+                            style = MaterialTheme.typography.displaySmall.copy(
+                                color = textPrimaryColor,
+                                fontWeight = FontWeight.Normal
+                            ),
+                            modifier = Modifier.weight(1f),
+                            maxLines = 1,
+                            overflow = TextOverflow.Ellipsis
+                        )
+                    }
                 }
             }
         }
 
-        // Add a visual divider between standalone projects and subsequent area headers if both exist
+        // [ИЗМЕНЕНИЕ]: Уменьшен отступ у разделителя для уменьшения пространства между списком Non-area проектов и областями
         if (noAreaProjects.isNotEmpty() && areas.isNotEmpty()) {
             item {
                 HorizontalDivider(
                     color = dividerColor,
-                    modifier = Modifier.padding(vertical = 8.dp)
+                    modifier = Modifier.padding(vertical = 0.dp)
                 )
             }
         }
 
         // Render Areas
-        areas.forEach { area ->
+        areas.forEachIndexed { index, area ->
             val areaProjects = projects.filter { it.areaId == area.id }
             val hasProjects = areaProjects.isNotEmpty()
+            val isAreaEditing = area.id == editingAreaId
 
             item {
+                if (index > 0) {
+                    // [ИЗМЕНЕНИЕ]: Горизонтальный разделитель выше любой карточки области (кроме первой, у которой разделитель обеспечивается другими условиями)
+                    HorizontalDivider(
+                        color = dividerColor,
+                        modifier = Modifier.padding(vertical = 0.dp)
+                    )
+                }
                 val isExpanded = expandedStates[area.id] ?: true
                 val rotationAngle by animateFloatAsState(
                     targetValue = if (isExpanded) 90f else 0f,
@@ -439,17 +498,20 @@ fun ThingsHomePanel(
                 )
                 // [ИЗМЕНЕНИЕ]: Уменьшен верхний отступ (top padding) до карточки области на 4.dp для компенсации увеличенной высоты иконки
                 Column(
-                    // [ИЗМЕНЕНИЕ]: Безопасно сдвигаем столбец на 4.dp вверх с помощью offset вместо отрицательного padding, чтобы избежать исключения IllegalArgumentException
                     modifier = Modifier
                         .fillMaxWidth()
-                        //.offset(y = (-4).dp)
                 ) {
                     // Title block for Area
+                    // [ИЗМЕНЕНИЕ]: Установка минимальной высоты карточки пустой области в 48.dp
                     Row(
                         modifier = Modifier
                             .fillMaxWidth()
+                            .then(
+                                if (!hasProjects) Modifier.heightIn(min = 48.dp) else Modifier
+                            )
                             .clip(RoundedCornerShape(10.dp))
-                            .clickable { onAreaClick(area) }
+                            .background(if (isAreaEditing) ThingsBlue.copy(alpha = 0.15f) else Color.Transparent)
+                            .clickable(enabled = !isAreaEditing) { onAreaClick(area) }
                             .padding(vertical = 2.dp, horizontal = 6.dp),
                         verticalAlignment = Alignment.CenterVertically
                     ) {
@@ -461,14 +523,84 @@ fun ThingsHomePanel(
                             modifier = Modifier.size(width = 20.dp, height = 28.dp)
                         )
                         Spacer(modifier = Modifier.width(7.dp))
-                        // [ИЗМЕНЕНИЕ]: Убрано переопределение fontWeight = FontWeight.Bold, чтобы начертание автоматически унаследовалось из базовой темы (FontWeight.Medium)
-                        Text(
-                            text = area.title,
-                            style = MaterialTheme.typography.displaySmall.copy(
-                                color = textPrimaryColor
-                            ),
-                            modifier = Modifier.weight(1f)
-                        )
+                        
+                        if (isAreaEditing) {
+                            // [ИЗМЕНЕНИЕ]: Поле встроенного inline-редактирования названия области (сферы) с защитой от преждевременного удаления
+                            var textState by remember { mutableStateOf(area.title) }
+                            var hasFocused by remember { mutableStateOf(false) }
+                            val focusRequester = remember { FocusRequester() }
+
+                            BasicTextField(
+                                value = textState,
+                                onValueChange = { textState = it },
+                                textStyle = MaterialTheme.typography.displaySmall.copy(
+                                    color = textPrimaryColor
+                                ),
+                                cursorBrush = SolidColor(ThingsBlue),
+                                modifier = Modifier
+                                    .weight(1f)
+                                    .focusRequester(focusRequester)
+                                    .onFocusChanged { focusState ->
+                                        if (focusState.isFocused) {
+                                            hasFocused = true
+                                        } else if (hasFocused) {
+                                            hasFocused = false
+                                            val trimmed = textState.trim()
+                                            if (trimmed.isEmpty() && area.title.isEmpty()) {
+                                                onDeleteArea(area)
+                                            } else if (trimmed.isNotEmpty() && trimmed != area.title) {
+                                                onUpdateArea(area.copy(title = trimmed))
+                                            }
+                                            onEditingAreaIdChange(null)
+                                        }
+                                    },
+                                singleLine = true,
+                                keyboardOptions = KeyboardOptions(
+                                    imeAction = ImeAction.Done,
+                                    capitalization = KeyboardCapitalization.Sentences
+                                ),
+                                keyboardActions = KeyboardActions(
+                                    onDone = {
+                                        if (hasFocused) {
+                                            hasFocused = false
+                                            val trimmed = textState.trim()
+                                            if (trimmed.isEmpty()) {
+                                                onDeleteArea(area)
+                                            } else {
+                                                onUpdateArea(area.copy(title = trimmed))
+                                            }
+                                            onEditingAreaIdChange(null)
+                                        }
+                                    }
+                                ),
+                                decorationBox = { innerTextField ->
+                                    Box(modifier = Modifier.fillMaxWidth()) {
+                                        if (textState.isEmpty()) {
+                                            Text(
+                                                text = "New Area",
+                                                style = MaterialTheme.typography.displaySmall.copy(
+                                                    color = textSecondaryColor.copy(alpha = 0.6f)
+                                                )
+                                            )
+                                        }
+                                        innerTextField()
+                                    }
+                                }
+                            )
+
+                            LaunchedEffect(Unit) {
+                                focusRequester.requestFocus()
+                            }
+                        } else {
+                            Text(
+                                text = area.title,
+                                style = MaterialTheme.typography.displaySmall.copy(
+                                    color = textPrimaryColor
+                                ),
+                                modifier = Modifier.weight(1f)
+                            )
+                        }
+                        
                         // [ИЗМЕНЕНИЕ]: Если в области есть проекты, показываем кнопку раскрытия. Иначе отображаем Spacer(44.dp) для сохранения выравнивания.
                         if (hasProjects) {
                             IconButton(
@@ -507,12 +639,14 @@ fun ThingsHomePanel(
                                 val projectTasks = tasksByProject[project.id] ?: emptyList()
                                 val completedCount = projectTasks.count { it.item.isCompleted }
                                 val totalCount = projectTasks.size
+                                val isProjectEditing = project.id == editingProjectId
 
                                 Row(
                                     modifier = Modifier
                                         .fillMaxWidth()
                                         .clip(RoundedCornerShape(10.dp))
-                                        .clickable { onProjectClick(project) }
+                                        .background(if (isProjectEditing) ThingsBlue.copy(alpha = 0.15f) else Color.Transparent)
+                                        .clickable(enabled = !isProjectEditing) { onProjectClick(project) }
                                         .padding(vertical = 6.dp, horizontal = 6.dp),
                                     verticalAlignment = Alignment.CenterVertically
                                 ) {
@@ -527,16 +661,87 @@ fun ThingsHomePanel(
                                         )
                                     }
                                     Spacer(modifier = Modifier.width(7.dp))
-                                    Text(
-                                        text = project.title,
-                                        style = MaterialTheme.typography.displaySmall.copy(
-                                            color = textPrimaryColor,
-                                            fontWeight = FontWeight.Normal
-                                        ),
-                                        modifier = Modifier.weight(1f),
-                                        maxLines = 1,
-                                        overflow = TextOverflow.Ellipsis
-                                    )
+                                    
+                                    if (isProjectEditing) {
+                                        var textState by remember { mutableStateOf(project.title) }
+                                        var hasFocused by remember { mutableStateOf(false) }
+                                        val focusRequester = remember { FocusRequester() }
+
+                                        BasicTextField(
+                                            value = textState,
+                                            onValueChange = { textState = it },
+                                            textStyle = MaterialTheme.typography.displaySmall.copy(
+                                                color = textPrimaryColor,
+                                                fontWeight = FontWeight.Normal
+                                            ),
+                                            cursorBrush = SolidColor(ThingsBlue),
+                                            modifier = Modifier
+                                                .weight(1f)
+                                                .focusRequester(focusRequester)
+                                                .onFocusChanged { focusState ->
+                                                    if (focusState.isFocused) {
+                                                        hasFocused = true
+                                                    } else if (hasFocused) {
+                                                        hasFocused = false
+                                                        val trimmed = textState.trim()
+                                                        if (trimmed.isEmpty() && project.title.isEmpty()) {
+                                                            onDeleteProject(project)
+                                                        } else if (trimmed.isNotEmpty() && trimmed != project.title) {
+                                                            onUpdateProject(project.copy(title = trimmed))
+                                                        }
+                                                        onEditingProjectIdChange(null)
+                                                    }
+                                                },
+                                            singleLine = true,
+                                            keyboardOptions = KeyboardOptions(
+                                                imeAction = ImeAction.Done,
+                                                capitalization = KeyboardCapitalization.Sentences
+                                            ),
+                                            keyboardActions = KeyboardActions(
+                                                onDone = {
+                                                    if (hasFocused) {
+                                                        hasFocused = false
+                                                        val trimmed = textState.trim()
+                                                        if (trimmed.isEmpty()) {
+                                                            onDeleteProject(project)
+                                                        } else {
+                                                            onUpdateProject(project.copy(title = trimmed))
+                                                        }
+                                                        onEditingProjectIdChange(null)
+                                                    }
+                                                }
+                                            ),
+                                            decorationBox = { innerTextField ->
+                                                Box(modifier = Modifier.fillMaxWidth()) {
+                                                    if (textState.isEmpty()) {
+                                                        Text(
+                                                            text = "New Project",
+                                                            style = MaterialTheme.typography.displaySmall.copy(
+                                                                color = textSecondaryColor.copy(alpha = 0.6f),
+                                                                fontWeight = FontWeight.Normal
+                                                            )
+                                                        )
+                                                    }
+                                                    innerTextField()
+                                                }
+                                            }
+                                        )
+
+                                        LaunchedEffect(Unit) {
+                                            focusRequester.requestFocus()
+                                        }
+                                    } else {
+                                        Text(
+                                            text = project.title,
+                                            style = MaterialTheme.typography.displaySmall.copy(
+                                                color = textPrimaryColor,
+                                                fontWeight = FontWeight.Normal
+                                            ),
+                                            modifier = Modifier.weight(1f),
+                                            maxLines = 1,
+                                            overflow = TextOverflow.Ellipsis
+                                        )
+                                    }
                                 }
                             }
                         }

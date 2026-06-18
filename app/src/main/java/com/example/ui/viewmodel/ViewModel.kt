@@ -440,6 +440,13 @@ class ThingsViewModel @Inject constructor(
         }
     }
 
+    fun updateArea(area: Area) {
+        // [ИЗМЕНЕНИЕ]: Добавлен метод обновления области (сферы) в БД для inline-редактирования
+        viewModelScope.launch {
+            areaUseCases.updateArea(area)
+        }
+    }
+
     fun deleteArea(area: Area) {
         viewModelScope.launch {
             areaUseCases.deleteArea(area)

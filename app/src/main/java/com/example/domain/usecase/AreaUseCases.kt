@@ -8,5 +8,6 @@ import javax.inject.Inject
  */
 class AreaUseCases @Inject constructor(
     val addArea: AddAreaUseCase,
-    val deleteArea: DeleteAreaUseCase
+    val deleteArea: DeleteAreaUseCase,
+    val updateArea: UpdateAreaUseCase
 )

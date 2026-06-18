@@ -9,6 +9,7 @@ import androidx.compose.animation.core.spring
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -96,6 +97,9 @@ fun ThingsHomeScreen(viewModel: ThingsViewModel = hiltViewModel()) {
     var showAddProjectDialog by remember { mutableStateOf(false) }
     var showAddAreaDialog by remember { mutableStateOf(false) }
     var inlineExpandedTaskId by remember { mutableStateOf<String?>(null) }
+    var editingProjectId by remember { mutableStateOf<String?>(null) }
+    var editingAreaId by remember { mutableStateOf<String?>(null) }
+    var showFabMenu by remember { mutableStateOf(false) }
     var isSearchOverlayActive by remember { mutableStateOf(false) }
     var newTaskTitlePrefill by remember { mutableStateOf("") }
     
@@ -172,67 +176,71 @@ fun ThingsHomeScreen(viewModel: ThingsViewModel = hiltViewModel()) {
         // Поэтому на уровне главного Scaffold тулбар больше не отображается.
         topBar = {},
         floatingActionButton = {
-            // [ИЗМЕНЕНИЕ]: Скрывать глобально на уровне HomeScreen, если открыт встроенный редактор (inlineExpandedTaskId != null)
-            if (inlineExpandedTaskId == null) {
+            // [ИЗМЕНЕНИЕ]: Скрывать глобально на уровне HomeScreen с плавной анимацией при открытии inline-редактора или FAB-меню
+            AnimatedVisibility(
+                visible = inlineExpandedTaskId == null && !showFabMenu,
+                enter = scaleIn(
+                    animationSpec = spring(stiffness = androidx.compose.animation.core.Spring.StiffnessMedium)
+                ) + fadeIn(),
+                exit = scaleOut(
+                    animationSpec = spring(stiffness = androidx.compose.animation.core.Spring.StiffnessMedium)
+                ) + fadeOut()
+            ) {
                 FloatingActionButton(
                     onClick = {
-                        val targetScreen = if (activeScreen == ActiveScreen.HOME || activeScreen == ActiveScreen.LOGBOOK) {
-                            ActiveScreen.INBOX
+                        if (activeScreen == ActiveScreen.HOME) {
+                            showFabMenu = true
                         } else {
-                            activeScreen
-                        }
-                        if (activeScreen != targetScreen) {
-                            activeScreen = targetScreen
-                        }
-
-                        val initialSection = when (targetScreen) {
-                            ActiveScreen.TODAY -> TaskSection.TODAY
-                            ActiveScreen.UPCOMING -> TaskSection.UPCOMING
-                            ActiveScreen.ANYTIME -> TaskSection.ANYTIME
-                            ActiveScreen.SOMEDAY -> TaskSection.SOMEDAY
-                            else -> TaskSection.INBOX
-                        }
-                        val initialProjectId = if (targetScreen == ActiveScreen.PROJECT_DETAIL) selectedProject?.id else null
-                        val newTaskId = java.util.UUID.randomUUID().toString()
-
-                        val startValue = when (initialSection) {
-                            TaskSection.INBOX -> 0
-                            TaskSection.TODAY -> 1
-                            TaskSection.ANYTIME -> 2
-                            TaskSection.SOMEDAY -> 3
-                            TaskSection.UPCOMING -> 2
-                        }
-                        val computedStartDate = when (targetScreen) {
-                            ActiveScreen.TODAY -> System.currentTimeMillis()
-                            ActiveScreen.UPCOMING -> {
-                                val earliestUpcomingTask = allTasksRaw
-                                    .filter { it.item.isUpcoming }
-                                    .minByOrNull { it.item.startDate ?: Long.MAX_VALUE }
-                                
-                                earliestUpcomingTask?.item?.startDate ?: java.util.Calendar.getInstance().apply {
-                                    add(java.util.Calendar.DAY_OF_YEAR, 1)
-                                    set(java.util.Calendar.HOUR_OF_DAY, 0)
-                                    set(java.util.Calendar.MINUTE, 0)
-                                    set(java.util.Calendar.SECOND, 0)
-                                    set(java.util.Calendar.MILLISECOND, 0)
-                                }.timeInMillis
+                            val targetScreen = activeScreen
+                            val initialSection = when (targetScreen) {
+                                ActiveScreen.TODAY -> TaskSection.TODAY
+                                ActiveScreen.UPCOMING -> TaskSection.UPCOMING
+                                ActiveScreen.ANYTIME -> TaskSection.ANYTIME
+                                ActiveScreen.SOMEDAY -> TaskSection.SOMEDAY
+                                else -> TaskSection.INBOX
                             }
-                            else -> null
+                            val initialProjectId = if (targetScreen == ActiveScreen.PROJECT_DETAIL) selectedProject?.id else null
+                            val newTaskId = java.util.UUID.randomUUID().toString()
+
+                            val startValue = when (initialSection) {
+                                TaskSection.INBOX -> 0
+                                TaskSection.TODAY -> 1
+                                TaskSection.ANYTIME -> 2
+                                TaskSection.SOMEDAY -> 3
+                                TaskSection.UPCOMING -> 2
+                            }
+                            val computedStartDate = when (targetScreen) {
+                                ActiveScreen.TODAY -> System.currentTimeMillis()
+                                ActiveScreen.UPCOMING -> {
+                                    val earliestUpcomingTask = allTasksRaw
+                                        .filter { it.item.isUpcoming }
+                                        .minByOrNull { it.item.startDate ?: Long.MAX_VALUE }
+                                    
+                                    earliestUpcomingTask?.item?.startDate ?: java.util.Calendar.getInstance().apply {
+                                        add(java.util.Calendar.DAY_OF_YEAR, 1)
+                                        set(java.util.Calendar.HOUR_OF_DAY, 0)
+                                        set(java.util.Calendar.MINUTE, 0)
+                                        set(java.util.Calendar.SECOND, 0)
+                                        set(java.util.Calendar.MILLISECOND, 0)
+                                    }.timeInMillis
+                                }
+                                else -> null
+                            }
+
+                            val newTask = Item(
+                                id = newTaskId,
+                                type = 0,
+                                title = "",
+                                notes = "",
+                                start = startValue,
+                                projectId = initialProjectId,
+                                startDate = computedStartDate,
+                                creationDate = System.currentTimeMillis()
+                            )
+
+                            viewModel.updateTask(newTask)
+                            inlineExpandedTaskId = newTaskId
                         }
-
-                        val newTask = Item(
-                            id = newTaskId,
-                            type = 0,
-                            title = "",
-                            notes = "",
-                            start = startValue,
-                            projectId = initialProjectId,
-                            startDate = computedStartDate,
-                            creationDate = System.currentTimeMillis()
-                        )
-
-                        viewModel.updateTask(newTask)
-                        inlineExpandedTaskId = newTaskId
                     },
                     containerColor = ThingsBlue,
                     contentColor = Color.White,
@@ -275,9 +283,9 @@ fun ThingsHomeScreen(viewModel: ThingsViewModel = hiltViewModel()) {
                             selectedArea = area
                             activeScreen = ActiveScreen.AREA_DETAIL
                         },
-                        onAddProjectClick = { showAddProjectDialog = true },
+                        onAddProjectClick = {},
                         areas = areas,
-                        onAddAreaClick = { showAddAreaDialog = true },
+                        onAddAreaClick = {},
                         onDeleteArea = { viewModel.deleteArea(it) },
                         onDeleteProject = { viewModel.deleteProject(it) },
                         onSyncClick = { token ->
@@ -285,8 +293,13 @@ fun ThingsHomeScreen(viewModel: ThingsViewModel = hiltViewModel()) {
                             viewModel.syncWithGoogle()
                         },
                         onSearchClick = { isSearchOverlayActive = true },
-                        // [ИЗМЕНЕНИЕ]: Передается флаг активности оверлея поиска
-                        isSearchOverlayActive = isSearchOverlayActive
+                        isSearchOverlayActive = isSearchOverlayActive,
+                        editingProjectId = editingProjectId,
+                        onEditingProjectIdChange = { editingProjectId = it },
+                        editingAreaId = editingAreaId,
+                        onEditingAreaIdChange = { editingAreaId = it },
+                        onUpdateProject = { viewModel.updateProject(it) },
+                        onUpdateArea = { viewModel.updateArea(it) }
                     )
                     ActiveScreen.SEARCH -> ThingsSearchScreen(
                         searchQuery = searchQuery,
@@ -555,6 +568,236 @@ fun ThingsHomeScreen(viewModel: ThingsViewModel = hiltViewModel()) {
                         activeScreen = ActiveScreen.SEARCH
                     }
                 )
+            }
+
+            AnimatedVisibility(
+                visible = showFabMenu,
+                enter = fadeIn(
+                    animationSpec = spring(stiffness = androidx.compose.animation.core.Spring.StiffnessMedium)
+                ),
+                exit = fadeOut(
+                    animationSpec = spring(stiffness = androidx.compose.animation.core.Spring.StiffnessMedium)
+                )
+            ) {
+                Box(
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .background(Color.Black.copy(alpha = 0.4f))
+                        .clickable(
+                            interactionSource = remember { MutableInteractionSource() },
+                            indication = null
+                        ) {
+                            showFabMenu = false
+                        }
+                ) {
+                    AnimatedVisibility(
+                        visible = showFabMenu,
+                        enter = scaleIn(
+                            transformOrigin = TransformOrigin(1f, 1f),
+                            animationSpec = spring(stiffness = androidx.compose.animation.core.Spring.StiffnessMedium)
+                        ) + fadeIn(
+                            animationSpec = spring(stiffness = androidx.compose.animation.core.Spring.StiffnessMedium)
+                        ),
+                        exit = scaleOut(
+                            transformOrigin = TransformOrigin(1f, 1f),
+                            animationSpec = spring(stiffness = androidx.compose.animation.core.Spring.StiffnessMedium)
+                        ) + fadeOut(
+                            animationSpec = spring(stiffness = androidx.compose.animation.core.Spring.StiffnessMedium)
+                        ),
+                        modifier = Modifier
+                            .align(Alignment.BottomCenter)
+                            .padding(bottom = 32.dp, start = 16.dp, end = 16.dp)
+                            .fillMaxWidth()
+                            .wrapContentHeight()
+                    ) {
+                        Column(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .background(Color(0xFF23252E), shape = RoundedCornerShape(16.dp))
+                                .border(1.dp, Color.White.copy(alpha = 0.08f), RoundedCornerShape(16.dp))
+                                .padding(vertical = 4.dp)
+                        ) {
+                            // 1. New To-Do
+                            Row(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .clickable {
+                                        showFabMenu = false
+                                        val targetScreen = ActiveScreen.INBOX
+                                        if (activeScreen != targetScreen) {
+                                            activeScreen = targetScreen
+                                        }
+                                        val newTaskId = java.util.UUID.randomUUID().toString()
+                                        val newTask = Item(
+                                            id = newTaskId,
+                                            type = 0,
+                                            title = "",
+                                            notes = "",
+                                            start = 0,
+                                            creationDate = System.currentTimeMillis()
+                                        )
+                                        viewModel.updateTask(newTask)
+                                        inlineExpandedTaskId = newTaskId
+                                    }
+                                    .padding(16.dp),
+                                verticalAlignment = Alignment.Top
+                            ) {
+                                Box(
+                                    modifier = Modifier
+                                        .size(24.dp)
+                                        .padding(top = 2.dp),
+                                    contentAlignment = Alignment.Center
+                                ) {
+                                    Icon(
+                                        imageVector = Icons.Default.Add,
+                                        contentDescription = null,
+                                        tint = Color.White,
+                                        modifier = Modifier.size(20.dp)
+                                    )
+                                }
+                                Spacer(modifier = Modifier.width(16.dp))
+                                Column {
+                                    Text(
+                                        text = "New To-Do",
+                                        style = TextStyle(
+                                            fontSize = 17.sp,
+                                            fontWeight = FontWeight.Bold,
+                                            color = Color.White
+                                        )
+                                    )
+                                    Spacer(modifier = Modifier.height(2.dp))
+                                    Text(
+                                        text = "Quickly add a to-do to your inbox.",
+                                        style = TextStyle(
+                                            fontSize = 13.sp,
+                                            color = Color(0xFF8B8C8E)
+                                        )
+                                    )
+                                }
+                            }
+
+                            Spacer(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .padding(horizontal = 16.dp)
+                                    .height(0.5.dp)
+                                    .background(Color.White.copy(alpha = 0.08f))
+                            )
+
+                            // 2. New Project
+                            Row(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .clickable {
+                                        showFabMenu = false
+                                        val newProjectId = java.util.UUID.randomUUID().toString()
+                                        val newProject = Item(
+                                            id = newProjectId,
+                                            type = 1,
+                                            title = "",
+                                            creationDate = System.currentTimeMillis()
+                                        )
+                                        viewModel.updateProject(newProject)
+                                        editingProjectId = newProjectId
+                                    }
+                                    .padding(16.dp),
+                                verticalAlignment = Alignment.Top
+                            ) {
+                                Box(
+                                    modifier = Modifier
+                                        .size(24.dp)
+                                        .padding(top = 2.dp),
+                                    contentAlignment = Alignment.Center
+                                ) {
+                                    Icon(
+                                        imageVector = Icons.Default.CheckCircle,
+                                        contentDescription = null,
+                                        tint = ThingsBlue,
+                                        modifier = Modifier.size(20.dp)
+                                    )
+                                }
+                                Spacer(modifier = Modifier.width(16.dp))
+                                Column {
+                                    Text(
+                                        text = "New Project",
+                                        style = TextStyle(
+                                            fontSize = 17.sp,
+                                            fontWeight = FontWeight.Bold,
+                                            color = Color.White
+                                        )
+                                    )
+                                    Spacer(modifier = Modifier.height(2.dp))
+                                    Text(
+                                        text = "Define a goal, then work towards it one to-do at a time.",
+                                        style = TextStyle(
+                                            fontSize = 13.sp,
+                                            color = Color(0xFF8B8C8E)
+                                        )
+                                    )
+                                }
+                            }
+
+                            Spacer(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .padding(horizontal = 16.dp)
+                                    .height(0.5.dp)
+                                    .background(Color.White.copy(alpha = 0.08f))
+                            )
+
+                            // 3. New Area
+                            Row(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .clickable {
+                                        showFabMenu = false
+                                        val newAreaId = java.util.UUID.randomUUID().toString()
+                                        val newArea = Area(
+                                            id = newAreaId,
+                                            title = ""
+                                        )
+                                        viewModel.updateArea(newArea)
+                                        editingAreaId = newAreaId
+                                    }
+                                    .padding(16.dp),
+                                verticalAlignment = Alignment.Top
+                            ) {
+                                Box(
+                                    modifier = Modifier
+                                        .size(24.dp)
+                                        .padding(top = 2.dp),
+                                    contentAlignment = Alignment.Center
+                                ) {
+                                    Icon(
+                                        imageVector = Icons.Default.Layers,
+                                        contentDescription = null,
+                                        tint = ThingsLogbookGreen,
+                                        modifier = Modifier.size(20.dp)
+                                    )
+                                }
+                                Spacer(modifier = Modifier.width(16.dp))
+                                Column {
+                                    Text(
+                                        text = "New Area",
+                                        style = TextStyle(
+                                            fontSize = 17.sp,
+                                            fontWeight = FontWeight.Bold,
+                                            color = Color.White
+                                        )
+                                    )
+                                    Spacer(modifier = Modifier.height(2.dp))
+                                    Text(
+                                        text = "Group projects and to-dos based on different responsibilities, such as Family or Work.",
+                                        style = TextStyle(
+                                            fontSize = 13.sp,
+                                            color = Color(0xFF8B8C8E)
+                                        )
+                                    )
+                                }
+                            }
+                        }
+                    }
+                }
             }
         }
     }
