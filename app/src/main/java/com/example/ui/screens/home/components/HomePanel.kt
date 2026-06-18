@@ -27,6 +27,7 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.animation.core.Animatable
 import androidx.compose.animation.core.spring
+import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.input.nestedscroll.NestedScrollConnection
@@ -432,6 +433,10 @@ fun ThingsHomePanel(
 
             item {
                 val isExpanded = expandedStates[area.id] ?: true
+                val rotationAngle by animateFloatAsState(
+                    targetValue = if (isExpanded) 90f else 0f,
+                    label = "rotationAngle"
+                )
                 // [ИЗМЕНЕНИЕ]: Уменьшен верхний отступ (top padding) до карточки области на 4.dp для компенсации увеличенной высоты иконки
                 Column(
                     // [ИЗМЕНЕНИЕ]: Безопасно сдвигаем столбец на 4.dp вверх с помощью offset вместо отрицательного padding, чтобы избежать исключения IllegalArgumentException
@@ -471,10 +476,12 @@ fun ThingsHomePanel(
                                 modifier = Modifier.size(44.dp)
                             ) {
                                 Icon(
-                                    imageVector = if (isExpanded) Icons.Default.KeyboardArrowDown else Icons.Default.KeyboardArrowRight,
+                                    imageVector = Icons.Default.KeyboardArrowRight,
                                     contentDescription = "Toggle Area",
                                     tint = textSecondaryColor,
-                                    modifier = Modifier.size(22.dp)
+                                    modifier = Modifier
+                                        .size(22.dp)
+                                        .graphicsLayer(rotationZ = rotationAngle)
                                 )
                             }
                         } else {
