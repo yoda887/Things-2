@@ -163,7 +163,7 @@ fun Modifier.taskDragAndDrop(
                     true
                 }
 
-                // КЛАССИЧЕСКИЙ ОБМЕН ДВУХ ЗАДАЧ (Swap)
+                    // КЛАССИЧЕСКИЙ ОБМЕН ДВУХ ЗАДАЧ (Swap)
                 else -> {
                     val toIndex = currentLocalTasksList.indexOfFirst { it.item.id == targetId }
                     if (toIndex == -1) return@universalDragAndDrop false
@@ -173,7 +173,8 @@ fun Modifier.taskDragAndDrop(
 
                     val hoveredTask = currentLocalTasksList.firstOrNull { it.item.id == targetId }
                     if (hoveredTask != null) {
-                        if (hoveredTask.item.isTonight != moved.item.isTonight)
+                        // Изменяем статус "Вечер" только на экране "Сегодня" (ActiveScreen.TODAY)
+                        if (currentScreen == ActiveScreen.TODAY && hoveredTask.item.isTonight != moved.item.isTonight)
                             moved = moved.copyWithTonight(hoveredTask.item.isTonight)
                         if (currentScreen == ActiveScreen.UPCOMING && hoveredTask.item.startDate != moved.item.startDate)
                             moved = moved.copyWithStartDate(hoveredTask.item.startDate)

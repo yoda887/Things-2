@@ -48,11 +48,14 @@ fun MainCategoryHeader(
     ) {
         when (screen) {
             ActiveScreen.TODAY -> {
-                Text(
-                    text = "⭐",
-                    fontSize = headerEmojiFontSize,
-                    modifier = Modifier.padding(end = 12.dp)
+                // Используем кастомную иконку AppIcons.Today вместо обычного эмодзи звезды
+                Icon(
+                    imageVector = AppIcons.Today,
+                    contentDescription = null,
+                    tint = Color.Unspecified,
+                    modifier = Modifier.size((32 * scaleFactor).dp)
                 )
+                Spacer(modifier = Modifier.width((10 * scaleFactor).dp))
                 Text(
                     text = "Today",
                     style = TextStyle(
@@ -64,11 +67,13 @@ fun MainCategoryHeader(
             }
             ActiveScreen.INBOX -> {
                 Icon(
-                    imageVector = Icons.Outlined.Inbox,
+                    // Используем кастомную иконку AppIcons.Inbox
+                    imageVector = AppIcons.Inbox,
                     contentDescription = null,
-                    tint = Color(0xFF1B80FA),
-                    modifier = Modifier.size((32 * scaleFactor).dp).padding(end = 10.dp)
+                    tint = Color.Unspecified,
+                    modifier = Modifier.size((32 * scaleFactor).dp)
                 )
+                Spacer(modifier = Modifier.width((10 * scaleFactor).dp))
                 Text(
                     text = "Inbox",
                     style = TextStyle(
@@ -80,11 +85,13 @@ fun MainCategoryHeader(
             }
             ActiveScreen.UPCOMING -> {
                 Icon(
-                    imageVector = Icons.Outlined.CalendarToday,
+                    // Используем кастомную иконку AppIcons.Upcoming
+                    imageVector = AppIcons.Upcoming,
                     contentDescription = null,
-                    tint = Color(0xFFF35F50),
-                    modifier = Modifier.size((32 * scaleFactor).dp).padding(end = 10.dp)
+                    tint = Color.Unspecified,
+                    modifier = Modifier.size((32 * scaleFactor).dp)
                 )
+                Spacer(modifier = Modifier.width((10 * scaleFactor).dp))
                 Text(
                     text = "Upcoming",
                     style = TextStyle(
@@ -96,11 +103,13 @@ fun MainCategoryHeader(
             }
             ActiveScreen.ANYTIME -> {
                 Icon(
-                    imageVector = Icons.Outlined.Archive,
+                    // Используем кастомную иконку AppIcons.Anytime
+                    imageVector = AppIcons.Anytime,
                     contentDescription = null,
-                    tint = Color(0xFF2EB7CD),
-                    modifier = Modifier.size((32 * scaleFactor).dp).padding(end = 10.dp)
+                    tint = Color.Unspecified,
+                    modifier = Modifier.size((32 * scaleFactor).dp)
                 )
+                Spacer(modifier = Modifier.width((10 * scaleFactor).dp))
                 Text(
                     text = "Anytime",
                     style = TextStyle(
@@ -112,11 +121,13 @@ fun MainCategoryHeader(
             }
             ActiveScreen.SOMEDAY -> {
                 Icon(
-                    imageVector = Icons.Outlined.Folder,
+                    // Используем кастомную иконку AppIcons.Someday
+                    imageVector = AppIcons.Someday,
                     contentDescription = null,
-                    tint = Color(0xFF8F93A3),
-                    modifier = Modifier.size((32 * scaleFactor).dp).padding(end = 10.dp)
+                    tint = Color.Unspecified,
+                    modifier = Modifier.size((32 * scaleFactor).dp)
                 )
+                Spacer(modifier = Modifier.width((10 * scaleFactor).dp))
                 Text(
                     text = "Someday",
                     style = TextStyle(
@@ -128,11 +139,13 @@ fun MainCategoryHeader(
             }
             ActiveScreen.LOGBOOK -> {
                 Icon(
-                    imageVector = Icons.Outlined.AssignmentTurnedIn,
+                    // Используем кастомную иконку AppIcons.Logbook
+                    imageVector = AppIcons.Logbook,
                     contentDescription = null,
-                    tint = Color(0xFF2EC275),
-                    modifier = Modifier.size((32 * scaleFactor).dp).padding(end = 10.dp)
+                    tint = Color.Unspecified,
+                    modifier = Modifier.size((32 * scaleFactor).dp)
                 )
+                Spacer(modifier = Modifier.width((10 * scaleFactor).dp))
                 Text(
                     text = "Logbook",
                     style = TextStyle(
@@ -145,10 +158,15 @@ fun MainCategoryHeader(
             ActiveScreen.PROJECT_DETAIL -> {
                 val completedCount = tasks.count { it.item.projectId == project?.id && it.item.isCompleted }
                 val totalCount = tasks.count { it.item.projectId == project?.id }
+                // [ИЗМЕНЕНИЕ]: Иконка проекта (ProgressArc) окрашена в синий цвет и выровнена по верхнему краю заголовка с компенсационным отступом
                 ProjectProgressArc(
                     completed = completedCount,
                     total = totalCount,
-                    modifier = Modifier.size((26 * scaleFactor).dp)
+                    color = ThingsBlue,
+                    modifier = Modifier
+                        .size((26 * scaleFactor).dp)
+                        .align(Alignment.Top)
+                        .padding(top = (4 * scaleFactor).dp)
                 )
                 Spacer(modifier = Modifier.width(12.dp))
                 Text(
@@ -247,22 +265,28 @@ fun SubCategoryHeader(
             modifier = modifier
                 .graphicsLayer { alpha = dimAlpha }
         ) {
-            Spacer(modifier = Modifier.height(MaterialTheme.dimens.eveningSectionSpacing))
+            // Свободное пространство сверху увеличено на 16.dp по запросу пользователя.
+            Spacer(modifier = Modifier.height(MaterialTheme.dimens.eveningSectionSpacing + 16.dp))
             Row(
                 modifier = Modifier
                     .fillMaxWidth()
                     .padding(vertical = 6.dp),
                 verticalAlignment = Alignment.CenterVertically
             ) {
-                Text(
-                    text = "🌙",
-                    fontSize = 18.sp,
-                    modifier = Modifier.padding(end = 8.dp)
+                // Иконка "Вечер" с автоматическим подбором цвета и размера
+                Icon(
+                    imageVector = AppIcons.Evening,
+                    contentDescription = "This Evening",
+                    tint = Color.Unspecified,
+                    modifier = Modifier
+                        .padding(end = 8.dp)
+                        .size(20.dp)
                 )
+                // Увеличенный размер шрифта для заголовка "This Evening" до 20.sp по запросу пользователя.
                 Text(
                     "This Evening",
                     style = TextStyle(
-                        fontSize = 18.sp,
+                        fontSize = 20.sp,
                         fontWeight = FontWeight.Bold,
                         color = textPrimaryColor
                     )
@@ -275,6 +299,8 @@ fun SubCategoryHeader(
                     .background(dividerColor)
                     .padding(bottom = 6.dp)
             )
+            // Свободное пространство в 8.dp снизу от разделительной линии по запросу пользователя.
+            Spacer(modifier = Modifier.height(8.dp))
         }
     }
 }

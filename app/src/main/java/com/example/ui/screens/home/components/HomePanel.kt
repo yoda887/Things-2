@@ -286,8 +286,10 @@ fun ThingsHomePanel(
             Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
                 SmartListRow(
                     title = "Inbox",
-                    icon = Icons.Outlined.Inbox,
-                    iconColor = ThingsInboxBlue,
+                    // Используем кастомную иконку AppIcons.Inbox
+                    icon = AppIcons.Inbox,
+                    // Задаём Unspecified цвет, чтобы отображался оригинальный красивый градиент/цвет иконки
+                    iconColor = Color.Unspecified,
                     count = inboxCount,
                     textPrimaryColor = textPrimaryColor,
                     textSecondaryColor = textSecondaryColor,
@@ -296,8 +298,9 @@ fun ThingsHomePanel(
                 Spacer(modifier = Modifier.height(12.dp))
                 SmartListRow(
                     title = "Today",
-                    icon = Icons.Default.Star,
-                    iconColor = ThingsTodayStar,
+                    // Используем кастомную иконку AppIcons.Today
+                    icon = AppIcons.Today,
+                    iconColor = Color.Unspecified,
                     count = todayCount,
                     textPrimaryColor = textPrimaryColor,
                     textSecondaryColor = textSecondaryColor,
@@ -305,8 +308,9 @@ fun ThingsHomePanel(
                 )
                 SmartListRow(
                     title = "Upcoming",
-                    icon = Icons.Outlined.CalendarToday,
-                    iconColor = ThingsUpcomingRed,
+                    // Используем кастомную иконку AppIcons.Upcoming
+                    icon = AppIcons.Upcoming,
+                    iconColor = Color.Unspecified,
                     count = 0,
                     textPrimaryColor = textPrimaryColor,
                     textSecondaryColor = textSecondaryColor,
@@ -314,8 +318,9 @@ fun ThingsHomePanel(
                 )
                 SmartListRow(
                     title = "Anytime",
-                    icon = Icons.Outlined.Archive,
-                    iconColor = ThingsAnytimeTeal,
+                    // Используем кастомную иконку AppIcons.Anytime
+                    icon = AppIcons.Anytime,
+                    iconColor = Color.Unspecified,
                     count = 0,
                     textPrimaryColor = textPrimaryColor,
                     textSecondaryColor = textSecondaryColor,
@@ -323,8 +328,9 @@ fun ThingsHomePanel(
                 )
                 SmartListRow(
                     title = "Someday",
-                    icon = Icons.Outlined.Folder,
-                    iconColor = ThingsSomedayGrey,
+                    // Используем кастомную иконку AppIcons.Someday
+                    icon = AppIcons.Someday,
+                    iconColor = Color.Unspecified,
                     count = 0,
                     textPrimaryColor = textPrimaryColor,
                     textSecondaryColor = textSecondaryColor,
@@ -332,8 +338,9 @@ fun ThingsHomePanel(
                 )
                 SmartListRow(
                     title = "Logbook",
-                    icon = Icons.Outlined.AssignmentTurnedIn,
-                    iconColor = ThingsLogbookGreen,
+                    // Используем кастомную иконку AppIcons.Logbook
+                    icon = AppIcons.Logbook,
+                    iconColor = Color.Unspecified,
                     count = 0,
                     textPrimaryColor = textPrimaryColor,
                     textSecondaryColor = textSecondaryColor,
@@ -467,16 +474,6 @@ fun ThingsHomePanel(
             }
         }
 
-        // [ИЗМЕНЕНИЕ]: Уменьшен отступ у разделителя для уменьшения пространства между списком Non-area проектов и областями
-        if (noAreaProjects.isNotEmpty() && areas.isNotEmpty()) {
-            item {
-                HorizontalDivider(
-                    color = dividerColor,
-                    modifier = Modifier.padding(vertical = 0.dp)
-                )
-            }
-        }
-
         // Render Areas
         areas.forEachIndexed { index, area ->
             val areaProjects = projects.filter { it.areaId == area.id }
@@ -484,13 +481,6 @@ fun ThingsHomePanel(
             val isAreaEditing = area.id == editingAreaId
 
             item {
-                if (index > 0) {
-                    // [ИЗМЕНЕНИЕ]: Горизонтальный разделитель выше любой карточки области (кроме первой, у которой разделитель обеспечивается другими условиями)
-                    HorizontalDivider(
-                        color = dividerColor,
-                        modifier = Modifier.padding(vertical = 0.dp)
-                    )
-                }
                 val isExpanded = expandedStates[area.id] ?: true
                 val rotationAngle by animateFloatAsState(
                     targetValue = if (isExpanded) 90f else 0f,
@@ -501,6 +491,21 @@ fun ThingsHomePanel(
                     modifier = Modifier
                         .fillMaxWidth()
                 ) {
+                    if (index > 0) {
+                        // [ИЗМЕНЕНИЕ]: Горизонтальный разделитель выше любой карточки области
+                        HorizontalDivider(
+                            color = dividerColor,
+                            modifier = Modifier.padding(vertical = 0.dp)
+                        )
+                        Spacer(modifier = Modifier.height(20.dp))
+                    } else if (noAreaProjects.isNotEmpty()) {
+                        // [ИЗМЕНЕНИЕ]: Разделитель между списком проектов без области и первой областью
+                        HorizontalDivider(
+                            color = dividerColor,
+                            modifier = Modifier.padding(vertical = 0.dp)
+                        )
+                        Spacer(modifier = Modifier.height(20.dp))
+                    }
                     // Title block for Area
                     // [ИЗМЕНЕНИЕ]: Установка минимальной высоты карточки пустой области в 48.dp
                     Row(

@@ -72,9 +72,12 @@ class TaskRepositoryImpl @Inject constructor(
         calendarDataSource.fetchLocalCalendarEvents()
     }
 
-    override suspend fun insertTask(item: Item, checklist: List<ChecklistItem>): Unit = withContext(Dispatchers.IO) {
+    // Хирургическое исправление: обновляем чек-лист только если он передан явно (не равен null)
+    override suspend fun insertTask(item: Item, checklist: List<ChecklistItem>?): Unit = withContext(Dispatchers.IO) {
         localDataSource.insertItem(item)
-        updateChecklistItems(item.id, checklist)
+        if (checklist != null) {
+            updateChecklistItems(item.id, checklist)
+        }
     }
 
     override suspend fun insertTasks(items: List<Item>): Unit = withContext(Dispatchers.IO) {

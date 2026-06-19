@@ -88,7 +88,7 @@ fun AnimatedTaskItem(
     // Извлечение значения из Animatable
     val translationYVal = if (isDragTask) dragDropState.dragAccumulatedOffset.value else 0f
 
-    val containerBgColor = if (isExpanded || isDragTask) MaterialTheme.colorScheme.background else Color.Transparent
+    val containerBgColor = if (isExpanded || isDragTask || dragElevation > 0.dp) MaterialTheme.colorScheme.background else Color.Transparent
 
     Column(
         modifier = modifier

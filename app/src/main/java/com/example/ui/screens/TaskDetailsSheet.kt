@@ -400,10 +400,11 @@ fun ThingsTaskDetailsSheet(
                             .clickable { isTonight = !isTonight }
                             .padding(horizontal = 10.dp, vertical = 6.dp)
                     ) {
+                        // Иконка "Вечер" с использованием AppIcons.Evening
                         Icon(
-                            Icons.Outlined.Brightness3,
+                            AppIcons.Evening,
                             contentDescription = "Tonight",
-                            tint = ThingsSomedayGrey,
+                            tint = if (isTonight) Color.Unspecified else ThingsSomedayGrey,
                             modifier = Modifier.size(16.dp)
                         )
                         Spacer(modifier = Modifier.width(6.dp))

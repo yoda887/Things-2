@@ -25,6 +25,7 @@ import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
 import com.example.data.model.TaskSection
 import com.example.ui.theme.ThingsBlue
+import com.example.ui.theme.AppIcons
 import com.example.ui.screens.home.inlineeditor.utils.isPastDate
 import com.example.ui.screens.home.inlineeditor.utils.isTodayDate
 import com.example.ui.screens.home.inlineeditor.utils.isSameDay
@@ -210,10 +211,14 @@ fun ThingsWhenDialog(
                         .padding(vertical = 8.dp),
                     verticalAlignment = Alignment.CenterVertically
                 ) {
-                    Text(
-                        text = "🌙",
-                        fontSize = titleFontSize,
-                        modifier = Modifier.padding(end = 12.dp)
+                    // Иконка "Вечер" с автоматическим подбором цвета и размера
+                    Icon(
+                        imageVector = AppIcons.Evening,
+                        contentDescription = "This Evening",
+                        tint = Color.Unspecified,
+                        modifier = Modifier
+                            .padding(end = 12.dp)
+                            .size(24.dp)
                     )
                     Text(
                         text = "This Evening",

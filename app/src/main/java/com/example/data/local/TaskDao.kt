@@ -5,6 +5,7 @@ import androidx.room.Delete
 import androidx.room.Insert
 import androidx.room.OnConflictStrategy
 import androidx.room.Query
+import androidx.room.Upsert
 import com.example.data.model.Area
 import com.example.data.model.Item
 import com.example.data.model.Tag
@@ -21,10 +22,12 @@ interface TaskDao {
     @Query("SELECT * FROM items WHERE id = :id")
     suspend fun getItemById(id: String): Item?
 
-    @Insert(onConflict = OnConflictStrategy.REPLACE)
+    //@Insert(onConflict = OnConflictStrategy.REPLACE)
+    @Upsert
     suspend fun insertItem(item: Item)
 
-    @Insert(onConflict = OnConflictStrategy.REPLACE)
+    //@Insert(onConflict = OnConflictStrategy.REPLACE)
+    @Upsert
     suspend fun insertItems(items: List<Item>)
 
     @Delete

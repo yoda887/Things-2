@@ -231,10 +231,11 @@ fun ThingsCategoryListPanel(
         ) {
             item(key = "main_header") {
                 // Извлеченный подкомпонент заголовка
+                // [ИЗМЕНЕНИЕ]: Передаем state.allTasks вместо state.displayTasks, чтобы степень выполнения проекта рассчитывалась корректно с учетом завершенных задач
                 MainCategoryHeader(
                     screen = screen,
                     project = project,
-                    tasks = state.displayTasks,
+                    tasks = state.allTasks,
                     area = area,
                     scaleFactor = scaleFactor,
                     textPrimaryColor = textPrimaryColor,

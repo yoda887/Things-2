@@ -49,9 +49,10 @@ interface ITaskRepository {
     /**
      * Создает или обновляет задачу локально с возможностью передать связанный чек-лист.
      * @param item Объект задачи
-     * @param checklist Список пунктов чек-листа
+     * @param checklist Список пунктов чек-листа (null, если обновлять чек-лист не требуется)
      */
-    suspend fun insertTask(item: Item, checklist: List<ChecklistItem> = emptyList())
+    // Хирургическое исправление: делаем checklist nullable для предотвращения стирания при обновлении задачи
+    suspend fun insertTask(item: Item, checklist: List<ChecklistItem>? = null)
 
     /**
      * Вставляет список задач в пакетном режиме.

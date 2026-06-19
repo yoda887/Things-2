@@ -82,7 +82,7 @@ fun TaskItemRow(
     )
 
     val rowBgColor = when {
-        isDragging -> if (isDark) Color(0xFF2C2C2E) else Color(0xFFF2F2F7)
+        isDragging || elevation > 0.dp -> if (isDark) Color(0xFF2C2C2E) else Color(0xFFF2F2F7)
         else -> highlightColor
     }
 
@@ -323,7 +323,8 @@ fun TaskItemRow(
                 areas.firstOrNull { it.id == task.areaId }
             }
             if (project != null && screen != ActiveScreen.PROJECT_DETAIL) {
-                Spacer(modifier = Modifier.height(2.dp))
+                // Расстояние уменьшено до 0.dp по запросу пользователя.
+                Spacer(modifier = Modifier.height(0.dp))
                 Text(
                     text = project.name,
                     style = TextStyle(
@@ -333,7 +334,8 @@ fun TaskItemRow(
                     )
                 )
             } else if (project == null && area != null && screen != ActiveScreen.AREA_DETAIL) {
-                Spacer(modifier = Modifier.height(2.dp))
+                // Расстояние уменьшено до 0.dp по запросу пользователя.
+                Spacer(modifier = Modifier.height(0.dp))
                 Text(
                     text = area.title,
                     style = TextStyle(
@@ -376,8 +378,9 @@ private fun getStartDateIndicator(startDate: Long, isTonight: Boolean): DateIndi
                   
     if (isToday) {
         return if (isTonight) {
+            // Иконка "Вечер" с использованием AppIcons.Evening
             DateIndicatorResult.IconIndicator(
-                icon = androidx.compose.material.icons.Icons.Default.NightsStay,
+                icon = AppIcons.Evening,
                 color = androidx.compose.ui.graphics.Color(0xFF2196F3),
                 contentDescription = "Tonight"
             )

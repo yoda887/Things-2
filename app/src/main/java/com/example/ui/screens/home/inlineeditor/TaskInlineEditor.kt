@@ -35,6 +35,7 @@ import androidx.compose.material.icons.outlined.Brightness3
 import androidx.compose.material.icons.outlined.Archive
 import com.example.ui.theme.ThingsTodayStar
 import com.example.ui.theme.ThingsSomedayGrey
+import com.example.ui.theme.AppIcons
 import com.example.ui.screens.home.inlineeditor.utils.isTodayDate
 import com.example.ui.screens.home.inlineeditor.components.*
 import com.example.ui.screens.home.inlineeditor.dialogs.ThingsWhenDialog
@@ -240,10 +241,10 @@ fun ThingsTaskInlineEditor(
             val activeDateIcon = if (hasActiveDate) {
                 when {
                     startDate != null && isTodayDate(startDate) -> {
-                        if (isTonight) Icons.Outlined.Brightness3 else Icons.Default.Star
+                        if (isTonight) AppIcons.Evening else Icons.Default.Star
                     }
                     startDate == null && section == TaskSection.TODAY -> {
-                        if (isTonight) Icons.Outlined.Brightness3 else Icons.Default.Star
+                        if (isTonight) AppIcons.Evening else Icons.Default.Star
                     }
                     section == TaskSection.SOMEDAY -> Icons.Outlined.Archive
                     else -> Icons.Outlined.CalendarToday
@@ -253,10 +254,10 @@ fun ThingsTaskInlineEditor(
             val activeDateColor = if (hasActiveDate) {
                 when {
                     startDate != null && isTodayDate(startDate) -> {
-                        if (isTonight) ThingsBlue else ThingsTodayStar
+                        if (isTonight) Color.Unspecified else ThingsTodayStar
                     }
                     startDate == null && section == TaskSection.TODAY -> {
-                        if (isTonight) ThingsBlue else ThingsTodayStar
+                        if (isTonight) Color.Unspecified else ThingsTodayStar
                     }
                     section == TaskSection.SOMEDAY -> ThingsSomedayGrey
                     else -> ThingsBlue

@@ -22,6 +22,7 @@ import com.example.data.model.TaskSection
 import com.example.ui.theme.ThingsBlue
 import com.example.ui.theme.ThingsTodayStar
 import com.example.ui.theme.ThingsSomedayGrey
+import com.example.ui.theme.AppIcons
 import com.example.ui.screens.home.inlineeditor.utils.isTodayDate
 import java.text.SimpleDateFormat
 import java.util.*
@@ -73,10 +74,10 @@ fun InlineEditorToolbar(
 
             val activeDateIcon = when {
                 startDate != null && isTodayDate(startDate) -> {
-                    if (isTonight) Icons.Outlined.Brightness3 else Icons.Default.Star
+                    if (isTonight) AppIcons.Evening else Icons.Default.Star
                 }
                 startDate == null && section == TaskSection.TODAY -> {
-                    if (isTonight) Icons.Outlined.Brightness3 else Icons.Default.Star
+                    if (isTonight) AppIcons.Evening else Icons.Default.Star
                 }
                 section == TaskSection.SOMEDAY -> Icons.Outlined.Archive
                 else -> Icons.Outlined.CalendarToday
@@ -84,10 +85,10 @@ fun InlineEditorToolbar(
 
             val activeDateColor = when {
                 startDate != null && isTodayDate(startDate) -> {
-                    if (isTonight) ThingsBlue else ThingsTodayStar
+                    if (isTonight) Color.Unspecified else ThingsTodayStar
                 }
                 startDate == null && section == TaskSection.TODAY -> {
-                    if (isTonight) ThingsBlue else ThingsTodayStar
+                    if (isTonight) Color.Unspecified else ThingsTodayStar
                 }
                 section == TaskSection.SOMEDAY -> ThingsSomedayGrey
                 else -> ThingsBlue
