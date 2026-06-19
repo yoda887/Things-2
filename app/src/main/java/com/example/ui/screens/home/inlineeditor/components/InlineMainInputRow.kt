@@ -18,10 +18,13 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.SolidColor
+import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.ui.layout.layout
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import com.example.ui.theme.ThingsBlue
 import com.example.ui.theme.dimens
 
@@ -38,7 +41,8 @@ fun InlineMainInputRow(
     val textPrimaryColor = Color(0xFF1C1C1E) // blackish font
     val textSecondaryColor = Color(0xFF747679) // dark grey font
 
-    val titleFontSize = MaterialTheme.typography.headlineSmall.fontSize
+    // Размер шрифта в заголовке статически равен MaterialTheme.typography.titleMedium.fontSize
+    val titleFontSize = MaterialTheme.typography.titleMedium.fontSize
     val notesFontSize = MaterialTheme.typography.bodyMedium.fontSize
 
     val titleSpacing = (8 + 4 * expansionProgress).dp
@@ -87,36 +91,52 @@ fun InlineMainInputRow(
                 }
             )
 
-            Spacer(modifier = Modifier.height(6.dp))
-
-            BasicTextField(
-                value = notes,
-                onValueChange = onNotesChange,
-                minLines = 2,
-                textStyle = TextStyle(
-                    fontSize = notesFontSize,
-                    fontWeight = FontWeight.Normal,
-                    color = textSecondaryColor
-                ),
-                cursorBrush = SolidColor(ThingsBlue),
+            // Smoothly collapse height and fade out the notes section during closing animation
+            Column(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .heightIn(min = 44.dp)
-                    .testTag("task_notes_input"),
-                decorationBox = { innerTextField ->
-                    if (notes.isEmpty()) {
-                        Text(
-                            "Notes",
-                            style = TextStyle(
-                                fontSize = notesFontSize,
-                                fontWeight = FontWeight.Normal,
-                                color = textSecondaryColor.copy(alpha = 0.5f)
-                            )
-                        )
+                    .graphicsLayer {
+                        alpha = expansionProgress
                     }
-                    innerTextField()
-                }
-            )
+                    .layout { measurable, constraints ->
+                        val placeable = measurable.measure(constraints)
+                        val calculatedHeight = (placeable.height * expansionProgress).toInt()
+                        layout(placeable.width, calculatedHeight) {
+                            placeable.place(0, 0)
+                        }
+                    }
+            ) {
+                Spacer(modifier = Modifier.height(6.dp))
+
+                BasicTextField(
+                    value = notes,
+                    onValueChange = onNotesChange,
+                    minLines = 2,
+                    textStyle = TextStyle(
+                        fontSize = notesFontSize,
+                        fontWeight = FontWeight.Normal,
+                        color = textSecondaryColor
+                    ),
+                    cursorBrush = SolidColor(ThingsBlue),
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .heightIn(min = 44.dp)
+                        .testTag("task_notes_input"),
+                    decorationBox = { innerTextField ->
+                        if (notes.isEmpty()) {
+                            Text(
+                                "Notes",
+                                style = TextStyle(
+                                    fontSize = notesFontSize,
+                                    fontWeight = FontWeight.Normal,
+                                    color = textSecondaryColor.copy(alpha = 0.5f)
+                                )
+                            )
+                        }
+                        innerTextField()
+                    }
+                )
+            }
         }
     }
 }

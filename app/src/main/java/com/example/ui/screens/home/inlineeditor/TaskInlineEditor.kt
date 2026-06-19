@@ -12,6 +12,8 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.ui.layout.layout
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.testTag
@@ -162,11 +164,25 @@ fun ThingsTaskInlineEditor(
         colors = CardDefaults.cardColors(containerColor = Color.Transparent),
         elevation = CardDefaults.cardElevation(defaultElevation = 0.dp)
     ) {
-        val horizontalPadding = (8 + 8 * expansionProgress).dp
+        // Динамические отступы для бесшовного перехода из состояния элемента списка:
+        // Слева: от 8dp (равно отступу в списке) до 16dp во весь экран
+        val startPadding = (8 + 8 * expansionProgress).dp
+        // Справа: от 4dp (равно отступу в списке) до 16dp во весь экран
+        val endPadding = (4 + 12 * expansionProgress).dp
+        // Сверху и снизу: по 13dp на старте (при высоте 46dp и чекбоксе 16dp центрирование
+        // дает ровно 15dp свободного места до чекбокса с учетом его собственного top padding = 2dp)
+        val topPadding = (13 + 3 * expansionProgress).dp
+        val bottomPadding = (13 + 3 * expansionProgress).dp
+
         Column(
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(horizontal = horizontalPadding, vertical = 16.dp)
+                .padding(
+                    start = startPadding,
+                    end = endPadding,
+                    top = topPadding,
+                    bottom = bottomPadding
+                )
         ) {
             // Main Top Content: Checkbox, Title and Notes
                 InlineMainInputRow(
@@ -199,10 +215,23 @@ fun ThingsTaskInlineEditor(
                     }
                 )
 
-               
-
-                // Checklist Items Panel
-                InlineChecklistPanel(
+                // Smoothly collapse and fade out all secondary items (checklist, dates, tags, buttons) below title row
+                Column(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .graphicsLayer {
+                            alpha = expansionProgress
+                        }
+                        .layout { measurable, constraints ->
+                            val placeable = measurable.measure(constraints)
+                            val calculatedHeight = (placeable.height * expansionProgress).toInt()
+                            layout(placeable.width, calculatedHeight) {
+                                placeable.place(0, 0)
+                            }
+                        }
+                ) {
+                    // Checklist Items Panel
+                    InlineChecklistPanel(
                     itemId = task.item.id,
                     checklist = checklist,
                     onChecklistChange = { checklist = it },
@@ -559,8 +588,9 @@ fun ThingsTaskInlineEditor(
                         .padding(horizontal = 4.dp, vertical = 2.dp)
                 )
             }
-        }
-    }
+        } // Close the collapse Column
+    } // Close the main Column
+} // Close the Card
 
     if (showWhenDialog) {
          ThingsWhenDialog(

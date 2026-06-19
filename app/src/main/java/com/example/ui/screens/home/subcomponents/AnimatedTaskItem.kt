@@ -90,14 +90,14 @@ fun AnimatedTaskItem(
         label = "dragScale_${task.id}"
     )
     val dragElevation by animateDpAsState(
-        targetValue = if (isDragTask) 8.dp else (if (isExpanded) 8.dp else 0.dp),
+        targetValue = if (isDragTask) 8.dp else (if (isExpanded || expansionProgress > 0f) 8.dp else 0.dp),
         label = "dragElev_${task.id}"
     )
-    val zIndexValToUse = if (isDragTask) 100f else (if (isExpanded) 1f else 0f)
+    val zIndexValToUse = if (isDragTask) 100f else (if (isExpanded || expansionProgress > 0f) 1f else 0f)
     // Извлечение значения из Animatable
     val translationYVal = if (isDragTask) dragDropState.dragAccumulatedOffset.value else 0f
 
-    val containerBgColor = if (isExpanded || isDragTask || dragElevation > 0.dp) MaterialTheme.colorScheme.background else Color.Transparent
+    val containerBgColor = if (isExpanded || expansionProgress > 0f || isDragTask || dragElevation > 0.dp) MaterialTheme.colorScheme.background else Color.Transparent
 
     val cornerRadiusValue = (8 * (1f - expansionProgress).coerceAtLeast(0f)).dp
     val currCornerShape = RoundedCornerShape(cornerRadiusValue)
