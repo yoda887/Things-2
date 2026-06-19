@@ -72,6 +72,15 @@ fun AnimatedTaskItem(
     val isExpanded = inlineExpandedTaskId == task.id
     val shouldDim = inlineExpandedTaskId != null && !isExpanded
 
+    val expansionProgress by animateFloatAsState(
+        targetValue = if (isExpanded) 1f else 0f,
+        animationSpec = spring(
+            dampingRatio = Spring.DampingRatioLowBouncy,
+            stiffness = Spring.StiffnessMediumLow
+        ),
+        label = "expansionProgress_${task.id}"
+    )
+
     val dimAlpha by animateFloatAsState(
         targetValue = if (shouldDim) 0.3f else 1f,
         label = "dimAlpha_${task.id}"
@@ -90,6 +99,11 @@ fun AnimatedTaskItem(
 
     val containerBgColor = if (isExpanded || isDragTask || dragElevation > 0.dp) MaterialTheme.colorScheme.background else Color.Transparent
 
+    val cornerRadiusValue = (8 * (1f - expansionProgress).coerceAtLeast(0f)).dp
+    val currCornerShape = RoundedCornerShape(cornerRadiusValue)
+
+    val extraPaddingDp = 4.dp + (16.dp * expansionProgress)
+
     Column(
         modifier = modifier
             .zIndex(zIndexValToUse)
@@ -100,24 +114,24 @@ fun AnimatedTaskItem(
                 alpha = dimAlpha
             }
             .layout { measurable, constraints ->
-                val paddingPx = 4.dp.roundToPx()
+                val extraPaddingPx = extraPaddingDp.roundToPx()
                 val extendedConstraints = constraints.copy(
-                    minWidth = (constraints.minWidth + paddingPx * 2).coerceAtMost(constraints.maxWidth + paddingPx * 2),
-                    maxWidth = (constraints.maxWidth + paddingPx * 2)
+                    minWidth = (constraints.minWidth + extraPaddingPx * 2).coerceAtMost(constraints.maxWidth + extraPaddingPx * 2),
+                    maxWidth = (constraints.maxWidth + extraPaddingPx * 2)
                 )
                 val placeable = measurable.measure(extendedConstraints)
-                layout(placeable.width - paddingPx * 2, placeable.height) {
-                    placeable.place(-paddingPx, 0)
+                layout(placeable.width - extraPaddingPx * 2, placeable.height) {
+                    placeable.place(-extraPaddingPx, 0)
                 }
             }
-            .shadow(dragElevation, RoundedCornerShape(8.dp))
-            .background(containerBgColor, RoundedCornerShape(8.dp))
+            .shadow(dragElevation, currCornerShape)
+            .background(containerBgColor, currCornerShape)
             .animateContentSize(animationSpec = spring(
                 dampingRatio = Spring.DampingRatioLowBouncy,
                 stiffness = Spring.StiffnessMediumLow
             ))
     ) {
-        if (isExpanded) {
+        if (isExpanded || expansionProgress > 0f) {
             ThingsTaskInlineEditor(
                 task = taskWrapper,
                 projects = projects,
@@ -128,6 +142,7 @@ fun AnimatedTaskItem(
                 onUpdateTag = { tag -> onEvent(ThingsCategoryListEvent.UpdateTag(tag)) },
                 onUpdateTagsOrder = { tags -> onEvent(ThingsCategoryListEvent.UpdateTagsOrder(tags)) },
                 isDeletedExternally = { deletedTaskIds.contains(task.id) },
+                expansionProgress = expansionProgress,
                 onSave = { title, notes, section, isTonight, startDate, dueDate, tags, projectId, checklist, priority ->
                     onEvent(
                         ThingsCategoryListEvent.SaveTask(

@@ -72,7 +72,8 @@ fun ThingsTaskInlineEditor(
     onDeleteTag: (Tag) -> Unit = {},
     onUpdateTag: (Tag) -> Unit = {},
     onUpdateTagsOrder: (List<Tag>) -> Unit = {},
-    isDeletedExternally: () -> Boolean = { false }
+    isDeletedExternally: () -> Boolean = { false },
+    expansionProgress: Float = 1f
 ) {
     var title by remember(task.item.id) { mutableStateOf<String>(task.item.title) }
     var notes by remember(task.item.id) { mutableStateOf<String>(task.item.notes) }
@@ -161,10 +162,11 @@ fun ThingsTaskInlineEditor(
         colors = CardDefaults.cardColors(containerColor = Color.Transparent),
         elevation = CardDefaults.cardElevation(defaultElevation = 0.dp)
     ) {
+        val horizontalPadding = (8 + 8 * expansionProgress).dp
         Column(
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(horizontal = 16.dp, vertical = 16.dp)
+                .padding(horizontal = horizontalPadding, vertical = 16.dp)
         ) {
             // Main Top Content: Checkbox, Title and Notes
                 InlineMainInputRow(
@@ -173,6 +175,7 @@ fun ThingsTaskInlineEditor(
                     notes = notes,
                     onNotesChange = { notes = it },
                     isCompleted = task.item.isCompleted,
+                    expansionProgress = expansionProgress,
                     onCheckboxClick = {
                         isSavedManually = true
                         if (title.isBlank() && notes.isBlank() && checklist.isEmpty()) {
@@ -201,11 +204,12 @@ fun ThingsTaskInlineEditor(
                 // Checklist Items Panel
                 InlineChecklistPanel(
                     itemId = task.item.id,
-                checklist = checklist,
-                onChecklistChange = { checklist = it },
-                showChecklistHelper = showChecklistHelper,
-                onShowChecklistHelperChange = { showChecklistHelper = it }
-            )
+                    checklist = checklist,
+                    onChecklistChange = { checklist = it },
+                    showChecklistHelper = showChecklistHelper,
+                    onShowChecklistHelperChange = { showChecklistHelper = it },
+                    expansionProgress = expansionProgress
+                )
 
             Spacer(modifier = Modifier.height(16.dp))
 
@@ -264,6 +268,7 @@ fun ThingsTaskInlineEditor(
                 }
             } else ThingsBlue
 
+            val startRelativePadding = (24 + 4 * expansionProgress).dp
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 verticalAlignment = Alignment.Bottom
@@ -272,7 +277,7 @@ fun ThingsTaskInlineEditor(
                 Column(
                     modifier = Modifier
                         .weight(1f)
-                        .padding(start = 28.dp),
+                        .padding(start = startRelativePadding),
                     verticalArrangement = Arrangement.Center
                 ) {
                     // 0. Active Tags Chips

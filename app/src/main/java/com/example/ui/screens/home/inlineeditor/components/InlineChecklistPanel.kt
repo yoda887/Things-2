@@ -38,7 +38,8 @@ fun InlineChecklistPanel(
     checklist: List<ChecklistItem>,
     onChecklistChange: (List<ChecklistItem>) -> Unit,
     showChecklistHelper: Boolean,
-    onShowChecklistHelperChange: (Boolean) -> Unit
+    onShowChecklistHelperChange: (Boolean) -> Unit,
+    expansionProgress: Float = 1f
 ) {
     val showPanel = showChecklistHelper || checklist.isNotEmpty()
 
@@ -48,6 +49,8 @@ fun InlineChecklistPanel(
 
     var newChecklistItemTitle by remember { mutableStateOf("") }
 
+    val startPadding = (24 + 4 * expansionProgress).dp
+
     AnimatedVisibility(
         visible = showPanel,
         enter = fadeIn() + expandVertically(),
@@ -56,7 +59,7 @@ fun InlineChecklistPanel(
         Column(
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(start = 28.dp, top = 8.dp)
+                .padding(start = startPadding, top = 8.dp)
         ) {
             if (checklist.isNotEmpty()) {
                 HorizontalDivider(color = Color(0xFFE5E5EA), thickness = 0.5.dp)

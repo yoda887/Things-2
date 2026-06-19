@@ -32,13 +32,16 @@ fun InlineMainInputRow(
     notes: String,
     onNotesChange: (String) -> Unit,
     isCompleted: Boolean,
-    onCheckboxClick: () -> Unit
+    onCheckboxClick: () -> Unit,
+    expansionProgress: Float = 1f
 ) {
     val textPrimaryColor = Color(0xFF1C1C1E) // blackish font
     val textSecondaryColor = Color(0xFF747679) // dark grey font
 
     val titleFontSize = MaterialTheme.typography.headlineSmall.fontSize
     val notesFontSize = MaterialTheme.typography.bodyMedium.fontSize
+
+    val titleSpacing = (8 + 4 * expansionProgress).dp
 
     Row(
         modifier = Modifier.fillMaxWidth(),
@@ -50,7 +53,7 @@ fun InlineMainInputRow(
             onCheckedChange = { onCheckboxClick() },
             size = MaterialTheme.dimens.mainCheckboxSize,
             uncheckedColor = Color(0xFFC7C7CC),
-            modifier = Modifier.padding(end = 12.dp, top = 2.dp)
+            modifier = Modifier.padding(end = titleSpacing, top = 2.dp)
         )
 
         // Title and Notes Fields (Always black text on white background)
