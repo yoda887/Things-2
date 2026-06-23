@@ -6,6 +6,7 @@ import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.animation.*
 import androidx.compose.animation.core.spring
+import androidx.compose.animation.core.tween
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
@@ -260,7 +261,43 @@ fun ThingsHomeScreen(viewModel: ThingsViewModel = hiltViewModel()) {
                 .fillMaxSize()
                 .padding(innerPadding)
         ) {
-            Crossfade(targetState = activeScreen, animationSpec = spring()) { screen ->
+            // [ИЗМЕНЕНИЕ]: Анимированный переход между экранами. Вход в подробные экраны выполняется 
+            // слайдом справа налево с фейдом, а возврат на экран HOME — слайдом обратно направо.
+            AnimatedContent(
+                targetState = activeScreen,
+                transitionSpec = {
+                    val enterAnim = if (initialState == ActiveScreen.HOME && targetState != ActiveScreen.HOME) {
+                        slideInHorizontally(
+                            initialOffsetX = { it },
+                            animationSpec = tween(durationMillis = 350)
+                        ) + fadeIn(animationSpec = tween(durationMillis = 350))
+                    } else if (initialState != ActiveScreen.HOME && targetState == ActiveScreen.HOME) {
+                        slideInHorizontally(
+                            initialOffsetX = { -it / 3 },
+                            animationSpec = tween(durationMillis = 350)
+                        ) + fadeIn(animationSpec = tween(durationMillis = 350))
+                    } else {
+                        fadeIn(animationSpec = tween(durationMillis = 350))
+                    }
+
+                    val exitAnim = if (initialState == ActiveScreen.HOME && targetState != ActiveScreen.HOME) {
+                        slideOutHorizontally(
+                            targetOffsetX = { -it / 3 },
+                            animationSpec = tween(durationMillis = 350)
+                        ) + fadeOut(animationSpec = tween(durationMillis = 350))
+                    } else if (initialState != ActiveScreen.HOME && targetState == ActiveScreen.HOME) {
+                        slideOutHorizontally(
+                            targetOffsetX = { it },
+                            animationSpec = tween(durationMillis = 350)
+                        ) + fadeOut(animationSpec = tween(durationMillis = 350))
+                    } else {
+                        fadeOut(animationSpec = tween(durationMillis = 350))
+                    }
+
+                    enterAnim togetherWith exitAnim
+                },
+                label = "screenTransition"
+            ) { screen ->
                 when (screen) {
                     ActiveScreen.HOME -> ThingsHomePanel(
                         allTasks = allTasksRaw,

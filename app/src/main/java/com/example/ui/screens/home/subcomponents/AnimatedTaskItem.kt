@@ -6,6 +6,8 @@ import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.spring
 import androidx.compose.animation.core.Spring
 import androidx.compose.foundation.background
+import androidx.compose.foundation.isSystemInDarkTheme
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.lazy.LazyListState
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -65,6 +67,7 @@ fun AnimatedTaskItem(
     displayTasks: List<ItemWithChecklist>,
     onLocalTasksListChange: (List<ItemWithChecklist>) -> Unit,
     lazyListState: LazyListState,
+    onWhenDialogVisibilityChange: (Boolean) -> Unit = {},
     modifier: Modifier = Modifier
 ) {
     val task = taskWrapper.item
@@ -104,106 +107,122 @@ fun AnimatedTaskItem(
 
     val extraPaddingDp = 4.dp + (16.dp * expansionProgress)
 
-    Column(
+    // Добавляем светло-серую подложку (плейсхолдер) на физическое место задачи во время перетаскивания (landing slot)
+    Box(
         modifier = modifier
-            .zIndex(zIndexValToUse)
-            .graphicsLayer {
-                translationY = translationYVal
-                scaleX = dragScale
-                scaleY = dragScale
-                alpha = dimAlpha
-            }
-            .layout { measurable, constraints ->
-                val extraPaddingPx = extraPaddingDp.roundToPx()
-                val extendedConstraints = constraints.copy(
-                    minWidth = (constraints.minWidth + extraPaddingPx * 2).coerceAtMost(constraints.maxWidth + extraPaddingPx * 2),
-                    maxWidth = (constraints.maxWidth + extraPaddingPx * 2)
-                )
-                val placeable = measurable.measure(extendedConstraints)
-                layout(placeable.width - extraPaddingPx * 2, placeable.height) {
-                    placeable.place(-extraPaddingPx, 0)
-                }
-            }
-            .shadow(dragElevation, currCornerShape)
-            .background(containerBgColor, currCornerShape)
-            .animateContentSize(animationSpec = spring(
-                dampingRatio = Spring.DampingRatioLowBouncy,
-                stiffness = Spring.StiffnessMediumLow
-            ))
     ) {
-        if (isExpanded || expansionProgress > 0f) {
-            ThingsTaskInlineEditor(
-                task = taskWrapper,
-                projects = projects,
-                allSavedTags = allSavedTags,
-                allSavedTagObjects = allSavedTagObjects,
-                onNewTagCreated = { title, parentId -> onEvent(ThingsCategoryListEvent.CreateTag(title, parentId)) },
-                onDeleteTag = { tag -> onEvent(ThingsCategoryListEvent.DeleteTag(tag)) },
-                onUpdateTag = { tag -> onEvent(ThingsCategoryListEvent.UpdateTag(tag)) },
-                onUpdateTagsOrder = { tags -> onEvent(ThingsCategoryListEvent.UpdateTagsOrder(tags)) },
-                isDeletedExternally = { deletedTaskIds.contains(task.id) },
-                expansionProgress = expansionProgress,
-                onSave = { title, notes, section, isTonight, startDate, dueDate, tags, projectId, checklist, priority ->
-                    onEvent(
-                        ThingsCategoryListEvent.SaveTask(
-                            taskWrapper = taskWrapper,
-                            title = title,
-                            notes = notes,
-                            section = section,
-                            isTonight = isTonight,
-                            startDate = startDate,
-                            dueDate = dueDate,
-                            tags = tags,
-                            projectId = projectId,
-                            priority = priority,
-                            checklist = checklist
-                        )
-                    )
-                    onEvent(ThingsCategoryListEvent.ChangeInlineExpandedTaskId(null))
-                },
-                onDelete = {
-                    onDeletedTaskIdAdd(task.id)
-                    onEvent(ThingsCategoryListEvent.ChangeInlineExpandedTaskId(null))
-                    coroutineScope.launch {
-                        delay(DELETE_ANIMATION_DELAY_MS)
-                        onEvent(ThingsCategoryListEvent.DeleteTask(taskWrapper))
-                    }
-                },
-                onDone = {
-                    onEvent(ThingsCategoryListEvent.ChangeInlineExpandedTaskId(null))
+        if (isDragTask) {
+            val isDark = isSystemInDarkTheme()
+            val placeholderBgColor = if (isDark) Color(0xFF2C2D32) else Color(0xFFE5E6EB)
+            Box(
+                modifier = Modifier
+                    .matchParentSize()
+                    .background(placeholderBgColor, currCornerShape)
+            )
+        }
+
+        Column(
+            modifier = Modifier
+                .zIndex(zIndexValToUse)
+                .graphicsLayer {
+                    translationY = translationYVal
+                    scaleX = dragScale
+                    scaleY = dragScale
+                    alpha = dimAlpha
                 }
-            )
-        } else {
-            TaskItemRow(
-                modifier = Modifier,
-                task = taskWrapper.item,
-                textPrimaryColor = textPrimaryColor,
-                textSecondaryColor = textSecondaryColor,
-                dividerColor = dividerColor,
-                onToggle = { onEvent(ThingsCategoryListEvent.ToggleTask(taskWrapper)) },
-                onClick = {
-                    onEvent(ThingsCategoryListEvent.ChangeInlineExpandedTaskId(task.id))
-                },
-                projects = projects,
-                areas = areas,
-                showTodayIndicator = screen == ActiveScreen.TODAY && !task.isTonight,
-                isDragging = false,
-                dragOffsetY = 0f,
-                dragModifier = Modifier.taskDragAndDrop(
-                    state = dragDropState,
-                    taskWrapper = taskWrapper,
-                    screen = screen,
-                    upcomingDays = upcomingDays,
-                    localTasksList = localTasksList,
-                    filteredTasks = displayTasks,
-                    onLocalTasksListChange = onLocalTasksListChange,
-                    onTasksReordered = { items ->
-                        onEvent(ThingsCategoryListEvent.ReorderTasks(items))
+                .layout { measurable, constraints ->
+                    val extraPaddingPx = extraPaddingDp.roundToPx()
+                    val extendedConstraints = constraints.copy(
+                        minWidth = (constraints.minWidth + extraPaddingPx * 2).coerceAtMost(constraints.maxWidth + extraPaddingPx * 2),
+                        maxWidth = (constraints.maxWidth + extraPaddingPx * 2)
+                    )
+                    val placeable = measurable.measure(extendedConstraints)
+                    layout(placeable.width - extraPaddingPx * 2, placeable.height) {
+                        placeable.place(-extraPaddingPx, 0)
                     }
-                ),
-                isHighlighted = task.id == highlightedTaskId,
-                screen = screen
-            )
+                }
+                .shadow(dragElevation, currCornerShape)
+                .background(containerBgColor, currCornerShape)
+                .animateContentSize(animationSpec = spring(
+                    dampingRatio = Spring.DampingRatioLowBouncy,
+                    stiffness = Spring.StiffnessMediumLow
+                ))
+        ) {
+            if (isExpanded || expansionProgress > 0f) {
+                ThingsTaskInlineEditor(
+                    task = taskWrapper,
+                    projects = projects,
+                    allSavedTags = allSavedTags,
+                    allSavedTagObjects = allSavedTagObjects,
+                    onNewTagCreated = { title, parentId -> onEvent(ThingsCategoryListEvent.CreateTag(title, parentId)) },
+                    onDeleteTag = { tag -> onEvent(ThingsCategoryListEvent.DeleteTag(tag)) },
+                    onUpdateTag = { tag -> onEvent(ThingsCategoryListEvent.UpdateTag(tag)) },
+                    onUpdateTagsOrder = { tags -> onEvent(ThingsCategoryListEvent.UpdateTagsOrder(tags)) },
+                    isDeletedExternally = { deletedTaskIds.contains(task.id) },
+                    expansionProgress = expansionProgress,
+                    onSave = { title, notes, section, isTonight, startDate, dueDate, tags, projectId, checklist, priority ->
+                        onEvent(
+                            ThingsCategoryListEvent.SaveTask(
+                                taskWrapper = taskWrapper,
+                                title = title,
+                                notes = notes,
+                                section = section,
+                                isTonight = isTonight,
+                                startDate = startDate,
+                                dueDate = dueDate,
+                                tags = tags,
+                                projectId = projectId,
+                                priority = priority,
+                                checklist = checklist
+                            )
+                        )
+                        onEvent(ThingsCategoryListEvent.ChangeInlineExpandedTaskId(null))
+                    },
+                    onDelete = {
+                        onDeletedTaskIdAdd(task.id)
+                        onEvent(ThingsCategoryListEvent.ChangeInlineExpandedTaskId(null))
+                        coroutineScope.launch {
+                            delay(DELETE_ANIMATION_DELAY_MS)
+                            onEvent(ThingsCategoryListEvent.DeleteTask(taskWrapper))
+                        }
+                    },
+                    onDone = {
+                        onEvent(ThingsCategoryListEvent.ChangeInlineExpandedTaskId(null))
+                    },
+                    onWhenDialogVisibilityChange = onWhenDialogVisibilityChange
+                )
+            } else {
+                TaskItemRow(
+                    modifier = Modifier,
+                    task = taskWrapper.item,
+                    textPrimaryColor = textPrimaryColor,
+                    textSecondaryColor = textSecondaryColor,
+                    dividerColor = dividerColor,
+                    onToggle = { onEvent(ThingsCategoryListEvent.ToggleTask(taskWrapper)) },
+                    onClick = {
+                        onEvent(ThingsCategoryListEvent.ChangeInlineExpandedTaskId(task.id))
+                    },
+                    projects = projects,
+                    areas = areas,
+                    showTodayIndicator = screen == ActiveScreen.TODAY && !task.isTonight,
+                    isDragging = false,
+                    dragOffsetY = 0f,
+                    dragModifier = Modifier.taskDragAndDrop(
+                        state = dragDropState,
+                        taskWrapper = taskWrapper,
+                        screen = screen,
+                        upcomingDays = upcomingDays,
+                        localTasksList = localTasksList,
+                        filteredTasks = displayTasks,
+                        onLocalTasksListChange = onLocalTasksListChange,
+                        onTasksReordered = { items ->
+                            onEvent(ThingsCategoryListEvent.ReorderTasks(items))
+                        }
+                    ),
+                    isHighlighted = task.id == highlightedTaskId,
+                    screen = screen
+                )
+            }
         }
     }
 }

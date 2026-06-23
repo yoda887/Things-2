@@ -135,6 +135,7 @@ fun Modifier.universalDragAndDrop(
 
     /**
      * Поиск элемента списка, с которым необходимо произвести обмен на основании геометрии.
+     * Реализует строгое пересечение по центру для заголовков и 50% наложение для других элементов.
      */
     fun checkSwap(
         draggedKey: Any,
@@ -145,27 +146,45 @@ fun Modifier.universalDragAndDrop(
         
         val dragTop = draggedItem.offset + currentOffset
         val dragBottom = dragTop + draggedItem.size
+        
 
         return visibleItems.firstOrNull { target ->
             if (target.key == draggedKey) return@firstOrNull false
 
-            val overlapTop = maxOf(dragTop, target.offset.toFloat())
-            val overlapBottom = minOf(dragBottom, (target.offset + target.size).toFloat())
-            val overlapAmount = overlapBottom - overlapTop
+            
 
-            overlapAmount > (target.size * MOVE_THRESHOLD) // Универсальное правило 50%
+
+
+
+
+
+
+
+
+
+
+
+            
+                val overlapTop = maxOf(dragTop, target.offset.toFloat())
+                val overlapBottom = minOf(dragBottom, (target.offset + target.size).toFloat())
+                val overlapAmount = overlapBottom - overlapTop
+                
+                
+                overlapAmount > (target.size * MOVE_THRESHOLD) // Универсальное правило 50%
         }
     }
 
     /**
      * Инициализирует проверку пересечения и последующий вызов бизнес-логики.
+
+
      */
     fun performIntersectionCheck() {
         val visibleItems = lazyListState.layoutInfo.visibleItemsInfo
         val targetItem = checkSwap(key, visibleItems, state.dragAccumulatedOffset.value)
 
         if (targetItem != null) {
-            val draggedItem = visibleItems.firstOrNull { it.key == key } ?: return
+             val draggedItem = visibleItems.firstOrNull { it.key == key } ?: return
             
             val spacing = detectItemSpacing(visibleItems)
             val distanceToShift = if (targetItem.index > draggedItem.index) {
@@ -181,6 +200,7 @@ fun Modifier.universalDragAndDrop(
             if (swapAccepted) {
                 coroutineScope.launch {
                     state.adjustOffset(distanceToShift)
+                    
                 }
             }
         }

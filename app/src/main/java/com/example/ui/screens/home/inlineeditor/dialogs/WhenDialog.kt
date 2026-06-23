@@ -21,10 +21,15 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.animation.core.animateFloatAsState
+import androidx.compose.animation.core.spring
+import androidx.compose.animation.core.Spring
 import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
 import com.example.data.model.TaskSection
 import com.example.ui.theme.ThingsBlue
+import com.example.ui.theme.ThingsUpcomingRed
 import com.example.ui.theme.AppIcons
 import com.example.ui.screens.home.inlineeditor.utils.isPastDate
 import com.example.ui.screens.home.inlineeditor.utils.isTodayDate
@@ -97,6 +102,27 @@ fun ThingsWhenDialog(
     val notesFontSize = MaterialTheme.typography.titleSmall.fontSize
     val smallFontSize = MaterialTheme.typography.labelMedium.fontSize
 
+    var isVisible by remember { mutableStateOf(false) }
+    LaunchedEffect(Unit) {
+        isVisible = true
+    }
+
+    val scale by animateFloatAsState(
+        targetValue = if (isVisible) 1f else 0.85f,
+        animationSpec = spring(
+            dampingRatio = Spring.DampingRatioMediumBouncy,
+            stiffness = Spring.StiffnessLow
+        ),
+        label = "scale"
+    )
+    val alpha by animateFloatAsState(
+        targetValue = if (isVisible) 1f else 0f,
+        animationSpec = spring(
+            stiffness = Spring.StiffnessLow
+        ),
+        label = "alpha"
+    )
+
     Dialog(
         onDismissRequest = onDismissRequest,
         properties = DialogProperties(usePlatformDefaultWidth = false)
@@ -107,6 +133,11 @@ fun ThingsWhenDialog(
                 containerColor = Color(0xFF22242C)
             ),
             modifier = Modifier
+                .graphicsLayer(
+                    scaleX = scale,
+                    scaleY = scale,
+                    alpha = alpha
+                )
                 .width(320.dp)
                 .wrapContentHeight()
         ) {
@@ -149,17 +180,11 @@ fun ThingsWhenDialog(
                         .fillMaxWidth()
                         .clip(RoundedCornerShape(8.dp))
                         .clickable {
-                            if (isTodayActive) {
-                                onStartDateChange(null)
-                                onSectionChange(TaskSection.ANYTIME)
-                                onIsTonightChange(false)
-                                onShowCalendarHelperChange(false)
-                            } else {
-                                onStartDateChange(System.currentTimeMillis())
-                                onSectionChange(TaskSection.TODAY)
-                                onIsTonightChange(false)
-                                onShowCalendarHelperChange(true)
-                            }
+                            // [ИЗМЕНЕНИЕ]: Нажатие назначает дату "Today" без сброса в "Anytime". Сброс даты теперь производится через кнопку "Clear".
+                            onStartDateChange(System.currentTimeMillis())
+                            onSectionChange(TaskSection.TODAY)
+                            onIsTonightChange(false)
+                            onShowCalendarHelperChange(true)
                             onDismissRequest()
                         }
                         .padding(vertical = 8.dp),
@@ -195,17 +220,11 @@ fun ThingsWhenDialog(
                         .fillMaxWidth()
                         .clip(RoundedCornerShape(8.dp))
                         .clickable {
-                            if (isThisEveningActive) {
-                                onStartDateChange(null)
-                                onSectionChange(TaskSection.ANYTIME)
-                                onIsTonightChange(false)
-                                onShowCalendarHelperChange(false)
-                            } else {
-                                onStartDateChange(System.currentTimeMillis())
-                                onSectionChange(TaskSection.TODAY)
-                                onIsTonightChange(true)
-                                onShowCalendarHelperChange(true)
-                            }
+                            // [ИЗМЕНЕНИЕ]: Нажатие назначает категорию "This Evening" без сброса в "Anytime". Сброс даты производится через кнопку "Clear".
+                            onStartDateChange(System.currentTimeMillis())
+                            onSectionChange(TaskSection.TODAY)
+                            onIsTonightChange(true)
+                            onShowCalendarHelperChange(true)
                             onDismissRequest()
                         }
                         .padding(vertical = 8.dp),
@@ -373,18 +392,11 @@ fun ThingsWhenDialog(
                                                     }
                                                 )
                                                 .clickable {
-                                                    if (isSelected) {
-                                                        // Toggle off -> Next state (ANYTIME)
-                                                        onStartDateChange(null)
-                                                        onSectionChange(TaskSection.ANYTIME)
-                                                        onIsTonightChange(false)
-                                                        onShowCalendarHelperChange(false)
-                                                    } else {
-                                                        onStartDateChange(cell.timestamp)
-                                                        onSectionChange(if (isTodayDate(cell.timestamp)) TaskSection.TODAY else TaskSection.UPCOMING)
-                                                        onIsTonightChange(false)
-                                                        onShowCalendarHelperChange(true)
-                                                    }
+                                                    // [ИЗМЕНЕНИЕ]: Выбор даты в календаре устанавливает дату без переключения в "Anytime". Сброс даты производится через кнопку "Clear".
+                                                    onStartDateChange(cell.timestamp)
+                                                    onSectionChange(if (isTodayDate(cell.timestamp)) TaskSection.TODAY else TaskSection.UPCOMING)
+                                                    onIsTonightChange(false)
+                                                    onShowCalendarHelperChange(true)
                                                     onDismissRequest()
                                                 },
                                             contentAlignment = Alignment.Center
@@ -467,17 +479,11 @@ fun ThingsWhenDialog(
                         .fillMaxWidth()
                         .clip(RoundedCornerShape(8.dp))
                         .clickable {
-                            if (isSomedayActive) {
-                                onStartDateChange(null)
-                                onSectionChange(TaskSection.ANYTIME)
-                                onIsTonightChange(false)
-                                onShowCalendarHelperChange(false)
-                            } else {
-                                onStartDateChange(null)
-                                onSectionChange(TaskSection.SOMEDAY)
-                                onIsTonightChange(false)
-                                onShowCalendarHelperChange(true)
-                            }
+                            // [ИЗМЕНЕНИЕ]: Выбор "Someday" устанавливает категорию "Someday" без переключения в "Anytime". Сброс даты производится через кнопку "Clear".
+                            onStartDateChange(null)
+                            onSectionChange(TaskSection.SOMEDAY)
+                            onIsTonightChange(false)
+                            onShowCalendarHelperChange(true)
                             onDismissRequest()
                         }
                         .padding(vertical = 8.dp),
@@ -529,6 +535,36 @@ fun ThingsWhenDialog(
                             fontWeight = FontWeight.Normal
                         )
                     )
+                }
+
+                // [ИЗМЕНЕНИЕ]: Если назначена дата или другая временная категория (Today, This Evening, Someday, Upcoming),
+                // выводим широкую кнопку "Clear" в самом низу диалога для обнуления/сброса даты в "Anytime".
+                val hasTimeAssignment = startDate != null || section != TaskSection.ANYTIME
+                if (hasTimeAssignment) {
+                    Spacer(modifier = Modifier.height(4.dp))
+                    Button(
+                        onClick = {
+                            onStartDateChange(null)
+                            onSectionChange(TaskSection.ANYTIME)
+                            onIsTonightChange(false)
+                            onShowCalendarHelperChange(false)
+                            onDismissRequest()
+                        },
+                        colors = ButtonDefaults.buttonColors(
+                            containerColor = ThingsUpcomingRed,
+                            contentColor = Color.White
+                        ),
+                        shape = RoundedCornerShape(16.dp),
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .height(44.dp)
+                    ) {
+                        Text(
+                            text = "Clear",
+                            fontSize = 16.sp,
+                            fontWeight = FontWeight.SemiBold
+                        )
+                    }
                 }
             }
         }

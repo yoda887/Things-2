@@ -293,6 +293,7 @@ fun ThingsHomePanel(
                     count = inboxCount,
                     textPrimaryColor = textPrimaryColor,
                     textSecondaryColor = textSecondaryColor,
+                    isGrayCountAndNoBg = true, // [ИЗМЕНЕНИЕ]: Количество задач серого цвета и без фона
                     onClick = { onSmartListClick(ActiveScreen.INBOX) }
                 )
                 Spacer(modifier = Modifier.height(12.dp))
@@ -304,6 +305,7 @@ fun ThingsHomePanel(
                     count = todayCount,
                     textPrimaryColor = textPrimaryColor,
                     textSecondaryColor = textSecondaryColor,
+                    isGrayCountAndNoBg = true, // [ИЗМЕНЕНИЕ]: Количество задач серого цвета и без фона
                     onClick = { onSmartListClick(ActiveScreen.TODAY) }
                 )
                 SmartListRow(
@@ -362,15 +364,17 @@ fun ThingsHomePanel(
 
         // Render projects without area first, as standalone items
         noAreaProjects.forEach { project ->
-            item {
+            // [ИЗМЕНЕНИЕ]: Добавлен стабильный ключ "proj_${project.id}" для анимации элементов
+            item(key = "proj_${project.id}") {
                 val projectTasks = tasksByProject[project.id] ?: emptyList()
                 val completedCount = projectTasks.count { it.item.isCompleted }
                 val totalCount = projectTasks.size
                 val isEditing = project.id == editingProjectId
 
-                // [ИЗМЕНЕНИЕ]: При inline-редактировании цвет фона становится полупрозрачным голубым
+                // [ИЗМЕНЕНИЕ]: Добавлен Modifier.animateItem() перед остальными модификаторами для плавной анимации появления/перемещения/удаления проектов
                 Row(
                     modifier = Modifier
+                        .animateItem()
                         .fillMaxWidth()
                         .clip(RoundedCornerShape(10.dp))
                         .background(if (isEditing) ThingsBlue.copy(alpha = 0.15f) else Color.Transparent)
@@ -480,15 +484,17 @@ fun ThingsHomePanel(
             val hasProjects = areaProjects.isNotEmpty()
             val isAreaEditing = area.id == editingAreaId
 
-            item {
+            // [ИЗМЕНЕНИЕ]: Добавлен стабильный ключ "area_${area.id}" для корректной анимации добавления/удаления/перемещения
+            item(key = "area_${area.id}") {
                 val isExpanded = expandedStates[area.id] ?: true
                 val rotationAngle by animateFloatAsState(
                     targetValue = if (isExpanded) 90f else 0f,
                     label = "rotationAngle"
                 )
-                // [ИЗМЕНЕНИЕ]: Уменьшен верхний отступ (top padding) до карточки области на 4.dp для компенсации увеличенной высоты иконки
+                // [ИЗМЕНЕНИЕ]: Добавлен Modifier.animateItem() для плавной анимации появления, перемещения и исчезновения областей
                 Column(
                     modifier = Modifier
+                        .animateItem()
                         .fillMaxWidth()
                 ) {
                     if (index > 0) {

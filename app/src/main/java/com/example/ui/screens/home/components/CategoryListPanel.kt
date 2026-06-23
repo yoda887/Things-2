@@ -124,6 +124,7 @@ fun ThingsCategoryListPanel(
 
     var showMoveDialog by remember { mutableStateOf(false) }
     var showDeleteConfirm by remember { mutableStateOf(false) }
+    var isWhenDialogOpen by remember { mutableStateOf(false) }
     val deletedTaskIds = remember { mutableStateListOf<String>() }
     
     val activeTask = remember(inlineExpandedTaskId, state.displayTasks) {
@@ -208,6 +209,15 @@ fun ThingsCategoryListPanel(
         maxOffsetPx = maxOffsetPx,
         onSearchClick = { onEvent(ThingsCategoryListEvent.ClickSearch) }
     )
+
+    // [ИЗМЕНЕНИЕ]: Вычисляем порог прокрутки списка (56.dp) для активации анимации заголовков и elevation на AppBar
+    val scrollThresholdPx = with(density) { TOP_APP_BAR_HEIGHT.toPx() }
+    val isScrolledPastHeader by remember {
+        derivedStateOf {
+            lazyListState.firstVisibleItemIndex > 0 ||
+            lazyListState.firstVisibleItemScrollOffset > scrollThresholdPx
+        }
+    }
 
     val isDark = textPrimaryColor == ThingsTextPrimaryDark
     val topPaddingTotal = TOP_APP_BAR_HEIGHT
@@ -317,6 +327,7 @@ fun ThingsCategoryListPanel(
                                 displayTasks = state.displayTasks,
                                 onLocalTasksListChange = { localTasksList = it },
                                 lazyListState = lazyListState,
+                                onWhenDialogVisibilityChange = { isWhenDialogOpen = it },
                                 modifier = if (dragDropState.draggedTaskId == item.item.id) Modifier else Modifier.animateItem()
                             )
                         }
@@ -398,10 +409,17 @@ fun ThingsCategoryListPanel(
         }
 
         // TopAppBar
+        // [ИЗМЕНЕНИЕ]: Передаем в AppBar дополнительные параметры (состояние скролла, экран, проект, область ответственности и список задач) для вывода иконки и полужирного заголовка
         CategoryListTopAppBar(
             isDark = isDark,
+            textPrimaryColor = textPrimaryColor,
             textSecondaryColor = textSecondaryColor,
-            onBackClick = { onEvent(ThingsCategoryListEvent.ClickBack) }
+            onBackClick = { onEvent(ThingsCategoryListEvent.ClickBack) },
+            screen = screen,
+            project = project,
+            area = area,
+            tasks = state.allTasks,
+            isScrolled = isScrolledPastHeader
         )
 
     // PullToSearchIndicator
@@ -453,7 +471,7 @@ fun ThingsCategoryListPanel(
     }
 
     FloatingBottomCapsuleToolbar(
-        visible = inlineExpandedTaskId != null && activeTask != null,
+        visible = inlineExpandedTaskId != null && activeTask != null && !isWhenDialogOpen,
         onMoveClick = { showMoveDialog = true },
         onDeleteClick = { showDeleteConfirm = true },
         onDuplicateClick = {

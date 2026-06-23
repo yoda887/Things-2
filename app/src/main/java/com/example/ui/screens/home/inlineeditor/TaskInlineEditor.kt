@@ -75,7 +75,8 @@ fun ThingsTaskInlineEditor(
     onUpdateTag: (Tag) -> Unit = {},
     onUpdateTagsOrder: (List<Tag>) -> Unit = {},
     isDeletedExternally: () -> Boolean = { false },
-    expansionProgress: Float = 1f
+    expansionProgress: Float = 1f,
+    onWhenDialogVisibilityChange: (Boolean) -> Unit = {}
 ) {
     var title by remember(task.item.id) { mutableStateOf<String>(task.item.title) }
     var notes by remember(task.item.id) { mutableStateOf<String>(task.item.notes) }
@@ -97,6 +98,10 @@ fun ThingsTaskInlineEditor(
 
     var isDeleted by remember { mutableStateOf(false) }
     var isSavedManually by remember { mutableStateOf(false) }
+
+    LaunchedEffect(showWhenDialog) {
+        onWhenDialogVisibilityChange(showWhenDialog)
+    }
 
     val currentTitle by rememberUpdatedState(title)
     val currentNotes by rememberUpdatedState(notes)
