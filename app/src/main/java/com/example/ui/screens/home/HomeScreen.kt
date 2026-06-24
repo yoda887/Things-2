@@ -364,99 +364,110 @@ fun ThingsHomeScreen(viewModel: ThingsViewModel = hiltViewModel()) {
                             showAddDialog = true
                         }
                     )
-                    else -> ThingsCategoryListPanel(
-                        state = categoryListState.copy(
-                            textPrimaryColor = textPrimaryColor,
-                            textSecondaryColor = textSecondaryColor,
-                            dividerColor = dividerColor
-                        ),
-                        onEvent = { event ->
-                            when (event) {
-                                is ThingsCategoryListEvent.SelectTag -> {
-                                    viewModel.selectTag(event.tag)
-                                }
-                                is ThingsCategoryListEvent.ToggleTask -> {
-                                    viewModel.toggleTaskCompletion(event.task)
-                                }
-                                is ThingsCategoryListEvent.ClickTask -> {
-                                    inlineExpandedTaskId = event.task.item.id
-                                }
-                                is ThingsCategoryListEvent.ClickProject -> {
-                                    selectedProject = event.project
-                                    activeScreen = ActiveScreen.PROJECT_DETAIL
-                                }
-                                is ThingsCategoryListEvent.ChangeInlineExpandedTaskId -> {
-                                    inlineExpandedTaskId = event.taskId
-                                }
-                                ThingsCategoryListEvent.ClickSearch -> {
-                                    isSearchOverlayActive = true
-                                }
-                                ThingsCategoryListEvent.ClickBack -> {
-                                    activeScreen = ActiveScreen.HOME
-                                    selectedProject = null
-                                    selectedArea = null
-                                    viewModel.selectTag(null)
-                                }
-                                is ThingsCategoryListEvent.CreateTag -> {
-                                    viewModel.insertTag(event.title, event.parentId)
-                                }
-                                is ThingsCategoryListEvent.DeleteTag -> {
-                                    viewModel.deleteTag(event.tag)
-                                }
-                                is ThingsCategoryListEvent.UpdateTag -> {
-                                    viewModel.updateTag(event.tag)
-                                }
-                                is ThingsCategoryListEvent.UpdateTagsOrder -> {
-                                    viewModel.updateTagsOrder(event.tags)
-                                }
-                                is ThingsCategoryListEvent.SaveTask -> {
-                                    viewModel.updateTask(
-                                        task = event.taskWrapper.item,
-                                        checklist = event.checklist,
-                                        section = event.section,
-                                        title = event.title,
-                                        notes = event.notes,
-                                        isTonight = event.isTonight,
-                                        startDate = event.startDate,
-                                        dueDate = event.dueDate,
-                                        tags = event.tags,
-                                        projectId = event.projectId,
-                                        priority = event.priority
-                                    )
-                                }
-                                is ThingsCategoryListEvent.DeleteTask -> {
-                                    viewModel.deleteTask(event.taskWrapper)
-                                }
-                                is ThingsCategoryListEvent.DuplicateTask -> {
-                                    viewModel.duplicateTask(event.taskWrapper)
-                                }
-                                is ThingsCategoryListEvent.MoveTask -> {
-                                    val updatedTask = if (event.moveToInbox) {
-                                        event.taskWrapper.item.copy(
-                                            projectId = null,
-                                            areaId = null,
-                                            start = 0,
-                                            startDate = null,
-                                            dueDate = null,
-                                            modificationDate = System.currentTimeMillis()
-                                        )
-                                    } else {
-                                        val newStart = if (event.taskWrapper.item.start == 0 && event.projectId != null) 2 else event.taskWrapper.item.start
-                                        event.taskWrapper.item.copy(
+                    else -> {
+                        // [ИЗМЕНЕНИЕ]: Сохраняем состояние для конкретного экрана в переходе, чтобы при выходе из него (на экран HOME)
+                        // данные (заголовок, задачи, теги) не сбрасывались мгновенно во время анимации слайда/затухания.
+                        val stateForThisScreen = remember(screen) {
+                            mutableStateOf(categoryListState)
+                        }
+                        if (categoryListState.screen == screen) {
+                            stateForThisScreen.value = categoryListState
+                        }
+
+                        ThingsCategoryListPanel(
+                            state = stateForThisScreen.value.copy(
+                                textPrimaryColor = textPrimaryColor,
+                                textSecondaryColor = textSecondaryColor,
+                                dividerColor = dividerColor
+                            ),
+                            onEvent = { event ->
+                                when (event) {
+                                    is ThingsCategoryListEvent.SelectTag -> {
+                                        viewModel.selectTag(event.tag)
+                                    }
+                                    is ThingsCategoryListEvent.ToggleTask -> {
+                                        viewModel.toggleTaskCompletion(event.task)
+                                    }
+                                    is ThingsCategoryListEvent.ClickTask -> {
+                                        inlineExpandedTaskId = event.task.item.id
+                                    }
+                                    is ThingsCategoryListEvent.ClickProject -> {
+                                        selectedProject = event.project
+                                        activeScreen = ActiveScreen.PROJECT_DETAIL
+                                    }
+                                    is ThingsCategoryListEvent.ChangeInlineExpandedTaskId -> {
+                                        inlineExpandedTaskId = event.taskId
+                                    }
+                                    ThingsCategoryListEvent.ClickSearch -> {
+                                        isSearchOverlayActive = true
+                                    }
+                                    ThingsCategoryListEvent.ClickBack -> {
+                                        activeScreen = ActiveScreen.HOME
+                                        selectedProject = null
+                                        selectedArea = null
+                                        viewModel.selectTag(null)
+                                    }
+                                    is ThingsCategoryListEvent.CreateTag -> {
+                                        viewModel.insertTag(event.title, event.parentId)
+                                    }
+                                    is ThingsCategoryListEvent.DeleteTag -> {
+                                        viewModel.deleteTag(event.tag)
+                                    }
+                                    is ThingsCategoryListEvent.UpdateTag -> {
+                                        viewModel.updateTag(event.tag)
+                                    }
+                                    is ThingsCategoryListEvent.UpdateTagsOrder -> {
+                                        viewModel.updateTagsOrder(event.tags)
+                                    }
+                                    is ThingsCategoryListEvent.SaveTask -> {
+                                        viewModel.updateTask(
+                                            task = event.taskWrapper.item,
+                                            checklist = event.checklist,
+                                            section = event.section,
+                                            title = event.title,
+                                            notes = event.notes,
+                                            isTonight = event.isTonight,
+                                            startDate = event.startDate,
+                                            dueDate = event.dueDate,
+                                            tags = event.tags,
                                             projectId = event.projectId,
-                                            areaId = event.areaId,
-                                            start = newStart,
-                                            modificationDate = System.currentTimeMillis()
+                                            priority = event.priority
                                         )
                                     }
-                                    viewModel.updateTask(updatedTask, event.taskWrapper.checklist)
-                                }
-                                is ThingsCategoryListEvent.ReorderTasks -> {
-                                    viewModel.updateTasks(event.items)
+                                    is ThingsCategoryListEvent.DeleteTask -> {
+                                        viewModel.deleteTask(event.taskWrapper)
+                                    }
+                                    is ThingsCategoryListEvent.DuplicateTask -> {
+                                        viewModel.duplicateTask(event.taskWrapper)
+                                    }
+                                    is ThingsCategoryListEvent.MoveTask -> {
+                                        val updatedTask = if (event.moveToInbox) {
+                                            event.taskWrapper.item.copy(
+                                                projectId = null,
+                                                areaId = null,
+                                                start = 0,
+                                                startDate = null,
+                                                dueDate = null,
+                                                modificationDate = System.currentTimeMillis()
+                                            )
+                                        } else {
+                                            val newStart = if (event.taskWrapper.item.start == 0 && event.projectId != null) 2 else event.taskWrapper.item.start
+                                            event.taskWrapper.item.copy(
+                                                projectId = event.projectId,
+                                                areaId = event.areaId,
+                                                start = newStart,
+                                                modificationDate = System.currentTimeMillis()
+                                            )
+                                        }
+                                        viewModel.updateTask(updatedTask, event.taskWrapper.checklist)
+                                    }
+                                    is ThingsCategoryListEvent.ReorderTasks -> {
+                                        viewModel.updateTasks(event.items)
+                                    }
                                 }
                             }
-                        }
-                    )
+                        )
+                    }
                 }
             }
 
