@@ -123,3 +123,20 @@ fun rememberThingsTypography(): Typography {
         )
     )
 }
+
+/**
+ * Кастомный стиль для заголовка Top App Bar размером 20.sp с масштабированием на планшетах.
+ */
+val Typography.topAppBarTitle: TextStyle
+    @Composable
+    get() {
+        val configuration = LocalConfiguration.current
+        val isLargeScreen = configuration.screenWidthDp >= 600
+        val scaleFactor = if (isLargeScreen) 1.25f else 1.0f
+        return TextStyle(
+            fontFamily = FontFamily.Default,
+            fontWeight = FontWeight.SemiBold,
+            fontSize = (20 * scaleFactor).sp
+        )
+    }
+

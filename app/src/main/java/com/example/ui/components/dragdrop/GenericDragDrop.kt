@@ -12,6 +12,7 @@ import androidx.compose.ui.composed
 import androidx.compose.ui.hapticfeedback.HapticFeedbackType
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.platform.LocalHapticFeedback
+import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
@@ -38,6 +39,9 @@ class GenericDragDropState(
     /** Накопленный оффсет смещения с использованием Animatable для плавного перемещения и возврата */
     val dragAccumulatedOffset = Animatable(0f)
     
+    /** Накопленный оффсет смещения по горизонтали для свободного перемещения */
+    val dragAccumulatedOffsetHorizontal = Animatable(0f)
+    
     /** Временная метка начала авто-прокрутки для расчёта ускорения */
     var dragScrollStartMs by mutableStateOf(Long.MIN_VALUE)
 
@@ -50,20 +54,38 @@ class GenericDragDropState(
     }
 
     /**
+     * Позволяет скорректировать смещение накопленного драга внешними силами по горизонтали.
+     */
+    suspend fun adjustOffsetHorizontal(amount: Float) {
+        dragAccumulatedOffsetHorizontal.snapTo(dragAccumulatedOffsetHorizontal.value + amount)
+    }
+
+    /**
      * Позволяет установить точное начальное смещение (например, сбросить в 0f).
      */
     suspend fun snapOffsetTo(amount: Float) {
         dragAccumulatedOffset.snapTo(amount)
+        dragAccumulatedOffsetHorizontal.snapTo(0f)
     }
 
     /**
      * Плавный возврат элемента на своё место с помощью анимации.
      */
     suspend fun animateOffsetToZero() {
-        dragAccumulatedOffset.animateTo(
-            targetValue = 0f,
-            animationSpec = tween(durationMillis = 200)
-        )
+        coroutineScope {
+            launch {
+                dragAccumulatedOffset.animateTo(
+                    targetValue = 0f,
+                    animationSpec = tween(durationMillis = 200)
+                )
+            }
+            launch {
+                dragAccumulatedOffsetHorizontal.animateTo(
+                    targetValue = 0f,
+                    animationSpec = tween(durationMillis = 200)
+                )
+            }
+        }
     }
 }
 
@@ -315,6 +337,7 @@ fun Modifier.reorderableItem(
                 change.consume()
                 coroutineScope.launch {
                     state.adjustOffset(dragAmount.y)
+                    state.adjustOffsetHorizontal(dragAmount.x)
                     currentOnDrag(dragAmount.y)
                 }
             },

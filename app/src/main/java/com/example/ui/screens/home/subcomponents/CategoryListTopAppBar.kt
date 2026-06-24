@@ -1,7 +1,7 @@
 package com.example.ui.screens.home.subcomponents
 
 import androidx.compose.animation.*
-import androidx.compose.animation.core.animateDpAsState
+import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.*
@@ -17,8 +17,9 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.draw.clipToBounds
+import androidx.compose.ui.draw.drawWithContent
+import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import com.example.data.model.Area
@@ -29,6 +30,7 @@ import com.example.ui.theme.AppIcons
 import com.example.ui.theme.ThingsBlue
 import com.example.ui.theme.ThingsBackgroundDark
 import com.example.ui.theme.ThingsBackgroundLight
+import com.example.ui.theme.topAppBarTitle
 
 private val BACK_ICON_SIZE = 28.dp
 private val OPTIONS_BOX_SIZE = 22.dp
@@ -39,10 +41,10 @@ private const val OPTIONS_CONTENT_DESC = "Options"
 // [ИЗМЕНЕНИЕ]: Константы анимации, размеров и отступов для исключения хардкода во всем компоненте
 private val SCROLLED_ELEVATION = 4.dp
 private val UNSCROLLED_ELEVATION = 0.dp
-private const val ANIMATION_DURATION_MS = 300
-private val TOP_APP_BAR_ICON_SIZE = 20.dp
-private val PROJECT_PROGRESS_ARC_SIZE = 18.dp
-private val AREA_ICON_SIZE = 18.dp
+private const val ANIMATION_DURATION_MS = 100
+private val TOP_APP_BAR_ICON_SIZE = 22.dp
+private val PROJECT_PROGRESS_ARC_SIZE = 20.dp
+private val AREA_ICON_SIZE = 20.dp
 private val TOP_APP_BAR_SPACING = 8.dp
 
 /**
@@ -74,12 +76,15 @@ fun CategoryListTopAppBar(
     isScrolled: Boolean,
     modifier: Modifier = Modifier
 ) {
-    // [ИЗМЕНЕНИЕ]: Анимация изменения elevation TopAppBar при прокрутке списка (увеличивается на 4.dp без пружинной анимации)
-    val elevation by animateDpAsState(
-        targetValue = if (isScrolled) SCROLLED_ELEVATION else UNSCROLLED_ELEVATION,
-        animationSpec = tween(durationMillis = ANIMATION_DURATION_MS),
-        label = "appBarElevation"
+    // [ИЗМЕНЕНИЕ]: Анимация прогресса прокрутки (плавный переход за ANIMATION_DURATION_MS / 10 для сверхбыстрого переключения прозрачности)
+    val scrollProgress by animateFloatAsState(
+        targetValue = if (isScrolled) 1f else 0f,
+        animationSpec = tween(durationMillis = ANIMATION_DURATION_MS / 10),
+        label = "scrollProgress"
     )
+    val dividerAlpha = scrollProgress * 0.2f
+    val baseColor = if (isDark) ThingsBackgroundDark else ThingsBackgroundLight
+    val containerColor = baseColor.copy(alpha = scrollProgress)
 
     CenterAlignedTopAppBar(
         title = {
@@ -109,7 +114,7 @@ fun CategoryListTopAppBar(
                             Spacer(modifier = Modifier.width(TOP_APP_BAR_SPACING))
                             Text(
                                 text = "Today",
-                                style = MaterialTheme.typography.titleMedium,
+                                style = MaterialTheme.typography.topAppBarTitle,
                                 color = textPrimaryColor,
                                 fontWeight = FontWeight.SemiBold
                             )
@@ -124,7 +129,7 @@ fun CategoryListTopAppBar(
                             Spacer(modifier = Modifier.width(TOP_APP_BAR_SPACING))
                             Text(
                                 text = "Inbox",
-                                style = MaterialTheme.typography.titleMedium,
+                                style = MaterialTheme.typography.topAppBarTitle,
                                 color = textPrimaryColor,
                                 fontWeight = FontWeight.SemiBold
                             )
@@ -139,7 +144,7 @@ fun CategoryListTopAppBar(
                             Spacer(modifier = Modifier.width(TOP_APP_BAR_SPACING))
                             Text(
                                 text = "Upcoming",
-                                style = MaterialTheme.typography.titleMedium,
+                                style = MaterialTheme.typography.topAppBarTitle,
                                 color = textPrimaryColor,
                                 fontWeight = FontWeight.SemiBold
                             )
@@ -154,7 +159,7 @@ fun CategoryListTopAppBar(
                             Spacer(modifier = Modifier.width(TOP_APP_BAR_SPACING))
                             Text(
                                 text = "Anytime",
-                                style = MaterialTheme.typography.titleMedium,
+                                style = MaterialTheme.typography.topAppBarTitle,
                                 color = textPrimaryColor,
                                 fontWeight = FontWeight.SemiBold
                             )
@@ -169,7 +174,7 @@ fun CategoryListTopAppBar(
                             Spacer(modifier = Modifier.width(TOP_APP_BAR_SPACING))
                             Text(
                                 text = "Someday",
-                                style = MaterialTheme.typography.titleMedium,
+                                style = MaterialTheme.typography.topAppBarTitle,
                                 color = textPrimaryColor,
                                 fontWeight = FontWeight.SemiBold
                             )
@@ -184,7 +189,7 @@ fun CategoryListTopAppBar(
                             Spacer(modifier = Modifier.width(TOP_APP_BAR_SPACING))
                             Text(
                                 text = "Logbook",
-                                style = MaterialTheme.typography.titleMedium,
+                                style = MaterialTheme.typography.topAppBarTitle,
                                 color = textPrimaryColor,
                                 fontWeight = FontWeight.SemiBold
                             )
@@ -201,7 +206,7 @@ fun CategoryListTopAppBar(
                             Spacer(modifier = Modifier.width(TOP_APP_BAR_SPACING))
                             Text(
                                 text = project?.name ?: "Project",
-                                style = MaterialTheme.typography.titleMedium,
+                                style = MaterialTheme.typography.topAppBarTitle,
                                 color = textPrimaryColor,
                                 fontWeight = FontWeight.SemiBold,
                                 maxLines = 1,
@@ -218,7 +223,7 @@ fun CategoryListTopAppBar(
                             Spacer(modifier = Modifier.width(TOP_APP_BAR_SPACING))
                             Text(
                                 text = area?.title ?: "Responsibility Area",
-                                style = MaterialTheme.typography.titleMedium,
+                                style = MaterialTheme.typography.topAppBarTitle,
                                 color = textPrimaryColor,
                                 fontWeight = FontWeight.SemiBold,
                                 maxLines = 1,
@@ -261,10 +266,22 @@ fun CategoryListTopAppBar(
         },
         windowInsets = WindowInsets(0, 0, 0, 0),
         colors = TopAppBarDefaults.topAppBarColors(
-            containerColor = if (isDark) ThingsBackgroundDark else ThingsBackgroundLight
+            containerColor = containerColor
         ),
         modifier = modifier
-            .shadow(elevation = elevation)
             .clipToBounds()
+            .drawWithContent {
+                drawContent()
+                if (dividerAlpha > 0f) {
+                    val strokeWidth = 1.dp.toPx()
+                    val y = size.height - strokeWidth / 2
+                    drawLine(
+                        color = textSecondaryColor.copy(alpha = dividerAlpha),
+                        start = Offset(0f, y),
+                        end = Offset(size.width, y),
+                        strokeWidth = strokeWidth
+                    )
+                }
+            }
     )
 }

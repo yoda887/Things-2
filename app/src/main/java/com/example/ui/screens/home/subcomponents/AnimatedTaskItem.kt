@@ -15,6 +15,7 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.graphicsLayer
@@ -99,6 +100,7 @@ fun AnimatedTaskItem(
     val zIndexValToUse = if (isDragTask) 100f else (if (isExpanded || expansionProgress > 0f) 1f else 0f)
     // Извлечение значения из Animatable
     val translationYVal = if (isDragTask) dragDropState.dragAccumulatedOffset.value else 0f
+    val translationXVal = if (isDragTask) dragDropState.dragAccumulatedOffsetHorizontal.value else 0f
 
     val containerBgColor = if (isExpanded || expansionProgress > 0f || isDragTask || dragElevation > 0.dp) MaterialTheme.colorScheme.background else Color.Transparent
 
@@ -110,6 +112,7 @@ fun AnimatedTaskItem(
     // Добавляем светло-серую подложку (плейсхолдер) на физическое место задачи во время перетаскивания (landing slot)
     Box(
         modifier = modifier
+            .zIndex(zIndexValToUse)
     ) {
         if (isDragTask) {
             val isDark = isSystemInDarkTheme()
@@ -117,14 +120,16 @@ fun AnimatedTaskItem(
             Box(
                 modifier = Modifier
                     .matchParentSize()
+                    .alpha(0.5f) // Полупрозрачный
+                    .zIndex(-1f) // Уровнем ниже всех задач в списке (в рамках контекста элемента)
                     .background(placeholderBgColor, currCornerShape)
             )
         }
 
         Column(
             modifier = Modifier
-                .zIndex(zIndexValToUse)
                 .graphicsLayer {
+                    translationX = translationXVal
                     translationY = translationYVal
                     scaleX = dragScale
                     scaleY = dragScale
