@@ -64,6 +64,9 @@ import com.example.ui.screens.home.inlineeditor.ThingsTaskInlineEditor
 import com.example.ui.screens.home.inlineeditor.dialogs.ThingsMoveDialog
 import com.example.ui.screens.home.inlineeditor.dialogs.DeleteConfirmDialog
 import com.example.ui.theme.*
+import com.example.ui.theme.ThingsBackgroundDark
+import com.example.ui.theme.ThingsBackgroundLight
+import androidx.compose.foundation.isSystemInDarkTheme
 import com.example.data.model.ChecklistItem
 import java.util.Calendar
 import java.util.Locale
@@ -222,7 +225,9 @@ fun ThingsCategoryListPanel(
     val isDark = textPrimaryColor == ThingsTextPrimaryDark
     val topPaddingTotal = TOP_APP_BAR_HEIGHT
 
-    Box(modifier = Modifier.fillMaxSize()) {
+    val bkgColor = if (isDark) ThingsBackgroundDark else ThingsBackgroundLight
+
+    Box(modifier = Modifier.fillMaxSize().background(bkgColor)) {
         LazyColumn(
             state = lazyListState,
             modifier = Modifier

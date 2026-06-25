@@ -45,6 +45,12 @@ import com.example.ui.theme.*
 import com.example.ui.viewmodel.ThingsViewModel
 import androidx.hilt.navigation.compose.hiltViewModel
 import kotlinx.coroutines.launch
+import kotlinx.serialization.Serializable
+import androidx.navigation.compose.NavHost
+import androidx.navigation.compose.composable
+import androidx.navigation.compose.rememberNavController
+import androidx.navigation.compose.currentBackStackEntryAsState
+import androidx.navigation.toRoute
 
 
 /**
@@ -55,6 +61,11 @@ import kotlinx.coroutines.launch
  */
 
 
+@Serializable object HomeRoute
+@Serializable object SearchRoute
+@Serializable data class ListRoute(val screen: ActiveScreen)
+
+@Serializable
 enum class ActiveScreen {
     HOME, INBOX, TODAY, UPCOMING, ANYTIME, SOMEDAY, LOGBOOK, PROJECT_DETAIL, AREA_DETAIL, SEARCH
 }
@@ -90,7 +101,42 @@ fun ThingsHomeScreen(viewModel: ThingsViewModel = hiltViewModel()) {
         }
     }
 
+    val navController = rememberNavController()
+    val navBackStackEntry by navController.currentBackStackEntryAsState()
     var activeScreen by remember { mutableStateOf(ActiveScreen.HOME) }
+
+    LaunchedEffect(navBackStackEntry) {
+        navBackStackEntry?.let { entry ->
+            val route = entry.destination.route ?: ""
+            val newScreen = when {
+                route.contains("HomeRoute") -> ActiveScreen.HOME
+                route.contains("SearchRoute") -> ActiveScreen.SEARCH
+                route.contains("ListRoute") -> {
+                    try {
+                        entry.toRoute<ListRoute>().screen
+                    } catch (e: Exception) {
+                        ActiveScreen.HOME
+                    }
+                }
+                else -> ActiveScreen.HOME
+            }
+            if (activeScreen != newScreen) {
+                activeScreen = newScreen
+            }
+        }
+    }
+
+    fun navigateTo(screen: ActiveScreen) {
+        if (activeScreen == screen) return
+        val route: Any = when (screen) {
+            ActiveScreen.HOME -> HomeRoute
+            ActiveScreen.SEARCH -> SearchRoute
+            else -> ListRoute(screen)
+        }
+        navController.navigate(route) {
+            launchSingleTop = true
+        }
+    }
     var selectedProject by remember { mutableStateOf<Item?>(null) }
     var selectedArea by remember { mutableStateOf<Area?>(null) }
     var taskToEdit by remember { mutableStateOf<ItemWithChecklist?>(null) }
@@ -263,43 +309,52 @@ fun ThingsHomeScreen(viewModel: ThingsViewModel = hiltViewModel()) {
         ) {
             // [ИЗМЕНЕНИЕ]: Анимированный переход между экранами. Вход в подробные экраны выполняется 
             // слайдом справа налево с фейдом, а возврат на экран HOME — слайдом обратно направо.
-            AnimatedContent(
-                targetState = activeScreen,
-                transitionSpec = {
-                    val enterAnim = if (initialState == ActiveScreen.HOME && targetState != ActiveScreen.HOME) {
+                        NavHost(
+                navController = navController,
+                startDestination = HomeRoute,
+                enterTransition = {
+                    if (initialState.destination.route?.contains("HomeRoute") == true) {
                         slideInHorizontally(
                             initialOffsetX = { it },
                             animationSpec = tween(durationMillis = 350)
-                        ) + fadeIn(animationSpec = tween(durationMillis = 350))
-                    } else if (initialState != ActiveScreen.HOME && targetState == ActiveScreen.HOME) {
-                        slideInHorizontally(
-                            initialOffsetX = { -it / 3 },
-                            animationSpec = tween(durationMillis = 350)
-                        ) + fadeIn(animationSpec = tween(durationMillis = 350))
+                        )
                     } else {
-                        fadeIn(animationSpec = tween(durationMillis = 350))
+                        EnterTransition.None
                     }
-
-                    val exitAnim = if (initialState == ActiveScreen.HOME && targetState != ActiveScreen.HOME) {
+                },
+                exitTransition = {
+                    if (initialState.destination.route?.contains("HomeRoute") == true) {
                         slideOutHorizontally(
                             targetOffsetX = { -it / 3 },
                             animationSpec = tween(durationMillis = 350)
-                        ) + fadeOut(animationSpec = tween(durationMillis = 350))
-                    } else if (initialState != ActiveScreen.HOME && targetState == ActiveScreen.HOME) {
+                        )
+                    } else {
+                        ExitTransition.None
+                    }
+                },
+                popEnterTransition = {
+                    if (targetState.destination.route?.contains("HomeRoute") == true) {
+                        slideInHorizontally(
+                            initialOffsetX = { -it / 3 },
+                            animationSpec = tween(durationMillis = 350)
+                        )
+                    } else {
+                        EnterTransition.None
+                    }
+                },
+                popExitTransition = {
+                    if (targetState.destination.route?.contains("HomeRoute") == true) {
                         slideOutHorizontally(
                             targetOffsetX = { it },
                             animationSpec = tween(durationMillis = 350)
-                        ) + fadeOut(animationSpec = tween(durationMillis = 350))
+                        )
                     } else {
-                        fadeOut(animationSpec = tween(durationMillis = 350))
+                        ExitTransition.None
                     }
-
-                    enterAnim togetherWith exitAnim
-                },
-                label = "screenTransition"
-            ) { screen ->
-                when (screen) {
-                    ActiveScreen.HOME -> ThingsHomePanel(
+                }
+            ) {
+                composable<HomeRoute> {
+                    ThingsHomePanel(
                         allTasks = allTasksRaw,
                         projects = projects,
                         searchQuery = searchQuery,
@@ -311,14 +366,14 @@ fun ThingsHomeScreen(viewModel: ThingsViewModel = hiltViewModel()) {
                         cardSurfaceColor = cardSurfaceColor,
                         dividerColor = dividerColor,
                         onSearchChange = { viewModel.setSearchQuery(it) },
-                        onSmartListClick = { listScreen -> activeScreen = listScreen },
+                        onSmartListClick = { listScreen -> navigateTo(listScreen) },
                         onProjectClick = { proj ->
                             selectedProject = proj
-                            activeScreen = ActiveScreen.PROJECT_DETAIL
+                            navigateTo(ActiveScreen.PROJECT_DETAIL)
                         },
                         onAreaClick = { area ->
                             selectedArea = area
-                            activeScreen = ActiveScreen.AREA_DETAIL
+                            navigateTo(ActiveScreen.AREA_DETAIL)
                         },
                         onAddProjectClick = {},
                         areas = areas,
@@ -338,7 +393,9 @@ fun ThingsHomeScreen(viewModel: ThingsViewModel = hiltViewModel()) {
                         onUpdateProject = { viewModel.updateProject(it) },
                         onUpdateArea = { viewModel.updateArea(it) }
                     )
-                    ActiveScreen.SEARCH -> ThingsSearchScreen(
+                }
+                composable<SearchRoute> {
+                    ThingsSearchScreen(
                         searchQuery = searchQuery,
                         onSearchQueryChange = { viewModel.setSearchQuery(it) },
                         allTasks = allTasksRaw,
@@ -355,7 +412,7 @@ fun ThingsHomeScreen(viewModel: ThingsViewModel = hiltViewModel()) {
                             viewModel.toggleTaskCompletion(toggledTask)
                         },
                         onBack = {
-                            activeScreen = ActiveScreen.HOME
+                            navController.popBackStack()
                             viewModel.setSearchQuery("")
                         },
                         onFabClick = {
@@ -364,110 +421,115 @@ fun ThingsHomeScreen(viewModel: ThingsViewModel = hiltViewModel()) {
                             showAddDialog = true
                         }
                     )
-                    else -> {
-                        // [ИЗМЕНЕНИЕ]: Сохраняем состояние для конкретного экрана в переходе, чтобы при выходе из него (на экран HOME)
-                        // данные (заголовок, задачи, теги) не сбрасывались мгновенно во время анимации слайда/затухания.
-                        val stateForThisScreen = remember(screen) {
-                            mutableStateOf(categoryListState)
-                        }
-                        if (categoryListState.screen == screen) {
-                            stateForThisScreen.value = categoryListState
-                        }
+                }
+                
+                // Helper for the category lists
+                val listScreenContent: @Composable (ActiveScreen) -> Unit = { screen ->
+                    val stateForThisScreen = remember(screen) {
+                        androidx.compose.runtime.mutableStateOf(categoryListState)
+                    }
+                    if (categoryListState.screen == screen) {
+                        stateForThisScreen.value = categoryListState
+                    }
 
-                        ThingsCategoryListPanel(
-                            state = stateForThisScreen.value.copy(
-                                textPrimaryColor = textPrimaryColor,
-                                textSecondaryColor = textSecondaryColor,
-                                dividerColor = dividerColor
-                            ),
-                            onEvent = { event ->
-                                when (event) {
-                                    is ThingsCategoryListEvent.SelectTag -> {
-                                        viewModel.selectTag(event.tag)
-                                    }
-                                    is ThingsCategoryListEvent.ToggleTask -> {
-                                        viewModel.toggleTaskCompletion(event.task)
-                                    }
-                                    is ThingsCategoryListEvent.ClickTask -> {
-                                        inlineExpandedTaskId = event.task.item.id
-                                    }
-                                    is ThingsCategoryListEvent.ClickProject -> {
-                                        selectedProject = event.project
-                                        activeScreen = ActiveScreen.PROJECT_DETAIL
-                                    }
-                                    is ThingsCategoryListEvent.ChangeInlineExpandedTaskId -> {
-                                        inlineExpandedTaskId = event.taskId
-                                    }
-                                    ThingsCategoryListEvent.ClickSearch -> {
-                                        isSearchOverlayActive = true
-                                    }
-                                    ThingsCategoryListEvent.ClickBack -> {
-                                        activeScreen = ActiveScreen.HOME
-                                        selectedProject = null
-                                        selectedArea = null
-                                        viewModel.selectTag(null)
-                                    }
-                                    is ThingsCategoryListEvent.CreateTag -> {
-                                        viewModel.insertTag(event.title, event.parentId)
-                                    }
-                                    is ThingsCategoryListEvent.DeleteTag -> {
-                                        viewModel.deleteTag(event.tag)
-                                    }
-                                    is ThingsCategoryListEvent.UpdateTag -> {
-                                        viewModel.updateTag(event.tag)
-                                    }
-                                    is ThingsCategoryListEvent.UpdateTagsOrder -> {
-                                        viewModel.updateTagsOrder(event.tags)
-                                    }
-                                    is ThingsCategoryListEvent.SaveTask -> {
-                                        viewModel.updateTask(
-                                            task = event.taskWrapper.item,
-                                            checklist = event.checklist,
-                                            section = event.section,
-                                            title = event.title,
-                                            notes = event.notes,
-                                            isTonight = event.isTonight,
-                                            startDate = event.startDate,
-                                            dueDate = event.dueDate,
-                                            tags = event.tags,
+                    ThingsCategoryListPanel(
+                        state = stateForThisScreen.value.copy(
+                            textPrimaryColor = textPrimaryColor,
+                            textSecondaryColor = textSecondaryColor,
+                            dividerColor = dividerColor
+                        ),
+                        onEvent = { event ->
+                            when (event) {
+                                is ThingsCategoryListEvent.SelectTag -> {
+                                    viewModel.selectTag(event.tag)
+                                }
+                                is ThingsCategoryListEvent.ToggleTask -> {
+                                    viewModel.toggleTaskCompletion(event.task)
+                                }
+                                is ThingsCategoryListEvent.ClickTask -> {
+                                    inlineExpandedTaskId = event.task.item.id
+                                }
+                                is ThingsCategoryListEvent.ClickProject -> {
+                                    selectedProject = event.project
+                                    navigateTo(ActiveScreen.PROJECT_DETAIL)
+                                }
+                                is ThingsCategoryListEvent.ChangeInlineExpandedTaskId -> {
+                                    inlineExpandedTaskId = event.taskId
+                                }
+                                ThingsCategoryListEvent.ClickSearch -> {
+                                    isSearchOverlayActive = true
+                                }
+                                ThingsCategoryListEvent.ClickBack -> {
+                                    navController.popBackStack()
+                                    selectedProject = null
+                                    selectedArea = null
+                                    viewModel.selectTag(null)
+                                }
+                                is ThingsCategoryListEvent.CreateTag -> {
+                                    viewModel.insertTag(event.title, event.parentId)
+                                }
+                                is ThingsCategoryListEvent.DeleteTag -> {
+                                    viewModel.deleteTag(event.tag)
+                                }
+                                is ThingsCategoryListEvent.UpdateTag -> {
+                                    viewModel.updateTag(event.tag)
+                                }
+                                is ThingsCategoryListEvent.UpdateTagsOrder -> {
+                                    viewModel.updateTagsOrder(event.tags)
+                                }
+                                is ThingsCategoryListEvent.SaveTask -> {
+                                    viewModel.updateTask(
+                                        task = event.taskWrapper.item,
+                                        checklist = event.checklist,
+                                        section = event.section,
+                                        title = event.title,
+                                        notes = event.notes,
+                                        isTonight = event.isTonight,
+                                        startDate = event.startDate,
+                                        dueDate = event.dueDate,
+                                        tags = event.tags,
+                                        projectId = event.projectId,
+                                        priority = event.priority
+                                    )
+                                }
+                                is ThingsCategoryListEvent.DeleteTask -> {
+                                    viewModel.deleteTask(event.taskWrapper)
+                                }
+                                is ThingsCategoryListEvent.DuplicateTask -> {
+                                    viewModel.duplicateTask(event.taskWrapper)
+                                }
+                                is ThingsCategoryListEvent.MoveTask -> {
+                                    val updatedTask = if (event.moveToInbox) {
+                                        event.taskWrapper.item.copy(
+                                            projectId = null,
+                                            areaId = null,
+                                            start = 0,
+                                            startDate = null,
+                                            dueDate = null,
+                                            modificationDate = System.currentTimeMillis()
+                                        )
+                                    } else {
+                                        val newStart = if (event.taskWrapper.item.start == 0 && event.projectId != null) 2 else event.taskWrapper.item.start
+                                        event.taskWrapper.item.copy(
                                             projectId = event.projectId,
-                                            priority = event.priority
+                                            areaId = event.areaId,
+                                            start = newStart,
+                                            modificationDate = System.currentTimeMillis()
                                         )
                                     }
-                                    is ThingsCategoryListEvent.DeleteTask -> {
-                                        viewModel.deleteTask(event.taskWrapper)
-                                    }
-                                    is ThingsCategoryListEvent.DuplicateTask -> {
-                                        viewModel.duplicateTask(event.taskWrapper)
-                                    }
-                                    is ThingsCategoryListEvent.MoveTask -> {
-                                        val updatedTask = if (event.moveToInbox) {
-                                            event.taskWrapper.item.copy(
-                                                projectId = null,
-                                                areaId = null,
-                                                start = 0,
-                                                startDate = null,
-                                                dueDate = null,
-                                                modificationDate = System.currentTimeMillis()
-                                            )
-                                        } else {
-                                            val newStart = if (event.taskWrapper.item.start == 0 && event.projectId != null) 2 else event.taskWrapper.item.start
-                                            event.taskWrapper.item.copy(
-                                                projectId = event.projectId,
-                                                areaId = event.areaId,
-                                                start = newStart,
-                                                modificationDate = System.currentTimeMillis()
-                                            )
-                                        }
-                                        viewModel.updateTask(updatedTask, event.taskWrapper.checklist)
-                                    }
-                                    is ThingsCategoryListEvent.ReorderTasks -> {
-                                        viewModel.updateTasks(event.items)
-                                    }
+                                    viewModel.updateTask(updatedTask, event.taskWrapper.checklist)
+                                }
+                                is ThingsCategoryListEvent.ReorderTasks -> {
+                                    viewModel.updateTasks(event.items)
                                 }
                             }
-                        )
-                    }
+                        }
+                    )
+                }
+
+                composable<ListRoute> { backStackEntry ->
+                    val route = backStackEntry.toRoute<ListRoute>()
+                    listScreenContent(route.screen)
                 }
             }
 
@@ -575,7 +637,7 @@ fun ThingsHomeScreen(viewModel: ThingsViewModel = hiltViewModel()) {
                         addToRecent(SearchResultItem.ProjectResult(proj))
 
                         selectedProject = proj
-                        activeScreen = ActiveScreen.PROJECT_DETAIL
+                        navigateTo(ActiveScreen.PROJECT_DETAIL)
                         viewModel.setSearchQuery("")
                         isSearchOverlayActive = false
                     },
@@ -584,7 +646,7 @@ fun ThingsHomeScreen(viewModel: ThingsViewModel = hiltViewModel()) {
                         addToRecent(SearchResultItem.AreaResult(area))
 
                         selectedArea = area
-                        activeScreen = ActiveScreen.AREA_DETAIL
+                        navigateTo(ActiveScreen.AREA_DETAIL)
                         viewModel.setSearchQuery("")
                         isSearchOverlayActive = false
                     },
@@ -601,7 +663,7 @@ fun ThingsHomeScreen(viewModel: ThingsViewModel = hiltViewModel()) {
                         }
                         addToRecent(SearchResultItem.SmartListResult(title, smartScreen))
 
-                        activeScreen = smartScreen
+                        navigateTo(smartScreen)
                         viewModel.setSearchQuery("")
                         isSearchOverlayActive = false
                     },
@@ -613,7 +675,7 @@ fun ThingsHomeScreen(viewModel: ThingsViewModel = hiltViewModel()) {
                     recentSearchItems = recentSearchItems,
                     onContinueSearchClick = {
                         isSearchOverlayActive = false
-                        activeScreen = ActiveScreen.SEARCH
+                        navigateTo(ActiveScreen.SEARCH)
                     }
                 )
             }
@@ -673,7 +735,7 @@ fun ThingsHomeScreen(viewModel: ThingsViewModel = hiltViewModel()) {
                                         showFabMenu = false
                                         val targetScreen = ActiveScreen.INBOX
                                         if (activeScreen != targetScreen) {
-                                            activeScreen = targetScreen
+                                            navigateTo(targetScreen)
                                         }
                                         val newTaskId = java.util.UUID.randomUUID().toString()
                                         val newTask = Item(

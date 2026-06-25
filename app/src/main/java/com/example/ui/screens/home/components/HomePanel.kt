@@ -37,6 +37,8 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.animation.core.Animatable
 import androidx.compose.animation.core.spring
 import androidx.compose.animation.core.animateFloatAsState
+import androidx.compose.animation.core.tween
+import androidx.compose.animation.core.FastOutSlowInEasing
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.input.nestedscroll.NestedScrollConnection
@@ -58,6 +60,9 @@ import com.example.ui.components.AreaIconAnimated
 import com.example.ui.screens.home.ActiveScreen
 import com.example.ui.screens.home.subcomponents.SmartListRow
 import com.example.ui.theme.*
+import com.example.ui.theme.ThingsBackgroundDark
+import com.example.ui.theme.ThingsBackgroundLight
+import androidx.compose.foundation.isSystemInDarkTheme
 
 @Composable
 fun ThingsHomePanel(
@@ -212,7 +217,10 @@ fun ThingsHomePanel(
         }
     }
 
-    Box(modifier = Modifier.fillMaxSize()) {
+    val isDarkTheme = isSystemInDarkTheme()
+    val bkgColor = if (isDarkTheme) ThingsBackgroundDark else ThingsBackgroundLight
+
+    Box(modifier = Modifier.fillMaxSize().background(bkgColor)) {
         // [ИЗМЕНЕНИЕ]: Отображение динамического индикатора поиска в свободном пространстве свайпа
         if (pullOffset.value > 0f) {
             Box(
@@ -489,12 +497,15 @@ fun ThingsHomePanel(
                 val isExpanded = expandedStates[area.id] ?: true
                 val rotationAngle by animateFloatAsState(
                     targetValue = if (isExpanded) 90f else 0f,
+                    animationSpec = tween(durationMillis = 200, easing = FastOutSlowInEasing),
                     label = "rotationAngle"
                 )
-                // [ИЗМЕНЕНИЕ]: Добавлен Modifier.animateItem() для плавной анимации появления, перемещения и исчезновения областей
+                // Возвращаем animateItem, так как мы вынесли проекты в отдельные item для предотвращения "гусеницы"
                 Column(
                     modifier = Modifier
-                        .animateItem()
+                        .animateItem(
+                            placementSpec = tween(durationMillis = 200, easing = FastOutSlowInEasing)
+                        )
                         .fillMaxWidth()
                 ) {
                     if (index > 0) {
@@ -632,129 +643,126 @@ fun ThingsHomePanel(
                         }
                     }
 
-                    // [ИЗМЕНЕНИЕ]: Плавная анимация раскрытия и сворачивания списка проектов с использованием AnimatedVisibility.
-                    // Применяется плавное расширение по высоте (expandVertically) и появление (fadeIn) при открытии,
-                    // и сжатие по высоте (shrinkVertically) со скрытием (fadeOut) при закрытии.
-                    AnimatedVisibility(
-                        visible = isExpanded && hasProjects,
-                        enter = expandVertically() + fadeIn(),
-                        exit = shrinkVertically() + fadeOut()
+                }
+            }
+
+            // Выносим проекты в отдельные items, чтобы анимация раскрытия не ломала плавноть (caterpillar effect)
+            // Но при этом нижележащие области будут плавно сдвигаться благодаря animateItem на них.
+            val isExpanded = expandedStates[area.id] ?: true
+            if (isExpanded && hasProjects) {
+                items(
+                    count = areaProjects.size,
+                    key = { index -> "project_${areaProjects[index].id}" }
+                ) { projIndex ->
+                    val project = areaProjects[projIndex]
+                    val projectTasks = tasksByProject[project.id] ?: emptyList()
+                    val completedCount = projectTasks.count { it.item.isCompleted }
+                    val totalCount = projectTasks.size
+                    val isProjectEditing = project.id == editingProjectId
+
+                    Row(
+                        modifier = Modifier
+                            .animateItem(
+                                placementSpec = tween(durationMillis = 200, easing = FastOutSlowInEasing)
+                            )
+                            .fillMaxWidth()
+                            .clip(RoundedCornerShape(10.dp))
+                            .background(if (isProjectEditing) ThingsBlue.copy(alpha = 0.15f) else Color.Transparent)
+                            .clickable(enabled = !isProjectEditing) { onProjectClick(project) }
+                            .padding(vertical = 6.dp, horizontal = 6.dp),
+                        verticalAlignment = Alignment.CenterVertically
                     ) {
-                        Column(
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .padding(start = 0.dp),
-                            verticalArrangement = Arrangement.spacedBy(10.dp)
+                        Box(
+                            modifier = Modifier.size(20.dp),
+                            contentAlignment = Alignment.Center
                         ) {
-                            areaProjects.forEach { project ->
-                                val projectTasks = tasksByProject[project.id] ?: emptyList()
-                                val completedCount = projectTasks.count { it.item.isCompleted }
-                                val totalCount = projectTasks.size
-                                val isProjectEditing = project.id == editingProjectId
+                            ProjectProgressArc(
+                                completed = completedCount,
+                                total = totalCount,
+                                modifier = Modifier.size(20.dp)
+                            )
+                        }
+                        Spacer(modifier = Modifier.width(7.dp))
+                        
+                        if (isProjectEditing) {
+                            var textState by remember { mutableStateOf(project.title) }
+                            var hasFocused by remember { mutableStateOf(false) }
+                            val focusRequester = remember { FocusRequester() }
 
-                                Row(
-                                    modifier = Modifier
-                                        .fillMaxWidth()
-                                        .clip(RoundedCornerShape(10.dp))
-                                        .background(if (isProjectEditing) ThingsBlue.copy(alpha = 0.15f) else Color.Transparent)
-                                        .clickable(enabled = !isProjectEditing) { onProjectClick(project) }
-                                        .padding(vertical = 6.dp, horizontal = 6.dp),
-                                    verticalAlignment = Alignment.CenterVertically
-                                ) {
-                                    Box(
-                                        modifier = Modifier.size(20.dp),
-                                        contentAlignment = Alignment.Center
-                                    ) {
-                                        ProjectProgressArc(
-                                            completed = completedCount,
-                                            total = totalCount,
-                                            modifier = Modifier.size(20.dp)
-                                        )
-                                    }
-                                    Spacer(modifier = Modifier.width(7.dp))
-                                    
-                                    if (isProjectEditing) {
-                                        var textState by remember { mutableStateOf(project.title) }
-                                        var hasFocused by remember { mutableStateOf(false) }
-                                        val focusRequester = remember { FocusRequester() }
-
-                                        BasicTextField(
-                                            value = textState,
-                                            onValueChange = { textState = it },
-                                            textStyle = MaterialTheme.typography.displaySmall.copy(
-                                                color = textPrimaryColor,
-                                                fontWeight = FontWeight.Normal
-                                            ),
-                                            cursorBrush = SolidColor(ThingsBlue),
-                                            modifier = Modifier
-                                                .weight(1f)
-                                                .focusRequester(focusRequester)
-                                                .onFocusChanged { focusState ->
-                                                    if (focusState.isFocused) {
-                                                        hasFocused = true
-                                                    } else if (hasFocused) {
-                                                        hasFocused = false
-                                                        val trimmed = textState.trim()
-                                                        if (trimmed.isEmpty() && project.title.isEmpty()) {
-                                                            onDeleteProject(project)
-                                                        } else if (trimmed.isNotEmpty() && trimmed != project.title) {
-                                                            onUpdateProject(project.copy(title = trimmed))
-                                                        }
-                                                        onEditingProjectIdChange(null)
-                                                    }
-                                                },
-                                            singleLine = true,
-                                            keyboardOptions = KeyboardOptions(
-                                                imeAction = ImeAction.Done,
-                                                capitalization = KeyboardCapitalization.Sentences
-                                            ),
-                                            keyboardActions = KeyboardActions(
-                                                onDone = {
-                                                    if (hasFocused) {
-                                                        hasFocused = false
-                                                        val trimmed = textState.trim()
-                                                        if (trimmed.isEmpty()) {
-                                                            onDeleteProject(project)
-                                                        } else {
-                                                            onUpdateProject(project.copy(title = trimmed))
-                                                        }
-                                                        onEditingProjectIdChange(null)
-                                                    }
-                                                }
-                                            ),
-                                            decorationBox = { innerTextField ->
-                                                Box(modifier = Modifier.fillMaxWidth()) {
-                                                    if (textState.isEmpty()) {
-                                                        Text(
-                                                            text = "New Project",
-                                                            style = MaterialTheme.typography.displaySmall.copy(
-                                                                color = textSecondaryColor.copy(alpha = 0.6f),
-                                                                fontWeight = FontWeight.Normal
-                                                            )
-                                                        )
-                                                    }
-                                                    innerTextField()
-                                                }
+                            BasicTextField(
+                                value = textState,
+                                onValueChange = { textState = it },
+                                textStyle = MaterialTheme.typography.displaySmall.copy(
+                                    color = textPrimaryColor,
+                                    fontWeight = FontWeight.Normal
+                                ),
+                                cursorBrush = SolidColor(ThingsBlue),
+                                modifier = Modifier
+                                    .weight(1f)
+                                    .focusRequester(focusRequester)
+                                    .onFocusChanged { focusState ->
+                                        if (focusState.isFocused) {
+                                            hasFocused = true
+                                        } else if (hasFocused) {
+                                            hasFocused = false
+                                            val trimmed = textState.trim()
+                                            if (trimmed.isEmpty() && project.title.isEmpty()) {
+                                                onDeleteProject(project)
+                                            } else if (trimmed.isNotEmpty() && trimmed != project.title) {
+                                                onUpdateProject(project.copy(title = trimmed))
                                             }
-                                        )
-
-                                        LaunchedEffect(Unit) {
-                                            focusRequester.requestFocus()
+                                            onEditingProjectIdChange(null)
                                         }
-                                    } else {
-                                        Text(
-                                            text = project.title,
-                                            style = MaterialTheme.typography.displaySmall.copy(
-                                                color = textPrimaryColor,
-                                                fontWeight = FontWeight.Normal
-                                            ),
-                                            modifier = Modifier.weight(1f),
-                                            maxLines = 1,
-                                            overflow = TextOverflow.Ellipsis
-                                        )
+                                    },
+                                singleLine = true,
+                                keyboardOptions = KeyboardOptions(
+                                    imeAction = ImeAction.Done,
+                                    capitalization = KeyboardCapitalization.Sentences
+                                ),
+                                keyboardActions = KeyboardActions(
+                                    onDone = {
+                                        if (hasFocused) {
+                                            hasFocused = false
+                                            val trimmed = textState.trim()
+                                            if (trimmed.isEmpty()) {
+                                                onDeleteProject(project)
+                                            } else {
+                                                onUpdateProject(project.copy(title = trimmed))
+                                            }
+                                            onEditingProjectIdChange(null)
+                                        }
+                                    }
+                                ),
+                                decorationBox = { innerTextField ->
+                                    Box(modifier = Modifier.fillMaxWidth()) {
+                                        if (textState.isEmpty()) {
+                                            Text(
+                                                text = "New Project",
+                                                style = MaterialTheme.typography.displaySmall.copy(
+                                                    color = textSecondaryColor.copy(alpha = 0.6f),
+                                                    fontWeight = FontWeight.Normal
+                                                )
+                                            )
+                                        }
+                                        innerTextField()
                                     }
                                 }
+                            )
+
+                            LaunchedEffect(Unit) {
+                                focusRequester.requestFocus()
                             }
+                        } else {
+                            Text(
+                                text = project.title,
+                                style = MaterialTheme.typography.displaySmall.copy(
+                                    color = textPrimaryColor,
+                                    fontWeight = FontWeight.Normal
+                                ),
+                                modifier = Modifier.weight(1f),
+                                maxLines = 1,
+                                overflow = TextOverflow.Ellipsis
+                            )
                         }
                     }
                 }
