@@ -7,6 +7,14 @@ import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.animation.*
 import androidx.compose.animation.core.spring
 import androidx.compose.animation.core.tween
+import androidx.compose.animation.core.CubicBezierEasing
+import androidx.compose.animation.core.animateFloat
+import androidx.compose.ui.draw.drawBehind
+import androidx.compose.ui.draw.drawWithContent
+import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.geometry.Size
+import androidx.compose.ui.graphics.Brush
+import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
@@ -307,120 +315,127 @@ fun ThingsHomeScreen(viewModel: ThingsViewModel = hiltViewModel()) {
                 .fillMaxSize()
                 .padding(innerPadding)
         ) {
-            // [ИЗМЕНЕНИЕ]: Анимированный переход между экранами. Вход в подробные экраны выполняется 
-            // слайдом справа налево с фейдом, а возврат на экран HOME — слайдом обратно направо.
-                        NavHost(
+            // [ИЗМЕНЕНИЕ]: Анимированный переход между всеми экранами, имитирующий iOS.
+            // Используется длительность 400 мс с кривой Безье (EaseOut), горизонтальным сдвигом на 30% ширины
+            // экрана для уходящих/возвращающихся экранов и плавным наложением фейда.
+            NavHost(
                 navController = navController,
                 startDestination = HomeRoute,
                 enterTransition = {
-                    if (initialState.destination.route?.contains("HomeRoute") == true) {
-                        slideInHorizontally(
-                            initialOffsetX = { it },
-                            animationSpec = tween(durationMillis = 350)
-                        )
-                    } else {
-                        EnterTransition.None
-                    }
+                    // [ИЗМЕНЕНИЕ]: Плавное появление нового экрана справа налево с нарастанием прозрачности
+                    slideInHorizontally(
+                        initialOffsetX = { it },
+                        animationSpec = tween(durationMillis = 400, easing = CubicBezierEasing(0.25f, 1f, 0.5f, 1f))
+                    ) + fadeIn(
+                        animationSpec = tween(durationMillis = 400, easing = CubicBezierEasing(0.25f, 1f, 0.5f, 1f)),
+                        initialAlpha = 0.5f
+                    )
                 },
                 exitTransition = {
-                    if (initialState.destination.route?.contains("HomeRoute") == true) {
-                        slideOutHorizontally(
-                            targetOffsetX = { -it / 3 },
-                            animationSpec = tween(durationMillis = 350)
-                        )
-                    } else {
-                        ExitTransition.None
-                    }
+                    // [ИЗМЕНЕНИЕ]: Плавное смещение текущего экрана влево на 30% ширины и легкое затемнение
+                    slideOutHorizontally(
+                        targetOffsetX = { -it / 3 },
+                        animationSpec = tween(durationMillis = 400, easing = CubicBezierEasing(0.25f, 1f, 0.5f, 1f))
+                    ) + fadeOut(
+                        animationSpec = tween(durationMillis = 400, easing = CubicBezierEasing(0.25f, 1f, 0.5f, 1f)),
+                        targetAlpha = 0.6f
+                    )
                 },
                 popEnterTransition = {
-                    if (targetState.destination.route?.contains("HomeRoute") == true) {
-                        slideInHorizontally(
-                            initialOffsetX = { -it / 3 },
-                            animationSpec = tween(durationMillis = 350)
-                        )
-                    } else {
-                        EnterTransition.None
-                    }
+                    // [ИЗМЕНЕНИЕ]: Возвращение экрана с левой стороны (из смещения -30%) обратно в центр с проявлением
+                    slideInHorizontally(
+                        initialOffsetX = { -it / 3 },
+                        animationSpec = tween(durationMillis = 400, easing = CubicBezierEasing(0.25f, 1f, 0.5f, 1f))
+                    ) + fadeIn(
+                        animationSpec = tween(durationMillis = 400, easing = CubicBezierEasing(0.25f, 1f, 0.5f, 1f)),
+                        initialAlpha = 0.6f
+                    )
                 },
                 popExitTransition = {
-                    if (targetState.destination.route?.contains("HomeRoute") == true) {
-                        slideOutHorizontally(
-                            targetOffsetX = { it },
-                            animationSpec = tween(durationMillis = 350)
-                        )
-                    } else {
-                        ExitTransition.None
-                    }
+                    // [ИЗМЕНЕНИЕ]: Плавный сдвиг уходящего по кнопке "Назад" экрана слева направо (до 100% ширины) с затуханием
+                    slideOutHorizontally(
+                        targetOffsetX = { it },
+                        animationSpec = tween(durationMillis = 400, easing = CubicBezierEasing(0.25f, 1f, 0.5f, 1f))
+                    ) + fadeOut(
+                        animationSpec = tween(durationMillis = 400, easing = CubicBezierEasing(0.25f, 1f, 0.5f, 1f)),
+                        targetAlpha = 0.5f
+                    )
                 }
             ) {
                 composable<HomeRoute> {
-                    ThingsHomePanel(
-                        allTasks = allTasksRaw,
-                        projects = projects,
-                        searchQuery = searchQuery,
-                        googleToken = googleToken,
-                        syncError = syncError,
-                        isSyncing = isSyncing,
-                        textPrimaryColor = textPrimaryColor,
-                        textSecondaryColor = textSecondaryColor,
-                        cardSurfaceColor = cardSurfaceColor,
-                        dividerColor = dividerColor,
-                        onSearchChange = { viewModel.setSearchQuery(it) },
-                        onSmartListClick = { listScreen -> navigateTo(listScreen) },
-                        onProjectClick = { proj ->
-                            selectedProject = proj
-                            navigateTo(ActiveScreen.PROJECT_DETAIL)
-                        },
-                        onAreaClick = { area ->
-                            selectedArea = area
-                            navigateTo(ActiveScreen.AREA_DETAIL)
-                        },
-                        onAddProjectClick = {},
-                        areas = areas,
-                        onAddAreaClick = {},
-                        onDeleteArea = { viewModel.deleteArea(it) },
-                        onDeleteProject = { viewModel.deleteProject(it) },
-                        onSyncClick = { token ->
-                            viewModel.setAccessToken(token)
-                            viewModel.syncWithGoogle()
-                        },
-                        onSearchClick = { isSearchOverlayActive = true },
-                        isSearchOverlayActive = isSearchOverlayActive,
-                        editingProjectId = editingProjectId,
-                        onEditingProjectIdChange = { editingProjectId = it },
-                        editingAreaId = editingAreaId,
-                        onEditingAreaIdChange = { editingAreaId = it },
-                        onUpdateProject = { viewModel.updateProject(it) },
-                        onUpdateArea = { viewModel.updateArea(it) }
-                    )
+                    // [ИЗМЕНЕНИЕ]: Применяем обертку IosTransitionWrapper для нативного iOS-эффекта затемнения уходящего экрана
+                    IosTransitionWrapper(isStartDestination = true) {
+                        ThingsHomePanel(
+                            allTasks = allTasksRaw,
+                            projects = projects,
+                            searchQuery = searchQuery,
+                            googleToken = googleToken,
+                            syncError = syncError,
+                            isSyncing = isSyncing,
+                            textPrimaryColor = textPrimaryColor,
+                            textSecondaryColor = textSecondaryColor,
+                            cardSurfaceColor = cardSurfaceColor,
+                            dividerColor = dividerColor,
+                            onSearchChange = { viewModel.setSearchQuery(it) },
+                            onSmartListClick = { listScreen -> navigateTo(listScreen) },
+                            onProjectClick = { proj ->
+                                selectedProject = proj
+                                navigateTo(ActiveScreen.PROJECT_DETAIL)
+                            },
+                            onAreaClick = { area ->
+                                selectedArea = area
+                                navigateTo(ActiveScreen.AREA_DETAIL)
+                            },
+                            onAddProjectClick = {},
+                            areas = areas,
+                            onAddAreaClick = {},
+                            onDeleteArea = { viewModel.deleteArea(it) },
+                            onDeleteProject = { viewModel.deleteProject(it) },
+                            onSyncClick = { token ->
+                                viewModel.setAccessToken(token)
+                                viewModel.syncWithGoogle()
+                            },
+                            onSearchClick = { isSearchOverlayActive = true },
+                            isSearchOverlayActive = isSearchOverlayActive,
+                            editingProjectId = editingProjectId,
+                            onEditingProjectIdChange = { editingProjectId = it },
+                            editingAreaId = editingAreaId,
+                            onEditingAreaIdChange = { editingAreaId = it },
+                            onUpdateProject = { viewModel.updateProject(it) },
+                            onUpdateArea = { viewModel.updateArea(it) }
+                        )
+                    }
                 }
                 composable<SearchRoute> {
-                    ThingsSearchScreen(
-                        searchQuery = searchQuery,
-                        onSearchQueryChange = { viewModel.setSearchQuery(it) },
-                        allTasks = allTasksRaw,
-                        projects = projects,
-                        areas = areas,
-                        textPrimaryColor = textPrimaryColor,
-                        textSecondaryColor = textSecondaryColor,
-                        dividerColor = dividerColor,
-                        onTaskClick = { clickedTask ->
-                            taskToEdit = clickedTask
-                            showAddDialog = true
-                        },
-                        onTaskToggle = { toggledTask ->
-                            viewModel.toggleTaskCompletion(toggledTask)
-                        },
-                        onBack = {
-                            navController.popBackStack()
-                            viewModel.setSearchQuery("")
-                        },
-                        onFabClick = {
-                            taskToEdit = null
-                            newTaskTitlePrefill = searchQuery
-                            showAddDialog = true
-                        }
-                    )
+                    // [ИЗМЕНЕНИЕ]: Применяем обертку IosTransitionWrapper для нативного iOS-эффекта тени слева и затемнения
+                    IosTransitionWrapper(isStartDestination = false) {
+                        ThingsSearchScreen(
+                            searchQuery = searchQuery,
+                            onSearchQueryChange = { viewModel.setSearchQuery(it) },
+                            allTasks = allTasksRaw,
+                            projects = projects,
+                            areas = areas,
+                            textPrimaryColor = textPrimaryColor,
+                            textSecondaryColor = textSecondaryColor,
+                            dividerColor = dividerColor,
+                            onTaskClick = { clickedTask ->
+                                taskToEdit = clickedTask
+                                showAddDialog = true
+                            },
+                            onTaskToggle = { toggledTask ->
+                                viewModel.toggleTaskCompletion(toggledTask)
+                            },
+                            onBack = {
+                                navController.popBackStack()
+                                viewModel.setSearchQuery("")
+                            },
+                            onFabClick = {
+                                taskToEdit = null
+                                newTaskTitlePrefill = searchQuery
+                                showAddDialog = true
+                            }
+                        )
+                    }
                 }
                 
                 // Helper for the category lists
@@ -529,7 +544,10 @@ fun ThingsHomeScreen(viewModel: ThingsViewModel = hiltViewModel()) {
 
                 composable<ListRoute> { backStackEntry ->
                     val route = backStackEntry.toRoute<ListRoute>()
-                    listScreenContent(route.screen)
+                    // [ИЗМЕНЕНИЕ]: Применяем обертку IosTransitionWrapper для нативной iOS-тени слева и эффекта затемнения
+                    IosTransitionWrapper(isStartDestination = false) {
+                        listScreenContent(route.screen)
+                    }
                 }
             }
 
@@ -1103,3 +1121,73 @@ fun ThingsHomeScreen(viewModel: ThingsViewModel = hiltViewModel()) {
         )
     }
 }
+
+/**
+ * A wrapper for destination screens in [NavHost] that adds a native iOS-style navigation effect.
+ *
+ * It implements two core features:
+ * 1. A soft linear shadow on the left edge of entering or pop-exiting screens (the right-most layer).
+ * 2. A dark semi-transparent veil over departing or pop-entering screens (the left-most layer)
+ *    with a maximum opacity of 0.3f.
+ *
+ * @param isStartDestination whether the current screen is the root start destination (which never has a left-edge shadow)
+ * @param content the UI content of the screen
+ */
+@Composable
+private fun AnimatedVisibilityScope.IosTransitionWrapper(
+    isStartDestination: Boolean,
+    content: @Composable () -> Unit
+) {
+    // Animate the transition progress based on the current state.
+    // Visible maps to 0f dimming, PostExit maps to 0.3f dimming, PreEnter/initial states map to 0f dimming.
+    val dimmingAlpha by transition.animateFloat(
+        transitionSpec = {
+            tween(durationMillis = 400, easing = CubicBezierEasing(0.25f, 1f, 0.5f, 1f))
+        },
+        label = "IosDimmingAlpha"
+    ) { state ->
+        when (state) {
+            EnterExitState.Visible -> 0f
+            EnterExitState.PostExit -> 0.3f
+            EnterExitState.PreEnter -> 0f
+        }
+    }
+
+    // Measure the shadow width dynamically.
+    val density = LocalDensity.current
+    val shadowWidthPx = remember(density) { with(density) { 16.dp.toPx() } }
+
+    Box(
+        modifier = Modifier
+            .fillMaxSize()
+            // 1. Draw a soft linear shadow on the left edge of the screen (for non-start destinations)
+            .drawBehind {
+                if (!isStartDestination) {
+                    drawRect(
+                        brush = Brush.horizontalGradient(
+                            colors = listOf(
+                                Color.Transparent,
+                                Color.Black.copy(alpha = 0.02f),
+                                Color.Black.copy(alpha = 0.08f),
+                                Color.Black.copy(alpha = 0.22f)
+                            ),
+                            startX = -shadowWidthPx,
+                            endX = 0f
+                        ),
+                        topLeft = Offset(-shadowWidthPx, 0f),
+                        size = Size(shadowWidthPx, size.height)
+                    )
+                }
+            }
+            // 2. Draw a dark semi-transparent dimming veil on top of the screen content when it is exiting/pop-entering
+            .drawWithContent {
+                drawContent()
+                if (dimmingAlpha > 0f) {
+                    drawRect(color = Color.Black.copy(alpha = dimmingAlpha))
+                }
+            }
+    ) {
+        content()
+    }
+}
+
