@@ -607,8 +607,8 @@ fun ThingsHomeScreen(viewModel: ThingsViewModel = hiltViewModel()) {
                         selectedProject = proj
                         selectedArea = area
                         
-                        // Определить активный экран
-                        activeScreen = when {
+                        // [ИЗМЕНЕНИЕ]: Переход на соответствующий экран через navigateTo вместо прямого присвоения activeScreen
+                        val targetScreen = when {
                             task.item.projectId != null -> ActiveScreen.PROJECT_DETAIL
                             task.item.areaId != null -> ActiveScreen.AREA_DETAIL
                             task.item.isCompleted -> ActiveScreen.LOGBOOK
@@ -619,6 +619,7 @@ fun ThingsHomeScreen(viewModel: ThingsViewModel = hiltViewModel()) {
                             task.item.isSomeday -> ActiveScreen.SOMEDAY
                             else -> ActiveScreen.INBOX
                         }
+                        navigateTo(targetScreen)
                         
                         // [ИЗМЕНЕНИЕ]: Кликнутая задача более не разворачивается для редактирования, а кратковременно подсвечивается
                         highlightedTaskId = task.item.id
