@@ -192,7 +192,8 @@ fun ThingsSearchOverlay(
             elevation = CardDefaults.cardElevation(defaultElevation = 12.dp),
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(start = 20.dp, end = 20.dp, top = topPaddingOffset, bottom = 20.dp)
+                // [ИЗМЕНЕНИЕ]: Уменьшено расстояние от левой и правой стороны экрана до краев поиска с 20.dp до 14.dp
+                .padding(start = 14.dp, end = 14.dp, top = topPaddingOffset, bottom = 20.dp)
                 .widthIn(max = 480.dp)
                 .clickable(enabled = false, onClick = {}) // Игнорировать клики внутри карты
         ) {
@@ -201,11 +202,12 @@ fun ThingsSearchOverlay(
                     .fillMaxWidth()
                     .wrapContentHeight()
             ) {
-                // Top header with input field and close button (padding horizontal 20.dp, top 20.dp)
+                // Top header with input field and close button (padding horizontal 14.dp, top 20.dp)
                 Column(
                     modifier = Modifier
                         .fillMaxWidth()
-                        .padding(horizontal = 20.dp)
+                        // [ИЗМЕНЕНИЕ]: Уменьшено расстояние от левой и правой стороны до элементов поиска с 20.dp до 14.dp
+                        .padding(horizontal = 14.dp)
                         .padding(top = 20.dp)
                 ) {
                     Row(
@@ -294,11 +296,12 @@ fun ThingsSearchOverlay(
 
                 Spacer(modifier = Modifier.height(16.dp))
 
-                // Контент: Либо "Recent", либо "Результаты поиска" (с горизонтальным паддингом 20.dp)
+                // Контент: Либо "Recent", либо "Результаты поиска" (с горизонтальным паддингом 14.dp)
                 Column(
                     modifier = Modifier
                         .fillMaxWidth()
-                        .padding(horizontal = 20.dp)
+                        // [ИЗМЕНЕНИЕ]: Уменьшено расстояние от левой и правой стороны до элементов поиска с 20.dp до 14.dp
+                        .padding(horizontal = 14.dp)
                 ) {
                     if (searchQuery.isBlank()) {
                         // РЕЖИМ 1: Стартовый экран (без запроса)

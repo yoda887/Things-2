@@ -240,7 +240,8 @@ fun ThingsCategoryListPanel(
                         focusManager.clearFocus()
                     })
                 }
-                .padding(horizontal = 20.dp)
+                // [ИЗМЕНЕНИЕ]: Уменьшено расстояние от левой и правой стороны экрана до списков с 20.dp до 14.dp
+                .padding(horizontal = 14.dp)
                 .testTag("tasks_lazy_list"),
             contentPadding = PaddingValues(top = topPaddingTotal, bottom = 100.dp)
         ) {

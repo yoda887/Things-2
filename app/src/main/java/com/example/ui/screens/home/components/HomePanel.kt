@@ -243,7 +243,8 @@ fun ThingsHomePanel(
                 .fillMaxSize()
                 .nestedScroll(nestedScrollConnection)
                 .graphicsLayer { translationY = pullOffset.value }
-                .padding(horizontal = 20.dp),
+                // [ИЗМЕНЕНИЕ]: Уменьшено расстояние от левой и правой стороны экрана до списков с 20.dp до 14.dp
+                .padding(horizontal = 14.dp),
             verticalArrangement = Arrangement.spacedBy(16.dp)
         ) {
         // Search Filter row

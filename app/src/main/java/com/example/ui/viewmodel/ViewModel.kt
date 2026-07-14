@@ -142,6 +142,149 @@ class ThingsViewModel @Inject constructor(
     val allSavedTagObjects: StateFlow<List<Tag>> = queryUseCases.observeAllTags()
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
 
+    private fun computeCategoryListState(
+        screen: ActiveScreen,
+        project: Item?,
+        area: Area?,
+        expandedTaskId: String?,
+        selectedTag: String?,
+        taskList: List<ItemWithChecklist>,
+        projectList: List<Item>,
+        areaList: List<Area>,
+        calEvents: List<Item>,
+        savedTags: List<String>,
+        savedTagObjs: List<Tag>,
+        allTagsSet: Set<String>,
+        highlighted: String?
+    ): ThingsCategoryListState {
+        val listTasks = taskList.filter { wrapper ->
+            val task = wrapper.item
+            if (task.id == expandedTaskId) {
+                true
+            } else {
+                when (screen) {
+                    ActiveScreen.INBOX -> task.isInbox && !task.isCompleted
+                    ActiveScreen.TODAY -> task.isToday
+                    ActiveScreen.UPCOMING -> task.isUpcoming
+                    ActiveScreen.ANYTIME -> task.isAnytime
+                    ActiveScreen.SOMEDAY -> task.isSomeday
+                    ActiveScreen.LOGBOOK -> task.isCompleted
+                    ActiveScreen.PROJECT_DETAIL -> task.projectId == project?.id && !task.isCompleted
+                    ActiveScreen.AREA_DETAIL -> task.areaId == area?.id && task.type == 0 && !task.isCompleted
+                    else -> false
+                }
+            }
+        }.sortedBy { it.item.sortOrder }
+
+        val displayTasks = if (selectedTag == null) {
+            listTasks
+        } else {
+            listTasks.filter { it.item.tags.contains(selectedTag) || it.item.id == expandedTaskId }
+        }
+
+        val standardToday = displayTasks.filter { !it.item.isTonight }
+        val eveningToday = displayTasks.filter { it.item.isTonight }
+        val upcomingDays = computeUpcomingDays(displayTasks, calEvents)
+
+        return ThingsCategoryListState(
+            screen = screen,
+            project = project,
+            area = area,
+            inlineExpandedTaskId = expandedTaskId,
+            selectedTagFilter = selectedTag,
+            allTags = allTagsSet,
+            displayTasks = displayTasks,
+            standardToday = standardToday,
+            eveningToday = eveningToday,
+            upcomingDays = upcomingDays,
+            calendarEvents = calEvents,
+            allSavedTags = savedTags,
+            allSavedTagObjects = savedTagObjs,
+            areas = areaList,
+            projects = projectList,
+            highlightedTaskId = highlighted,
+            allTasks = taskList
+        )
+    }
+
+    fun getCategoryListStateSnapshot(
+        screen: ActiveScreen,
+        project: Item?,
+        area: Area?
+    ): ThingsCategoryListState {
+        return computeCategoryListState(
+            screen = screen,
+            project = project,
+            area = area,
+            expandedTaskId = inlineExpandedTaskId.value,
+            selectedTag = selectedTagFilter.value,
+            taskList = tasks.value,
+            projectList = projects.value,
+            areaList = areas.value,
+            calEvents = calendarEvents.value,
+            savedTags = allSavedTags.value,
+            savedTagObjs = allSavedTagObjects.value,
+            allTagsSet = allTags.value,
+            highlighted = highlightedTaskId.value
+        )
+    }
+
+    fun getCategoryListStateFlow(
+        screen: ActiveScreen,
+        project: Item?,
+        area: Area?
+    ): StateFlow<ThingsCategoryListState> {
+        val initialValue = getCategoryListStateSnapshot(screen, project, area)
+        return combine(
+            listOf(
+                inlineExpandedTaskId,
+                selectedTagFilter,
+                tasks,
+                projects,
+                areas,
+                calendarEvents,
+                allSavedTags,
+                allSavedTagObjects,
+                allTags,
+                highlightedTaskId
+            )
+        ) { array ->
+            val expandedTaskId = array[0] as? String
+            val selectedTag = array[1] as? String
+            @Suppress("UNCHECKED_CAST")
+            val taskList = array[2] as List<ItemWithChecklist>
+            @Suppress("UNCHECKED_CAST")
+            val projectList = array[3] as List<Item>
+            @Suppress("UNCHECKED_CAST")
+            val areaList = array[4] as List<Area>
+            @Suppress("UNCHECKED_CAST")
+            val calEvents = array[5] as List<Item>
+            @Suppress("UNCHECKED_CAST")
+            val savedTags = array[6] as List<String>
+            @Suppress("UNCHECKED_CAST")
+            val savedTagObjs = array[7] as List<Tag>
+            @Suppress("UNCHECKED_CAST")
+            val allTagsSet = array[8] as Set<String>
+            val highlighted = array[9] as? String
+
+            computeCategoryListState(
+                screen = screen,
+                project = project,
+                area = area,
+                expandedTaskId = expandedTaskId,
+                selectedTag = selectedTag,
+                taskList = taskList,
+                projectList = projectList,
+                areaList = areaList,
+                calEvents = calEvents,
+                savedTags = savedTags,
+                savedTagObjs = savedTagObjs,
+                allTagsSet = allTagsSet,
+                highlighted = highlighted
+            )
+        }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), initialValue)
+    }
+
     val categoryListState: StateFlow<ThingsCategoryListState> = combine(
         listOf(
             currentScreen,
@@ -180,53 +323,20 @@ class ThingsViewModel @Inject constructor(
         val allTagsSet = array[11] as Set<String>
         val highlighted = array[12] as? String
 
-        val listTasks = taskList.filter { wrapper ->
-            val task = wrapper.item
-            if (task.id == expandedTaskId) {
-                true
-            } else {
-                when (screen) {
-                    ActiveScreen.INBOX -> task.isInbox && !task.isCompleted
-                    ActiveScreen.TODAY -> task.isToday
-                    ActiveScreen.UPCOMING -> task.isUpcoming
-                    ActiveScreen.ANYTIME -> task.isAnytime
-                    ActiveScreen.SOMEDAY -> task.isSomeday
-                    ActiveScreen.LOGBOOK -> task.isCompleted
-                    ActiveScreen.PROJECT_DETAIL -> task.projectId == project?.id && !task.isCompleted
-                    ActiveScreen.AREA_DETAIL -> task.areaId == area?.id && task.type == 0 && !task.isCompleted
-                    else -> false
-                }
-            }
-        }.sortedBy { it.item.sortOrder }
-
-        val displayTasks = if (selectedTag == null) {
-            listTasks
-        } else {
-            listTasks.filter { it.item.tags.contains(selectedTag) || it.item.id == expandedTaskId }
-        }
-
-        val standardToday = displayTasks.filter { !it.item.isTonight }
-        val eveningToday = displayTasks.filter { it.item.isTonight }
-        val upcomingDays = computeUpcomingDays(displayTasks, calEvents)
-
-        ThingsCategoryListState(
+        computeCategoryListState(
             screen = screen,
             project = project,
             area = area,
-            inlineExpandedTaskId = expandedTaskId,
-            selectedTagFilter = selectedTag,
-            allTags = allTagsSet,
-            displayTasks = displayTasks,
-            standardToday = standardToday,
-            eveningToday = eveningToday,
-            upcomingDays = upcomingDays,
-            calendarEvents = calEvents,
-            allSavedTags = savedTags,
-            allSavedTagObjects = savedTagObjs,
-            areas = areaList,
-            projects = projectList,
-            highlightedTaskId = highlighted,
-            allTasks = taskList
+            expandedTaskId = expandedTaskId,
+            selectedTag = selectedTag,
+            taskList = taskList,
+            projectList = projectList,
+            areaList = areaList,
+            calEvents = calEvents,
+            savedTags = savedTags,
+            savedTagObjs = savedTagObjs,
+            allTagsSet = allTagsSet,
+            highlighted = highlighted
         )
     }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), ThingsCategoryListState())
 

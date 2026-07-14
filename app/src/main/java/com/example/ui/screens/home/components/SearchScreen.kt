@@ -148,7 +148,8 @@ fun ThingsSearchScreen(
             // Large Title: Search
             Row(
                 verticalAlignment = Alignment.CenterVertically,
-                modifier = Modifier.padding(horizontal = 24.dp, vertical = 8.dp)
+                // [ИЗМЕНЕНИЕ]: Уменьшено расстояние от левой и правой стороны экрана с 24.dp до 14.dp
+                modifier = Modifier.padding(horizontal = 14.dp, vertical = 8.dp)
             ) {
                 Icon(
                     imageVector = Icons.Default.Search,
@@ -170,7 +171,8 @@ fun ThingsSearchScreen(
                 verticalAlignment = Alignment.CenterVertically,
                 modifier = Modifier
                     .fillMaxWidth()
-                    .padding(horizontal = 24.dp, vertical = 8.dp)
+                    // [ИЗМЕНЕНИЕ]: Уменьшено расстояние от левой и правой стороны экрана с 24.dp до 14.dp
+                    .padding(horizontal = 14.dp, vertical = 8.dp)
                     .height(44.dp)
                     .clip(RoundedCornerShape(22.dp))
                     .background(capsuleBkg)
@@ -223,7 +225,8 @@ fun ThingsSearchScreen(
                     modifier = Modifier
                         .fillMaxWidth()
                         .weight(1f)
-                        .padding(horizontal = 24.dp),
+                        // [ИЗМЕНЕНИЕ]: Уменьшено расстояние от левой и правой стороны экрана с 24.dp до 14.dp
+                        .padding(horizontal = 14.dp),
                     contentAlignment = Alignment.Center
                 ) {
                     Text(
@@ -238,7 +241,8 @@ fun ThingsSearchScreen(
                     modifier = Modifier
                         .fillMaxWidth()
                         .weight(1f)
-                        .padding(horizontal = 24.dp),
+                        // [ИЗМЕНЕНИЕ]: Уменьшено расстояние от левой и правой стороны экрана с 24.dp до 14.dp
+                        .padding(horizontal = 14.dp),
                     contentAlignment = Alignment.Center
                 ) {
                     Column(horizontalAlignment = Alignment.CenterHorizontally) {
@@ -261,7 +265,8 @@ fun ThingsSearchScreen(
                     modifier = Modifier
                         .fillMaxWidth()
                         .weight(1f)
-                        .padding(horizontal = 24.dp),
+                        // [ИЗМЕНЕНИЕ]: Уменьшено расстояние от левой и правой стороны экрана с 24.dp до 14.dp
+                        .padding(horizontal = 14.dp),
                     verticalArrangement = Arrangement.spacedBy(8.dp),
                     contentPadding = PaddingValues(top = 12.dp, bottom = 80.dp)
                 ) {
