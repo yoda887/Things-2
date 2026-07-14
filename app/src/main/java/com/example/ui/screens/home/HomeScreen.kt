@@ -14,6 +14,7 @@ import androidx.compose.ui.draw.drawWithContent
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Brush
+import androidx.compose.animation.core.FastOutSlowInEasing
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
@@ -315,44 +316,51 @@ fun ThingsHomeScreen(viewModel: ThingsViewModel = hiltViewModel()) {
                 .fillMaxSize()
                 .padding(innerPadding)
         ) {
-            // [ИЗМЕНЕНИЕ]: Анимированный переход между всеми экранами, имитирующий iOS.
-            // Используется длительность 400 мс с кривой Безье (EaseOut), горизонтальным сдвигом на 30% ширины
-            // экрана для уходящих/возвращающихся экранов и плавным наложением фейда.
+            // [ИЗМЕНЕНИЕ]: Анимированный переход между всеми экранами, имитирующий масштабное появление (scale-up) с эффектом отскока (overshoot)
+            // аналогично оригинальному проекту Things (makeScaleUpAnimation).
             NavHost(
                 navController = navController,
                 startDestination = HomeRoute,
                 enterTransition = {
-                    // Плавное появление нового экрана справа налево
-                    slideInHorizontally(
-                        initialOffsetX = { it },
-                        animationSpec = tween(durationMillis = 400, easing = CubicBezierEasing(0.25f, 1f, 0.5f, 1f))
+                    scaleIn(
+                        initialScale = 0f,
+                        transformOrigin = TransformOrigin.Center,
+                        animationSpec = tween(durationMillis = 300, easing = FastOutSlowInEasing)
+                    ) + fadeIn(
+                        animationSpec = tween(durationMillis = 200)
                     )
                 },
                 exitTransition = {
-                    // Плавное смещение текущего экрана влево на 30% ширины
-                    slideOutHorizontally(
-                        targetOffsetX = { -it / 3 },
-                        animationSpec = tween(durationMillis = 400, easing = CubicBezierEasing(0.25f, 1f, 0.5f, 1f))
+                    scaleOut(
+                        targetScale = 0.9f,
+                        transformOrigin = TransformOrigin.Center,
+                        animationSpec = tween(durationMillis = 300, easing = FastOutSlowInEasing)
+                    ) + fadeOut(
+                        animationSpec = tween(durationMillis = 200)
                     )
                 },
                 popEnterTransition = {
-                    // Возвращение экрана с левой стороны (из смещения -30%) обратно в центр
-                    slideInHorizontally(
-                        initialOffsetX = { -it / 3 },
-                        animationSpec = tween(durationMillis = 400, easing = CubicBezierEasing(0.25f, 1f, 0.5f, 1f))
+                    scaleIn(
+                        initialScale = 0.9f,
+                        transformOrigin = TransformOrigin.Center,
+                        animationSpec = tween(durationMillis = 300, easing = FastOutSlowInEasing)
+                    ) + fadeIn(
+                        animationSpec = tween(durationMillis = 200)
                     )
                 },
                 popExitTransition = {
-                    // Плавный сдвиг уходящего по кнопке "Назад" экрана слева направо (до 100% ширины)
-                    slideOutHorizontally(
-                        targetOffsetX = { it },
-                        animationSpec = tween(durationMillis = 400, easing = CubicBezierEasing(0.25f, 1f, 0.5f, 1f))
+                    scaleOut(
+                        targetScale = 0f,
+                        transformOrigin = TransformOrigin.Center,
+                        animationSpec = tween(durationMillis = 300, easing = CubicBezierEasing(0.4f, 0f, 1f, 1f))
+                    ) + fadeOut(
+                        animationSpec = tween(durationMillis = 200)
                     )
                 }
             ) {
                 composable<HomeRoute> {
-                    // Применяем обертку IosTransitionWrapper сплошным фоном и эффектом затемнения для уходящего экрана
-                    IosTransitionWrapper(isStartDestination = true, backgroundColor = backgroundColor) {
+                    // Применяем обертку ScreenTransitionWrapper со сплошным фоном и эффектом затемнения для уходящего экрана
+                    ScreenTransitionWrapper(isStartDestination = true, backgroundColor = backgroundColor) {
                         ThingsHomePanel(
                             allTasks = allTasksRaw,
                             projects = projects,
@@ -395,8 +403,8 @@ fun ThingsHomeScreen(viewModel: ThingsViewModel = hiltViewModel()) {
                     }
                 }
                 composable<SearchRoute> {
-                    // Применяем обертку IosTransitionWrapper сплошным фоном и эффектом затемнения
-                    IosTransitionWrapper(isStartDestination = false, backgroundColor = backgroundColor) {
+                    // Применяем обертку ScreenTransitionWrapper со сплошным фоном и эффектом затемнения
+                    ScreenTransitionWrapper(isStartDestination = false, backgroundColor = backgroundColor) {
                         ThingsSearchScreen(
                             searchQuery = searchQuery,
                             onSearchQueryChange = { viewModel.setSearchQuery(it) },
@@ -536,8 +544,8 @@ fun ThingsHomeScreen(viewModel: ThingsViewModel = hiltViewModel()) {
 
                 composable<ListRoute> { backStackEntry ->
                     val route = backStackEntry.toRoute<ListRoute>()
-                    // Применяем обертку IosTransitionWrapper сплошным фоном и эффектом затемнения
-                    IosTransitionWrapper(isStartDestination = false, backgroundColor = backgroundColor) {
+                    // Применяем обертку ScreenTransitionWrapper со сплошным фоном и эффектом затемнения
+                    ScreenTransitionWrapper(isStartDestination = false, backgroundColor = backgroundColor) {
                         listScreenContent(route.screen)
                     }
                 }
@@ -1115,7 +1123,7 @@ fun ThingsHomeScreen(viewModel: ThingsViewModel = hiltViewModel()) {
 }
 
 /**
- * A wrapper for destination screens in [NavHost] that adds a native iOS-style navigation effect.
+ * A wrapper for destination screens in [NavHost] that adds solid background and transition dimming.
  *
  * It implements the core feature:
  * - A dark semi-transparent veil over departing or pop-entering screens (the left-most layer)
@@ -1126,7 +1134,7 @@ fun ThingsHomeScreen(viewModel: ThingsViewModel = hiltViewModel()) {
  * @param content the UI content of the screen
  */
 @Composable
-private fun AnimatedVisibilityScope.IosTransitionWrapper(
+private fun AnimatedVisibilityScope.ScreenTransitionWrapper(
     isStartDestination: Boolean,
     backgroundColor: Color,
     content: @Composable () -> Unit
@@ -1135,9 +1143,9 @@ private fun AnimatedVisibilityScope.IosTransitionWrapper(
     // Visible maps to 0f dimming, PostExit maps to 0.3f dimming, PreEnter/initial states map to 0f dimming.
     val dimmingAlpha by transition.animateFloat(
         transitionSpec = {
-            tween(durationMillis = 400, easing = CubicBezierEasing(0.25f, 1f, 0.5f, 1f))
+            tween(durationMillis = 300, easing = FastOutSlowInEasing)
         },
-        label = "IosDimmingAlpha"
+        label = "DimmingAlpha"
     ) { state ->
         when (state) {
             EnterExitState.Visible -> 0f
