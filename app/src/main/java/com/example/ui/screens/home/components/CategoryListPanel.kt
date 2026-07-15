@@ -198,6 +198,15 @@ fun ThingsCategoryListPanel(
     val anyExpanded = inlineExpandedTaskId != null
     val globalDimAlpha by animateFloatAsState(targetValue = if (anyExpanded) 0.3f else 1f, label = "globalDim")
 
+    val placementSpec: androidx.compose.animation.core.FiniteAnimationSpec<androidx.compose.ui.unit.IntOffset>? = if (anyExpanded) {
+        null
+    } else {
+        spring(
+            dampingRatio = Spring.DampingRatioNoBouncy,
+            stiffness = Spring.StiffnessMediumLow
+        )
+    }
+
     val coroutineScope = rememberCoroutineScope()
     val pullOffset = remember { Animatable(0f) }
     val thresholdPx = with(density) { 100.dp.toPx() }
@@ -341,7 +350,13 @@ fun ThingsCategoryListPanel(
                                 onLocalTasksListChange = { localTasksList = it },
                                 lazyListState = lazyListState,
                                 onWhenDialogVisibilityChange = { isWhenDialogOpen = it },
-                                modifier = if (dragDropState.draggedTaskId == item.item.id) Modifier else Modifier.animateItem()
+                                modifier = if (dragDropState.draggedTaskId == item.item.id) {
+                                    Modifier
+                                } else {
+                                    Modifier.animateItem(
+                                        placementSpec = placementSpec
+                                    )
+                                }
                             )
                         }
                         is Item -> {
@@ -354,7 +369,9 @@ fun ThingsCategoryListPanel(
                                     textPrimaryColor = textPrimaryColor,
                                     inlineExpandedTaskId = inlineExpandedTaskId,
                                     onProjectClick = { onEvent(ThingsCategoryListEvent.ClickProject(it)) },
-                                    modifier = Modifier.animateItem()
+                                    modifier = Modifier.animateItem(
+                                        placementSpec = placementSpec
+                                    )
                                 )
                             }
                         }
@@ -373,7 +390,9 @@ fun ThingsCategoryListPanel(
                                 textSecondaryColor = textSecondaryColor,
                                 dividerColor = dividerColor,
                                 modifier = Modifier
-                                    .animateItem()
+                                    .animateItem(
+                                        placementSpec = placementSpec
+                                    )
                                     .graphicsLayer { alpha = dimAlpha }
                             )
                         }
@@ -386,7 +405,9 @@ fun ThingsCategoryListPanel(
                             )
                             Column(
                                 modifier = Modifier
-                                    .animateItem()
+                                    .animateItem(
+                                        placementSpec = placementSpec
+                                    )
                                     .graphicsLayer { alpha = dimAlpha }
                             ) {
                                 UpcomingCalendarEventRow(
@@ -410,7 +431,9 @@ fun ThingsCategoryListPanel(
                                 textSecondaryColor = textSecondaryColor,
                                 dividerColor = dividerColor,
                                 dimAlpha = dimAlpha,
-                                modifier = Modifier.animateItem()
+                                modifier = Modifier.animateItem(
+                                    placementSpec = placementSpec
+                                )
                             )
                         }
                     }

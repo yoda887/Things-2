@@ -134,7 +134,7 @@ fun AnimatedTaskItem(
 
     val extraPaddingDp = 4.dp + (16.dp * expansionProgress)
 
-    val verticalGapPadding = (16 * expansionProgress).dp
+    val verticalGapPadding = (28 * expansionProgress).dp
 
     // Добавляем светло-серую подложку (плейсхолдер) на физическое место задачи во время перетаскивания (landing slot)
     Column(
