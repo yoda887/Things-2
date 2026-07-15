@@ -268,6 +268,7 @@ sealed interface ThingsCategoryListEvent {
     data class ToggleTask(val task: ItemWithChecklist) : ThingsCategoryListEvent
     data class ClickTask(val task: ItemWithChecklist) : ThingsCategoryListEvent
     data class ClickProject(val project: Item) : ThingsCategoryListEvent
+    data class ClickArea(val area: Area) : ThingsCategoryListEvent
     data class ChangeInlineExpandedTaskId(val taskId: String?) : ThingsCategoryListEvent
     object ClickSearch : ThingsCategoryListEvent
     object ClickBack : ThingsCategoryListEvent

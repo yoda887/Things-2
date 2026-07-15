@@ -76,7 +76,10 @@ fun ThingsTaskInlineEditor(
     onUpdateTagsOrder: (List<Tag>) -> Unit = {},
     isDeletedExternally: () -> Boolean = { false },
     expansionProgress: Float = 1f,
-    onWhenDialogVisibilityChange: (Boolean) -> Unit = {}
+    onWhenDialogVisibilityChange: (Boolean) -> Unit = {},
+    areas: List<com.example.data.model.Area> = emptyList(),
+    onNavigateToProject: ((Item) -> Unit)? = null,
+    onNavigateToArea: ((com.example.data.model.Area) -> Unit)? = null
 ) {
     var title by remember(task.item.id) { mutableStateOf<String>(task.item.title) }
     var notes by remember(task.item.id) { mutableStateOf<String>(task.item.notes) }
@@ -533,82 +536,22 @@ fun ThingsTaskInlineEditor(
                     }
                 }
             }
-
-            Spacer(modifier = Modifier.height(12.dp))
-
-            // Row for Trash & Done (Below the Smart Icons row)
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.SpaceBetween
-            ) {
-                if (onDelete != null) {
-                    Icon(
-                        imageVector = Icons.Default.Delete,
-                        contentDescription = "Delete Task",
-                        tint = ThingsUpcomingRed.copy(alpha = 0.8f),
-                        modifier = Modifier
-                            .size(20.dp)
-                            .clickable {
-                                isDeleted = true
-                                onDelete()
-                            }
-                    )
-                } else {
-                    Spacer(modifier = Modifier.width(1.dp)) // empty fallback
-                }
-
-                // Done / Save Quick Action button
-                Text(
-                    text = "Done",
-                    style = TextStyle(
-                        fontSize = buttonFontSize,
-                        color = ThingsBlue,
-                        fontWeight = FontWeight.Bold
-                    ),
-                    modifier = Modifier
-                        .clickable {
-                            isSavedManually = true
-                            if (title.isBlank() && notes.isBlank() && checklist.isEmpty()) {
-                                onDelete?.invoke()
-                            } else {
-                                val tagList = tagInput.split(",")
-                                    .map { it.trim() }
-                                    .filter { it.isNotEmpty() }
-                                onSave(
-                                    title,
-                                    notes,
-                                    section,
-                                    isTonight,
-                                    startDate,
-                                    dueDate,
-                                    tagList,
-                                    task.item.projectId,
-                                    checklist,
-                                    priority
-                                )
-                            }
-                            onDone()
-                        }
-                        .padding(horizontal = 4.dp, vertical = 2.dp)
-                )
-            }
-        } // Close the collapse Column
-    } // Close the main Column
-} // Close the Card
+        }
+    }
+}
 
     if (showWhenDialog) {
-         ThingsWhenDialog(
-             startDate = startDate,
-             onStartDateChange = { startDate = it },
-             section = section,
-             onSectionChange = { section = it },
-             isTonight = isTonight,
-             onIsTonightChange = { isTonight = it },
-             onShowCalendarHelperChange = { showCalendarHelper = it },
-             onDismissRequest = { showWhenDialog = false }
-         )
-     }
+        ThingsWhenDialog(
+            startDate = startDate,
+            onStartDateChange = { startDate = it },
+            section = section,
+            onSectionChange = { section = it },
+            isTonight = isTonight,
+            onIsTonightChange = { isTonight = it },
+            onShowCalendarHelperChange = { showCalendarHelper = it },
+            onDismissRequest = { showWhenDialog = false }
+        )
+    }
 
     if (showDatePicker) {
         DeadlineDatePickerDialog(

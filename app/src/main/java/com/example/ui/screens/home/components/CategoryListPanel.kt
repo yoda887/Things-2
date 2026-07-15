@@ -225,7 +225,14 @@ fun ThingsCategoryListPanel(
     val isDark = textPrimaryColor == ThingsTextPrimaryDark
     val topPaddingTotal = TOP_APP_BAR_HEIGHT
 
-    val bkgColor = if (isDark) ThingsBackgroundDark else ThingsBackgroundLight
+    val bkgColor by animateColorAsState(
+        targetValue = if (anyExpanded) {
+            if (isDark) Color(0xFF151618) else Color(0xFFF4F4F6)
+        } else {
+            if (isDark) ThingsBackgroundDark else ThingsBackgroundLight
+        },
+        label = "backgroundColor"
+    )
 
     Box(modifier = Modifier.fillMaxSize().background(bkgColor)) {
         LazyColumn(

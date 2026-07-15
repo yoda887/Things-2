@@ -468,6 +468,10 @@ fun ThingsHomeScreen(viewModel: ThingsViewModel = hiltViewModel()) {
                                     selectedProject = event.project
                                     navigateTo(ActiveScreen.PROJECT_DETAIL)
                                 }
+                                is ThingsCategoryListEvent.ClickArea -> {
+                                    selectedArea = event.area
+                                    navigateTo(ActiveScreen.AREA_DETAIL)
+                                }
                                 is ThingsCategoryListEvent.ChangeInlineExpandedTaskId -> {
                                     inlineExpandedTaskId = event.taskId
                                 }

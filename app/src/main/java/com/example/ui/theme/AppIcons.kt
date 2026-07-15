@@ -3,6 +3,7 @@ package com.example.ui.theme
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.SolidColor
 import androidx.compose.ui.graphics.StrokeJoin
+import androidx.compose.ui.graphics.StrokeCap
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.graphics.vector.path
 import androidx.compose.ui.unit.dp
@@ -324,6 +325,50 @@ object AppIcons {
                 curveToRelative(-4.8369f, -0.0001f, -8.7579f, -3.9211f, -8.758f, -8.758f)
                 curveToRelative(0f, -2.2856f, 0.8937f, -4.4808f, 2.4899f, -6.1166f)
                 close()
+            }
+        }.build()
+    }
+
+    val Area: ImageVector by lazy(LazyThreadSafetyMode.NONE) {
+        ImageVector.Builder(
+            name = "CustomArea",
+            defaultWidth = 24.dp,
+            defaultHeight = 24.dp,
+            viewportWidth = 24f,
+            viewportHeight = 24f
+        ).apply {
+            path(
+                stroke = SolidColor(Color.White),
+                strokeLineWidth = 2f,
+                strokeLineCap = StrokeCap.Round,
+                strokeLineJoin = StrokeJoin.Round
+            ) {
+                moveTo(2f, 15.5f)
+                quadToRelative(0f, 2f, 1.8f, 2.9f)
+                lineToRelative(6.4f, 3.2f)
+                quadToRelative(1.8f, 0.9f, 3.6f, 0f)
+                lineToRelative(6.4f, -3.2f)
+                quadToRelative(1.8f, -0.9f, 1.8f, -2.9f)
+                lineToRelative(0f, -7f)
+                quadToRelative(0f, -2f, -1.8f, -2.9f)
+                lineToRelative(-6.4f, -3.2f)
+                quadToRelative(-1.8f, -0.9f, -3.6f, 0f)
+                lineToRelative(-6.4f, 3.2f)
+                quadToRelative(-1.8f, 0.9f, -1.8f, 2.9f)
+                close()
+            }
+            path(
+                stroke = SolidColor(Color.White),
+                strokeLineWidth = 1.4f,
+                strokeLineCap = StrokeCap.Round,
+                strokeLineJoin = StrokeJoin.Round
+            ) {
+                moveTo(3f, 6.5f)
+                curveToRelative(-1f, 1.2f, -0.2f, 1.9f, 0.8f, 2.4f)
+                lineTo(10.2f, 12.1f)
+                quadTo(12f, 13f, 13.8f, 12.1f)
+                lineTo(20.2f, 8.9f)
+                curveToRelative(1f, -0.5f, 1.8f, -1.2f, 0.8f, -2.4f)
             }
         }.build()
     }
