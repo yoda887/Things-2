@@ -251,6 +251,16 @@ fun ThingsCategoryListPanel(
         label = "backgroundColor"
     )
 
+    val toolbarHeightPx = with(density) { TOP_APP_BAR_HEIGHT.toPx() }
+    val toolbarOffsetY by animateFloatAsState(
+        targetValue = if (anyExpanded) -(toolbarHeightPx + with(density) { 24.dp.toPx() }) else 0f,
+        animationSpec = androidx.compose.animation.core.tween(
+            durationMillis = com.example.ui.theme.AnimationConstants.TASK_EXPANSION_DURATION_MS.toInt(),
+            easing = androidx.compose.animation.core.FastOutSlowInEasing
+        ),
+        label = "toolbarOffset"
+    )
+
     Box(modifier = Modifier.fillMaxSize().background(bkgColor)) {
         LazyColumn(
             state = lazyListState,
@@ -455,6 +465,7 @@ fun ThingsCategoryListPanel(
         // TopAppBar
         // [ИЗМЕНЕНИЕ]: Передаем в AppBar дополнительные параметры (состояние скролла, экран, проект, область ответственности и список задач) для вывода иконки и полужирного заголовка
         CategoryListTopAppBar(
+            modifier = Modifier.graphicsLayer { translationY = toolbarOffsetY },
             isDark = isDark,
             textPrimaryColor = textPrimaryColor,
             textSecondaryColor = textSecondaryColor,
