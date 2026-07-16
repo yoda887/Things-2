@@ -202,7 +202,7 @@ fun ThingsCategoryListPanel(
 
     LaunchedEffect(inlineExpandedTaskId) {
         isTransitionActive = true
-        kotlinx.coroutines.delay(400)
+        kotlinx.coroutines.delay(com.example.ui.theme.AnimationConstants.TASK_EXPANSION_DURATION_MS)
         isTransitionActive = false
     }
 
