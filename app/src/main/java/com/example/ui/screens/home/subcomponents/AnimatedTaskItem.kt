@@ -148,33 +148,34 @@ fun AnimatedTaskItem(
     val verticalGapPadding = MaterialTheme.dimens.taskExpandedVerticalGap * expansionProgress
 
     // Добавляем светло-серую подложку (плейсхолдер) на физическое место задачи во время перетаскивания (landing slot)
-    Column(
+    Box(
         modifier = modifier
             .zIndex(zIndexValToUse)
-            .graphicsLayer {
-                translationX = translationXVal
-                translationY = translationYVal
-                scaleX = dragScale
-                scaleY = dragScale
-                alpha = dimAlpha
-            }
-            .padding(top = verticalGapPadding, bottom = verticalGapPadding)
     ) {
-        Box(
-            modifier = Modifier.fillMaxWidth()
-        ) {
-            if (isDragTask) {
-                val isDark = isSystemInDarkTheme()
-                val placeholderBgColor = if (isDark) Color(0xFF2C2D32) else Color(0xFFE5E6EB)
-                Box(
-                    modifier = Modifier
-                        .matchParentSize()
-                        .alpha(0.5f) // Полупрозрачный
-                        .zIndex(-1f) // Уровнем ниже всех задач в списке (в рамках контекста элемента)
-                        .background(placeholderBgColor, currCornerShape)
-                )
-            }
+        if (isDragTask) {
+            val isDark = isSystemInDarkTheme()
+            val placeholderBgColor = if (isDark) Color(0xFF2C2D32) else Color(0xFFE5E6EB)
+            Box(
+                modifier = Modifier
+                    .matchParentSize()
+                    .alpha(0.5f) // Полупрозрачный
+                    .zIndex(-1f) // Уровнем ниже всех задач в списке (в рамках контекста элемента)
+                    .background(placeholderBgColor, currCornerShape)
+            )
+        }
 
+        Column(
+            modifier = Modifier
+                .fillMaxWidth()
+                .graphicsLayer {
+                    translationX = translationXVal
+                    translationY = translationYVal
+                    scaleX = dragScale
+                    scaleY = dragScale
+                    alpha = dimAlpha
+                }
+                .padding(top = verticalGapPadding, bottom = verticalGapPadding)
+        ) {
             Column(
                 modifier = Modifier
                     .fillMaxWidth()
