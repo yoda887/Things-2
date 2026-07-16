@@ -5,6 +5,8 @@ import androidx.compose.animation.core.animateDpAsState
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.spring
 import androidx.compose.animation.core.Spring
+import androidx.compose.animation.core.tween
+import androidx.compose.animation.core.FastOutSlowInEasing
 import androidx.compose.foundation.background
 import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.foundation.layout.Box
@@ -103,9 +105,9 @@ fun AnimatedTaskItem(
 
     val expansionProgress by animateFloatAsState(
         targetValue = if (isExpanded) 1f else 0f,
-        animationSpec = spring(
-            dampingRatio = Spring.DampingRatioNoBouncy,
-            stiffness = Spring.StiffnessMediumLow
+        animationSpec = tween(
+            durationMillis = com.example.ui.theme.AnimationConstants.TASK_EXPANSION_DURATION_MS.toInt(),
+            easing = FastOutSlowInEasing
         ),
         label = "expansionProgress_${task.id}"
     )
@@ -194,9 +196,9 @@ fun AnimatedTaskItem(
                     }
                     .shadow(dragElevation, currCornerShape)
                     .background(containerBgColor, currCornerShape)
-                    .animateContentSize(animationSpec = spring(
-                        dampingRatio = Spring.DampingRatioNoBouncy,
-                        stiffness = Spring.StiffnessMediumLow
+                    .animateContentSize(animationSpec = tween(
+                        durationMillis = com.example.ui.theme.AnimationConstants.TASK_EXPANSION_DURATION_MS.toInt(),
+                        easing = FastOutSlowInEasing
                     ))
             ) {
                 if (isExpanded || expansionProgress > 0f) {
