@@ -284,7 +284,6 @@ fun AnimatedTaskItem(
                     )
                 }
             }
-        }
 
         // Project/Area indicator row (drawn under/outside the Card)
         if (isExpanded || expansionProgress > 0f) {
@@ -348,6 +347,7 @@ fun AnimatedTaskItem(
                     }
                 }
             }
+        }
         }
     }
 }
