@@ -5,6 +5,8 @@ import androidx.compose.animation.core.animateDpAsState
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.spring
 import androidx.compose.animation.core.Spring
+import androidx.compose.animation.core.tween
+import androidx.compose.animation.core.FastOutSlowInEasing
 import androidx.compose.foundation.background
 import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.foundation.layout.Box
@@ -103,9 +105,9 @@ fun AnimatedTaskItem(
 
     val expansionProgress by animateFloatAsState(
         targetValue = if (isExpanded) 1f else 0f,
-        animationSpec = spring(
-            dampingRatio = Spring.DampingRatioNoBouncy,
-            stiffness = Spring.StiffnessMediumLow
+        animationSpec = tween(
+            durationMillis = com.example.ui.theme.AnimationConstants.TASK_EXPANSION_DURATION_MS.toInt(),
+            easing = FastOutSlowInEasing
         ),
         label = "expansionProgress_${task.id}"
     )
@@ -133,6 +135,10 @@ fun AnimatedTaskItem(
     )
     val dragElevation by animateDpAsState(
         targetValue = if (isDragTask) 8.dp else (if (isExpanded || expansionProgress > 0f) 8.dp else 0.dp),
+        animationSpec = tween(
+            durationMillis = com.example.ui.theme.AnimationConstants.TASK_EXPANSION_DURATION_MS.toInt(),
+            easing = FastOutSlowInEasing
+        ),
         label = "dragElev_${task.id}"
     )
     val zIndexValToUse = if (isDragTask) 100f else (if (isExpanded || expansionProgress > 0f) 1f else 0f)
@@ -194,10 +200,6 @@ fun AnimatedTaskItem(
                     }
                     .shadow(dragElevation, currCornerShape)
                     .background(containerBgColor, currCornerShape)
-                    .animateContentSize(animationSpec = spring(
-                        dampingRatio = Spring.DampingRatioNoBouncy,
-                        stiffness = Spring.StiffnessMediumLow
-                    ))
             ) {
                 if (isExpanded || expansionProgress > 0f) {
                     ThingsTaskInlineEditor(
