@@ -33,6 +33,7 @@ import com.example.ui.components.dragdrop.draggedTaskId
 import com.example.ui.screens.home.components.taskDragAndDrop
 import com.example.ui.screens.home.components.UpcomingDay
 import com.example.ui.screens.home.inlineeditor.ThingsTaskInlineEditor
+import com.example.ui.theme.dimens
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
@@ -110,10 +111,11 @@ fun AnimatedTaskItem(
     )
 
     val density = androidx.compose.ui.platform.LocalDensity.current
+    val verticalGapLimit = MaterialTheme.dimens.taskExpandedVerticalGap
     var prevPaddingPx by remember(task.id) { mutableStateOf(0f) }
 
     LaunchedEffect(expansionProgress) {
-        val currentPaddingPx = with(density) { (MaterialTheme.dimens.taskExpandedVerticalGap * expansionProgress).toPx() }
+        val currentPaddingPx = with(density) { (verticalGapLimit * expansionProgress).toPx() }
         val delta = currentPaddingPx - prevPaddingPx
         if (delta != 0f) {
             lazyListState.dispatchRawDelta(delta)
