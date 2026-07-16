@@ -12,8 +12,7 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.lazy.LazyListState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.runtime.Composable
-import androidx.compose.runtime.getValue
+import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.draw.shadow
@@ -110,6 +109,18 @@ fun AnimatedTaskItem(
         label = "expansionProgress_${task.id}"
     )
 
+    val density = androidx.compose.ui.platform.LocalDensity.current
+    var prevPaddingPx by remember(task.id) { mutableStateOf(0f) }
+
+    LaunchedEffect(expansionProgress) {
+        val currentPaddingPx = with(density) { (32.dp * expansionProgress).toPx() }
+        val delta = currentPaddingPx - prevPaddingPx
+        if (delta != 0f) {
+            lazyListState.dispatchRawDelta(delta)
+        }
+        prevPaddingPx = currentPaddingPx
+    }
+
     val dimAlpha by animateFloatAsState(
         targetValue = if (shouldDim) 0.3f else 1f,
         label = "dimAlpha_${task.id}"
@@ -134,7 +145,7 @@ fun AnimatedTaskItem(
 
     val extraPaddingDp = 4.dp + (16.dp * expansionProgress)
 
-    val verticalGapPadding = (28 * expansionProgress).dp
+    val verticalGapPadding = (32 * expansionProgress).dp
 
     // Добавляем светло-серую подложку (плейсхолдер) на физическое место задачи во время перетаскивания (landing slot)
     Column(
