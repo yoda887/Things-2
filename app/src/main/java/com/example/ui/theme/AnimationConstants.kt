@@ -7,5 +7,5 @@ object AnimationConstants {
     /**
      * Длительность анимации разворачивания и сворачивания задачи в миллисекундах.
      */
-    const val TASK_EXPANSION_DURATION_MS = 400L
+    const val TASK_EXPANSION_DURATION_MS = 100L
 }
