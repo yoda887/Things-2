@@ -198,10 +198,22 @@ fun ThingsCategoryListPanel(
     val anyExpanded = inlineExpandedTaskId != null
     val globalDimAlpha by animateFloatAsState(targetValue = if (anyExpanded) 0.3f else 1f, label = "globalDim")
 
-    val placementSpec = spring<androidx.compose.ui.unit.IntOffset>(
-        dampingRatio = Spring.DampingRatioNoBouncy,
-        stiffness = Spring.StiffnessMedium
-    )
+    var isTransitionActive by remember { mutableStateOf(false) }
+
+    LaunchedEffect(inlineExpandedTaskId) {
+        isTransitionActive = true
+        kotlinx.coroutines.delay(400)
+        isTransitionActive = false
+    }
+
+    val placementSpec: androidx.compose.animation.core.FiniteAnimationSpec<androidx.compose.ui.unit.IntOffset>? = if (isTransitionActive) {
+        null
+    } else {
+        spring(
+            dampingRatio = Spring.DampingRatioNoBouncy,
+            stiffness = Spring.StiffnessMediumLow
+        )
+    }
 
     val coroutineScope = rememberCoroutineScope()
     val pullOffset = remember { Animatable(0f) }
