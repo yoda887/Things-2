@@ -113,7 +113,7 @@ fun AnimatedTaskItem(
     var prevPaddingPx by remember(task.id) { mutableStateOf(0f) }
 
     LaunchedEffect(expansionProgress) {
-        val currentPaddingPx = with(density) { (32.dp * expansionProgress).toPx() }
+        val currentPaddingPx = with(density) { (MaterialTheme.dimens.taskExpandedVerticalGap * expansionProgress).toPx() }
         val delta = currentPaddingPx - prevPaddingPx
         if (delta != 0f) {
             lazyListState.dispatchRawDelta(delta)
@@ -145,7 +145,7 @@ fun AnimatedTaskItem(
 
     val extraPaddingDp = 4.dp + (16.dp * expansionProgress)
 
-    val verticalGapPadding = (32 * expansionProgress).dp
+    val verticalGapPadding = MaterialTheme.dimens.taskExpandedVerticalGap * expansionProgress
 
     // Добавляем светло-серую подложку (плейсхолдер) на физическое место задачи во время перетаскивания (landing slot)
     Column(
