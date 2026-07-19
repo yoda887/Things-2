@@ -263,8 +263,9 @@ fun ThingsCategoryListPanel(
     )
 
     val toolbarHeightPx = with(density) { TOP_APP_BAR_HEIGHT.toPx() }
+    val statusBarHeightPx = WindowInsets.statusBars.getTop(density)
     val toolbarOffsetY by animateFloatAsState(
-        targetValue = if (anyExpanded) -(toolbarHeightPx + with(density) { 24.dp.toPx() }) else 0f,
+        targetValue = if (anyExpanded) -(toolbarHeightPx + statusBarHeightPx) else 0f,
         animationSpec = androidx.compose.animation.core.tween(
             durationMillis = com.example.ui.theme.AnimationConstants.TASK_EXPANSION_DURATION_MS.toInt(),
             easing = androidx.compose.animation.core.FastOutSlowInEasing
