@@ -149,168 +149,176 @@ fun TaskItemRow(
                 verticalAlignment = Alignment.CenterVertically,
                 modifier = Modifier.fillMaxWidth()
             ) {
-                if (screen == ActiveScreen.PROJECT_DETAIL && dateIndicator != null) {
-                    when (dateIndicator) {
-                        is DateIndicatorResult.IconIndicator -> {
-                            Icon(
-                                imageVector = dateIndicator.icon,
-                                contentDescription = dateIndicator.contentDescription,
-                                tint = dateIndicator.color,
-                                modifier = Modifier.size(16.dp)
-                            )
-                        }
-                        is DateIndicatorResult.TextIndicator -> {
-                            val displayText = if (dateIndicator.text == "TOMORROW_PLACEHOLDER") {
-                                androidx.compose.ui.res.stringResource(com.example.R.string.tomorrow)
-                            } else {
-                                dateIndicator.text
-                            }
-                            
-                            // Determine dynamic colors for light/dark mode
-                            val isSystemDark = androidx.compose.foundation.isSystemInDarkTheme()
-                            val badgeTextColor = if (isSystemDark) {
-                                Color(0xFFE0E0E0) // Tailored light grey/silver to maintain solid contrast on dark backgrounds
-                            } else {
-                                Color(0xFF5F6368) // Dark grey for light backgrounds
-                            }
-                            val badgeBgColor = if (isSystemDark) {
-                                Color(0xFF2C2C2E) // Deep slate grey backing matching premium look feel
-                            } else {
-                                Color(0xFFECECEC) // Soft light grey backing
-                            }
-
-                            // Render task indicator as a clean, rounded badge
-                            Text(
-                                text = displayText,
-                                style = TextStyle(
-                                    fontSize = 11.sp,
-                                    fontWeight = FontWeight.Medium,
-                                    color = badgeTextColor
-                                ),
-                                modifier = Modifier
-                                    .background(
-                                        color = badgeBgColor,
-                                        shape = RoundedCornerShape(4.dp)
-                                    )
-                                    .padding(horizontal = 6.dp, vertical = 2.dp)
-                            )
-                        }
-                    }
-                    Spacer(modifier = Modifier.width(6.dp))
-                }
-
-                Text(
-                    text = task.title,
-                    style = TextStyle(
-                        fontSize = titleFontSize,
-                        fontWeight = FontWeight.Normal,
-                        color = if (localCompleted) textSecondaryColor else textPrimaryColor,
-                        textDecoration = if (localCompleted) TextDecoration.LineThrough else null
-                    ),
-                    maxLines = 1,
-                    overflow = TextOverflow.Ellipsis,
-                    modifier = Modifier.weight(1f, fill = false)
-                )
-
-                // Inline note/subtask icons representation
-                if (task.notes.isNotBlank() || task.checklistItemsCount > 0 || task.cachedTags.isNotBlank() || task.dueDate != null) {
-                    Spacer(modifier = Modifier.width(6.dp))
-                    Row(
-                        horizontalArrangement = Arrangement.spacedBy(4.dp),
-                        verticalAlignment = Alignment.CenterVertically
-                    ) {
-                        if (task.notes.isNotBlank()) {
-                            Icon(
-                                imageVector = Icons.Outlined.Description,
-                                contentDescription = "Has notes",
-                                tint = textSecondaryColor.copy(alpha = 0.4f),
-                                modifier = Modifier.size(13.dp)
-                            )
-                        }
-                        if (task.checklistItemsCount > 0) {
-                            Icon(
-                                imageVector = Icons.Outlined.FormatListBulleted,
-                                contentDescription = "Has checklist",
-                                tint = textSecondaryColor.copy(alpha = 0.4f),
-                                modifier = Modifier.size(13.dp)
-                            )
-                        }
-                        if (task.cachedTags.isNotBlank()) {
-                            Icon(
-                                imageVector = Icons.Outlined.LocalOffer,
-                                contentDescription = "Has tags",
-                                tint = textSecondaryColor.copy(alpha = 0.4f),
-                                modifier = Modifier.size(13.dp)
-                            )
-                        }
-                        if (task.dueDate != null) {
-                            val delta = remember(task.dueDate) {
-                                val today = java.util.Calendar.getInstance().apply {
-                                    set(java.util.Calendar.HOUR_OF_DAY, 0)
-                                    set(java.util.Calendar.MINUTE, 0)
-                                    set(java.util.Calendar.SECOND, 0)
-                                    set(java.util.Calendar.MILLISECOND, 0)
-                                }
-                                val due = java.util.Calendar.getInstance().apply {
-                                    timeInMillis = task.dueDate
-                                    set(java.util.Calendar.HOUR_OF_DAY, 0)
-                                    set(java.util.Calendar.MINUTE, 0)
-                                    set(java.util.Calendar.SECOND, 0)
-                                    set(java.util.Calendar.MILLISECOND, 0)
-                                }
-                                val diffMillis = due.timeInMillis - today.timeInMillis
-                                if (diffMillis >= 0) {
-                                    (diffMillis / (24 * 60 * 60 * 1000L)).toInt()
-                                } else {
-                                    ((diffMillis - (24 * 60 * 60 * 1000L - 1)) / (24 * 60 * 60 * 1000L)).toInt()
-                                }
-                            }
-
-                            val lang = remember { java.util.Locale.getDefault().language }
-                            val relativeText = when (lang) {
-                                "uk" -> when {
-                                    delta < 0 -> "протерміновано"
-                                    delta == 0 -> "сьогодні"
-                                    delta == 1 -> "завтра"
-                                    else -> "через $delta дн."
-                                }
-                                "ru" -> when {
-                                    delta < 0 -> "просрочено"
-                                    delta == 0 -> "сегодня"
-                                    delta == 1 -> "завтра"
-                                    else -> "через $delta дн."
-                                }
-                                else -> when {
-                                    delta < 0 -> "overdue"
-                                    delta == 0 -> "today"
-                                    delta == 1 -> "tomorrow"
-                                    else -> "in $delta d."
-                                }
-                            }
-
-                            val isOverdueOrToday = delta <= 0
-                            val color = if (isOverdueOrToday) ThingsUpcomingRed else textSecondaryColor.copy(alpha = 0.4f)
-
-                            Row(
-                                verticalAlignment = Alignment.CenterVertically
-                            ) {
+                Row(
+                    modifier = Modifier.weight(1f),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    if (screen == ActiveScreen.PROJECT_DETAIL && dateIndicator != null) {
+                        when (dateIndicator) {
+                            is DateIndicatorResult.IconIndicator -> {
                                 Icon(
-                                    imageVector = Icons.Outlined.Flag,
-                                    contentDescription = "Deadline Flag",
-                                    tint = color,
-                                    modifier = Modifier.size(13.dp)
+                                    imageVector = dateIndicator.icon,
+                                    contentDescription = dateIndicator.contentDescription,
+                                    tint = dateIndicator.color,
+                                    modifier = Modifier.size(16.dp)
                                 )
-                                Spacer(modifier = Modifier.width(3.dp))
+                            }
+                            is DateIndicatorResult.TextIndicator -> {
+                                val displayText = if (dateIndicator.text == "TOMORROW_PLACEHOLDER") {
+                                    androidx.compose.ui.res.stringResource(com.example.R.string.tomorrow)
+                                } else {
+                                    dateIndicator.text
+                                }
+                                
+                                // Determine dynamic colors for light/dark mode
+                                val isSystemDark = androidx.compose.foundation.isSystemInDarkTheme()
+                                val badgeTextColor = if (isSystemDark) {
+                                    Color(0xFFE0E0E0) // Tailored light grey/silver to maintain solid contrast on dark backgrounds
+                                } else {
+                                    Color(0xFF5F6368) // Dark grey for light backgrounds
+                                }
+                                val badgeBgColor = if (isSystemDark) {
+                                    Color(0xFF2C2C2E) // Deep slate grey backing matching premium look feel
+                                } else {
+                                    Color(0xFFECECEC) // Soft light grey backing
+                                }
+
+                                // Render task indicator as a clean, rounded badge
                                 Text(
-                                    text = relativeText,
+                                    text = displayText,
                                     style = TextStyle(
                                         fontSize = 11.sp,
-                                        color = color,
-                                        fontWeight = FontWeight.Normal
-                                    )
+                                        fontWeight = FontWeight.Medium,
+                                        color = badgeTextColor
+                                    ),
+                                    modifier = Modifier
+                                        .background(
+                                            color = badgeBgColor,
+                                            shape = RoundedCornerShape(4.dp)
+                                        )
+                                        .padding(horizontal = 6.dp, vertical = 2.dp)
                                 )
                             }
                         }
+                        Spacer(modifier = Modifier.width(6.dp))
+                    }
+
+                    Text(
+                        text = task.title,
+                        style = TextStyle(
+                            fontSize = titleFontSize,
+                            fontWeight = FontWeight.Normal,
+                            color = if (localCompleted) textSecondaryColor else textPrimaryColor,
+                            textDecoration = if (localCompleted) TextDecoration.LineThrough else null
+                        ),
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis,
+                        modifier = Modifier.weight(1f, fill = false)
+                    )
+
+                    // Inline note/subtask icons representation
+                    if (task.notes.isNotBlank() || task.checklistItemsCount > 0 || task.cachedTags.isNotBlank()) {
+                        Spacer(modifier = Modifier.width(6.dp))
+                        Row(
+                            horizontalArrangement = Arrangement.spacedBy(4.dp),
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            if (task.notes.isNotBlank()) {
+                                Icon(
+                                    imageVector = Icons.Outlined.Description,
+                                    contentDescription = "Has notes",
+                                    tint = textSecondaryColor.copy(alpha = 0.4f),
+                                    modifier = Modifier.size(13.dp)
+                                )
+                            }
+                            if (task.checklistItemsCount > 0) {
+                                Icon(
+                                    imageVector = Icons.Outlined.FormatListBulleted,
+                                    contentDescription = "Has checklist",
+                                    tint = textSecondaryColor.copy(alpha = 0.4f),
+                                    modifier = Modifier.size(13.dp)
+                                )
+                            }
+                            if (task.cachedTags.isNotBlank()) {
+                                Icon(
+                                    imageVector = Icons.Outlined.LocalOffer,
+                                    contentDescription = "Has tags",
+                                    tint = textSecondaryColor.copy(alpha = 0.4f),
+                                    modifier = Modifier.size(13.dp)
+                                )
+                            }
+                        }
+                    }
+                }
+
+                if (task.dueDate != null) {
+                    val delta = remember(task.dueDate) {
+                        val today = java.util.Calendar.getInstance().apply {
+                            set(java.util.Calendar.HOUR_OF_DAY, 0)
+                            set(java.util.Calendar.MINUTE, 0)
+                            set(java.util.Calendar.SECOND, 0)
+                            set(java.util.Calendar.MILLISECOND, 0)
+                        }
+                        val due = java.util.Calendar.getInstance().apply {
+                            timeInMillis = task.dueDate
+                            set(java.util.Calendar.HOUR_OF_DAY, 0)
+                            set(java.util.Calendar.MINUTE, 0)
+                            set(java.util.Calendar.SECOND, 0)
+                            set(java.util.Calendar.MILLISECOND, 0)
+                        }
+                        val diffMillis = due.timeInMillis - today.timeInMillis
+                        if (diffMillis >= 0) {
+                            (diffMillis / (24 * 60 * 60 * 1000L)).toInt()
+                        } else {
+                            ((diffMillis - (24 * 60 * 60 * 1000L - 1)) / (24 * 60 * 60 * 1000L)).toInt()
+                        }
+                    }
+
+                    val lang = remember { java.util.Locale.getDefault().language }
+                    val relativeText = when (lang) {
+                        "uk" -> when {
+                            delta < 0 -> "протерміновано"
+                            delta == 0 -> "сьогодні"
+                            delta == 1 -> "завтра"
+                            else -> "через $delta дн."
+                        }
+                        "ru" -> when {
+                            delta < 0 -> "просрочено"
+                            delta == 0 -> "сегодня"
+                            delta == 1 -> "завтра"
+                            else -> "через $delta дн."
+                        }
+                        else -> when {
+                            delta < 0 -> "overdue"
+                            delta == 0 -> "today"
+                            delta == 1 -> "tomorrow"
+                            else -> "in $delta d."
+                        }
+                    }
+
+                    val isOverdueOrToday = delta <= 0
+                    val color = if (isOverdueOrToday) ThingsUpcomingRed else textSecondaryColor.copy(alpha = 0.85f)
+
+                    Spacer(modifier = Modifier.width(8.dp))
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        modifier = Modifier.padding(end = 4.dp)
+                    ) {
+                        Icon(
+                            imageVector = Icons.Outlined.Flag,
+                            contentDescription = "Deadline Flag",
+                            tint = color,
+                            modifier = Modifier.size(15.dp)
+                        )
+                        Spacer(modifier = Modifier.width(4.dp))
+                        Text(
+                            text = relativeText,
+                            style = TextStyle(
+                                fontSize = subFontSize,
+                                color = color,
+                                fontWeight = FontWeight.Normal
+                            )
+                        )
                     }
                 }
             }

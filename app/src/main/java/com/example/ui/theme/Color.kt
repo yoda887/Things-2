@@ -16,6 +16,7 @@ val ThingsBackgroundLight = Color(0xFFFFFFFF)
 val ThingsSurfaceLight = Color(0xFFF4F5F7)
 val ThingsTextPrimaryLight = Color(0xFF000000)
 val ThingsTextSecondaryLight = Color(0xFF747679)
+val ThingsTextNotesLight = Color(0xFF424242)
 val ThingsDividerLight = Color(0xFFE4E4E6)
 
 // Dark Mode Theme (Classic Slate & Black)

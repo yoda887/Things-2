@@ -27,6 +27,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.example.ui.theme.ThingsBlue
 import com.example.ui.theme.dimens
+import com.example.ui.theme.taskEditorNotes
 
 @Composable
 fun InlineMainInputRow(
@@ -39,11 +40,11 @@ fun InlineMainInputRow(
     expansionProgress: Float = 1f
 ) {
     val textPrimaryColor = Color(0xFF1C1C1E) // blackish font
-    val textSecondaryColor = Color(0xFF747679) // dark grey font
+    val textSecondaryColor = com.example.ui.theme.ThingsTextNotesLight
 
     // Размер шрифта в заголовке статически равен MaterialTheme.typography.titleMedium.fontSize
     val titleFontSize = MaterialTheme.typography.titleMedium.fontSize
-    val notesFontSize = MaterialTheme.typography.bodyMedium.fontSize
+    val notesFontSize = MaterialTheme.typography.taskEditorNotes.fontSize
 
     val titleSpacing = (8 + 4 * expansionProgress).dp
 
@@ -106,7 +107,7 @@ fun InlineMainInputRow(
                         }
                     }
             ) {
-                Spacer(modifier = Modifier.height(6.dp))
+                Spacer(modifier = Modifier.height(MaterialTheme.dimens.taskExpandedTitleNotesGap))
 
                 BasicTextField(
                     value = notes,

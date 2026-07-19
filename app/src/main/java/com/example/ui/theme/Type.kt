@@ -77,7 +77,7 @@ fun rememberThingsTypography(): Typography {
         titleMedium = TextStyle(
             fontFamily = FontFamily.Default,
             fontWeight = FontWeight.Normal,
-            fontSize = (18f * scaleFactor).sp
+            fontSize = (19f * scaleFactor).sp
         ),
         // Sheet Header / Editor Notes / Alternative Subheader - 15.sp base (scaled)
         titleSmall = TextStyle(
@@ -101,7 +101,7 @@ fun rememberThingsTypography(): Typography {
         bodySmall = TextStyle(
             fontFamily = FontFamily.Default,
             fontWeight = FontWeight.Normal,
-            fontSize = (14 * scaleFactor).sp
+            fontSize = (15 * scaleFactor).sp
         ),
         // Clickable buttons / Action trigger text - increased to 18.sp base
         labelLarge = TextStyle(
@@ -137,6 +137,38 @@ val Typography.topAppBarTitle: TextStyle
             fontFamily = FontFamily.Default,
             fontWeight = FontWeight.SemiBold,
             fontSize = (20 * scaleFactor).sp
+        )
+    }
+
+/**
+ * Стиль для заметок задачи в редакторе (17.sp с масштабированием).
+ */
+val Typography.taskEditorNotes: TextStyle
+    @Composable
+    get() {
+        val configuration = LocalConfiguration.current
+        val isLargeScreen = configuration.screenWidthDp >= 600
+        val scaleFactor = if (isLargeScreen) 1.25f else 1.0f
+        return TextStyle(
+            fontFamily = FontFamily.Default,
+            fontWeight = FontWeight.Normal,
+            fontSize = (18 * scaleFactor).sp
+        )
+    }
+
+/**
+ * Стиль для дат в панели редактора (18.sp с масштабированием).
+ */
+val Typography.taskEditorDate: TextStyle
+    @Composable
+    get() {
+        val configuration = LocalConfiguration.current
+        val isLargeScreen = configuration.screenWidthDp >= 600
+        val scaleFactor = if (isLargeScreen) 1.25f else 1.0f
+        return TextStyle(
+            fontFamily = FontFamily.Default,
+            fontWeight = FontWeight.Normal,
+            fontSize = (18 * scaleFactor).sp
         )
     }
 

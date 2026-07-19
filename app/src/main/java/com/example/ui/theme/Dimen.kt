@@ -29,7 +29,15 @@ data class AppDimens(
     val mainHeaderPaddingBottom: Dp = 25.dp,
     val calendarBetweenSectionSpacing: Dp = 25.dp,
     val tagsBetweenSectionSpacing: Dp = 11.dp,
-    val taskExpandedVerticalGap: Dp = 42.dp
+    val taskExpandedVerticalGap: Dp = 42.dp,
+    val taskCollapsedTopPadding: Dp = 13.dp,
+    val taskExpandedTopPadding: Dp = 20.dp,
+    val taskCollapsedBottomPadding: Dp = 13.dp,
+    val taskExpandedBottomPadding: Dp = 16.dp,
+    val taskExpandedTitleNotesGap: Dp = 10.dp,
+    val taskCollapsedCornerRadius: Dp = 8.dp,
+    val taskExpandedCornerRadius: Dp = 8.dp,
+    val listBottomSpacerHeight: Dp = 72.dp
 )
 
 val LocalAppDimens = staticCompositionLocalOf { AppDimens() }

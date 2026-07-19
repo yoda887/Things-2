@@ -148,10 +148,12 @@ fun AnimatedTaskItem(
 
     val containerBgColor = if (isExpanded || expansionProgress > 0f || isDragTask || dragElevation > 0.dp) MaterialTheme.colorScheme.background else Color.Transparent
 
-    val cornerRadiusValue = (8 * (1f - expansionProgress).coerceAtLeast(0f)).dp
+    val collapsedRadius = MaterialTheme.dimens.taskCollapsedCornerRadius
+    val expandedRadius = MaterialTheme.dimens.taskExpandedCornerRadius
+    val cornerRadiusValue = (collapsedRadius.value + (expandedRadius.value - collapsedRadius.value) * expansionProgress).dp
     val currCornerShape = RoundedCornerShape(cornerRadiusValue)
 
-    val extraPaddingDp = 4.dp + (16.dp * expansionProgress)
+    val extraPaddingDp = 4.dp + (10.dp * expansionProgress)
 
     val verticalGapPadding = MaterialTheme.dimens.taskExpandedVerticalGap * expansionProgress
 

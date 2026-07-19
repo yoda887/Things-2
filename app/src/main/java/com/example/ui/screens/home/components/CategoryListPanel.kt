@@ -196,8 +196,6 @@ fun ThingsCategoryListPanel(
     }
 
     val anyExpanded = inlineExpandedTaskId != null
-    val globalDimAlpha by animateFloatAsState(targetValue = if (anyExpanded) 0.3f else 1f, label = "globalDim")
-
     var isTransitionActive by remember { mutableStateOf(false) }
 
     LaunchedEffect(inlineExpandedTaskId) {
@@ -205,6 +203,14 @@ fun ThingsCategoryListPanel(
         kotlinx.coroutines.delay(com.example.ui.theme.AnimationConstants.TASK_EXPANSION_DURATION_MS)
         isTransitionActive = false
     }
+
+    val keepSpacerExpanded = anyExpanded || isTransitionActive
+    val bottomSpacerHeight = if (keepSpacerExpanded) {
+        configuration.screenHeightDp.dp
+    } else {
+        MaterialTheme.dimens.listBottomSpacerHeight
+    }
+    val globalDimAlpha by animateFloatAsState(targetValue = if (anyExpanded) 0.3f else 1f, label = "globalDim")
 
     val placementSpec: androidx.compose.animation.core.FiniteAnimationSpec<androidx.compose.ui.unit.IntOffset>? = if (isTransitionActive) {
         null
@@ -457,7 +463,7 @@ fun ThingsCategoryListPanel(
                     }
                 }
                 item {
-                    Spacer(modifier = Modifier.height(72.dp))
+                    Spacer(modifier = Modifier.height(bottomSpacerHeight))
                 }
             }
         }

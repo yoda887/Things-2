@@ -38,6 +38,8 @@ import androidx.compose.material.icons.outlined.Archive
 import com.example.ui.theme.ThingsTodayStar
 import com.example.ui.theme.ThingsSomedayGrey
 import com.example.ui.theme.AppIcons
+import com.example.ui.theme.dimens
+import com.example.ui.theme.taskEditorDate
 import com.example.ui.screens.home.inlineeditor.utils.isTodayDate
 import com.example.ui.screens.home.inlineeditor.components.*
 import com.example.ui.screens.home.inlineeditor.dialogs.ThingsWhenDialog
@@ -179,8 +181,13 @@ fun ThingsTaskInlineEditor(
         val endPadding = (4 + 12 * expansionProgress).dp
         // Сверху и снизу: по 13dp на старте (при высоте 46dp и чекбоксе 16dp центрирование
         // дает ровно 15dp свободного места до чекбокса с учетом его собственного top padding = 2dp)
-        val topPadding = (13 + 3 * expansionProgress).dp
-        val bottomPadding = (13 + 3 * expansionProgress).dp
+        val collapsedTopPadding = MaterialTheme.dimens.taskCollapsedTopPadding
+        val expandedTopPadding = MaterialTheme.dimens.taskExpandedTopPadding
+        val collapsedBottomPadding = MaterialTheme.dimens.taskCollapsedBottomPadding
+        val expandedBottomPadding = MaterialTheme.dimens.taskExpandedBottomPadding
+
+        val topPadding = (collapsedTopPadding.value + (expandedTopPadding.value - collapsedTopPadding.value) * expansionProgress).dp
+        val bottomPadding = (collapsedBottomPadding.value + (expandedBottomPadding.value - collapsedBottomPadding.value) * expansionProgress).dp
 
         Column(
             modifier = Modifier
@@ -253,7 +260,7 @@ fun ThingsTaskInlineEditor(
             // Bottom Actions & Toolbar matching the image closely
             val textPrimaryColor = Color(0xFF1C1C1E)
             val iconInactiveColor = Color(0xFFC7C7CC)
-            val bodyFontSize = MaterialTheme.typography.bodyMedium.fontSize
+            val bodyFontSize = MaterialTheme.typography.taskEditorDate.fontSize
 
             val hasActiveDate = startDate != null || section == TaskSection.TODAY || section == TaskSection.SOMEDAY
 
