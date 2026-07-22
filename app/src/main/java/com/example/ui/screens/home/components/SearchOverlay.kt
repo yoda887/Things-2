@@ -38,6 +38,7 @@ import com.example.data.model.Area
 import com.example.data.model.Item
 import com.example.data.model.ItemWithChecklist
 import com.example.ui.screens.home.ActiveScreen
+import com.example.ui.theme.AppIcons
 import com.example.ui.screens.home.subcomponents.TaskItemRow
 import com.example.ui.components.ProjectProgressArc
 import com.example.ui.theme.*
@@ -340,9 +341,9 @@ fun ThingsSearchOverlay(
                                     title = "Today",
                                     icon = {
                                         Icon(
-                                            imageVector = Icons.Default.Star,
+                                            imageVector = AppIcons.Today,
                                             contentDescription = null,
-                                            tint = ThingsTodayStar,
+                                            tint = Color.Unspecified,
                                             modifier = Modifier.size(20.dp)
                                         )
                                     },
@@ -691,10 +692,12 @@ fun SearchResultRow(
                     when (result) {
                         is SearchResultItem.SmartListResult -> {
                             val info = when (result.screen) {
-                                ActiveScreen.TODAY -> Pair(Icons.Default.Star, ThingsTodayStar)
-                                ActiveScreen.INBOX -> Pair(Icons.Default.Inbox, ThingsInboxBlue)
-                                ActiveScreen.UPCOMING -> Pair(Icons.Default.CalendarToday, ThingsUpcomingRed)
-                                ActiveScreen.LOGBOOK -> Pair(Icons.Default.CheckCircle, ThingsLogbookGreen)
+                                ActiveScreen.TODAY -> Pair(AppIcons.Today, Color.Unspecified)
+                                ActiveScreen.INBOX -> Pair(AppIcons.Inbox, Color.Unspecified)
+                                ActiveScreen.UPCOMING -> Pair(AppIcons.Upcoming, Color.Unspecified)
+                                ActiveScreen.ANYTIME -> Pair(AppIcons.Anytime, Color.Unspecified)
+                                ActiveScreen.SOMEDAY -> Pair(AppIcons.Someday, Color.Unspecified)
+                                ActiveScreen.LOGBOOK -> Pair(AppIcons.Logbook, Color.Unspecified)
                                 else -> Pair(Icons.Default.Layers, ThingsSomedayGrey)
                             }
                             Icon(imageVector = info.first, contentDescription = null, tint = info.second, modifier = Modifier.size(20.dp))

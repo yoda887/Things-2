@@ -394,8 +394,8 @@ private fun getStartDateIndicator(startDate: Long, isTonight: Boolean): DateIndi
             )
         } else {
             DateIndicatorResult.IconIndicator(
-                icon = androidx.compose.material.icons.Icons.Default.Star,
-                color = androidx.compose.ui.graphics.Color(0xFFFFD700),
+                icon = AppIcons.Today,
+                color = androidx.compose.ui.graphics.Color.Unspecified,
                 contentDescription = "Today"
             )
         }

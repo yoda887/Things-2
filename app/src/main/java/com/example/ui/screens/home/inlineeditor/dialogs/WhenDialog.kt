@@ -192,10 +192,13 @@ fun ThingsWhenDialog(
                         .padding(vertical = 8.dp),
                     verticalAlignment = Alignment.CenterVertically
                 ) {
-                    Text(
-                        text = "⭐",
-                        fontSize = titleFontSize,
-                        modifier = Modifier.padding(end = 12.dp)
+                    Icon(
+                        imageVector = AppIcons.Today,
+                        contentDescription = "Today",
+                        tint = Color.Unspecified,
+                        modifier = Modifier
+                            .padding(end = 12.dp)
+                            .size(24.dp)
                     )
                     Text(
                         text = "Today",
@@ -492,10 +495,13 @@ fun ThingsWhenDialog(
                         .padding(vertical = 8.dp),
                     verticalAlignment = Alignment.CenterVertically
                 ) {
-                    Text(
-                        text = "📦",
-                        fontSize = 18.sp,
-                        modifier = Modifier.padding(end = 12.dp)
+                    Icon(
+                        imageVector = AppIcons.Someday,
+                        contentDescription = "Someday",
+                        tint = Color.Unspecified,
+                        modifier = Modifier
+                            .padding(end = 12.dp)
+                            .size(24.dp)
                     )
                     Text(
                         text = "Someday",

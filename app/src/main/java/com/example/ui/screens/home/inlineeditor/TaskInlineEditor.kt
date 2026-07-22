@@ -272,15 +272,15 @@ fun ThingsTaskInlineEditor(
             val activeDateIcon = if (hasActiveDate) {
                 when {
                     startDate != null && isTodayDate(startDate) -> {
-                        if (isTonight) AppIcons.Evening else Icons.Default.Star
+                        if (isTonight) AppIcons.Evening else AppIcons.Today
                     }
                     startDate == null && section == TaskSection.TODAY -> {
-                        if (isTonight) AppIcons.Evening else Icons.Default.Star
+                        if (isTonight) AppIcons.Evening else AppIcons.Today
                     }
-                    section == TaskSection.SOMEDAY -> Icons.Outlined.Archive
-                    else -> Icons.Outlined.CalendarToday
+                    section == TaskSection.SOMEDAY -> AppIcons.Someday
+                    else -> AppIcons.Upcoming
                 }
-            } else Icons.Outlined.CalendarToday
+            } else AppIcons.Upcoming
 
             val activeDateColor = if (hasActiveDate) {
                 when {
@@ -291,9 +291,9 @@ fun ThingsTaskInlineEditor(
                         if (isTonight) Color.Unspecified else ThingsTodayStar
                     }
                     section == TaskSection.SOMEDAY -> ThingsSomedayGrey
-                    else -> ThingsBlue
+                    else -> Color.Unspecified
                 }
-            } else ThingsBlue
+            } else Color.Unspecified
 
             val startRelativePadding = 24.dp
             Row(
@@ -485,7 +485,7 @@ fun ThingsTaskInlineEditor(
                 ) {
                     if (!hasActiveDate) {
                         Icon(
-                            imageVector = Icons.Outlined.CalendarToday,
+                            imageVector = AppIcons.Upcoming,
                             contentDescription = "Schedule",
                             tint = iconInactiveColor,
                             modifier = Modifier
