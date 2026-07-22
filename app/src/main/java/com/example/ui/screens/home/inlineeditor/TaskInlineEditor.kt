@@ -177,7 +177,7 @@ fun ThingsTaskInlineEditor(
     ) {
         // Динамические отступы для бесшовного перехода из состояния элемента списка:
         // Слева: от 8dp (равно отступу в списке) до 16dp во весь экран
-        val startPadding = (8 + 8 * expansionProgress).dp
+        val startPadding = (8 + 4 * expansionProgress).dp
         // Справа: от 4dp (равно отступу в списке) до 16dp во весь экран
         val endPadding = (4 + 12 * expansionProgress).dp
         // Сверху и снизу: по 13dp на старте (при высоте 46dp и чекбоксе 16dp центрирование
@@ -295,7 +295,7 @@ fun ThingsTaskInlineEditor(
                 }
             } else ThingsBlue
 
-            val startRelativePadding = (24 + 4 * expansionProgress).dp
+            val startRelativePadding = 24.dp
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 verticalAlignment = Alignment.Bottom

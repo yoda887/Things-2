@@ -49,7 +49,7 @@ fun InlineChecklistPanel(
 
     var newChecklistItemTitle by remember { mutableStateOf("") }
 
-    val startPadding = (24 + 4 * expansionProgress).dp
+    val startPadding = 24.dp
 
     AnimatedVisibility(
         visible = showPanel,

@@ -46,7 +46,7 @@ fun InlineMainInputRow(
     val titleFontSize = MaterialTheme.typography.titleMedium.fontSize
     val notesFontSize = MaterialTheme.typography.taskEditorNotes.fontSize
 
-    val titleSpacing = (8 + 4 * expansionProgress).dp
+    val titleSpacing = 8.dp
 
     Row(
         modifier = Modifier.fillMaxWidth(),
