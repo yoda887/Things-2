@@ -114,10 +114,15 @@ fun AnimatedTaskItem(
 
     val density = androidx.compose.ui.platform.LocalDensity.current
     val verticalGapLimit = MaterialTheme.dimens.taskExpandedVerticalGap
+    val verticalGapLimitPx = with(density) { verticalGapLimit.toPx() }
+    val extraTopPaddingPx = with(density) {
+        (MaterialTheme.dimens.taskExpandedTopPadding - MaterialTheme.dimens.taskCollapsedTopPadding).toPx()
+    }
+    val totalCompensationPx = verticalGapLimitPx + extraTopPaddingPx
     var prevPaddingPx by remember(task.id) { mutableStateOf(0f) }
 
     LaunchedEffect(expansionProgress) {
-        val currentPaddingPx = with(density) { (verticalGapLimit * expansionProgress).toPx() }
+        val currentPaddingPx = verticalGapLimitPx * expansionProgress
         val delta = currentPaddingPx - prevPaddingPx
         if (delta != 0f) {
             lazyListState.dispatchRawDelta(delta)
@@ -189,6 +194,14 @@ fun AnimatedTaskItem(
             Column(
                 modifier = Modifier
                     .fillMaxWidth()
+                    .graphicsLayer {
+                        // Мгновенная компенсация ВСЕГО вертикального смещения при раскрытии:
+                        // totalCompensationPx * progress = полное смещение (внешний зазор + внутренний top-padding)
+                        // prevPaddingPx = сколько уже скомпенсировано скроллом (dispatchRawDelta)
+                        // Разница компенсируется graphicsLayer мгновенно, в том же кадре отрисовки.
+                        // По мере того как dispatchRawDelta догоняет, graphicsLayer плавно уменьшает компенсацию.
+                        translationY = -(totalCompensationPx * expansionProgress - prevPaddingPx)
+                    }
                     .layout { measurable, constraints ->
                         val extraPaddingPx = extraPaddingDp.roundToPx()
                         val extendedConstraints = constraints.copy(
