@@ -64,6 +64,7 @@ fun ThingsWhenDialog(
 
     LaunchedEffect(Unit) {
         val todayStartSunday = Calendar.getInstance().apply {
+            firstDayOfWeek = Calendar.SUNDAY
             set(Calendar.DAY_OF_WEEK, Calendar.SUNDAY)
             set(Calendar.HOUR_OF_DAY, 0)
             set(Calendar.MINUTE, 0)
@@ -72,6 +73,7 @@ fun ThingsWhenDialog(
         }
         if (startDate != null && section == TaskSection.UPCOMING) {
             val targetStartSunday = Calendar.getInstance().apply {
+                firstDayOfWeek = Calendar.SUNDAY
                 timeInMillis = startDate
                 set(Calendar.DAY_OF_WEEK, Calendar.SUNDAY)
                 set(Calendar.HOUR_OF_DAY, 0)
@@ -283,6 +285,7 @@ fun ThingsWhenDialog(
                 // Calendar cells
                 val todayCal = Calendar.getInstance()
                 val todayStartSunday = Calendar.getInstance().apply {
+                    firstDayOfWeek = Calendar.SUNDAY
                     set(Calendar.DAY_OF_WEEK, Calendar.SUNDAY)
                     set(Calendar.HOUR_OF_DAY, 0)
                     set(Calendar.MINUTE, 0)

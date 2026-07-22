@@ -265,25 +265,7 @@ fun ThingsTaskInlineEditor(
             val hasActiveDate = startDate != null || section == TaskSection.TODAY || section == TaskSection.SOMEDAY
 
             val activeDateLabel = if (hasActiveDate) {
-                when {
-                    startDate != null && isTodayDate(startDate) -> {
-                        if (isTonight) "This Evening" else "Today"
-                    }
-                    startDate == null && section == TaskSection.TODAY -> {
-                        if (isTonight) "This Evening" else "Today"
-                    }
-                    section == TaskSection.SOMEDAY -> "Someday"
-                    else -> {
-                        val targetCal = java.util.Calendar.getInstance().apply { timeInMillis = startDate!! }
-                        val currentYear = java.util.Calendar.getInstance().get(java.util.Calendar.YEAR)
-                        val formatPattern = if (targetCal.get(Calendar.YEAR) == currentYear) {
-                            "EEE, MMM d"
-                        } else {
-                            "EEE, MMM d, yyyy"
-                        }
-                        java.text.SimpleDateFormat(formatPattern, java.util.Locale.US).format(java.util.Date(startDate!!))
-                    }
-                }
+                com.example.ui.screens.home.inlineeditor.utils.formatStartDateLabel(startDate, section, isTonight)
             } else ""
 
             val activeDateIcon = if (hasActiveDate) {

@@ -52,25 +52,7 @@ fun InlineEditorToolbar(
     ) {
         val hasActiveDate = startDate != null || section == TaskSection.TODAY || section == TaskSection.SOMEDAY
         if (hasActiveDate) {
-            val activeDateLabel = when {
-                startDate != null && isTodayDate(startDate) -> {
-                    if (isTonight) "This Evening" else "Today"
-                }
-                startDate == null && section == TaskSection.TODAY -> {
-                    if (isTonight) "This Evening" else "Today"
-                }
-                section == TaskSection.SOMEDAY -> "Someday"
-                else -> {
-                    val targetCal = Calendar.getInstance().apply { timeInMillis = startDate!! }
-                    val currentYear = Calendar.getInstance().get(Calendar.YEAR)
-                    val formatPattern = if (targetCal.get(Calendar.YEAR) == currentYear) {
-                        "EEE, MMM d"
-                    } else {
-                        "EEE, MMM d, yyyy"
-                    }
-                    SimpleDateFormat(formatPattern, Locale.US).format(Date(startDate!!))
-                }
-            }
+            val activeDateLabel = com.example.ui.screens.home.inlineeditor.utils.formatStartDateLabel(startDate, section, isTonight)
 
             val activeDateIcon = when {
                 startDate != null && isTodayDate(startDate) -> {
