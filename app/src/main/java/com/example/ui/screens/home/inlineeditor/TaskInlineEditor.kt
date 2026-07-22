@@ -19,6 +19,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.material.icons.outlined.Flag
@@ -358,6 +359,8 @@ fun ThingsTaskInlineEditor(
                             Spacer(modifier = Modifier.width(6.dp))
                             Text(
                                 text = activeDateLabel,
+                                maxLines = 1,
+                                overflow = TextOverflow.Ellipsis,
                                 style = TextStyle(
                                     fontSize = bodyFontSize,
                                     color = textPrimaryColor,
@@ -449,6 +452,8 @@ fun ThingsTaskInlineEditor(
                             Spacer(modifier = Modifier.width(6.dp))
                             Text(
                                 text = dateText,
+                                maxLines = 1,
+                                overflow = TextOverflow.Ellipsis,
                                 style = TextStyle(
                                     fontSize = bodyFontSize,
                                     color = primaryColor,
@@ -458,6 +463,8 @@ fun ThingsTaskInlineEditor(
                             Spacer(modifier = Modifier.width(4.dp))
                             Text(
                                 text = relativeText,
+                                maxLines = 1,
+                                overflow = TextOverflow.Ellipsis,
                                 style = TextStyle(
                                     fontSize = bodyFontSize,
                                     color = relativeColor,
