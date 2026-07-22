@@ -11,7 +11,7 @@ import androidx.compose.ui.unit.dp
 // Группируем все кастомные иконки в один объект для удобного автокомплита
 object AppIcons {
 
-    // Кастомная иконка для Inbox (Ящик)
+    // Кастомная иконка для Inbox (Ящик) из ic_inbox_black_24dp.xml
     val Inbox: ImageVector by lazy(LazyThreadSafetyMode.NONE) {
         ImageVector.Builder(
             name = "Inbox",
@@ -21,31 +21,31 @@ object AppIcons {
             viewportHeight = 24f
         ).apply {
             path(
-                fill = SolidColor(Color(0xFF1B80FA)),
-                stroke = SolidColor(Color(0xFF1B80FA)),
-                strokeLineWidth = 0.5f,
+                fill = SolidColor(Color(0xFF23A9EB)),
+                stroke = SolidColor(Color(0xFF21A1DF)),
+                strokeLineWidth = 1f,
                 strokeLineJoin = StrokeJoin.Round
             ) {
-                moveTo(19f, 3f)
-                lineTo(5f, 3f)
+                moveTo(20f, 2f)
+                horizontalLineToRelative(-16f)
                 curveToRelative(-1.1f, 0f, -2f, 0.9f, -2f, 2f)
-                lineTo(3f, 19f)
+                verticalLineToRelative(15f)
                 curveToRelative(0f, 1.1f, 0.9f, 2f, 2f, 2f)
-                lineTo(19f, 21f)
+                horizontalLineToRelative(16f)
                 curveToRelative(1.1f, 0f, 2f, -0.9f, 2f, -2f)
-                lineTo(21f, 5f)
+                verticalLineToRelative(-15f)
                 curveToRelative(0f, -1.1f, -0.9f, -2f, -2f, -2f)
                 close()
-                moveTo(19f, 15f)
-                lineTo(15.5f, 15f)
-                curveToRelative(-0.5f, 0f, -1f, 0.4f, -1f, 0.9f)
-                curveToRelative(-0.2f, 1.1f, -1.2f, 2.1f, -2.5f, 2.1f)
-                curveToRelative(-1.3f, 0f, -2.3f, -1f, -2.5f, -2.1f)
-                curveToRelative(0f, -0.5f, -0.5f, -0.9f, -1f, -0.9f)
-                lineTo(5f, 15f)
-                lineTo(5f, 5f)
-                lineTo(19f, 5f)
-                lineTo(19f, 15f)
+                moveTo(20f, 12.5f)
+                horizontalLineToRelative(-3f)
+                arcToRelative(1f, 1f, 0f, isMoreThanHalf = false, isPositiveArc = false, -1f, 1f)
+                verticalLineToRelative(5f)
+                horizontalLineToRelative(-8f)
+                verticalLineToRelative(-5f)
+                arcToRelative(1f, 1f, 0f, isMoreThanHalf = false, isPositiveArc = false, -1f, -1f)
+                horizontalLineToRelative(-3f)
+                verticalLineToRelative(-7f)
+                horizontalLineToRelative(16f)
                 close()
             }
         }.build()
@@ -81,7 +81,7 @@ object AppIcons {
         }.build()
     }
 
-    // Кастомная иконка для Upcoming (Календарь-сетка)
+    // Кастомная иконка для Upcoming (Календарь-сетка) из ic_upcoming_black_24dp.xml
     val Upcoming: ImageVector by lazy(LazyThreadSafetyMode.NONE) {
         ImageVector.Builder(
             name = "Upcoming",
@@ -91,70 +91,76 @@ object AppIcons {
             viewportHeight = 24f
         ).apply {
             path(
-                fill = SolidColor(Color(0xFFF35F50)),
-                stroke = SolidColor(Color(0xFFF35F50)),
-                strokeLineWidth = 0.5f,
+                fill = SolidColor(Color(0xFFD30062)),
+                stroke = SolidColor(Color(0xFFC5015C)),
+                strokeLineWidth = 1f,
                 strokeLineJoin = StrokeJoin.Round
             ) {
-                moveTo(19f, 4f)
-                lineTo(18f, 4f)
-                lineTo(18f, 2f)
-                lineTo(16f, 2f)
-                lineTo(16f, 4f)
-                lineTo(8f, 4f)
-                lineTo(8f, 2f)
-                lineTo(6f, 2f)
-                lineTo(6f, 4f)
-                lineTo(5f, 4f)
-                curveToRelative(-1.11f, 0f, -1.99f, 0.9f, -1.99f, 2f)
-                lineTo(3f, 20f)
-                curveToRelative(0f, 1.1f, 0.89f, 2f, 2f, 2f)
-                lineTo(19f, 22f)
-                curveToRelative(1.1f, 0f, 2f, -0.9f, 2f, -2f)
-                lineTo(21f, 6f)
-                curveToRelative(0f, -1.1f, -0.9f, -2f, -2f, -2f)
+                moveTo(16.5f, 4.3f)
+                horizontalLineToRelative(2f)
+                arcToRelative(0.3f, 0.3f, 0f, isMoreThanHalf = false, isPositiveArc = true, 0.3f, 0.3f)
+                verticalLineToRelative(1.5f)
+                arcToRelative(0.3f, 0.3f, 0f, isMoreThanHalf = false, isPositiveArc = true, -0.3f, 0.3f)
+                horizontalLineToRelative(-2f)
+                arcToRelative(0.3f, 0.3f, 0f, isMoreThanHalf = false, isPositiveArc = true, -0.3f, -0.3f)
+                verticalLineToRelative(-1.5f)
+                arcToRelative(0.3f, 0.3f, 0f, isMoreThanHalf = false, isPositiveArc = true, 0.3f, -0.3f)
                 close()
-                moveTo(19f, 20f)
-                lineTo(5f, 20f)
-                lineTo(5f, 9f)
-                lineTo(19f, 9f)
-                lineTo(19f, 20f)
+                moveToRelative(-11f, 0f)
+                horizontalLineToRelative(2f)
+                arcToRelative(0.3f, 0.3f, 0f, isMoreThanHalf = false, isPositiveArc = true, 0.3f, 0.3f)
+                verticalLineToRelative(1.5f)
+                arcToRelative(0.3f, 0.3f, 0f, isMoreThanHalf = false, isPositiveArc = true, -0.3f, 0.3f)
+                horizontalLineToRelative(-2f)
+                arcToRelative(0.3f, 0.3f, 0f, isMoreThanHalf = false, isPositiveArc = true, -0.3f, -0.3f)
+                verticalLineToRelative(-1.5f)
+                arcToRelative(0.3f, 0.3f, 0f, isMoreThanHalf = false, isPositiveArc = true, 0.3f, -0.3f)
                 close()
-                moveTo(7f, 11f)
-                lineTo(9f, 11f)
-                lineTo(9f, 13f)
-                lineTo(7f, 13f)
+                moveTo(18f, 3f)
+                horizontalLineToRelative(-12f)
+                arcToRelative(4f, 4f, 0f, isMoreThanHalf = false, isPositiveArc = false, -4f, 4f)
+                lineToRelative(0f, 10f)
+                arcToRelative(4f, 4f, 0f, isMoreThanHalf = false, isPositiveArc = false, 4f, 4f)
+                horizontalLineToRelative(12f)
+                arcToRelative(4f, 4f, 0f, isMoreThanHalf = false, isPositiveArc = false, 4f, -4f)
+                lineToRelative(0f, -10f)
+                arcToRelative(4f, 4f, 0f, isMoreThanHalf = false, isPositiveArc = false, -4f, -4f)
                 close()
-                moveTo(11f, 11f)
-                lineTo(13f, 11f)
-                lineTo(13f, 13f)
-                lineTo(11f, 13f)
+                moveToRelative(3.5f, 14f)
+                arcToRelative(3.5f, 3.5f, 0f, isMoreThanHalf = false, isPositiveArc = true, -3.5f, 3.5f)
+                horizontalLineToRelative(-12f)
+                arcToRelative(3.5f, 3.5f, 0f, isMoreThanHalf = false, isPositiveArc = true, -3.5f, -3.5f)
+                lineToRelative(0f, -9.5f)
+                horizontalLineToRelative(19f)
                 close()
-                moveTo(15f, 11f)
-                lineTo(17f, 11f)
-                lineTo(17f, 13f)
-                lineTo(15f, 13f)
-                close()
-                moveTo(7f, 15f)
-                lineTo(9f, 15f)
-                lineTo(9f, 17f)
-                lineTo(7f, 17f)
-                close()
-                moveTo(11f, 15f)
-                lineTo(13f, 15f)
-                lineTo(13f, 17f)
-                lineTo(11f, 17f)
-                close()
-                moveTo(15f, 15f)
-                lineTo(17f, 15f)
-                lineTo(17f, 17f)
-                lineTo(15f, 17f)
-                close()
+            }
+            path(
+                stroke = SolidColor(Color(0xFFD25961)),
+                strokeLineWidth = 1.2f
+            ) {
+                moveTo(5.5f, 10.5f)
+                horizontalLineToRelative(3f)
+                moveToRelative(2f, 0f)
+                horizontalLineToRelative(3f)
+                moveToRelative(2f, 0f)
+                horizontalLineToRelative(3f)
+                moveTo(5.5f, 13.5f)
+                horizontalLineToRelative(3f)
+                moveToRelative(2f, 0f)
+                horizontalLineToRelative(3f)
+                moveToRelative(2f, 0f)
+                horizontalLineToRelative(3f)
+                moveTo(5.5f, 16.5f)
+                horizontalLineToRelative(3f)
+                moveToRelative(2f, 0f)
+                horizontalLineToRelative(3f)
+                moveToRelative(2f, 0f)
+                horizontalLineToRelative(3f)
             }
         }.build()
     }
 
-    // Кастомная иконка для Anytime (Секционный ящик/сейф)
+    // Кастомная иконка для Anytime из ic_anytime_black_24dp.xml
     val Anytime: ImageVector by lazy(LazyThreadSafetyMode.NONE) {
         ImageVector.Builder(
             name = "Anytime",
@@ -164,54 +170,34 @@ object AppIcons {
             viewportHeight = 24f
         ).apply {
             path(
-                fill = SolidColor(Color(0xFF2EB7CD)),
-                stroke = SolidColor(Color(0xFF2EB7CD)),
-                strokeLineWidth = 0.5f,
-                strokeLineJoin = StrokeJoin.Round
+                fill = SolidColor(Color(0xFF3BA39A))
             ) {
-                moveTo(20.54f, 5.23f)
-                lineTo(19.15f, 3.55f)
-                curveToRelative(-0.26f, -0.32f, -0.65f, -0.55f, -1.09f, -0.55f)
-                lineTo(5.94f, 3f)
-                curveToRelative(-0.44f, 0f, -0.83f, 0.23f, -1.09f, 0.55f)
-                lineTo(3.46f, 5.23f)
-                curveToRelative(-0.29f, 0.35f, -0.46f, 0.8f, -0.46f, 1.27f)
-                lineTo(3f, 19f)
-                curveToRelative(0f, 1.1f, 0.9f, 2f, 2f, 2f)
-                lineTo(19f, 21f)
-                curveToRelative(1.1f, 0f, 2f, -0.9f, 2f, -2f)
-                lineTo(21f, 6.5f)
-                curveToRelative(0f, -0.47f, -0.17f, -0.92f, -0.46f, -1.27f)
+                moveToRelative(2f, 8.5f)
+                lineToRelative(10f, 6.5f)
+                lineToRelative(10f, -6.5f)
+                lineToRelative(-10f, -6.5f)
                 close()
-                moveTo(5.12f, 5f)
-                lineTo(6.12f, 5f)
-                lineTo(17.88f, 5f)
-                lineTo(18.88f, 5f)
-                lineTo(19.7f, 6f)
-                lineTo(4.3f, 6f)
-                lineTo(5.12f, 5f)
+                moveToRelative(0.5f, 3.5f)
+                lineToRelative(9.5f, 6.5f)
+                lineToRelative(9.5f, -6.5f)
+                arcToRelative(2f, 2f, 0f, isMoreThanHalf = false, isPositiveArc = false, 0f, -2f)
+                lineToRelative(-9.5f, 6.5f)
+                lineToRelative(-9.5f, -6.5f)
+                arcToRelative(2f, 2f, 0f, isMoreThanHalf = false, isPositiveArc = false, 0f, 2f)
                 close()
-                moveTo(19f, 19f)
-                lineTo(5f, 19f)
-                lineTo(5f, 8f)
-                lineTo(19f, 8f)
-                lineTo(19f, 19f)
-                close()
-                moveTo(15f, 11f)
-                lineTo(9f, 11f)
-                curveToRelative(-0.55f, 0f, -1f, 0.45f, -1f, 1f)
-                lineTo(8f, 12f)
-                curveToRelative(0f, 0.55f, 0.45f, 1f, 1f, 1f)
-                lineTo(15f, 13f)
-                curveToRelative(0.55f, 0f, 1f, -0.45f, 1f, -1f)
-                lineTo(16f, 12f)
-                curveToRelative(0f, -0.55f, -0.45f, -1f, -1f, -1f)
+                moveToRelative(0f, 3.5f)
+                lineToRelative(9.5f, 6.5f)
+                lineToRelative(9.5f, -6.5f)
+                arcToRelative(2f, 2f, 0f, isMoreThanHalf = false, isPositiveArc = false, 0f, -2f)
+                lineToRelative(-9.5f, 6.5f)
+                lineToRelative(-9.5f, -6.5f)
+                arcToRelative(2f, 2f, 0f, isMoreThanHalf = false, isPositiveArc = false, 0f, 2f)
                 close()
             }
         }.build()
     }
 
-    // Кастомная иконка для Someday (Папка)
+    // Кастомная иконка для Someday из ic_someday_black_24dp.xml
     val Someday: ImageVector by lazy(LazyThreadSafetyMode.NONE) {
         ImageVector.Builder(
             name = "Someday",
@@ -221,34 +207,40 @@ object AppIcons {
             viewportHeight = 24f
         ).apply {
             path(
-                fill = SolidColor(Color(0xFF8F93A3)),
-                stroke = SolidColor(Color(0xFF8F93A3)),
-                strokeLineWidth = 0.5f,
+                fill = SolidColor(Color(0xFFCEC493)),
+                stroke = SolidColor(Color(0xFFC6BD8F)),
+                strokeLineWidth = 1f,
                 strokeLineJoin = StrokeJoin.Round
             ) {
-                moveTo(10f, 4f)
-                lineTo(4f, 4f)
-                curveToRelative(-1.1f, 0f, -1.99f, 0.9f, -1.99f, 2f)
-                lineTo(2f, 18f)
-                curveToRelative(0f, 1.1f, 0.9f, 2f, 2f, 2f)
-                lineTo(20f, 20f)
-                curveToRelative(1.1f, 0f, 2f, -0.9f, 2f, -2f)
-                lineTo(22f, 8f)
-                curveToRelative(0f, -1.1f, -0.9f, -2f, -2f, -2f)
-                lineTo(12f, 6f)
-                lineTo(10f, 4f)
+                moveToRelative(2f, 2f)
+                lineToRelative(0f, 4.5f)
+                arcToRelative(0.5f, 0.5f, 0f, isMoreThanHalf = false, isPositiveArc = false, 0.5f, 0.5f)
+                lineToRelative(19f, 0f)
+                arcToRelative(0.5f, 0.5f, 0f, isMoreThanHalf = false, isPositiveArc = false, 0.5f, -0.5f)
+                lineToRelative(0f, -4.5f)
                 close()
-                moveTo(20f, 18f)
-                lineTo(4f, 18f)
-                lineTo(4f, 8f)
-                lineTo(20f, 8f)
-                lineTo(20f, 18f)
+                moveToRelative(0.75f, 7f)
+                lineToRelative(0f, 11f)
+                arcToRelative(0.8f, 0.8f, 0f, isMoreThanHalf = false, isPositiveArc = false, 0.8f, 0.8f)
+                lineToRelative(17f, 0f)
+                arcToRelative(0.8f, 0.8f, 0f, isMoreThanHalf = false, isPositiveArc = false, 0.8f, -0.8f)
+                lineToRelative(0f, -11f)
+                close()
+                moveToRelative(6.25f, 1.85f)
+                lineToRelative(6.2f, 0f)
+                arcToRelative(0.25f, 0.25f, 0f, isMoreThanHalf = false, isPositiveArc = true, 0.25f, 0.25f)
+                lineToRelative(0f, 1.6f)
+                arcToRelative(0.25f, 0.25f, 0f, isMoreThanHalf = false, isPositiveArc = true, -0.25f, 0.25f)
+                lineToRelative(-6.2f, 0f)
+                arcToRelative(0.25f, 0.25f, 0f, isMoreThanHalf = false, isPositiveArc = true, -0.25f, -0.25f)
+                lineToRelative(0f, -1.6f)
+                arcToRelative(0.25f, 0.25f, 0f, isMoreThanHalf = false, isPositiveArc = true, 0.25f, -0.25f)
                 close()
             }
         }.build()
     }
 
-    // Кастомная иконка для Logbook (Блокнот с галочкой)
+    // Кастомная иконка для Logbook из ic_logbook_black_24dp.xml
     val Logbook: ImageVector by lazy(LazyThreadSafetyMode.NONE) {
         ImageVector.Builder(
             name = "Logbook",
@@ -258,44 +250,39 @@ object AppIcons {
             viewportHeight = 24f
         ).apply {
             path(
-                fill = SolidColor(Color(0xFF2EC275)),
-                stroke = SolidColor(Color(0xFF2EC275)),
-                strokeLineWidth = 0.5f,
+                fill = SolidColor(Color(0xFF51BD63)),
+                stroke = SolidColor(Color(0xFF50B661)),
+                strokeLineWidth = 1f,
                 strokeLineJoin = StrokeJoin.Round
             ) {
-                moveTo(19f, 3f)
-                lineTo(14.82f, 3f)
-                curveToRelative(-0.4f, -1.17f, -1.5f, -2f, -2.82f, -2f)
-                curveToRelative(-1.32f, 0f, -2.42f, 0.83f, -2.82f, 2f)
-                lineTo(5f, 3f)
-                curveToRelative(-1.1f, 0f, -2f, 0.9f, -2f, 2f)
-                lineTo(3f, 19f)
-                curveToRelative(0f, 1.1f, 0.9f, 2f, 2f, 2f)
-                lineTo(19f, 21f)
-                curveToRelative(1.1f, 0f, 2f, -0.9f, 2f, -2f)
-                lineTo(21f, 5f)
-                curveToRelative(0f, -1.1f, -0.9f, -2f, -2f, -2f)
+                moveTo(8.7f, 17f)
+                lineToRelative(-4f, -4f)
+                lineToRelative(1.41f, -1.41f)
+                lineToRelative(2.59f, 2.58f)
+                lineToRelative(5.59f, -5.59f)
+                lineToRelative(1.41f, 1.42f)
+                lineToRelative(-7f, 7f)
                 close()
-                moveTo(12f, 3f)
-                curveToRelative(0.55f, 0f, 1f, 0.45f, 1f, 1f)
-                curveToRelative(0f, 0.55f, -0.45f, 1f, -1f, 1f)
-                curveToRelative(-0.55f, 0f, -1f, -0.45f, -1f, -1f)
-                curveToRelative(0f, -0.55f, 0.45f, -1f, 1f, -1f)
+                moveToRelative(-6f, -13f)
+                verticalLineToRelative(15f)
+                curveToRelative(0f, 1f, 1f, 2f, 2f, 2f)
+                lineToRelative(11f, 1f)
+                curveToRelative(1f, 0f, 2f, -1f, 2f, -2f)
+                verticalLineToRelative(-13f)
+                curveToRelative(0f, -1f, -1f, -2f, -2f, -2f)
                 close()
-                moveTo(19f, 19f)
-                lineTo(5f, 19f)
-                lineTo(5f, 5f)
-                lineTo(19f, 5f)
-                lineTo(19f, 19f)
-                close()
-                moveTo(10f, 14.17f)
-                lineTo(7.41f, 11.59f)
-                lineTo(6f, 13f)
-                lineTo(10f, 17f)
-                lineTo(18f, 9f)
-                lineTo(16.59f, 7.58f)
-                lineTo(10f, 14.17f)
-                close()
+            }
+            path(
+                stroke = SolidColor(Color(0xFF50B661)),
+                strokeLineWidth = 1.6f,
+                strokeLineCap = StrokeCap.Round,
+                strokeLineJoin = StrokeJoin.Round
+            ) {
+                moveTo(20.5f, 19f)
+                verticalLineToRelative(-15f)
+                curveToRelative(0f, -1f, -1f, -2f, -2f, -2f)
+                horizontalLineToRelative(-13.5f)
+                curveToRelative(-1f, 0f, -2f, 1f, -2f, 2f)
             }
         }.build()
     }
