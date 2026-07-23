@@ -56,6 +56,9 @@ import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontWeight
 import com.example.ui.theme.AppIcons
 import androidx.compose.runtime.remember
+import androidx.compose.ui.unit.sp
+import com.example.ui.components.ProjectProgressArc
+import androidx.compose.material.icons.outlined.ChevronRight
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.outlined.FormatListBulleted
 
@@ -310,10 +313,29 @@ fun AnimatedTaskItem(
                     enter = androidx.compose.animation.expandVertically() + androidx.compose.animation.fadeIn(),
                     exit = androidx.compose.animation.shrinkVertically() + androidx.compose.animation.fadeOut()
                 ) {
+                    val projectTasks = remember(currentProject?.id, displayTasks) {
+                        if (currentProject != null) {
+                            displayTasks.filter { it.item.projectId == currentProject.id }
+                        } else emptyList()
+                    }
+                    val completedCount = remember(projectTasks) { projectTasks.count { it.item.isCompleted } }
+
+                    val pillContentColor = Color(0xFF8E8E93)
                     Row(
                         modifier = Modifier
                             .fillMaxWidth()
-                            .padding(top = 8.dp, bottom = 4.dp, end = 8.dp),
+                            .layout { measurable, constraints ->
+                                val extraPaddingPx = extraPaddingDp.roundToPx()
+                                val extendedConstraints = constraints.copy(
+                                    minWidth = (constraints.minWidth + extraPaddingPx * 2).coerceAtMost(constraints.maxWidth + extraPaddingPx * 2),
+                                    maxWidth = (constraints.maxWidth + extraPaddingPx * 2)
+                                )
+                                val placeable = measurable.measure(extendedConstraints)
+                                layout(placeable.width - extraPaddingPx * 2, placeable.height) {
+                                    placeable.place(-extraPaddingPx, 0)
+                                }
+                            }
+                            .padding(top = 10.dp, bottom = 4.dp, end = 16.dp),
                         horizontalArrangement = Arrangement.End,
                         verticalAlignment = Alignment.CenterVertically
                     ) {
@@ -329,36 +351,39 @@ fun AnimatedTaskItem(
                                         onEvent(ThingsCategoryListEvent.ClickArea(currentArea))
                                     }
                                 }
-                                .padding(vertical = 4.dp, horizontal = 8.dp),
+                                .padding(start = 8.dp, top = 4.dp, end = 0.dp, bottom = 4.dp),
                             verticalAlignment = Alignment.CenterVertically
                         ) {
-                            Icon(
-                                imageVector = if (currentProject != null) {
-                                    androidx.compose.material.icons.Icons.Outlined.FormatListBulleted
-                                } else {
-                                    AppIcons.Area
-                                },
-                                contentDescription = null,
-                                tint = Color(0xFF8E8E93),
-                                modifier = Modifier.size(14.dp)
-                            )
-                            Spacer(modifier = Modifier.width(4.dp))
+                            if (currentProject != null) {
+                                ProjectProgressArc(
+                                    completed = completedCount,
+                                    total = projectTasks.size,
+                                    color = pillContentColor,
+                                    modifier = Modifier.size(16.dp)
+                                )
+                            } else {
+                                Icon(
+                                    imageVector = AppIcons.Area,
+                                    contentDescription = null,
+                                    tint = pillContentColor,
+                                    modifier = Modifier.size(16.dp)
+                                )
+                            }
+                            Spacer(modifier = Modifier.width(6.dp))
                             Text(
                                 text = currentProject?.title ?: currentArea?.title ?: "",
                                 style = TextStyle(
-                                    fontSize = androidx.compose.material3.MaterialTheme.typography.bodyMedium.fontSize,
-                                    color = Color(0xFF8E8E93),
+                                    fontSize = 17.sp,
+                                    color = pillContentColor,
                                     fontWeight = FontWeight.Normal
                                 )
                             )
                             Spacer(modifier = Modifier.width(2.dp))
-                            Text(
-                                text = ">",
-                                style = TextStyle(
-                                    fontSize = androidx.compose.material3.MaterialTheme.typography.bodyMedium.fontSize,
-                                    color = Color(0xFFC7C7CC),
-                                    fontWeight = FontWeight.Normal
-                                )
+                            Icon(
+                                imageVector = androidx.compose.material.icons.Icons.Outlined.ChevronRight,
+                                contentDescription = null,
+                                tint = pillContentColor,
+                                modifier = Modifier.size(20.dp)
                             )
                         }
                     }
