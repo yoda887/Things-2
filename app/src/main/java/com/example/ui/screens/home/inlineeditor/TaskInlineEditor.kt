@@ -1,5 +1,6 @@
 package com.example.ui.screens.home.inlineeditor
 
+import androidx.compose.animation.*
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -479,56 +480,78 @@ fun ThingsTaskInlineEditor(
 
                 // Action Icons Row on the right
                 Row(
-                    horizontalArrangement = Arrangement.spacedBy(12.dp),
                     verticalAlignment = Alignment.CenterVertically,
                     modifier = Modifier.padding(bottom = 4.dp) // Align slightly with indicator row text/icon padding
                 ) {
-                    if (!hasActiveDate) {
-                        Icon(
-                            imageVector = AppIcons.Upcoming,
-                            contentDescription = "Schedule",
-                            tint = iconInactiveColor,
-                            modifier = Modifier
-                                .size(22.dp)
-                                .clickable { showWhenDialog = true }
-                        )
+                    androidx.compose.animation.AnimatedVisibility(
+                        visible = !hasActiveDate,
+                        enter = fadeIn() + expandHorizontally(expandFrom = Alignment.End),
+                        exit = fadeOut() + shrinkHorizontally(shrinkTowards = Alignment.End)
+                    ) {
+                        Box(modifier = Modifier.padding(start = 12.dp)) {
+                            Icon(
+                                imageVector = AppIcons.Upcoming,
+                                contentDescription = "Schedule",
+                                tint = iconInactiveColor,
+                                modifier = Modifier
+                                    .size(22.dp)
+                                    .clickable { showWhenDialog = true }
+                            )
+                        }
                     }
 
                     // Tag
-                    if (tagInput.trim().isEmpty()) {
-                       
-                    Icon(
-                        imageVector = Icons.Outlined.LocalOffer,
-                        contentDescription = "Tags",
-                        tint = iconInactiveColor,
-                        modifier = Modifier
-                            .size(22.dp)
-                            .clickable { showTagDialog = true }
-                    )
+                    androidx.compose.animation.AnimatedVisibility(
+                        visible = tagInput.trim().isEmpty(),
+                        enter = fadeIn() + expandHorizontally(expandFrom = Alignment.End),
+                        exit = fadeOut() + shrinkHorizontally(shrinkTowards = Alignment.End)
+                    ) {
+                        Box(modifier = Modifier.padding(start = 12.dp)) {
+                            Icon(
+                                imageVector = Icons.Outlined.LocalOffer,
+                                contentDescription = "Tags",
+                                tint = iconInactiveColor,
+                                modifier = Modifier
+                                    .size(22.dp)
+                                    .clickable { showTagDialog = true }
+                            )
+                        }
                     }
 
                     // Checklist toggle
-                    if (!showChecklistHelper && checklist.isEmpty()) {
-                        Icon(
-                            imageVector = Icons.Outlined.FormatListBulleted,
-                            contentDescription = "Checklists",
-                            tint = iconInactiveColor,
-                            modifier = Modifier
-                                .size(22.dp)
-                                .clickable { showChecklistHelper = true }
-                        )
+                    androidx.compose.animation.AnimatedVisibility(
+                        visible = !showChecklistHelper && checklist.isEmpty(),
+                        enter = fadeIn() + expandHorizontally(expandFrom = Alignment.End),
+                        exit = fadeOut() + shrinkHorizontally(shrinkTowards = Alignment.End)
+                    ) {
+                        Box(modifier = Modifier.padding(start = 12.dp)) {
+                            Icon(
+                                imageVector = Icons.Outlined.FormatListBulleted,
+                                contentDescription = "Checklists",
+                                tint = iconInactiveColor,
+                                modifier = Modifier
+                                    .size(22.dp)
+                                    .clickable { showChecklistHelper = true }
+                            )
+                        }
                     }
 
                     // Flag (Deadline)
-                    if (dueDate == null) {
-                        Icon(
-                            imageVector = Icons.Outlined.Flag,
-                            contentDescription = "Set Deadline",
-                            tint = iconInactiveColor,
-                            modifier = Modifier
-                                .size(22.dp)
-                                .clickable { showDatePicker = true }
-                        )
+                    androidx.compose.animation.AnimatedVisibility(
+                        visible = dueDate == null,
+                        enter = fadeIn() + expandHorizontally(expandFrom = Alignment.End),
+                        exit = fadeOut() + shrinkHorizontally(shrinkTowards = Alignment.End)
+                    ) {
+                        Box(modifier = Modifier.padding(start = 12.dp)) {
+                            Icon(
+                                imageVector = Icons.Outlined.Flag,
+                                contentDescription = "Set Deadline",
+                                tint = iconInactiveColor,
+                                modifier = Modifier
+                                    .size(22.dp)
+                                    .clickable { showDatePicker = true }
+                            )
+                        }
                     }
                 }
             }
