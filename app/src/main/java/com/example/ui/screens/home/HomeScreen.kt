@@ -158,7 +158,8 @@ fun ThingsHomeScreen(viewModel: ThingsViewModel = hiltViewModel()) {
     var showFabMenu by remember { mutableStateOf(false) }
     var isSearchOverlayActive by remember { mutableStateOf(false) }
     var newTaskTitlePrefill by remember { mutableStateOf("") }
-    
+    var isListDialogActive by remember { mutableStateOf(false) }
+
     // [ИЗМЕНЕНИЕ]: Состояния для недавно искавшихся объектов и подсветки конкретной задачи
     var recentSearchItems by remember { mutableStateOf<List<SearchResultItem>>(emptyList()) }
     var highlightedTaskId by remember { mutableStateOf<String?>(null) }
@@ -234,7 +235,7 @@ fun ThingsHomeScreen(viewModel: ThingsViewModel = hiltViewModel()) {
         floatingActionButton = {
             // [ИЗМЕНЕНИЕ]: Скрывать глобально на уровне HomeScreen с плавной анимацией при открытии inline-редактора или FAB-меню
             AnimatedVisibility(
-                visible = inlineExpandedTaskId == null && !showFabMenu,
+                visible = inlineExpandedTaskId == null && !showFabMenu && !isListDialogActive,
                 enter = scaleIn(
                     animationSpec = spring(stiffness = androidx.compose.animation.core.Spring.StiffnessMedium)
                 ) + fadeIn(),
@@ -453,6 +454,7 @@ fun ThingsHomeScreen(viewModel: ThingsViewModel = hiltViewModel()) {
                             textSecondaryColor = textSecondaryColor,
                             dividerColor = dividerColor
                         ),
+                        onDialogsActiveChange = { isListDialogActive = it },
                         onEvent = { event ->
                             when (event) {
                                 is ThingsCategoryListEvent.SelectTag -> {
@@ -540,6 +542,12 @@ fun ThingsHomeScreen(viewModel: ThingsViewModel = hiltViewModel()) {
                                 }
                                 is ThingsCategoryListEvent.ReorderTasks -> {
                                     viewModel.updateTasks(event.items)
+                                }
+                                is ThingsCategoryListEvent.SwipeTaskLeft -> {
+                                    // Заглушка для мультиселекции
+                                }
+                                is ThingsCategoryListEvent.SwipeTaskRight -> {
+                                    // Заглушка для When / Календаря
                                 }
                             }
                         }

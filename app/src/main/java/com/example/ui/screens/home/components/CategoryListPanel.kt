@@ -63,6 +63,7 @@ import com.example.ui.screens.home.subcomponents.TaskItemRow
 import com.example.ui.screens.home.inlineeditor.ThingsTaskInlineEditor
 import com.example.ui.screens.home.inlineeditor.dialogs.ThingsMoveDialog
 import com.example.ui.screens.home.inlineeditor.dialogs.DeleteConfirmDialog
+import com.example.ui.screens.home.inlineeditor.dialogs.ThingsWhenDialog
 import com.example.ui.theme.*
 import com.example.ui.theme.ThingsBackgroundDark
 import com.example.ui.theme.ThingsBackgroundLight
@@ -95,7 +96,8 @@ private const val DELETE_ANIMATION_DELAY_MS = 300L
 @Composable
 fun ThingsCategoryListPanel(
     state: ThingsCategoryListState,
-    onEvent: (ThingsCategoryListEvent) -> Unit
+    onEvent: (ThingsCategoryListEvent) -> Unit,
+    onDialogsActiveChange: (Boolean) -> Unit = {}
 ) {
     val screen = state.screen
     val project = state.project
@@ -128,7 +130,13 @@ fun ThingsCategoryListPanel(
     var showMoveDialog by remember { mutableStateOf(false) }
     var showDeleteConfirm by remember { mutableStateOf(false) }
     var isWhenDialogOpen by remember { mutableStateOf(false) }
+    var swipeWhenTask by remember { mutableStateOf<ItemWithChecklist?>(null) }
     val deletedTaskIds = remember { mutableStateListOf<String>() }
+    
+    LaunchedEffect(showMoveDialog, showDeleteConfirm, isWhenDialogOpen, swipeWhenTask != null) {
+        val anyActive = showMoveDialog || showDeleteConfirm || isWhenDialogOpen || swipeWhenTask != null
+        onDialogsActiveChange(anyActive)
+    }
     
     val activeTask = remember(inlineExpandedTaskId, state.displayTasks) {
         state.displayTasks.find { it.item.id == inlineExpandedTaskId }
@@ -372,7 +380,13 @@ fun ThingsCategoryListPanel(
                                 allSavedTagObjects = allSavedTagObjects,
                                 deletedTaskIds = deletedTaskIds,
                                 onDeletedTaskIdAdd = { deletedTaskIds.add(it) },
-                                onEvent = onEvent,
+                                onEvent = { event ->
+                                    if (event is ThingsCategoryListEvent.SwipeTaskRight) {
+                                        swipeWhenTask = event.task
+                                    } else {
+                                        onEvent(event)
+                                    }
+                                },
                                 coroutineScope = coroutineScope,
                                 screen = screen,
                                 upcomingDays = upcomingDays,
@@ -538,8 +552,48 @@ fun ThingsCategoryListPanel(
         )
     }
 
+    if (swipeWhenTask != null) {
+        val targetTask = swipeWhenTask!!
+        var pendingStartDate by remember(targetTask) { mutableStateOf(targetTask.item.startDate) }
+        var pendingSection by remember(targetTask) { mutableStateOf(targetTask.item.section) }
+        var pendingIsTonight by remember(targetTask) { mutableStateOf(targetTask.item.isTonight) }
+
+        ThingsWhenDialog(
+            startDate = pendingStartDate,
+            onStartDateChange = { pendingStartDate = it },
+            section = pendingSection,
+            onSectionChange = { pendingSection = it },
+            isTonight = pendingIsTonight,
+            onIsTonightChange = { pendingIsTonight = it },
+            onShowCalendarHelperChange = { },
+            onDismissRequest = {
+                val tagsList = targetTask.item.cachedTags
+                    .split(",")
+                    .map { it.trim() }
+                    .filter { it.isNotEmpty() }
+
+                onEvent(
+                    ThingsCategoryListEvent.SaveTask(
+                        taskWrapper = targetTask,
+                        title = targetTask.item.title,
+                        notes = targetTask.item.notes,
+                        section = pendingSection,
+                        isTonight = pendingIsTonight,
+                        startDate = pendingStartDate,
+                        dueDate = targetTask.item.dueDate,
+                        tags = tagsList,
+                        projectId = targetTask.item.projectId,
+                        priority = targetTask.item.priority,
+                        checklist = targetTask.checklist
+                    )
+                )
+                swipeWhenTask = null
+            }
+        )
+    }
+
     FloatingBottomCapsuleToolbar(
-        visible = inlineExpandedTaskId != null && activeTask != null && !isWhenDialogOpen,
+        visible = inlineExpandedTaskId != null && activeTask != null && !isWhenDialogOpen && swipeWhenTask == null,
         onMoveClick = { showMoveDialog = true },
         onDeleteClick = { showDeleteConfirm = true },
         onDuplicateClick = {

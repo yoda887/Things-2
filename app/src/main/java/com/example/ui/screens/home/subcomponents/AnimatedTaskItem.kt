@@ -61,6 +61,7 @@ import com.example.ui.components.ProjectProgressArc
 import androidx.compose.material.icons.outlined.ChevronRight
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.outlined.FormatListBulleted
+import com.example.ui.components.swipe.SwipeableTaskContainer
 
 private const val DELETE_ANIMATION_DELAY_MS = 300L
 
@@ -272,22 +273,8 @@ fun AnimatedTaskItem(
                         }
                     )
                 } else {
-                    TaskItemRow(
-                        modifier = Modifier,
-                        task = taskWrapper.item,
-                        textPrimaryColor = textPrimaryColor,
-                        textSecondaryColor = textSecondaryColor,
-                        dividerColor = dividerColor,
-                        onToggle = { onEvent(ThingsCategoryListEvent.ToggleTask(taskWrapper)) },
-                        onClick = {
-                            onEvent(ThingsCategoryListEvent.ChangeInlineExpandedTaskId(task.id))
-                        },
-                        projects = projects,
-                        areas = areas,
-                        showTodayIndicator = screen == ActiveScreen.TODAY && !task.isTonight,
-                        isDragging = false,
-                        dragOffsetY = 0f,
-                        dragModifier = Modifier.taskDragAndDrop(
+                    SwipeableTaskContainer(
+                        modifier = Modifier.taskDragAndDrop(
                             state = dragDropState,
                             taskWrapper = taskWrapper,
                             screen = screen,
@@ -299,9 +286,32 @@ fun AnimatedTaskItem(
                                 onEvent(ThingsCategoryListEvent.ReorderTasks(items))
                             }
                         ),
-                        isHighlighted = task.id == highlightedTaskId,
-                        screen = screen
-                    )
+                        onSwipeLeft = { onEvent(ThingsCategoryListEvent.SwipeTaskLeft(taskWrapper)) },
+                        onSwipeRight = { onEvent(ThingsCategoryListEvent.SwipeTaskRight(taskWrapper)) },
+                        enabled = inlineExpandedTaskId == null
+                                && dragDropState.draggedTaskId == null
+                                && !task.id.startsWith("cal_")
+                    ) {
+                        TaskItemRow(
+                            modifier = Modifier,
+                            task = taskWrapper.item,
+                            textPrimaryColor = textPrimaryColor,
+                            textSecondaryColor = textSecondaryColor,
+                            dividerColor = dividerColor,
+                            onToggle = { onEvent(ThingsCategoryListEvent.ToggleTask(taskWrapper)) },
+                            onClick = {
+                                onEvent(ThingsCategoryListEvent.ChangeInlineExpandedTaskId(task.id))
+                            },
+                            projects = projects,
+                            areas = areas,
+                            showTodayIndicator = screen == ActiveScreen.TODAY && !task.isTonight,
+                            isDragging = false,
+                            dragOffsetY = 0f,
+                            dragModifier = Modifier,
+                            isHighlighted = task.id == highlightedTaskId,
+                            screen = screen
+                        )
+                    }
                 }
             }
 

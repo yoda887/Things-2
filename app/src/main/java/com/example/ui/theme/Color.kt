@@ -10,6 +10,7 @@ val ThingsUpcomingRed = Color(0xFFF35F50)
 val ThingsAnytimeTeal = Color(0xFF2EB7CD)
 val ThingsSomedayGrey = Color(0xFF8F93A3)
 val ThingsLogbookGreen = Color(0xFF2EC275)
+val ThingsSwipeWhenYellow = Color(0xFFFFD401)
 
 // Light Mode Theme
 val ThingsBackgroundLight = Color(0xFFFFFFFF)
