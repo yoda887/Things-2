@@ -31,6 +31,8 @@ import com.example.ui.theme.ThingsSwipeWhenYellow
 import kotlinx.coroutines.launch
 import kotlin.math.abs
 import kotlin.math.sign
+import android.view.HapticFeedbackConstants
+import androidx.compose.ui.platform.LocalView
 
 /**
  * Направление активного свайпа задачи.
@@ -65,6 +67,7 @@ fun SwipeableTaskContainer(
     // Текущее смещение элемента по горизонтали (в пикселях)
     val offsetX = remember { Animatable(0f) }
     val scope = rememberCoroutineScope()
+    val view = LocalView.current
     
     val currentOnSwipeLeft by rememberUpdatedState(onSwipeLeft)
     val currentOnSwipeRight by rememberUpdatedState(onSwipeRight)
@@ -78,9 +81,22 @@ fun SwipeableTaskContainer(
     // Зафиксированное направление свайпа
     var lockedDirection by remember { mutableStateOf(SwipeDirection.NONE) }
 
-    // Прогресс свайпа [0..1] для анимации иконки
-    val currentOffset = offsetX.value
-    val swipeProgress = (abs(currentOffset) / activationThresholdPx).coerceIn(0f, 1f)
+    /**
+     * Плавный возврат карточки в исходное положение с адаптивной длительностью,
+     * пропорциональной текущему смещению (чем меньше смещение — тем быстрее возврат).
+     */
+    val resetSwipe: () -> Unit = {
+        val currentAbs = abs(offsetX.value)
+        val duration = (currentAbs / maxSwipeDistancePx * RETURN_ANIMATION_MAX_MS)
+            .toInt().coerceIn(RETURN_ANIMATION_MIN_MS, RETURN_ANIMATION_MAX_MS)
+        scope.launch {
+            offsetX.animateTo(
+                targetValue = 0f,
+                animationSpec = tween(durationMillis = duration, easing = FastOutSlowInEasing)
+            )
+            lockedDirection = SwipeDirection.NONE
+        }
+    }
 
     // Цвет и иконка фона в зависимости от зафиксированного направления
     val backgroundColor = when (lockedDirection) {
@@ -101,20 +117,15 @@ fun SwipeableTaskContainer(
                 modifier = Modifier
                     .matchParentSize()
                     .drawBehind {
-                        if (lockedDirection != SwipeDirection.NONE) {
-                            drawRoundRect(
-                                color = backgroundColor,
-                                topLeft = Offset.Zero,
-                                size = Size(size.width, size.height),
-                                cornerRadius = CornerRadius(cornerRadiusPx, cornerRadiusPx)
-                            )
-                        }
+                        drawRoundRect(
+                            color = backgroundColor,
+                            topLeft = Offset.Zero,
+                            size = Size(size.width, size.height),
+                            cornerRadius = CornerRadius(cornerRadiusPx, cornerRadiusPx)
+                        )
                     },
                 contentAlignment = if (lockedDirection == SwipeDirection.LEFT) Alignment.CenterEnd else Alignment.CenterStart
             ) {
-                val iconAlpha = swipeProgress
-                val iconScale = 0.5f + 0.5f * swipeProgress
-
                 if (lockedDirection == SwipeDirection.RIGHT) {
                     // Свайп вправо → When/Календарь → AppIcons.Upcoming
                     Icon(
@@ -125,9 +136,10 @@ fun SwipeableTaskContainer(
                             .padding(start = ICON_PADDING_DP.dp)
                             .size(ICON_SIZE_DP.dp)
                             .graphicsLayer {
-                                alpha = iconAlpha
-                                scaleX = iconScale
-                                scaleY = iconScale
+                                val progress = (abs(offsetX.value) / activationThresholdPx).coerceIn(0f, 1f)
+                                alpha = progress
+                                scaleX = 0.5f + 0.5f * progress
+                                scaleY = 0.5f + 0.5f * progress
                             }
                     )
                 } else if (lockedDirection == SwipeDirection.LEFT) {
@@ -140,9 +152,10 @@ fun SwipeableTaskContainer(
                             .padding(end = ICON_PADDING_DP.dp)
                             .size(ICON_SIZE_DP.dp)
                             .graphicsLayer {
-                                alpha = iconAlpha
-                                scaleX = iconScale
-                                scaleY = iconScale
+                                val progress = (abs(offsetX.value) / activationThresholdPx).coerceIn(0f, 1f)
+                                alpha = progress
+                                scaleX = 0.5f + 0.5f * progress
+                                scaleY = 0.5f + 0.5f * progress
                             }
                     )
                 }
@@ -154,10 +167,10 @@ fun SwipeableTaskContainer(
             modifier = Modifier
                 .fillMaxWidth()
                 .graphicsLayer {
-                    translationX = currentOffset
+                    translationX = offsetX.value
                 }
                 .then(
-                    if (currentOffset != 0f || lockedDirection != SwipeDirection.NONE) {
+                    if (lockedDirection != SwipeDirection.NONE) {
                         Modifier.background(
                             color = MaterialTheme.colorScheme.background,
                             shape = RoundedCornerShape(BACKGROUND_CORNER_RADIUS_DP.dp)
@@ -168,12 +181,13 @@ fun SwipeableTaskContainer(
                 )
                 .then(
                     if (enabled) {
-                        Modifier.pointerInput(Unit) {
+                        Modifier.pointerInput(enabled) {
                             awaitPointerEventScope {
                                 while (true) {
                                     val down = awaitFirstDown(requireUnconsumed = false)
                                     val pointerId = down.id
-                                    var rawOffset = 0f
+                                    var rawOffsetX = 0f
+                                    var rawOffsetY = 0f
                                     var isHorizontalSwipe = false
                                     var isCancelled = false
 
@@ -187,15 +201,16 @@ fun SwipeableTaskContainer(
                                         }
 
                                         val dragAmount = change.positionChange()
-                                        rawOffset += dragAmount.x
+                                        rawOffsetX += dragAmount.x
+                                        rawOffsetY += dragAmount.y
 
-                                        val absDx = abs(rawOffset)
-                                        val absDy = abs(change.positionChange().y)
+                                        val absDx = abs(rawOffsetX)
+                                        val absDy = abs(rawOffsetY)
 
                                         if (absDx > touchSlopPx || absDy > touchSlopPx) {
                                             if (absDx > absDy * 1.5f && absDx > touchSlopPx) {
                                                 isHorizontalSwipe = true
-                                                lockedDirection = if (rawOffset < 0f) SwipeDirection.LEFT else SwipeDirection.RIGHT
+                                                lockedDirection = if (rawOffsetX < 0f) SwipeDirection.LEFT else SwipeDirection.RIGHT
                                                 change.consume()
                                             } else {
                                                 isCancelled = true
@@ -205,6 +220,7 @@ fun SwipeableTaskContainer(
 
                                     // Фаза 2: Активный свайп с плавным началом от 0 (без резкого прыжка)
                                     if (isHorizontalSwipe) {
+                                        var hasTriggeredHaptic = false
                                         while (true) {
                                             val event = awaitPointerEvent()
                                             val change = event.changes.firstOrNull { it.id == pointerId }
@@ -215,17 +231,7 @@ fun SwipeableTaskContainer(
                                                 val wasLeft = lockedDirection == SwipeDirection.LEFT
                                                 val wasRight = lockedDirection == SwipeDirection.RIGHT
 
-                                                scope.launch {
-                                                    // Плавный возврат без пружинного отскока (tween 200ms)
-                                                    offsetX.animateTo(
-                                                        targetValue = 0f,
-                                                        animationSpec = tween(
-                                                            durationMillis = 200,
-                                                            easing = FastOutSlowInEasing
-                                                        )
-                                                    )
-                                                    lockedDirection = SwipeDirection.NONE
-                                                }
+                                                resetSwipe()
 
                                                 if (shouldActivate) {
                                                     if (wasLeft) currentOnSwipeLeft()
@@ -235,26 +241,17 @@ fun SwipeableTaskContainer(
                                             }
 
                                             if (change.isConsumed) {
-                                                scope.launch {
-                                                    offsetX.animateTo(
-                                                        targetValue = 0f,
-                                                        animationSpec = tween(
-                                                            durationMillis = 200,
-                                                            easing = FastOutSlowInEasing
-                                                        )
-                                                    )
-                                                    lockedDirection = SwipeDirection.NONE
-                                                }
+                                                resetSwipe()
                                                 break
                                             }
 
                                             val dragAmount = change.positionChange()
                                             change.consume()
-                                            rawOffset += dragAmount.x
+                                            rawOffsetX += dragAmount.x
 
                                             // Вычитаем touchSlop, чтобы старт движения карточки был строго с 0px без резкого прыжка
-                                            val directionSign = if (rawOffset >= 0f) 1f else -1f
-                                            val adjustedRawOffset = (abs(rawOffset) - touchSlopPx).coerceAtLeast(0f) * directionSign
+                                            val directionSign = if (rawOffsetX >= 0f) 1f else -1f
+                                            val adjustedRawOffset = (abs(rawOffsetX) - touchSlopPx).coerceAtLeast(0f) * directionSign
 
                                             val dampedOffset = applyRubberBandDamping(
                                                 rawOffset = adjustedRawOffset,
@@ -263,6 +260,13 @@ fun SwipeableTaskContainer(
                                             )
                                             scope.launch {
                                                 offsetX.snapTo(dampedOffset)
+                                            }
+
+                                            // Тактильная обратная связь при пересечении порога активации
+                                            val isPastThreshold = abs(dampedOffset) >= activationThresholdPx
+                                            if (isPastThreshold != hasTriggeredHaptic) {
+                                                hasTriggeredHaptic = isPastThreshold
+                                                view.performHapticFeedback(HapticFeedbackConstants.CLOCK_TICK)
                                             }
                                         }
                                     }
@@ -306,7 +310,7 @@ private fun applyRubberBandDamping(
 // ─── Константы ──────────────────────────────────────────────────────────────
 
 /** Порог срабатывания свайпа (в dp) */
-private const val TOUCH_SLOP_DP = 16f
+private const val TOUCH_SLOP_DP = 8f
 
 /** Порог активации действия свайпа (в dp) */
 private const val ACTIVATION_THRESHOLD_DP = 48f
@@ -325,3 +329,9 @@ private const val ICON_SIZE_DP = 22f
 
 /** Отступ иконки от края (в dp) */
 private const val ICON_PADDING_DP = 16f
+
+/** Минимальная длительность анимации возврата (мс) */
+private const val RETURN_ANIMATION_MIN_MS = 80
+
+/** Максимальная длительность анимации возврата (мс) */
+private const val RETURN_ANIMATION_MAX_MS = 200
