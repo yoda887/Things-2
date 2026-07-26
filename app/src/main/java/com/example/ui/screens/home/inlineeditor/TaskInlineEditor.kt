@@ -43,6 +43,7 @@ import com.example.ui.theme.AppIcons
 import com.example.ui.theme.dimens
 import com.example.ui.theme.taskEditorDate
 import com.example.ui.screens.home.inlineeditor.utils.isTodayDate
+import com.example.ui.screens.home.inlineeditor.utils.isTodayDateOrPast
 import com.example.ui.screens.home.inlineeditor.components.*
 import com.example.ui.screens.home.inlineeditor.dialogs.ThingsWhenDialog
 import com.example.ui.screens.home.inlineeditor.dialogs.ThingsTagDialog
@@ -272,7 +273,7 @@ fun ThingsTaskInlineEditor(
 
             val activeDateIcon = if (hasActiveDate) {
                 when {
-                    startDate != null && isTodayDate(startDate) -> {
+                    startDate != null && isTodayDateOrPast(startDate) -> {
                         if (isTonight) AppIcons.Evening else AppIcons.Today
                     }
                     startDate == null && section == TaskSection.TODAY -> {
@@ -285,7 +286,7 @@ fun ThingsTaskInlineEditor(
 
             val activeDateColor = if (hasActiveDate) {
                 when {
-                    startDate != null && isTodayDate(startDate) -> {
+                    startDate != null && isTodayDateOrPast(startDate) -> {
                         if (isTonight) Color.Unspecified else ThingsTodayStar
                     }
                     startDate == null && section == TaskSection.TODAY -> {

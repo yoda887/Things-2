@@ -235,6 +235,14 @@ fun rememberPullToSearchConnection(
 }
 
 /**
+ * Данные о прогрессе выполнения проекта (количество выполненных и общее количество задач).
+ */
+data class ProjectProgress(
+    val completed: Int = 0,
+    val total: Int = 0
+)
+
+/**
  * Состояние экрана категорий приложения Things.
  */
 data class ThingsCategoryListState(
@@ -257,7 +265,8 @@ data class ThingsCategoryListState(
     val textPrimaryColor: Color = Color.Unspecified,
     val textSecondaryColor: Color = Color.Unspecified,
     val dividerColor: Color = Color.Unspecified,
-    val allTasks: List<ItemWithChecklist> = emptyList()
+    val allTasks: List<ItemWithChecklist> = emptyList(),
+    val projectProgressMap: Map<String, ProjectProgress> = emptyMap()
 )
 
 /**

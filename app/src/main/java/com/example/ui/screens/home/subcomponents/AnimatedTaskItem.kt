@@ -58,6 +58,7 @@ import com.example.ui.theme.AppIcons
 import androidx.compose.runtime.remember
 import androidx.compose.ui.unit.sp
 import com.example.ui.components.ProjectProgressArc
+import com.example.ui.screens.home.components.ProjectProgress
 import androidx.compose.material.icons.outlined.ChevronRight
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.outlined.FormatListBulleted
@@ -91,6 +92,8 @@ fun AnimatedTaskItem(
     upcomingDays: List<UpcomingDay>,
     localTasksList: List<ItemWithChecklist>,
     displayTasks: List<ItemWithChecklist>,
+    allTasks: List<ItemWithChecklist> = emptyList(),
+    projectProgressMap: Map<String, ProjectProgress> = emptyMap(),
     onLocalTasksListChange: (List<ItemWithChecklist>) -> Unit,
     lazyListState: LazyListState,
     onWhenDialogVisibilityChange: (Boolean) -> Unit = {},
@@ -323,12 +326,9 @@ fun AnimatedTaskItem(
                     enter = androidx.compose.animation.expandVertically() + androidx.compose.animation.fadeIn(),
                     exit = androidx.compose.animation.shrinkVertically() + androidx.compose.animation.fadeOut()
                 ) {
-                    val projectTasks = remember(currentProject?.id, displayTasks) {
-                        if (currentProject != null) {
-                            displayTasks.filter { it.item.projectId == currentProject.id }
-                        } else emptyList()
-                    }
-                    val completedCount = remember(projectTasks) { projectTasks.count { it.item.isCompleted } }
+                    val progress = if (currentProject != null) projectProgressMap[currentProject.id] else null
+                    val completedCount = progress?.completed ?: 0
+                    val totalCount = progress?.total ?: 0
 
                     val pillContentColor = Color(0xFF8E8E93)
                     Row(
@@ -367,7 +367,7 @@ fun AnimatedTaskItem(
                             if (currentProject != null) {
                                 ProjectProgressArc(
                                     completed = completedCount,
-                                    total = projectTasks.size,
+                                    total = totalCount,
                                     color = pillContentColor,
                                     modifier = Modifier.size(16.dp)
                                 )

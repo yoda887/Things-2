@@ -381,10 +381,16 @@ private fun getStartDateIndicator(startDate: Long, isTonight: Boolean): DateIndi
     val todayCal = java.util.Calendar.getInstance()
     val currentYear = todayCal.get(java.util.Calendar.YEAR)
     
-    val isToday = taskCal.get(java.util.Calendar.YEAR) == todayCal.get(java.util.Calendar.YEAR) &&
-                  taskCal.get(java.util.Calendar.DAY_OF_YEAR) == todayCal.get(java.util.Calendar.DAY_OF_YEAR)
+    val endOfToday = (todayCal.clone() as java.util.Calendar).apply {
+        set(java.util.Calendar.HOUR_OF_DAY, 23)
+        set(java.util.Calendar.MINUTE, 59)
+        set(java.util.Calendar.SECOND, 59)
+        set(java.util.Calendar.MILLISECOND, 999)
+    }.timeInMillis
+
+    val isTodayOrPast = startDate <= endOfToday
                   
-    if (isToday) {
+    if (isTodayOrPast) {
         return if (isTonight) {
             // Иконка "Вечер" с использованием AppIcons.Evening
             DateIndicatorResult.IconIndicator(

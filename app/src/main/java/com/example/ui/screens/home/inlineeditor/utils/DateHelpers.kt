@@ -32,9 +32,21 @@ fun isSameDay(t1: Long?, t2: Long): Boolean {
            cal1.get(Calendar.DAY_OF_YEAR) == cal2.get(Calendar.DAY_OF_YEAR)
 }
 
+fun isTodayDateOrPast(timestamp: Long?): Boolean {
+    if (timestamp == null) return false
+    val cal = Calendar.getInstance()
+    val endOfToday = cal.apply {
+        set(Calendar.HOUR_OF_DAY, 23)
+        set(Calendar.MINUTE, 59)
+        set(Calendar.SECOND, 59)
+        set(Calendar.MILLISECOND, 999)
+    }.timeInMillis
+    return timestamp <= endOfToday
+}
+
 /**
  * Форматирует надпись стартовой даты задачи по правилам:
- * • Сегодня -> "Сегодня" / "Сегодня вечером"
+ * • Сегодня (или просроченная дата старта) -> "Сегодня" / "Сегодня вечером"
  * • Завтра -> "Завтра"
  * • На текущей неделе (позже завтра) -> "Чт, 23 июл."
  * • Позже текущей недели (в текущем году) -> "15 авг."
@@ -54,7 +66,7 @@ fun formatStartDateLabel(
         }
     }
 
-    val isToday = (startDate != null && isTodayDate(startDate)) || (startDate == null && section == com.example.data.model.TaskSection.TODAY)
+    val isToday = (startDate != null && isTodayDateOrPast(startDate)) || (startDate == null && section == com.example.data.model.TaskSection.TODAY)
     if (isToday) {
         val lang = java.util.Locale.getDefault().language
         return if (isTonight) {

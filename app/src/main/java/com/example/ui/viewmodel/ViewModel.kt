@@ -19,6 +19,7 @@ import com.example.domain.usecase.SyncUseCases
 import com.example.domain.usecase.ChecklistUseCases
 import com.example.domain.usecase.QueryUseCases
 import com.example.ui.screens.home.ActiveScreen
+import com.example.ui.screens.home.components.ProjectProgress
 import com.example.ui.screens.home.components.ThingsCategoryListState
 import com.example.ui.screens.home.components.computeUpcomingDays
 import com.example.data.model.toStartVal
@@ -186,6 +187,16 @@ class ThingsViewModel @Inject constructor(
         val eveningToday = displayTasks.filter { it.item.isTonight }
         val upcomingDays = computeUpcomingDays(displayTasks, calEvents)
 
+        val projectProgressMap = taskList
+            .filter { !it.item.projectId.isNullOrEmpty() }
+            .groupBy { it.item.projectId!! }
+            .mapValues { (_, tasks) ->
+                ProjectProgress(
+                    completed = tasks.count { it.item.isCompleted },
+                    total = tasks.size
+                )
+            }
+
         return ThingsCategoryListState(
             screen = screen,
             project = project,
@@ -203,7 +214,8 @@ class ThingsViewModel @Inject constructor(
             areas = areaList,
             projects = projectList,
             highlightedTaskId = highlighted,
-            allTasks = taskList
+            allTasks = taskList,
+            projectProgressMap = projectProgressMap
         )
     }
 

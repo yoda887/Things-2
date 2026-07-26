@@ -33,6 +33,7 @@ import com.example.ui.theme.ThingsUpcomingRed
 import com.example.ui.theme.AppIcons
 import com.example.ui.screens.home.inlineeditor.utils.isPastDate
 import com.example.ui.screens.home.inlineeditor.utils.isTodayDate
+import com.example.ui.screens.home.inlineeditor.utils.isTodayDateOrPast
 import com.example.ui.screens.home.inlineeditor.utils.isSameDay
 import java.text.SimpleDateFormat
 import java.util.*
@@ -96,8 +97,8 @@ fun ThingsWhenDialog(
         }
     }
 
-    val isTodayActive = startDate != null && isTodayDate(startDate) && section == TaskSection.TODAY && !isTonight
-    val isThisEveningActive = startDate != null && isTodayDate(startDate) && section == TaskSection.TODAY && isTonight
+    val isTodayActive = (startDate == null || isTodayDateOrPast(startDate)) && section == TaskSection.TODAY && !isTonight
+    val isThisEveningActive = (startDate == null || isTodayDateOrPast(startDate)) && section == TaskSection.TODAY && isTonight
     val isSomedayActive = startDate == null && section == TaskSection.SOMEDAY
 
     val titleFontSize = MaterialTheme.typography.headlineSmall.fontSize

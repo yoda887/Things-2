@@ -25,6 +25,7 @@ import com.example.ui.theme.ThingsTodayStar
 import com.example.ui.theme.ThingsSomedayGrey
 import com.example.ui.theme.AppIcons
 import com.example.ui.screens.home.inlineeditor.utils.isTodayDate
+import com.example.ui.screens.home.inlineeditor.utils.isTodayDateOrPast
 import java.text.SimpleDateFormat
 import java.util.*
 
@@ -56,7 +57,7 @@ fun InlineEditorToolbar(
             val activeDateLabel = com.example.ui.screens.home.inlineeditor.utils.formatStartDateLabel(startDate, section, isTonight)
 
             val activeDateIcon = when {
-                startDate != null && isTodayDate(startDate) -> {
+                startDate != null && isTodayDateOrPast(startDate) -> {
                     if (isTonight) AppIcons.Evening else AppIcons.Today
                 }
                 startDate == null && section == TaskSection.TODAY -> {
@@ -67,7 +68,7 @@ fun InlineEditorToolbar(
             }
 
             val activeDateColor = when {
-                startDate != null && isTodayDate(startDate) -> {
+                startDate != null && isTodayDateOrPast(startDate) -> {
                     if (isTonight) Color.Unspecified else ThingsTodayStar
                 }
                 startDate == null && section == TaskSection.TODAY -> {

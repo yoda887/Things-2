@@ -392,6 +392,8 @@ fun ThingsCategoryListPanel(
                                 upcomingDays = upcomingDays,
                                 localTasksList = localTasksList,
                                 displayTasks = state.displayTasks,
+                                allTasks = state.allTasks,
+                                projectProgressMap = state.projectProgressMap,
                                 onLocalTasksListChange = { localTasksList = it },
                                 lazyListState = lazyListState,
                                 onWhenDialogVisibilityChange = { isWhenDialogOpen = it },
