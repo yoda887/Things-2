@@ -146,7 +146,7 @@ data class Item(
      */
     @get:Ignore
     val isInbox: Boolean
-        get() = type == 0 && start == 0 && startDate == null && dueDate == null
+        get() = type == 0 && start == 0 && startDate == null && dueDate == null && projectId == null
 
     /**
      * Determines if the task belongs to Today category.
@@ -228,7 +228,7 @@ data class Item(
         get() {
             if (type != 0 || isCompleted) return false
             if (isToday) return false
-            if (start == 0 && startDate == null) return false
+            if (start == 0 && startDate == null && projectId == null) return false
             if (start == 3) return false
 
             val sDate = startDate
@@ -243,7 +243,7 @@ data class Item(
                 if (sDate <= endOfToday) return true
                 return false
             }
-            return start == 2
+            return start == 2 || start == 0 || projectId != null
         }
 
     /**

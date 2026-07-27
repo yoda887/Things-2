@@ -30,8 +30,13 @@ class AddTaskUseCase @Inject constructor(private val repository: ITaskRepository
     ) {
         val itemId = UUID.randomUUID().toString()
         val cleanTags = tags.map { it.trim() }.filter { it.isNotEmpty() }
-        val startValue = section.toStartVal()
-        val computedStartDate = startDate ?: if (section == TaskSection.TODAY) System.currentTimeMillis() else null
+        val effectiveSection = if (projectId != null && section == TaskSection.INBOX) {
+            TaskSection.ANYTIME
+        } else {
+            section
+        }
+        val startValue = effectiveSection.toStartVal()
+        val computedStartDate = startDate ?: if (effectiveSection == TaskSection.TODAY) System.currentTimeMillis() else null
         val item = Item(
             id = itemId,
             type = 0,

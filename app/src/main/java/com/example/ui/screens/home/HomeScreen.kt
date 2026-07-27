@@ -950,6 +950,7 @@ fun ThingsHomeScreen(viewModel: ThingsViewModel = hiltViewModel()) {
             ActiveScreen.UPCOMING -> TaskSection.UPCOMING
             ActiveScreen.ANYTIME -> TaskSection.ANYTIME
             ActiveScreen.SOMEDAY -> TaskSection.SOMEDAY
+            ActiveScreen.PROJECT_DETAIL, ActiveScreen.AREA_DETAIL -> TaskSection.ANYTIME
             else -> TaskSection.INBOX
         }
         val initialProjectId = if (activeScreen == ActiveScreen.PROJECT_DETAIL) selectedProject?.id else null

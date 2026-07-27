@@ -474,10 +474,15 @@ class ThingsViewModel @Inject constructor(
         priority: Int
     ) {
         viewModelScope.launch {
+            val startVal = if (projectId != null && section == TaskSection.INBOX) {
+                TaskSection.ANYTIME.toStartVal()
+            } else {
+                section.toStartVal()
+            }
             val updatedTask = task.copy(
                 title = title.ifBlank { "Untitled To-Do" },
                 notes = notes,
-                start = section.toStartVal(),
+                start = startVal,
                 isTonight = isTonight,
                 startDate = startDate,
                 dueDate = dueDate,
