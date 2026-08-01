@@ -88,6 +88,12 @@ private val TOP_APP_BAR_HEIGHT = 56.dp
 private const val DELETE_ANIMATION_DELAY_MS = 300L
 
 /**
+ * Аккумулятор для отслеживания ручного скролла пользователя (Scroll_B)
+ * без перекомпозиции на каждый кадр.
+ */
+private class FloatAccumulator(var value: Float = 0f)
+
+/**
  * Основная панель отображения списка задач по выбранной категории.
  * Комбинирует поддиалоги, скролл, свайпы и встроенное редактирование.
  */
@@ -204,17 +210,88 @@ fun ThingsCategoryListPanel(
     }
 
     val anyExpanded = inlineExpandedTaskId != null
-    val bottomSpacerHeight by animateDpAsState(
-        targetValue = if (anyExpanded) {
-            configuration.screenHeightDp.dp
-        } else {
-            MaterialTheme.dimens.listBottomSpacerHeight
-        },
-        animationSpec = androidx.compose.animation.core.snap(
-            delayMillis = if (anyExpanded) 0 else com.example.ui.theme.AnimationConstants.TASK_EXPANSION_DURATION_MS.toInt()
-        ),
-        label = "bottomSpacerHeight"
-    )
+
+    // --- Scroll_B: аккумулятор ручного скролла пользователя ---
+    val manualScrollDelta = remember { FloatAccumulator() }
+    val scrollTrackingConnection = remember {
+        object : NestedScrollConnection {
+            override fun onPostScroll(
+                consumed: Offset,
+                available: Offset,
+                source: NestedScrollSource
+            ): Offset {
+                // consumed.y отрицателен при скролле вперёд (палец вверх),
+                // инвертируем, чтобы forward scroll = positive
+                manualScrollDelta.value += -consumed.y
+                return Offset.Zero
+            }
+        }
+    }
+
+    // --- Bottom spacer: управляется вручную для синхронизации с обратным скроллом ---
+    val collapsedSpacerHeightPx = with(density) { MaterialTheme.dimens.listBottomSpacerHeight.toPx() }
+    val expandedSpacerHeightPx = with(density) { configuration.screenHeightDp.dp.toPx() }
+    val verticalGapLimitPx = with(density) { MaterialTheme.dimens.taskExpandedVerticalGap.toPx() }
+
+    var bottomSpacerHeightPx by remember { mutableStateOf(collapsedSpacerHeightPx) }
+    val bottomSpacerHeight = with(density) { bottomSpacerHeightPx.toDp() }
+
+    // Guard: отслеживаем, было ли предыдущее раскрытие, чтобы не скроллить на первой композиции
+    var previousExpandedTaskId by remember { mutableStateOf<String?>(null) }
+
+    LaunchedEffect(inlineExpandedTaskId) {
+        if (inlineExpandedTaskId != null) {
+            // Раскрытие задачи: сбросить аккумулятор, увеличить spacer
+            manualScrollDelta.value = 0f
+            bottomSpacerHeightPx = expandedSpacerHeightPx
+            previousExpandedTaskId = inlineExpandedTaskId
+        } else if (previousExpandedTaskId != null) {
+            // Сворачивание задачи
+            previousExpandedTaskId = null
+            // Scroll_A уже реверсируется AnimatedTaskItem (dispatchRawDelta при collapse),
+            // поэтому здесь реверсируем только Scroll_B (ручной скролл пользователя)
+            val scrollB = manualScrollDelta.value
+
+            val layoutInfo = lazyListState.layoutInfo
+            val lastVisibleItem = layoutInfo.visibleItemsInfo.lastOrNull()
+            val totalItems = layoutInfo.totalItemsCount
+
+            // Обратный скролл нужен, если пользователь скроллил вперёд (scrollB > 0)
+            // И bottom spacer виден (позиция может не выдержать уменьшения spacer'а).
+            // Если bottom spacer не виден — контента достаточно, позиция устойчива.
+            val shouldReverse = scrollB > 0.5f &&
+                    lastVisibleItem != null &&
+                    lastVisibleItem.index >= totalItems - 1
+
+            try {
+                if (shouldReverse) {
+                    // Покадровый обратный скролл scrollB через dispatchRawDelta.
+                    // В отличие от animateScrollBy, dispatchRawDelta не накапливает
+                    // «задолженность» при достижении края списка — unconsumed delta
+                    // просто теряется, что исключает «двойную анимацию».
+                    val durationNs = com.example.ui.theme.AnimationConstants.TASK_EXPANSION_DURATION_MS * 1_000_000L
+                    val startNanos = withFrameNanos { it }
+                    var lastEased = 0f
+                    while (true) {
+                        val now = withFrameNanos { it }
+                        val rawProgress = ((now - startNanos).toFloat() / durationNs).coerceAtMost(1f)
+                        val eased = androidx.compose.animation.core.FastOutSlowInEasing.transform(rawProgress)
+                        val frameDelta = -scrollB * (eased - lastEased)
+                        lazyListState.dispatchRawDelta(frameDelta)
+                        lastEased = eased
+                        if (rawProgress >= 1f) break
+                    }
+                } else {
+                    // Обратный скролл не нужен — ждём завершения анимации сворачивания,
+                    // прежде чем уменьшать spacer (иначе короткий список дёрнется)
+                    delay(com.example.ui.theme.AnimationConstants.TASK_EXPANSION_DURATION_MS)
+                }
+            } finally {
+                bottomSpacerHeightPx = collapsedSpacerHeightPx
+            }
+        }
+    }
+
     val globalDimAlpha by animateFloatAsState(targetValue = if (anyExpanded) 0.3f else 1f, label = "globalDim")
 
     var isTransitionActive by remember { mutableStateOf(false) }
@@ -288,6 +365,7 @@ fun ThingsCategoryListPanel(
             modifier = Modifier
                 .fillMaxSize()
                 .nestedScroll(nestedScrollConnection)
+                .nestedScroll(scrollTrackingConnection)
                 .graphicsLayer { translationY = pullOffset.value }
                 .pointerInput(Unit) {
                     detectTapGestures(onTap = {
