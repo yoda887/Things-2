@@ -94,9 +94,9 @@ fun TaskItemRow(
 
     val animatedTitleScaleX by animateFloatAsState(
         targetValue = titleScaleTarget,
-        animationSpec = androidx.compose.animation.core.spring(
-            dampingRatio = androidx.compose.animation.core.Spring.DampingRatioMediumBouncy,
-            stiffness = androidx.compose.animation.core.Spring.StiffnessMedium
+        animationSpec = androidx.compose.animation.core.tween(
+            durationMillis = if (titleScaleTarget < 1.0f) 70 else 120,
+            easing = if (titleScaleTarget < 1.0f) androidx.compose.animation.core.FastOutSlowInEasing else androidx.compose.animation.core.FastOutLinearInEasing
         ),
         label = "titleScaleX_${task.id}"
     )

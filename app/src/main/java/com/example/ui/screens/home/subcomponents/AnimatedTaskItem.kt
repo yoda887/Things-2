@@ -165,7 +165,7 @@ fun AnimatedTaskItem(
     val cornerRadiusValue = (collapsedRadius.value + (expandedRadius.value - collapsedRadius.value) * expansionProgress).dp
     val currCornerShape = RoundedCornerShape(cornerRadiusValue)
 
-    val extraPaddingDp = 4.dp + (10.dp * expansionProgress)
+    val extraPaddingDp = 14.dp * expansionProgress
 
     val verticalGapPadding = MaterialTheme.dimens.taskExpandedVerticalGap * expansionProgress
 
