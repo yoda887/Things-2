@@ -234,6 +234,7 @@ fun AnimatedTaskItem(
                         onUpdateTag = { tag -> onEvent(ThingsCategoryListEvent.UpdateTag(tag)) },
                         onUpdateTagsOrder = { tags -> onEvent(ThingsCategoryListEvent.UpdateTagsOrder(tags)) },
                         isDeletedExternally = { deletedTaskIds.contains(task.id) },
+                        isExpanded = isExpanded,
                         expansionProgress = expansionProgress,
                         onSave = { title, notes, section, isTonight, startDate, dueDate, tags, projectId, checklist, priority ->
                             onEvent(
@@ -303,7 +304,11 @@ fun AnimatedTaskItem(
                             dividerColor = dividerColor,
                             onToggle = { onEvent(ThingsCategoryListEvent.ToggleTask(taskWrapper)) },
                             onClick = {
-                                onEvent(ThingsCategoryListEvent.ChangeInlineExpandedTaskId(task.id))
+                                if (inlineExpandedTaskId != null) {
+                                    onEvent(ThingsCategoryListEvent.ChangeInlineExpandedTaskId(null))
+                                } else {
+                                    onEvent(ThingsCategoryListEvent.ChangeInlineExpandedTaskId(task.id))
+                                }
                             },
                             projects = projects,
                             areas = areas,
@@ -312,6 +317,7 @@ fun AnimatedTaskItem(
                             dragOffsetY = 0f,
                             dragModifier = Modifier,
                             isHighlighted = task.id == highlightedTaskId,
+                            isDimmed = shouldDim,
                             screen = screen
                         )
                     }

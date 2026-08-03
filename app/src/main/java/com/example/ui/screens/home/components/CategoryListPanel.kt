@@ -479,6 +479,8 @@ fun ThingsCategoryListPanel(
                                     Modifier
                                 } else {
                                     Modifier.animateItem(
+                                        fadeInSpec = androidx.compose.animation.core.tween(300),
+                                        fadeOutSpec = androidx.compose.animation.core.tween(300),
                                         placementSpec = placementSpec
                                     )
                                 }

@@ -80,6 +80,7 @@ fun ThingsTaskInlineEditor(
     onUpdateTag: (Tag) -> Unit = {},
     onUpdateTagsOrder: (List<Tag>) -> Unit = {},
     isDeletedExternally: () -> Boolean = { false },
+    isExpanded: Boolean = true,
     expansionProgress: Float = 1f,
     onWhenDialogVisibilityChange: (Boolean) -> Unit = {},
     areas: List<com.example.data.model.Area> = emptyList(),
@@ -136,6 +137,32 @@ fun ThingsTaskInlineEditor(
 
     LaunchedEffect(task.checklist) {
         checklist = task.checklist
+    }
+
+    // Save changes immediately when collapse animation starts so ViewModel & TaskItemRow have updated title before collapse finishes
+    LaunchedEffect(isExpanded) {
+        if (!isExpanded && !isDeleted && !isDeletedExternally() && !isSavedManually) {
+            isSavedManually = true
+            if (title.isBlank() && notes.isBlank() && checklist.isEmpty()) {
+                onDelete?.invoke()
+            } else {
+                val tagList = tagInput.split(",")
+                    .map { it.trim() }
+                    .filter { it.isNotEmpty() }
+                onSave(
+                    title,
+                    notes,
+                    section,
+                    isTonight,
+                    startDate,
+                    dueDate,
+                    tagList,
+                    task.item.projectId,
+                    checklist,
+                    priority
+                )
+            }
+        }
     }
 
     // Save changes automatically when focus is cleared or editor is disposed (e.g., clicking outside)
