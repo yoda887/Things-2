@@ -431,7 +431,8 @@ fun ThingsCategoryListPanel(
                     CalendarEventsWidget(
                         events = todayCalendarEvents,
                         textSecondaryColor = textSecondaryColor,
-                        isDark = false
+                        isDark = false,
+                        modifier = Modifier.graphicsLayer { alpha = globalDimAlpha }
                     )
                     Spacer(modifier = Modifier.height(MaterialTheme.dimens.calendarBetweenSectionSpacing))
                 }
@@ -445,7 +446,8 @@ fun ThingsCategoryListPanel(
                         selectedTag = selectedTag,
                         textSecondaryColor = textSecondaryColor,
                         dividerColor = dividerColor,
-                        onTagSelect = { onEvent(ThingsCategoryListEvent.SelectTag(it)) }
+                        onTagSelect = { onEvent(ThingsCategoryListEvent.SelectTag(it)) },
+                        modifier = Modifier.graphicsLayer { alpha = globalDimAlpha }
                     )
                     Spacer(modifier = Modifier.height(MaterialTheme.dimens.tagsBetweenSectionSpacing))
                 }
