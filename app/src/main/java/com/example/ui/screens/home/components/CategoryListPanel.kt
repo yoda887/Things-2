@@ -129,7 +129,41 @@ fun ThingsCategoryListPanel(
     // Используем новое универсальное состояние жестов перетаскивания вместо старого TaskDragDropState
     val dragDropState = rememberGenericDragDropState(lazyListState)
     
-    var localTasksList by remember(state.displayTasks) { mutableStateOf(state.displayTasks) }
+    var localTasksList by remember { mutableStateOf(state.displayTasks) }
+    val currentDisplayTasks by rememberUpdatedState(state.displayTasks)
+    // Флаг: идёт ли анимация сворачивания редактора (300 мс)
+    var isEditorCollapsing by remember { mutableStateOf(false) }
+    // Предыдущий ID развёрнутой задачи для обнаружения момента сворачивания
+    var previousExpandedId by remember { mutableStateOf(inlineExpandedTaskId) }
+
+    // Обнаружение момента сворачивания редактора и задержка удаления задачи из списка
+    LaunchedEffect(inlineExpandedTaskId) {
+        val wasExpanded = previousExpandedId != null
+        previousExpandedId = inlineExpandedTaskId
+        if (wasExpanded && inlineExpandedTaskId == null) {
+            // Редактор только что начал сворачиваться — блокируем удаление задач из списка на 300 мс
+            isEditorCollapsing = true
+            delay(com.example.ui.theme.AnimationConstants.TASK_EXPANSION_DURATION_MS)
+            isEditorCollapsing = false
+            // После завершения анимации — полная синхронизация списка с ViewModel
+            localTasksList = currentDisplayTasks
+        } else {
+            isEditorCollapsing = false
+        }
+    }
+
+    // Синхронизация localTasksList с displayTasks из ViewModel
+    LaunchedEffect(state.displayTasks) {
+        if (isEditorCollapsing) {
+            // Во время сворачивания: обновляем ДАННЫЕ задач (новый заголовок и т.д.),
+            // но НЕ УДАЛЯЕМ задачи из списка (чтобы анимация сворачивания не прерывалась)
+            localTasksList = localTasksList.map { localTask ->
+                currentDisplayTasks.find { it.item.id == localTask.item.id } ?: localTask
+            }
+        } else {
+            localTasksList = state.displayTasks
+        }
+    }
 
     val focusManager = LocalFocusManager.current
 

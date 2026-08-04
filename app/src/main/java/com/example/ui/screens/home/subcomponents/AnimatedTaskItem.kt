@@ -241,6 +241,7 @@ fun AnimatedTaskItem(
                         isExpanded = isExpanded,
                         expansionProgress = expansionProgress,
                         onSave = { title, notes, section, isTonight, startDate, dueDate, tags, projectId, checklist, priority ->
+                            // 1. Обновляем данные задачи сразу (заголовок обновляется мгновенно)
                             onEvent(
                                 ThingsCategoryListEvent.SaveTask(
                                     taskWrapper = taskWrapper,
@@ -256,6 +257,7 @@ fun AnimatedTaskItem(
                                     checklist = checklist
                                 )
                             )
+                            // 2. Сворачиваем редактор (CategoryListPanel удержит задачу в списке 300 мс)
                             onEvent(ThingsCategoryListEvent.ChangeInlineExpandedTaskId(null))
                         },
                         onDelete = {

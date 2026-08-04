@@ -162,7 +162,7 @@ fun TaskItemRow(
             .background(rowBgColor, RoundedCornerShape(8.dp))
             .clip(RoundedCornerShape(8.dp))
             .drawBehind {
-                if (completionFillProgress > 0f) {
+                if (localCompleted && completionFillProgress > 0f) {
                     val centerX = leftColumnWidth.toPx() / 2f
                     val centerY = size.height / 2f
                     val maxRadius = kotlin.math.hypot(size.width - centerX, centerY)
