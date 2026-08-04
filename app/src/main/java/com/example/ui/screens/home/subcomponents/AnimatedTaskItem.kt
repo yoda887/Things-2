@@ -241,24 +241,69 @@ fun AnimatedTaskItem(
                         isExpanded = isExpanded,
                         expansionProgress = expansionProgress,
                         onSave = { title, notes, section, isTonight, startDate, dueDate, tags, projectId, checklist, priority ->
-                            // 1. Обновляем данные задачи сразу (заголовок обновляется мгновенно)
-                            onEvent(
-                                ThingsCategoryListEvent.SaveTask(
-                                    taskWrapper = taskWrapper,
-                                    title = title,
-                                    notes = notes,
-                                    section = section,
-                                    isTonight = isTonight,
-                                    startDate = startDate,
-                                    dueDate = dueDate,
-                                    tags = tags,
-                                    projectId = projectId,
-                                    priority = priority,
-                                    checklist = checklist
+                            val hasPositionChange = (projectId != task.projectId) ||
+                                    (isTonight != task.isTonight) ||
+                                    (startDate != task.startDate) ||
+                                    (dueDate != task.dueDate) ||
+                                    (section != task.section)
+
+                            if (hasPositionChange) {
+                                // 1. Мгновенно обновляем заголовок и содержимое, сохранив прежнюю категорию/дату/проект
+                                onEvent(
+                                    ThingsCategoryListEvent.SaveTask(
+                                        taskWrapper = taskWrapper,
+                                        title = title,
+                                        notes = notes,
+                                        section = task.section,
+                                        isTonight = task.isTonight,
+                                        startDate = task.startDate,
+                                        dueDate = task.dueDate,
+                                        tags = tags,
+                                        projectId = task.projectId,
+                                        priority = priority,
+                                        checklist = checklist
+                                    )
                                 )
-                            )
-                            // 2. Сворачиваем редактор (CategoryListPanel удержит задачу в списке 300 мс)
-                            onEvent(ThingsCategoryListEvent.ChangeInlineExpandedTaskId(null))
+                                // 2. Сворачиваем редактор (300 мс)
+                                onEvent(ThingsCategoryListEvent.ChangeInlineExpandedTaskId(null))
+                                // 3. Применяем смену даты/проекта/секции только после завершения анимации сворачивания
+                                coroutineScope.launch {
+                                    delay(com.example.ui.theme.AnimationConstants.TASK_EXPANSION_DURATION_MS)
+                                    onEvent(
+                                        ThingsCategoryListEvent.SaveTask(
+                                            taskWrapper = taskWrapper,
+                                            title = title,
+                                            notes = notes,
+                                            section = section,
+                                            isTonight = isTonight,
+                                            startDate = startDate,
+                                            dueDate = dueDate,
+                                            tags = tags,
+                                            projectId = projectId,
+                                            priority = priority,
+                                            checklist = checklist
+                                        )
+                                    )
+                                }
+                            } else {
+                                // Если изменился только заголовок/текстовые поля — обновляем всё мгновенно
+                                onEvent(
+                                    ThingsCategoryListEvent.SaveTask(
+                                        taskWrapper = taskWrapper,
+                                        title = title,
+                                        notes = notes,
+                                        section = section,
+                                        isTonight = isTonight,
+                                        startDate = startDate,
+                                        dueDate = dueDate,
+                                        tags = tags,
+                                        projectId = projectId,
+                                        priority = priority,
+                                        checklist = checklist
+                                    )
+                                )
+                                onEvent(ThingsCategoryListEvent.ChangeInlineExpandedTaskId(null))
+                            }
                         },
                         onDelete = {
                             onEvent(ThingsCategoryListEvent.ChangeInlineExpandedTaskId(null))
