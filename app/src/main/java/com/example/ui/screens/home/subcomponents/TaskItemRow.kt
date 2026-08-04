@@ -62,6 +62,7 @@ fun TaskItemRow(
     dragModifier: Modifier = Modifier,
     isHighlighted: Boolean = false,
     isDimmed: Boolean = false,
+    isBeingDeleted: Boolean = false,
     leftColumnWidth: androidx.compose.ui.unit.Dp = androidx.compose.material3.MaterialTheme.dimens.taskLeftColumnWidthDefault,
     spacingToText: androidx.compose.ui.unit.Dp = androidx.compose.material3.MaterialTheme.dimens.taskSpacingToTextDefault,
     screen: ActiveScreen = ActiveScreen.INBOX,
@@ -75,8 +76,17 @@ fun TaskItemRow(
     var localCompleted by remember(task.isCompleted) { mutableStateOf(task.isCompleted) }
     var completionJob by remember { mutableStateOf<kotlinx.coroutines.Job?>(null) }
 
+    var localDeleted by remember { mutableStateOf(false) }
+    LaunchedEffect(isBeingDeleted) {
+        if (isBeingDeleted) {
+            localDeleted = true
+        }
+    }
+
+    val isMarkedDoneOrDeleted = localCompleted || localDeleted
+
     val completionFillProgress by androidx.compose.animation.core.animateFloatAsState(
-        targetValue = if (localCompleted) 1f else 0f,
+        targetValue = if (isMarkedDoneOrDeleted) 1f else 0f,
         animationSpec = androidx.compose.animation.core.tween(
             durationMillis = 350,
             easing = androidx.compose.animation.core.FastOutSlowInEasing
@@ -85,7 +95,7 @@ fun TaskItemRow(
     )
 
     val animatedTitleColor by androidx.compose.animation.animateColorAsState(
-        targetValue = if (localCompleted) textSecondaryColor else textPrimaryColor,
+        targetValue = if (isMarkedDoneOrDeleted) textSecondaryColor else textPrimaryColor,
         animationSpec = androidx.compose.animation.core.tween(durationMillis = 300),
         label = "titleColor_${task.id}"
     )

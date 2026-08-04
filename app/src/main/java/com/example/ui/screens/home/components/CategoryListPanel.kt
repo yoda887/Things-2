@@ -623,11 +623,16 @@ fun ThingsCategoryListPanel(
         DeleteConfirmDialog(
             onDismissRequest = { showDeleteConfirm = false },
             onConfirmDelete = {
-                deletedTaskIds.add(activeTask.item.id)
                 onEvent(ThingsCategoryListEvent.ChangeInlineExpandedTaskId(null))
                 showDeleteConfirm = false
                 coroutineScope.launch {
-                    delay(DELETE_ANIMATION_DELAY_MS)
+                    // 1. Сначала сворачиваем открытый редактор в обычную белую строку (300 мс)
+                    delay(com.example.ui.theme.AnimationConstants.TASK_EXPANSION_DURATION_MS)
+                    // 2. Включаем серое закрашивание серым кругом от чекбокса и серость текста
+                    deletedTaskIds.add(activeTask.item.id)
+                    // 3. Ждём 500 мс (стандартный таймер выполнения чекбокса)
+                    delay(500L)
+                    // 4. Удаляем из ViewModel -> animateItem растворяет карточку и сдвигает список
                     onEvent(ThingsCategoryListEvent.DeleteTask(activeTask))
                 }
             }

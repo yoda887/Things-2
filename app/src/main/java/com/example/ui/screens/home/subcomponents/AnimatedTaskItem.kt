@@ -137,6 +137,10 @@ fun AnimatedTaskItem(
         prevPaddingPx = currentPaddingPx
     }
 
+    val isBeingDeleted by remember(task.id) {
+        derivedStateOf { deletedTaskIds.contains(task.id) }
+    }
+
     val dimAlpha by animateFloatAsState(
         targetValue = if (shouldDim) 0.3f else 1f,
         label = "dimAlpha_${task.id}"
@@ -255,10 +259,15 @@ fun AnimatedTaskItem(
                             onEvent(ThingsCategoryListEvent.ChangeInlineExpandedTaskId(null))
                         },
                         onDelete = {
-                            onDeletedTaskIdAdd(task.id)
                             onEvent(ThingsCategoryListEvent.ChangeInlineExpandedTaskId(null))
                             coroutineScope.launch {
-                                delay(DELETE_ANIMATION_DELAY_MS)
+                                // 1. Сначала сворачиваем открытый редактор в обычную белую строку (300 мс)
+                                delay(com.example.ui.theme.AnimationConstants.TASK_EXPANSION_DURATION_MS)
+                                // 2. Включаем серое закрашивание серым кругом от чекбокса и серость текста (как при чекбоксе)
+                                onDeletedTaskIdAdd(task.id)
+                                // 3. Ждём 500 мс (стандартный таймер выполнения чекбокса)
+                                delay(500L)
+                                // 4. Удаляем задачу из ViewModel -> animateItem растворяет серую карточку и подтягивает задачи
                                 onEvent(ThingsCategoryListEvent.DeleteTask(taskWrapper))
                             }
                         },
@@ -318,6 +327,7 @@ fun AnimatedTaskItem(
                             dragModifier = Modifier,
                             isHighlighted = task.id == highlightedTaskId,
                             isDimmed = shouldDim,
+                            isBeingDeleted = isBeingDeleted,
                             screen = screen
                         )
                     }
