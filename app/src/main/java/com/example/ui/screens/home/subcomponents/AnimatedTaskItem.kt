@@ -248,25 +248,10 @@ fun AnimatedTaskItem(
                                     (section != task.section)
 
                             if (hasPositionChange) {
-                                // 1. Мгновенно обновляем заголовок и содержимое, сохранив прежнюю категорию/дату/проект
-                                onEvent(
-                                    ThingsCategoryListEvent.SaveTask(
-                                        taskWrapper = taskWrapper,
-                                        title = title,
-                                        notes = notes,
-                                        section = task.section,
-                                        isTonight = task.isTonight,
-                                        startDate = task.startDate,
-                                        dueDate = task.dueDate,
-                                        tags = tags,
-                                        projectId = task.projectId,
-                                        priority = priority,
-                                        checklist = checklist
-                                    )
-                                )
-                                // 2. Сворачиваем редактор (300 мс)
+                                // 1. Начинаем плавное сворачивание редактора (300 мс).
+                                // Редактор в процессе сворачивания продолжает отображать НОВЫЙ заголовок и НОВУЮ дату.
                                 onEvent(ThingsCategoryListEvent.ChangeInlineExpandedTaskId(null))
-                                // 3. Применяем смену даты/проекта/секции только после завершения анимации сворачивания
+                                // 2. Применяем новые свойства во ViewModel ровно через 300 мс (после полного сворачивания редактора)
                                 coroutineScope.launch {
                                     delay(com.example.ui.theme.AnimationConstants.TASK_EXPANSION_DURATION_MS)
                                     onEvent(
@@ -286,7 +271,7 @@ fun AnimatedTaskItem(
                                     )
                                 }
                             } else {
-                                // Если изменился только заголовок/текстовые поля — обновляем всё мгновенно
+                                // Если свойства позиции не менялись — обновляем всё мгновенно
                                 onEvent(
                                     ThingsCategoryListEvent.SaveTask(
                                         taskWrapper = taskWrapper,
