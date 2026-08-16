@@ -85,7 +85,8 @@ fun ThingsTaskInlineEditor(
     onWhenDialogVisibilityChange: (Boolean) -> Unit = {},
     areas: List<com.example.data.model.Area> = emptyList(),
     onNavigateToProject: ((Item) -> Unit)? = null,
-    onNavigateToArea: ((com.example.data.model.Area) -> Unit)? = null
+    onNavigateToArea: ((com.example.data.model.Area) -> Unit)? = null,
+    screen: com.example.ui.screens.home.ActiveScreen = com.example.ui.screens.home.ActiveScreen.INBOX
 ) {
     var title by remember(task.item.id) { mutableStateOf<String>(task.item.title) }
     var notes by remember(task.item.id) { mutableStateOf<String>(task.item.notes) }
@@ -199,18 +200,24 @@ fun ThingsTaskInlineEditor(
     Card(
         modifier = Modifier
             .fillMaxWidth()
-            .testTag("task_inline_editor"),
+            .testTag("task_inline_editor")
+            .clip(RoundedCornerShape(8.dp))
+            .layout { measurable, constraints ->
+                val placeable = measurable.measure(constraints)
+                val fullHeight = placeable.height
+                val collapsedHeight = 46.dp.roundToPx()
+                val targetHeight = (collapsedHeight + (fullHeight - collapsedHeight) * expansionProgress).toInt()
+                layout(placeable.width, targetHeight) {
+                    placeable.place(0, 0)
+                }
+            },
         shape = RoundedCornerShape(8.dp),
         colors = CardDefaults.cardColors(containerColor = Color.Transparent),
         elevation = CardDefaults.cardElevation(defaultElevation = 0.dp)
     ) {
-        // Динамические отступы для бесшовного перехода из состояния элемента списка:
-        // Слева: от 8dp (равно отступу в списке) до 16dp во весь экран
+        // Динамический startPadding и компенсирующий endPadding для постоянной ширины текста
         val startPadding = (8 + 4 * expansionProgress).dp
-        // Справа: от 4dp (равно отступу в списке) до 16dp во весь экран
-        val endPadding = (4 + 12 * expansionProgress).dp
-        // Сверху и снизу: по 13dp на старте (при высоте 46dp и чекбоксе 16dp центрирование
-        // дает ровно 15dp свободного места до чекбокса с учетом его собственного top padding = 2dp)
+        val endPadding = (4 + 24 * expansionProgress).dp
         val collapsedTopPadding = MaterialTheme.dimens.taskCollapsedTopPadding
         val expandedTopPadding = MaterialTheme.dimens.taskExpandedTopPadding
         val collapsedBottomPadding = MaterialTheme.dimens.taskCollapsedBottomPadding
@@ -218,6 +225,18 @@ fun ThingsTaskInlineEditor(
 
         val topPadding = (collapsedTopPadding.value + (expandedTopPadding.value - collapsedTopPadding.value) * expansionProgress).dp
         val bottomPadding = (collapsedBottomPadding.value + (expandedBottomPadding.value - collapsedBottomPadding.value) * expansionProgress).dp
+
+        val currentProject = remember(task.item.projectId, projects) {
+            projects.firstOrNull { it.id == task.item.projectId }
+        }
+        val currentArea = remember(task.item.areaId, areas) {
+            areas.firstOrNull { it.id == task.item.areaId }
+        }
+        val subtitleText = when {
+            currentProject != null && screen != com.example.ui.screens.home.ActiveScreen.PROJECT_DETAIL -> currentProject.name
+            currentProject == null && currentArea != null && screen != com.example.ui.screens.home.ActiveScreen.AREA_DETAIL -> currentArea.title
+            else -> null
+        }
 
         Column(
             modifier = Modifier
@@ -237,6 +256,7 @@ fun ThingsTaskInlineEditor(
                     onNotesChange = { notes = it },
                     isCompleted = task.item.isCompleted,
                     expansionProgress = expansionProgress,
+                    subtitleText = subtitleText,
                     onCheckboxClick = {
                         isSavedManually = true
                         if (title.isBlank() && notes.isBlank() && checklist.isEmpty()) {
@@ -260,19 +280,12 @@ fun ThingsTaskInlineEditor(
                     }
                 )
 
-                // Smoothly collapse and fade out all secondary items (checklist, dates, tags, buttons) below title row
+                // Smoothly fade in all secondary items (checklist, dates, tags, buttons) below title row
                 Column(
                     modifier = Modifier
                         .fillMaxWidth()
                         .graphicsLayer {
                             alpha = expansionProgress
-                        }
-                        .layout { measurable, constraints ->
-                            val placeable = measurable.measure(constraints)
-                            val calculatedHeight = (placeable.height * expansionProgress).toInt()
-                            layout(placeable.width, calculatedHeight) {
-                                placeable.place(0, 0)
-                            }
                         }
                 ) {
                     // Checklist Items Panel

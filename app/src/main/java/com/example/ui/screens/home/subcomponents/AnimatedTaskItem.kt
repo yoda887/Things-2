@@ -240,6 +240,7 @@ fun AnimatedTaskItem(
                         isDeletedExternally = { deletedTaskIds.contains(task.id) },
                         isExpanded = isExpanded,
                         expansionProgress = expansionProgress,
+                        screen = screen,
                         onSave = { title, notes, section, isTonight, startDate, dueDate, tags, projectId, checklist, priority ->
                             val hasPositionChange = (projectId != task.projectId) ||
                                     (isTonight != task.isTonight) ||

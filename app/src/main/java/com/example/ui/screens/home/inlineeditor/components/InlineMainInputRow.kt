@@ -37,7 +37,8 @@ fun InlineMainInputRow(
     onNotesChange: (String) -> Unit,
     isCompleted: Boolean,
     onCheckboxClick: () -> Unit,
-    expansionProgress: Float = 1f
+    expansionProgress: Float = 1f,
+    subtitleText: String? = null
 ) {
     val textPrimaryColor = Color(0xFF1C1C1E) // blackish font
     val textSecondaryColor = com.example.ui.theme.ThingsTextNotesLight
@@ -45,6 +46,7 @@ fun InlineMainInputRow(
     // Размер шрифта в заголовке статически равен MaterialTheme.typography.titleMedium.fontSize
     val titleFontSize = MaterialTheme.typography.titleMedium.fontSize
     val notesFontSize = MaterialTheme.typography.taskEditorNotes.fontSize
+    val subFontSize = MaterialTheme.typography.bodySmall.fontSize
 
     val titleSpacing = 8.dp
 
@@ -65,46 +67,75 @@ fun InlineMainInputRow(
         Column(
             modifier = Modifier.weight(1f)
         ) {
-            BasicTextField(
-                value = title,
-                onValueChange = onTitleChange,
-                textStyle = TextStyle(
-                    fontSize = titleFontSize,
-                    fontWeight = FontWeight.Normal,
-                    color = textPrimaryColor
-                ),
-                cursorBrush = SolidColor(ThingsBlue),
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .testTag("task_title_input"),
-                decorationBox = { innerTextField ->
-                    if (title.isEmpty()) {
-                        Text(
-                            "New To-Do",
-                            style = TextStyle(
-                                fontSize = titleFontSize,
-                                fontWeight = FontWeight.Normal,
-                                color = textSecondaryColor.copy(alpha = 0.5f)
+            TitleSubtitleLayout(
+                hasSubtitle = !subtitleText.isNullOrBlank(),
+                expansionProgress = expansionProgress,
+                modifier = Modifier.fillMaxWidth()
+            ) {
+                BasicTextField(
+                    value = title,
+                    onValueChange = onTitleChange,
+                    textStyle = TextStyle(
+                        fontSize = titleFontSize,
+                        fontWeight = FontWeight.Normal,
+                        color = textPrimaryColor
+                    ),
+                    cursorBrush = SolidColor(ThingsBlue),
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .testTag("task_title_input"),
+                    decorationBox = { innerTextField ->
+                        if (title.isEmpty()) {
+                            Text(
+                                "New To-Do",
+                                style = TextStyle(
+                                    fontSize = titleFontSize,
+                                    fontWeight = FontWeight.Normal,
+                                    color = textSecondaryColor.copy(alpha = 0.5f)
+                                )
                             )
-                        )
+                        }
+                        innerTextField()
                     }
-                    innerTextField()
-                }
-            )
+                )
 
-            // Smoothly collapse height and fade out the notes section during closing animation
+                if (!subtitleText.isNullOrBlank()) {
+                    Text(
+                        text = subtitleText,
+                        style = TextStyle(
+                            fontSize = subFontSize,
+                            color = textSecondaryColor.copy(alpha = 0.85f),
+                            fontWeight = FontWeight.Normal
+                        ),
+                        maxLines = 1,
+                        overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis,
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .graphicsLayer {
+                                alpha = (1f - expansionProgress).coerceIn(0f, 1f)
+                            }
+                            .background(Color.White)
+                    )
+                }
+
+                // Dummy text to measure exactly one line height for the title
+                Text(
+                    text = "A",
+                    style = TextStyle(
+                        fontSize = titleFontSize,
+                        fontWeight = FontWeight.Normal,
+                        color = textPrimaryColor
+                    ),
+                    maxLines = 1
+                )
+            }
+
+            // Smoothly fade out the notes section during closing animation
             Column(
                 modifier = Modifier
                     .fillMaxWidth()
                     .graphicsLayer {
                         alpha = expansionProgress
-                    }
-                    .layout { measurable, constraints ->
-                        val placeable = measurable.measure(constraints)
-                        val calculatedHeight = (placeable.height * expansionProgress).toInt()
-                        layout(placeable.width, calculatedHeight) {
-                            placeable.place(0, 0)
-                        }
                     }
             ) {
                 Spacer(modifier = Modifier.height(MaterialTheme.dimens.taskExpandedTitleNotesGap))
@@ -138,6 +169,64 @@ fun InlineMainInputRow(
                     }
                 )
             }
+        }
+    }
+}
+
+@Composable
+fun TitleSubtitleLayout(
+    hasSubtitle: Boolean,
+    expansionProgress: Float,
+    modifier: Modifier = Modifier,
+    content: @Composable () -> Unit
+) {
+    androidx.compose.ui.layout.Layout(
+        content = content,
+        modifier = modifier
+    ) { measurables, constraints ->
+        val titlePlaceable = measurables[0].measure(constraints)
+        val subtitlePlaceable = if (hasSubtitle && measurables.size > 1) {
+            measurables[1].measure(constraints)
+        } else null
+        
+        val dummyIndex = if (hasSubtitle) 2 else 1
+        val dummyPlaceable = if (measurables.size > dummyIndex) {
+            measurables[dummyIndex].measure(constraints)
+        } else null
+
+        val titleHeight = titlePlaceable.height
+        val subtitleHeight = subtitlePlaceable?.height ?: 0
+        
+        val titleSingleHeight = dummyPlaceable?.height ?: titleHeight
+
+        val simulatedFullHeight = titleSingleHeight + subtitleHeight
+        
+        // --- Calculate Y offsets ---
+        // At progress = 0, we want the content (simulatedFullHeight) to be vertically centered in 46.dp.
+        // The Layout itself is placed at topPadding (13.dp) inside the Card.
+        val cardHeightPx = 46.dp.roundToPx()
+        val topPaddingPx = 13.dp.roundToPx()
+        
+        // Absolute Y position in the Card where the content should start:
+        val targetAbsoluteY = (cardHeightPx - simulatedFullHeight) / 2
+        
+        // Since Layout is at topPaddingPx, the offset relative to Layout is:
+        val startOffset = targetAbsoluteY - topPaddingPx
+        
+        // Current offset interpolates to 0 at progress = 1
+        val currentOffset = (startOffset * (1f - expansionProgress)).toInt()
+
+        val width = maxOf(titlePlaceable.width, subtitlePlaceable?.width ?: 0)
+
+        // Reported height is simply titleHeight, since the card container smoothly animates its overall height
+        layout(width, titleHeight) {
+            titlePlaceable.place(0, currentOffset)
+            
+            // Subtitle starts below title's first line, and as progress goes to 1, it moves UP (overlaps title)
+            val subtitleStartY = startOffset + titleSingleHeight
+            val subtitleCurrentY = (subtitleStartY * (1f - expansionProgress)).toInt()
+            
+            subtitlePlaceable?.place(0, subtitleCurrentY)
         }
     }
 }
