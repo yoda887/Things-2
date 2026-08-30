@@ -1,14 +1,17 @@
 package com.example.ui.screens.home.inlineeditor.dialogs
 
+import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.ChevronLeft
 import androidx.compose.material.icons.filled.ChevronRight
+import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.Star
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
@@ -64,19 +67,19 @@ fun ThingsWhenDialog(
     var calendarWeekOffset by remember { mutableStateOf(0) }
 
     LaunchedEffect(Unit) {
-        val todayStartSunday = Calendar.getInstance().apply {
-            firstDayOfWeek = Calendar.SUNDAY
-            set(Calendar.DAY_OF_WEEK, Calendar.SUNDAY)
+        val todayStartMonday = Calendar.getInstance().apply {
+            firstDayOfWeek = Calendar.MONDAY
+            set(Calendar.DAY_OF_WEEK, Calendar.MONDAY)
             set(Calendar.HOUR_OF_DAY, 0)
             set(Calendar.MINUTE, 0)
             set(Calendar.SECOND, 0)
             set(Calendar.MILLISECOND, 0)
         }
         if (startDate != null && section == TaskSection.UPCOMING) {
-            val targetStartSunday = Calendar.getInstance().apply {
-                firstDayOfWeek = Calendar.SUNDAY
+            val targetStartMonday = Calendar.getInstance().apply {
+                firstDayOfWeek = Calendar.MONDAY
                 timeInMillis = startDate
-                set(Calendar.DAY_OF_WEEK, Calendar.SUNDAY)
+                set(Calendar.DAY_OF_WEEK, Calendar.MONDAY)
                 set(Calendar.HOUR_OF_DAY, 0)
                 set(Calendar.MINUTE, 0)
                 set(Calendar.SECOND, 0)
@@ -84,9 +87,9 @@ fun ThingsWhenDialog(
             }
             
             var diffWeeks = 0
-            val tempCal = todayStartSunday.clone() as Calendar
-            if (tempCal.before(targetStartSunday)) {
-                while (tempCal.before(targetStartSunday)) {
+            val tempCal = todayStartMonday.clone() as Calendar
+            if (tempCal.before(targetStartMonday)) {
+                while (tempCal.before(targetStartMonday)) {
                     tempCal.add(Calendar.WEEK_OF_YEAR, 1)
                     diffWeeks++
                 }
@@ -100,10 +103,6 @@ fun ThingsWhenDialog(
     val isTodayActive = (startDate == null || isTodayDateOrPast(startDate)) && section == TaskSection.TODAY && !isTonight
     val isThisEveningActive = (startDate == null || isTodayDateOrPast(startDate)) && section == TaskSection.TODAY && isTonight
     val isSomedayActive = startDate == null && section == TaskSection.SOMEDAY
-
-    val titleFontSize = MaterialTheme.typography.headlineSmall.fontSize
-    val notesFontSize = MaterialTheme.typography.titleSmall.fontSize
-    val smallFontSize = MaterialTheme.typography.labelMedium.fontSize
 
     var isVisible by remember { mutableStateOf(false) }
     LaunchedEffect(Unit) {
@@ -131,7 +130,7 @@ fun ThingsWhenDialog(
         properties = DialogProperties(usePlatformDefaultWidth = false)
     ) {
         Card(
-            shape = RoundedCornerShape(16.dp),
+            shape = RoundedCornerShape(26.dp),
             colors = CardDefaults.cardColors(
                 containerColor = Color(0xFF22242C)
             ),
@@ -141,40 +140,54 @@ fun ThingsWhenDialog(
                     scaleY = scale,
                     alpha = alpha
                 )
-                .width(320.dp)
+                .width(336.dp)
                 .wrapContentHeight()
         ) {
             Column(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .padding(16.dp),
-                verticalArrangement = Arrangement.spacedBy(16.dp)
+                    .padding(horizontal = 20.dp, vertical = 18.dp),
+                verticalArrangement = Arrangement.spacedBy(18.dp)
             ) {
-                // Top bar: "When?" and "Cancel"
-                Box(
+                // Top bar: "When?" and Close "✕" Button
+                Row(
                     modifier = Modifier.fillMaxWidth(),
-                    contentAlignment = Alignment.Center
+                    verticalAlignment = Alignment.CenterVertically
                 ) {
-                    Text(
-                        text = "When?",
-                        style = TextStyle(
-                            color = Color.White,
-                            fontSize = titleFontSize,
-                            fontWeight = FontWeight.Bold
-                        ),
-                        modifier = Modifier.align(Alignment.Center)
-                    )
-                    Text(
-                        text = "Cancel",
-                        style = TextStyle(
-                            color = Color(0xFF8E8E93),
-                            fontSize = notesFontSize,
-                            fontWeight = FontWeight.Normal
-                        ),
-                        modifier = Modifier
-                            .align(Alignment.CenterEnd)
-                            .clickable { onDismissRequest() }
-                    )
+                    Box(modifier = Modifier.weight(1f))
+                    Box(
+                        modifier = Modifier.weight(5f),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Text(
+                            text = "When?",
+                            style = TextStyle(
+                                color = Color.White,
+                                fontSize = 20.sp,
+                                fontWeight = FontWeight.Bold
+                            )
+                        )
+                    }
+                    Box(
+                        modifier = Modifier.weight(1f),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Box(
+                            modifier = Modifier
+                                .size(36.dp)
+                                .clip(CircleShape)
+                                .background(Color(0xFF33353E))
+                                .clickable { onDismissRequest() },
+                            contentAlignment = Alignment.Center
+                        ) {
+                            Icon(
+                                imageVector = Icons.Default.Close,
+                                contentDescription = "Close",
+                                tint = Color.White,
+                                modifier = Modifier.size(18.dp)
+                            )
+                        }
+                    }
                 }
 
                 // 1. Today Option
@@ -183,40 +196,41 @@ fun ThingsWhenDialog(
                         .fillMaxWidth()
                         .clip(RoundedCornerShape(8.dp))
                         .clickable {
-                            // [ИЗМЕНЕНИЕ]: Нажатие назначает дату "Today" без сброса в "Anytime". Сброс даты теперь производится через кнопку "Clear".
                             onStartDateChange(System.currentTimeMillis())
                             onSectionChange(TaskSection.TODAY)
                             onIsTonightChange(false)
                             onShowCalendarHelperChange(true)
                             onDismissRequest()
                         }
-                        .padding(vertical = 8.dp),
+                        .padding(vertical = 2.dp),
                     verticalAlignment = Alignment.CenterVertically
                 ) {
-                    Icon(
-                        imageVector = AppIcons.Today,
-                        contentDescription = "Today",
-                        tint = Color.Unspecified,
-                        modifier = Modifier
-                            .padding(end = 12.dp)
-                            .size(24.dp)
-                    )
+                    Box(modifier = Modifier.weight(1f), contentAlignment = Alignment.Center) {
+                        Icon(
+                            imageVector = AppIcons.Today,
+                            contentDescription = "Today",
+                            tint = Color.Unspecified,
+                            modifier = Modifier.size(18.dp)
+                        )
+                    }
                     Text(
                         text = "Today",
                         style = TextStyle(
                             color = Color.White,
-                            fontSize = MaterialTheme.typography.titleLarge.fontSize,
+                            fontSize = 17.sp,
                             fontWeight = FontWeight.Medium
                         ),
-                        modifier = Modifier.weight(1f)
+                        modifier = Modifier.weight(5f)
                     )
-                    if (isTodayActive) {
-                        Icon(
-                            imageVector = Icons.Default.Check,
-                            contentDescription = "Active Today",
-                            tint = ThingsBlue,
-                            modifier = Modifier.size(18.dp)
-                        )
+                    Box(modifier = Modifier.weight(1f), contentAlignment = Alignment.Center) {
+                        if (isTodayActive) {
+                            Icon(
+                                imageVector = Icons.Default.Check,
+                                contentDescription = "Active Today",
+                                tint = ThingsBlue,
+                                modifier = Modifier.size(18.dp)
+                            )
+                        }
                     }
                 }
 
@@ -226,59 +240,62 @@ fun ThingsWhenDialog(
                         .fillMaxWidth()
                         .clip(RoundedCornerShape(8.dp))
                         .clickable {
-                            // [ИЗМЕНЕНИЕ]: Нажатие назначает категорию "This Evening" без сброса в "Anytime". Сброс даты производится через кнопку "Clear".
                             onStartDateChange(System.currentTimeMillis())
                             onSectionChange(TaskSection.TODAY)
                             onIsTonightChange(true)
                             onShowCalendarHelperChange(true)
                             onDismissRequest()
                         }
-                        .padding(vertical = 8.dp),
+                        .padding(vertical = 2.dp),
                     verticalAlignment = Alignment.CenterVertically
                 ) {
-                    // Иконка "Вечер" с автоматическим подбором цвета и размера
-                    Icon(
-                        imageVector = AppIcons.Evening,
-                        contentDescription = "This Evening",
-                        tint = Color.Unspecified,
-                        modifier = Modifier
-                            .padding(end = 12.dp)
-                            .size(24.dp)
-                    )
+                    Box(modifier = Modifier.weight(1f), contentAlignment = Alignment.Center) {
+                        Icon(
+                            imageVector = AppIcons.Evening,
+                            contentDescription = "This Evening",
+                            tint = Color.Unspecified,
+                            modifier = Modifier.size(18.dp)
+                        )
+                    }
                     Text(
                         text = "This Evening",
                         style = TextStyle(
                             color = Color.White,
-                            fontSize = MaterialTheme.typography.titleLarge.fontSize,
+                            fontSize = 17.sp,
                             fontWeight = FontWeight.Medium
                         ),
-                        modifier = Modifier.weight(1f)
+                        modifier = Modifier.weight(5f)
                     )
-                    if (isThisEveningActive) {
-                        Icon(
-                            imageVector = Icons.Default.Check,
-                            contentDescription = "Active This Evening",
-                            tint = ThingsBlue,
-                            modifier = Modifier.size(18.dp)
-                        )
+                    Box(modifier = Modifier.weight(1f), contentAlignment = Alignment.Center) {
+                        if (isThisEveningActive) {
+                            Icon(
+                                imageVector = Icons.Default.Check,
+                                contentDescription = "Active This Evening",
+                                tint = ThingsBlue,
+                                modifier = Modifier.size(18.dp)
+                            )
+                        }
                     }
                 }
 
-                Spacer(modifier = Modifier.height(4.dp))
-
-                // Weekday headers: "Sun Mon Tue Wed Thu Fri Sat"
-                Row(
+                // Calendar section (Weekdays + 4 rows of dates) with tight vertical spacing
+                Column(
                     modifier = Modifier.fillMaxWidth(),
+                    verticalArrangement = Arrangement.spacedBy(2.dp)
+                ) {
+                    // Weekday headers: Mon Tue Wed Thu Fri Sat Sun
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
                     horizontalArrangement = Arrangement.SpaceBetween
                 ) {
-                    val weekdays = listOf("Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat")
+                    val weekdays = listOf("Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun")
                     weekdays.forEach { dayName ->
                         Text(
                             text = dayName,
                             style = TextStyle(
-                                color = Color(0xFF5F6368),
-                                fontSize = smallFontSize,
-                                fontWeight = FontWeight.Bold
+                                color = Color(0xFF6C6F7D),
+                                fontSize = 12.sp,
+                                fontWeight = FontWeight.SemiBold
                             ),
                             modifier = Modifier.weight(1f),
                             textAlign = TextAlign.Center
@@ -288,9 +305,9 @@ fun ThingsWhenDialog(
 
                 // Calendar cells
                 val todayCal = Calendar.getInstance()
-                val todayStartSunday = Calendar.getInstance().apply {
-                    firstDayOfWeek = Calendar.SUNDAY
-                    set(Calendar.DAY_OF_WEEK, Calendar.SUNDAY)
+                val todayStartMonday = Calendar.getInstance().apply {
+                    firstDayOfWeek = Calendar.MONDAY
+                    set(Calendar.DAY_OF_WEEK, Calendar.MONDAY)
                     set(Calendar.HOUR_OF_DAY, 0)
                     set(Calendar.MINUTE, 0)
                     set(Calendar.SECOND, 0)
@@ -299,7 +316,7 @@ fun ThingsWhenDialog(
 
                 val cells = remember(calendarWeekOffset) {
                     val list = mutableListOf<CalendarCell>()
-                    val tempCal = (todayStartSunday.clone() as Calendar).apply {
+                    val tempCal = (todayStartMonday.clone() as Calendar).apply {
                         add(Calendar.WEEK_OF_YEAR, calendarWeekOffset)
                     }
                     
@@ -365,7 +382,7 @@ fun ThingsWhenDialog(
                                         Icon(
                                             imageVector = Icons.Default.ChevronLeft,
                                             contentDescription = "Previous Month",
-                                            tint = ThingsBlue,
+                                            tint = Color(0xFF8E8E93),
                                             modifier = Modifier
                                                 .size(20.dp)
                                                 .clickable {
@@ -377,7 +394,7 @@ fun ThingsWhenDialog(
                                         Icon(
                                             imageVector = Icons.Default.ChevronRight,
                                             contentDescription = "Next Month",
-                                            tint = ThingsBlue,
+                                            tint = Color(0xFF8E8E93),
                                             modifier = Modifier
                                                 .size(20.dp)
                                                 .clickable {
@@ -399,7 +416,6 @@ fun ThingsWhenDialog(
                                                     }
                                                 )
                                                 .clickable {
-                                                    // [ИЗМЕНЕНИЕ]: Выбор даты в календаре устанавливает дату без переключения в "Anytime". Сброс даты производится через кнопку "Clear".
                                                     onStartDateChange(cell.timestamp)
                                                     onSectionChange(if (isTodayDate(cell.timestamp)) TaskSection.TODAY else TaskSection.UPCOMING)
                                                     onIsTonightChange(false)
@@ -418,7 +434,7 @@ fun ThingsWhenDialog(
                                                         text = monthLabel,
                                                         style = TextStyle(
                                                             color = ThingsBlue,
-                                                            fontSize = 9.sp,
+                                                            fontSize = 12.sp,
                                                             fontWeight = FontWeight.Bold
                                                         )
                                                     )
@@ -426,7 +442,7 @@ fun ThingsWhenDialog(
                                                         text = cell.day.toString(),
                                                         style = TextStyle(
                                                             color = Color.White,
-                                                            fontSize = 18.sp,
+                                                            fontSize = 12.sp,
                                                             fontWeight = FontWeight.Medium
                                                         )
                                                     )
@@ -435,7 +451,7 @@ fun ThingsWhenDialog(
                                                 Icon(
                                                     imageVector = Icons.Filled.Star,
                                                     contentDescription = "Today",
-                                                    tint = Color(0xFF7E8494),
+                                                    tint = Color(0xFF5F6368),
                                                     modifier = Modifier.size(16.dp)
                                                 )
                                             } else {
@@ -447,17 +463,17 @@ fun ThingsWhenDialog(
                                                         Text(
                                                             text = cell.monthLabel,
                                                             style = TextStyle(
-                                                                color = ThingsBlue,
-                                                                fontSize = 9.sp,
-                                                                fontWeight = FontWeight.Bold
+                                                                color = Color(0xFF9E9EA6),
+                                                                fontSize = 12.sp,
+                                                                fontWeight = FontWeight.Medium
                                                             )
                                                         )
                                                         Text(
                                                             text = cell.day.toString(),
                                                             style = TextStyle(
                                                                 color = Color.White,
-                                                                fontSize = 18.sp,
-                                                                fontWeight = FontWeight.Medium
+                                                                fontSize = 12.sp,
+                                                                fontWeight = FontWeight.Normal
                                                             )
                                                         )
                                                     }
@@ -479,47 +495,49 @@ fun ThingsWhenDialog(
                         }
                     }
                 }
+            }
 
-                // 3. Someday Option
+            // 3. Someday Option
                 Row(
                     modifier = Modifier
                         .fillMaxWidth()
                         .clip(RoundedCornerShape(8.dp))
                         .clickable {
-                            // [ИЗМЕНЕНИЕ]: Выбор "Someday" устанавливает категорию "Someday" без переключения в "Anytime". Сброс даты производится через кнопку "Clear".
                             onStartDateChange(null)
                             onSectionChange(TaskSection.SOMEDAY)
                             onIsTonightChange(false)
                             onShowCalendarHelperChange(true)
                             onDismissRequest()
                         }
-                        .padding(vertical = 8.dp),
+                        .padding(vertical = 2.dp),
                     verticalAlignment = Alignment.CenterVertically
                 ) {
-                    Icon(
-                        imageVector = AppIcons.Someday,
-                        contentDescription = "Someday",
-                        tint = Color.Unspecified,
-                        modifier = Modifier
-                            .padding(end = 12.dp)
-                            .size(24.dp)
-                    )
+                    Box(modifier = Modifier.weight(1f), contentAlignment = Alignment.Center) {
+                        Icon(
+                            imageVector = AppIcons.Someday,
+                            contentDescription = "Someday",
+                            tint = Color.Unspecified,
+                            modifier = Modifier.size(18.dp)
+                        )
+                    }
                     Text(
                         text = "Someday",
                         style = TextStyle(
                             color = Color.White,
-                            fontSize = 16.sp,
+                            fontSize = 17.sp,
                             fontWeight = FontWeight.Medium
                         ),
-                        modifier = Modifier.weight(1f)
+                        modifier = Modifier.weight(5f)
                     )
-                    if (isSomedayActive) {
-                        Icon(
-                            imageVector = Icons.Default.Check,
-                            contentDescription = "Active Someday",
-                            tint = ThingsBlue,
-                            modifier = Modifier.size(18.dp)
-                        )
+                    Box(modifier = Modifier.weight(1f), contentAlignment = Alignment.Center) {
+                        if (isSomedayActive) {
+                            Icon(
+                                imageVector = Icons.Default.Check,
+                                contentDescription = "Active Someday",
+                                tint = ThingsBlue,
+                                modifier = Modifier.size(18.dp)
+                            )
+                        }
                     }
                 }
 
@@ -527,31 +545,33 @@ fun ThingsWhenDialog(
                 Row(
                     modifier = Modifier
                         .fillMaxWidth()
-                        .padding(vertical = 4.dp),
+                        .padding(vertical = 2.dp),
                     verticalAlignment = Alignment.CenterVertically
                 ) {
-                    Icon(
-                        imageVector = Icons.Default.Add,
-                        contentDescription = null,
-                        tint = Color(0xFF5F6368),
-                        modifier = Modifier.size(16.dp)
-                    )
-                    Spacer(modifier = Modifier.width(12.dp))
+                    Box(modifier = Modifier.weight(1f), contentAlignment = Alignment.Center) {
+                        Icon(
+                            imageVector = Icons.Default.Add,
+                            contentDescription = null,
+                            tint = Color(0xFF6C6F7D),
+                            modifier = Modifier.size(18.dp)
+                        )
+                    }
                     Text(
                         text = "Add Reminder",
                         style = TextStyle(
-                            color = Color(0xFF5F6368),
-                            fontSize = 15.sp,
+                            color = Color(0xFF6C6F7D),
+                            fontSize = 17.sp,
                             fontWeight = FontWeight.Normal
-                        )
+                        ),
+                        modifier = Modifier.weight(5f)
                     )
+                    Box(modifier = Modifier.weight(1f))
                 }
 
-                // [ИЗМЕНЕНИЕ]: Если назначена дата или другая временная категория (Today, This Evening, Someday, Upcoming),
-                // выводим широкую кнопку "Clear" в самом низу диалога для обнуления/сброса даты в "Anytime".
+                // Кнопка "Clear" для сброса даты в "Anytime" (форма полной пилюли, малиново-красный цвет)
                 val hasTimeAssignment = startDate != null || section != TaskSection.ANYTIME
                 if (hasTimeAssignment) {
-                    Spacer(modifier = Modifier.height(4.dp))
+                    Spacer(modifier = Modifier.height(8.dp))
                     Button(
                         onClick = {
                             onStartDateChange(null)
@@ -561,12 +581,13 @@ fun ThingsWhenDialog(
                             onDismissRequest()
                         },
                         colors = ButtonDefaults.buttonColors(
-                            containerColor = ThingsUpcomingRed,
+                            containerColor = Color(0xFFE22D5A),
                             contentColor = Color.White
                         ),
-                        shape = RoundedCornerShape(16.dp),
+                        shape = RoundedCornerShape(percent = 50),
                         modifier = Modifier
                             .fillMaxWidth()
+                            .padding(horizontal = 4.dp)
                             .height(44.dp)
                     ) {
                         Text(
@@ -580,3 +601,4 @@ fun ThingsWhenDialog(
         }
     }
 }
+
