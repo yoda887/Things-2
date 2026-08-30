@@ -50,6 +50,7 @@ import com.example.ui.screens.home.components.ThingsSearchOverlay
 import com.example.ui.screens.home.components.ThingsSearchScreen
 import com.example.ui.screens.home.components.SearchResultItem
 import com.example.ui.screens.ThingsTaskDetailsSheet
+import com.example.ui.screens.home.inlineeditor.dialogs.QuickAddDialog
 import com.example.ui.theme.*
 import com.example.ui.viewmodel.ThingsViewModel
 import androidx.hilt.navigation.compose.hiltViewModel
@@ -88,6 +89,8 @@ fun ThingsHomeScreen(viewModel: ThingsViewModel = hiltViewModel()) {
     val searchQuery by viewModel.searchQuery.collectAsState()
     val selectedTagFilter by viewModel.selectedTagFilter.collectAsState()
     val allTags by viewModel.allTags.collectAsState()
+    val allSavedTags by viewModel.allSavedTags.collectAsState()
+    val allSavedTagObjects by viewModel.allSavedTagObjects.collectAsState()
     
     val isSyncing by viewModel.isSyncing.collectAsState()
     val syncError by viewModel.syncError.collectAsState()
@@ -233,15 +236,20 @@ fun ThingsHomeScreen(viewModel: ThingsViewModel = hiltViewModel()) {
         // Поэтому на уровне главного Scaffold тулбар больше не отображается.
         topBar = {},
         floatingActionButton = {
-            // [ИЗМЕНЕНИЕ]: Скрывать глобально на уровне HomeScreen с плавной анимацией при открытии inline-редактора или FAB-меню
+            // Скрывать FAB при открытии inline-редактора, FAB-меню, диалогов или окна быстрой задачи (QuickAddDialog)
             AnimatedVisibility(
-                visible = inlineExpandedTaskId == null && !showFabMenu && !isListDialogActive,
-                enter = scaleIn(
-                    animationSpec = spring(stiffness = androidx.compose.animation.core.Spring.StiffnessMedium)
-                ) + fadeIn(),
-                exit = scaleOut(
-                    animationSpec = spring(stiffness = androidx.compose.animation.core.Spring.StiffnessMedium)
-                ) + fadeOut()
+                visible = inlineExpandedTaskId == null && !showFabMenu && !isListDialogActive && !showAddDialog,
+                enter = slideInVertically(
+                    initialOffsetY = { it * 2 },
+                    animationSpec = spring(
+                        dampingRatio = 0.78f,
+                        stiffness = 240f
+                    )
+                ) + fadeIn(animationSpec = tween(durationMillis = 220)),
+                exit = slideOutVertically(
+                    targetOffsetY = { it * 2 },
+                    animationSpec = tween(durationMillis = 200, easing = FastOutSlowInEasing)
+                ) + fadeOut(animationSpec = tween(durationMillis = 180))
             ) {
                 FloatingActionButton(
                     onClick = {
@@ -764,21 +772,7 @@ fun ThingsHomeScreen(viewModel: ThingsViewModel = hiltViewModel()) {
                                     .fillMaxWidth()
                                     .clickable {
                                         showFabMenu = false
-                                        val targetScreen = ActiveScreen.INBOX
-                                        if (activeScreen != targetScreen) {
-                                            navigateTo(targetScreen)
-                                        }
-                                        val newTaskId = java.util.UUID.randomUUID().toString()
-                                        val newTask = Item(
-                                            id = newTaskId,
-                                            type = 0,
-                                            title = "",
-                                            notes = "",
-                                            start = 0,
-                                            creationDate = System.currentTimeMillis()
-                                        )
-                                        viewModel.updateTask(newTask)
-                                        inlineExpandedTaskId = newTaskId
+                                        showAddDialog = true
                                     }
                                     .padding(16.dp),
                                 verticalAlignment = Alignment.Top
@@ -944,61 +938,35 @@ fun ThingsHomeScreen(viewModel: ThingsViewModel = hiltViewModel()) {
     }
 
     // Task Create / Edit Sheet
+    // Task Create Sheet (QuickAddDialog)
     if (showAddDialog) {
-        val initialSection = when (activeScreen) {
-            ActiveScreen.TODAY -> TaskSection.TODAY
-            ActiveScreen.UPCOMING -> TaskSection.UPCOMING
-            ActiveScreen.ANYTIME -> TaskSection.ANYTIME
-            ActiveScreen.SOMEDAY -> TaskSection.SOMEDAY
-            ActiveScreen.PROJECT_DETAIL, ActiveScreen.AREA_DETAIL -> TaskSection.ANYTIME
-            else -> TaskSection.INBOX
-        }
-        val initialProjectId = if (activeScreen == ActiveScreen.PROJECT_DETAIL) selectedProject?.id else null
-        val currentTaskToEdit = taskToEdit
-
-        ThingsTaskDetailsSheet(
-            task = currentTaskToEdit,
-            initialSection = initialSection,
-            initialProjectId = initialProjectId,
+        QuickAddDialog(
             projects = projects,
-            onDismiss = { 
+            areas = areas,
+            allSavedTags = allSavedTags,
+            allSavedTagObjects = allSavedTagObjects,
+            allTasksRaw = allTasksRaw,
+            onNewTagCreated = { name, parentId -> viewModel.createTagInGroup(name, parentId) },
+            onDeleteTag = { tag -> viewModel.deleteTag(tag) },
+            onUpdateTag = { tag -> viewModel.updateTag(tag) },
+            onUpdateTagsOrder = { tags -> viewModel.updateTagsOrder(tags) },
+            onSave = { title, notes, section, isTonight, startDate, dueDate, tags, projectId, checklistItems, priority ->
+                viewModel.addTask(
+                    title = title,
+                    notes = notes,
+                    section = section,
+                    isTonight = isTonight,
+                    startDate = startDate,
+                    tags = tags,
+                    projectId = projectId,
+                    checklist = checklistItems,
+                    priority = priority
+                )
                 showAddDialog = false
-                newTaskTitlePrefill = ""
             },
-            onSave = { title, notes, section, isTonight, startDate, tags, projectId, checklistItems ->
-                if (currentTaskToEdit == null) {
-                    // Create Task
-                    viewModel.addTask(title, notes, section, isTonight, startDate, tags, projectId, checklistItems)
-                } else {
-                    // Update Task
-                    val startVal = when (section) {
-                        TaskSection.INBOX -> 0
-                        TaskSection.TODAY -> 1
-                        TaskSection.ANYTIME -> 2
-                        TaskSection.SOMEDAY -> 3
-                        TaskSection.UPCOMING -> 2
-                    }
-                    val updatedTask = currentTaskToEdit.item.copy(
-                         title = title,
-                         notes = notes,
-                         start = startVal,
-                         isTonight = isTonight,
-                         startDate = startDate,
-                         cachedTags = tags.joinToString(", "),
-                         projectId = projectId
-                    )
-                    viewModel.updateTask(updatedTask, checklistItems)
-                    
-                }
+            onDismissRequest = {
                 showAddDialog = false
-                newTaskTitlePrefill = ""
-            },
-            onDelete = {
-                currentTaskToEdit?.let { viewModel.deleteTask(it) }
-                showAddDialog = false
-                newTaskTitlePrefill = ""
-            },
-            initialTitle = newTaskTitlePrefill
+            }
         )
     }
 

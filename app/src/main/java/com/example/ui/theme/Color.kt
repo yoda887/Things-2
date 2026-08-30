@@ -3,7 +3,7 @@ package com.example.ui.theme
 import androidx.compose.ui.graphics.Color
 
 // Things iOS dynamic palette
-val ThingsBlue = Color(0xFF1070E0)
+val ThingsBlue = Color(0xFF568CF9)
 val ThingsInboxBlue = Color(0xFF1B80FA)
 val ThingsTodayStar = Color(0xFFE9AC10)
 val ThingsUpcomingRed = Color(0xFFF35F50)
