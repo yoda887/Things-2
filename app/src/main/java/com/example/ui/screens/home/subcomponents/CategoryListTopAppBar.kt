@@ -215,9 +215,9 @@ fun CategoryListTopAppBar(
                         }
                         ActiveScreen.AREA_DETAIL -> {
                             Icon(
-                                imageVector = Icons.Outlined.Layers,
+                                imageVector = AppIcons.Area,
                                 contentDescription = null,
-                                tint = Color(0xFF1B80FA),
+                                tint = Color.Unspecified,
                                 modifier = Modifier.size(AREA_ICON_SIZE)
                             )
                             Spacer(modifier = Modifier.width(TOP_APP_BAR_SPACING))

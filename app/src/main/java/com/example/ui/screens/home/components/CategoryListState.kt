@@ -308,6 +308,9 @@ sealed interface ThingsCategoryListEvent {
     data class DuplicateTask(val taskWrapper: ItemWithChecklist) : ThingsCategoryListEvent
     data class MoveTask(val taskWrapper: ItemWithChecklist, val projectId: String?, val areaId: String?, val moveToInbox: Boolean) : ThingsCategoryListEvent
     data class ReorderTasks(val items: List<Item>) : ThingsCategoryListEvent
+    // Удаление проекта и области
+    data class DeleteProject(val project: Item) : ThingsCategoryListEvent
+    data class DeleteArea(val area: Area) : ThingsCategoryListEvent
 
     // Свайп-события (заглушки для будущей реализации мультиселекции и When/календаря)
     data class SwipeTaskLeft(val task: ItemWithChecklist) : ThingsCategoryListEvent

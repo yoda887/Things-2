@@ -551,6 +551,16 @@ fun ThingsHomeScreen(viewModel: ThingsViewModel = hiltViewModel()) {
                                 is ThingsCategoryListEvent.ReorderTasks -> {
                                     viewModel.updateTasks(event.items)
                                 }
+                                is ThingsCategoryListEvent.DeleteProject -> {
+                                    viewModel.deleteProject(event.project)
+                                    navController.popBackStack()
+                                    selectedProject = null
+                                }
+                                is ThingsCategoryListEvent.DeleteArea -> {
+                                    viewModel.deleteArea(event.area)
+                                    navController.popBackStack()
+                                    selectedArea = null
+                                }
                                 is ThingsCategoryListEvent.SwipeTaskLeft -> {
                                     // Заглушка для мультиселекции
                                 }

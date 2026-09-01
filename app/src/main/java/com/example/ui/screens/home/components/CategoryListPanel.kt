@@ -422,7 +422,9 @@ fun ThingsCategoryListPanel(
                     area = area,
                     scaleFactor = scaleFactor,
                     textPrimaryColor = textPrimaryColor,
-                    globalDimAlpha = globalDimAlpha
+                    globalDimAlpha = globalDimAlpha,
+                    onDeleteProject = { onEvent(ThingsCategoryListEvent.DeleteProject(it)) },
+                    onDeleteArea = { onEvent(ThingsCategoryListEvent.DeleteArea(it)) }
                 )
             }
 

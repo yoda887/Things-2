@@ -1,17 +1,27 @@
 package com.example.ui.screens.home.subcomponents
 
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
+import androidx.compose.foundation.clickable
+import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.text.InlineTextContent
+import androidx.compose.foundation.text.appendInlineContent
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.*
 import androidx.compose.material.icons.outlined.*
 import androidx.compose.material3.*
-import androidx.compose.runtime.Composable
+import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.ui.text.Placeholder
+import androidx.compose.ui.text.PlaceholderVerticalAlign
 import androidx.compose.ui.text.TextStyle
+import androidx.compose.ui.text.buildAnnotatedString
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -34,10 +44,80 @@ fun MainCategoryHeader(
     scaleFactor: Float,
     textPrimaryColor: Color,
     globalDimAlpha: Float,
+    onDeleteProject: (Item) -> Unit = {},
+    onDeleteArea: (Area) -> Unit = {},
     modifier: Modifier = Modifier
 ) {
     val headerEmojiFontSize = MaterialTheme.typography.displayMedium.fontSize
     val headerTitleFontSize = MaterialTheme.typography.displayLarge.fontSize
+
+    var showOptionsMenu by remember { mutableStateOf(false) }
+    var showDeleteConfirmDialog by remember { mutableStateOf(false) }
+
+    var showAreaDeleteConfirmDialog by remember { mutableStateOf(false) }
+
+    if (showDeleteConfirmDialog && project != null) {
+        val taskCountInProj = tasks.count { it.item.projectId == project.id }
+        AlertDialog(
+            onDismissRequest = { showDeleteConfirmDialog = false },
+            title = { Text("Удалить проект?", fontWeight = FontWeight.Bold, color = textPrimaryColor) },
+            text = {
+                Text(
+                    if (taskCountInProj > 0) {
+                        "Вы действительно хотите удалить проект \"${project.name}\"? Проект удалится вместе с $taskCountInProj задачами."
+                    } else {
+                        "Вы действительно хотите удалить проект \"${project.name}\"?"
+                    },
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    fontSize = 14.sp
+                )
+            },
+            confirmButton = {
+                TextButton(
+                    onClick = {
+                        showDeleteConfirmDialog = false
+                        onDeleteProject(project)
+                    }
+                ) {
+                    Text("Удалить", color = ThingsUpcomingRed, fontWeight = FontWeight.Bold)
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = { showDeleteConfirmDialog = false }) {
+                    Text("Отмена", color = textPrimaryColor)
+                }
+            }
+        )
+    }
+
+    if (showAreaDeleteConfirmDialog && area != null) {
+        AlertDialog(
+            onDismissRequest = { showAreaDeleteConfirmDialog = false },
+            title = { Text("Удалить область?", fontWeight = FontWeight.Bold, color = textPrimaryColor) },
+            text = {
+                Text(
+                    "Вы действительно хотите удалить область \"${area.title}\"?",
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    fontSize = 14.sp
+                )
+            },
+            confirmButton = {
+                TextButton(
+                    onClick = {
+                        showAreaDeleteConfirmDialog = false
+                        onDeleteArea(area)
+                    }
+                ) {
+                    Text("Удалить", color = ThingsUpcomingRed, fontWeight = FontWeight.Bold)
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = { showAreaDeleteConfirmDialog = false }) {
+                    Text("Отмена", color = textPrimaryColor)
+                }
+            }
+        )
+    }
 
     Row(
         modifier = modifier
@@ -158,7 +238,7 @@ fun MainCategoryHeader(
             ActiveScreen.PROJECT_DETAIL -> {
                 val completedCount = tasks.count { it.item.projectId == project?.id && it.item.isCompleted }
                 val totalCount = tasks.count { it.item.projectId == project?.id }
-                // [ИЗМЕНЕНИЕ]: Иконка проекта (ProgressArc) окрашена в синий цвет и выровнена по верхнему краю заголовка с компенсационным отступом
+                // Иконка проекта (ProgressArc) окрашена в синий цвет и выровнена по верхнему краю заголовка с компенсационным отступом
                 ProjectProgressArc(
                     completed = completedCount,
                     total = totalCount,
@@ -169,30 +249,175 @@ fun MainCategoryHeader(
                         .padding(top = (4 * scaleFactor).dp)
                 )
                 Spacer(modifier = Modifier.width(12.dp))
+
+                val projectNameText = project?.name ?: "Project"
+                val projectTitleAnnotated = remember(projectNameText) {
+                    buildAnnotatedString {
+                        append(projectNameText)
+                        append(" ")
+                        appendInlineContent("project_options_icon", "[options]")
+                    }
+                }
+
+                val inlineContentMap = mapOf(
+                    "project_options_icon" to InlineTextContent(
+                        Placeholder(
+                            width = (headerTitleFontSize.value * 1.1f).sp,
+                            height = headerTitleFontSize,
+                            placeholderVerticalAlign = PlaceholderVerticalAlign.Center
+                        )
+                    ) {
+                        Box(
+                            modifier = Modifier
+                                .fillMaxSize()
+                                .clickable(
+                                    interactionSource = remember { MutableInteractionSource() },
+                                    indication = null
+                                ) {
+                                    showOptionsMenu = true
+                                },
+                            contentAlignment = Alignment.Center
+                        ) {
+                            Icon(
+                                imageVector = Icons.Default.MoreHoriz,
+                                contentDescription = "Project Options",
+                                tint = textPrimaryColor.copy(alpha = 0.45f),
+                                modifier = Modifier.size((headerTitleFontSize.value * 0.88f).dp)
+                            )
+
+                            DropdownMenu(
+                                expanded = showOptionsMenu,
+                                onDismissRequest = { showOptionsMenu = false },
+                                modifier = Modifier.background(Color(0xFF22242C))
+                            ) {
+                                DropdownMenuItem(
+                                    leadingIcon = {
+                                        Icon(
+                                            imageVector = Icons.Default.Delete,
+                                            contentDescription = "Delete",
+                                            tint = ThingsUpcomingRed,
+                                            modifier = Modifier.size(24.dp)
+                                        )
+                                    },
+                                    text = {
+                                        Text(
+                                            text = "Delete Project",
+                                            color = ThingsUpcomingRed,
+                                            fontWeight = FontWeight.Normal,
+                                            fontSize = 17.sp
+                                        )
+                                    },
+                                    onClick = {
+                                        showOptionsMenu = false
+                                        showDeleteConfirmDialog = true
+                                    }
+                                )
+                            }
+                        }
+                    }
+                )
+
                 Text(
-                    text = project?.name ?: "Project",
+                    text = projectTitleAnnotated,
+                    inlineContent = inlineContentMap,
                     style = TextStyle(
                         fontSize = headerTitleFontSize,
                         fontWeight = FontWeight.Bold,
                         color = textPrimaryColor
-                    )
+                    ),
+                    modifier = Modifier.weight(1f, fill = false)
                 )
             }
             ActiveScreen.AREA_DETAIL -> {
                 Icon(
-                    imageVector = Icons.Outlined.Layers,
+                    imageVector = AppIcons.Area,
                     contentDescription = null,
-                    tint = Color(0xFF1B80FA),
-                    modifier = Modifier.size((26 * scaleFactor).dp)
+                    tint = Color.Unspecified,
+                    modifier = Modifier
+                        .size((30 * scaleFactor).dp)
+                        .align(Alignment.Top)
+                        .padding(top = (2 * scaleFactor).dp)
                 )
                 Spacer(modifier = Modifier.width(12.dp))
+
+                val areaTitleText = area?.title ?: "Responsibility Area"
+                val areaTitleAnnotated = remember(areaTitleText) {
+                    buildAnnotatedString {
+                        append(areaTitleText)
+                        append(" ")
+                        appendInlineContent("area_options_icon", "[options]")
+                    }
+                }
+
+                var showAreaOptionsMenu by remember { mutableStateOf(false) }
+
+                val areaInlineContentMap = mapOf(
+                    "area_options_icon" to InlineTextContent(
+                        Placeholder(
+                            width = (headerTitleFontSize.value * 1.1f).sp,
+                            height = headerTitleFontSize,
+                            placeholderVerticalAlign = PlaceholderVerticalAlign.Center
+                        )
+                    ) {
+                        Box(
+                            modifier = Modifier
+                                .fillMaxSize()
+                                .clickable(
+                                    interactionSource = remember { MutableInteractionSource() },
+                                    indication = null
+                                ) {
+                                    showAreaOptionsMenu = true
+                                },
+                            contentAlignment = Alignment.Center
+                        ) {
+                            Icon(
+                                imageVector = Icons.Default.MoreHoriz,
+                                contentDescription = "Area Options",
+                                tint = textPrimaryColor.copy(alpha = 0.45f),
+                                modifier = Modifier.size((headerTitleFontSize.value * 0.88f).dp)
+                            )
+
+                            DropdownMenu(
+                                expanded = showAreaOptionsMenu,
+                                onDismissRequest = { showAreaOptionsMenu = false },
+                                modifier = Modifier.background(Color(0xFF22242C))
+                            ) {
+                                DropdownMenuItem(
+                                    leadingIcon = {
+                                        Icon(
+                                            imageVector = Icons.Default.Delete,
+                                            contentDescription = "Delete",
+                                            tint = ThingsUpcomingRed,
+                                            modifier = Modifier.size(24.dp)
+                                        )
+                                    },
+                                    text = {
+                                        Text(
+                                            text = "Delete Area",
+                                            color = ThingsUpcomingRed,
+                                            fontWeight = FontWeight.Normal,
+                                            fontSize = 17.sp
+                                        )
+                                    },
+                                    onClick = {
+                                        showAreaOptionsMenu = false
+                                        showAreaDeleteConfirmDialog = true
+                                    }
+                                )
+                            }
+                        }
+                    }
+                )
+
                 Text(
-                    text = area?.title ?: "Responsibility Area",
+                    text = areaTitleAnnotated,
+                    inlineContent = areaInlineContentMap,
                     style = TextStyle(
                         fontSize = headerTitleFontSize,
                         fontWeight = FontWeight.Bold,
                         color = textPrimaryColor
-                    )
+                    ),
+                    modifier = Modifier.weight(1f, fill = false)
                 )
             }
             else -> {}
