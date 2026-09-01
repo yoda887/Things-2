@@ -332,7 +332,7 @@ fun MainCategoryHeader(
                 Icon(
                     imageVector = AppIcons.Area,
                     contentDescription = null,
-                    tint = Color.Unspecified,
+                    tint = ThingsLogbookGreen,
                     modifier = Modifier
                         .size((30 * scaleFactor).dp)
                         .align(Alignment.Top)

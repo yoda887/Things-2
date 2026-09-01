@@ -28,6 +28,7 @@ import com.example.data.model.ItemWithChecklist
 import com.example.ui.screens.home.ActiveScreen
 import com.example.ui.theme.AppIcons
 import com.example.ui.theme.ThingsBlue
+import com.example.ui.theme.ThingsLogbookGreen
 import com.example.ui.theme.ThingsBackgroundDark
 import com.example.ui.theme.ThingsBackgroundLight
 import com.example.ui.theme.topAppBarTitle
@@ -217,7 +218,7 @@ fun CategoryListTopAppBar(
                             Icon(
                                 imageVector = AppIcons.Area,
                                 contentDescription = null,
-                                tint = Color.Unspecified,
+                                tint = ThingsLogbookGreen,
                                 modifier = Modifier.size(AREA_ICON_SIZE)
                             )
                             Spacer(modifier = Modifier.width(TOP_APP_BAR_SPACING))
