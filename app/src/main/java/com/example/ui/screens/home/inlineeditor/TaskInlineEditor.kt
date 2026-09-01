@@ -342,7 +342,7 @@ fun ThingsTaskInlineEditor(
                 }
             } else Color.Unspecified
 
-            val startRelativePadding = 24.dp
+            val startRelativePadding = MaterialTheme.dimens.taskEditorStartRelativePadding
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 verticalAlignment = Alignment.Bottom
@@ -364,7 +364,7 @@ fun ThingsTaskInlineEditor(
                         FlowRow(
                             modifier = Modifier
                                 .fillMaxWidth()
-                                .padding(top = 4.dp, bottom = 12.dp),
+                                .padding(vertical = MaterialTheme.dimens.taskEditorTagsVerticalPadding),
                             horizontalArrangement = Arrangement.spacedBy(8.dp),
                             verticalArrangement = Arrangement.spacedBy(6.dp)
                         ) {
@@ -387,6 +387,10 @@ fun ThingsTaskInlineEditor(
                                 }
                             }
                         }
+
+                        if (hasActiveDate || dueDate != null) {
+                            Spacer(modifier = Modifier.height(MaterialTheme.dimens.taskEditorTagsToDateSpacer))
+                        }
                     }
 
                     // 1. Date Indicator Row
@@ -395,7 +399,7 @@ fun ThingsTaskInlineEditor(
                             verticalAlignment = Alignment.CenterVertically,
                             modifier = Modifier
                                 .clickable { showWhenDialog = true }
-                                .padding(vertical = 6.dp)
+                                .padding(vertical = MaterialTheme.dimens.taskEditorIndicatorVerticalPadding)
                         ) {
                             Icon(
                                 imageVector = activeDateIcon,
@@ -419,7 +423,7 @@ fun ThingsTaskInlineEditor(
 
                     // Spacer between date indicator and duedate indicator
                     if (hasActiveDate && dueDate != null) {
-                        Spacer(modifier = Modifier.height(12.dp))
+                        Spacer(modifier = Modifier.height(MaterialTheme.dimens.taskEditorDateToDeadlineSpacer))
                     }
 
                     // 2. Due Date (Deadline) Indicator Row
@@ -488,7 +492,7 @@ fun ThingsTaskInlineEditor(
                             verticalAlignment = Alignment.CenterVertically,
                             modifier = Modifier
                                 .clickable { showDatePicker = true }
-                                .padding(vertical = 6.dp)
+                                .padding(vertical = MaterialTheme.dimens.taskEditorIndicatorVerticalPadding)
                         ) {
                             Icon(
                                 imageVector = Icons.Outlined.Flag,

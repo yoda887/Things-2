@@ -41,7 +41,17 @@ data class AppDimens(
     /** Горизонтальный отступ контента внутри карточки задачи (start padding Row в TaskItemRow) */
     val taskRowStartPadding: Dp = 10.dp,
     /** Горизонтальный отступ контента в полностью раскрытом inline-редакторе */
-    val taskEditorExpandedStartPadding: Dp = 12.dp
+    val taskEditorExpandedStartPadding: Dp = 12.dp,
+    /** Горизонтальный отступ начала нижних индикаторов в редакторе (теги, дата, дедлайн) */
+    val taskEditorStartRelativePadding: Dp = 24.dp,
+    /** Вертикальный отступ строки чипов тегов в редакторе */
+    val taskEditorTagsVerticalPadding: Dp = 4.dp,
+    /** Вертикальный отступ строки индикатора даты и дедлайна в редакторе */
+    val taskEditorIndicatorVerticalPadding: Dp = 6.dp,
+    /** Отступ между тегами и датой/дедлайном в редакторе (в сумме с паддингами дает зазор 16.dp) */
+    val taskEditorTagsToDateSpacer: Dp = 6.dp,
+    /** Отступ между датой и дедлайном в редакторе (в сумме с паддингами дает зазор 16.dp) */
+    val taskEditorDateToDeadlineSpacer: Dp = 4.dp
 )
 
 val LocalAppDimens = staticCompositionLocalOf { AppDimens() }
