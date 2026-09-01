@@ -31,6 +31,7 @@ import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.SolidColor
 import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.platform.LocalSoftwareKeyboardController
 import androidx.compose.ui.text.TextStyle
@@ -135,8 +136,13 @@ fun QuickAddDialog(
         }
     }
 
+    val density = LocalDensity.current
+    val startOffsetPx = remember(density) { with(density) { 380.dp.toPx() } }
+    val dismissNudgePx = remember(density) { with(density) { (-12).dp.toPx() } }
+    val dismissDropPx = remember(density) { with(density) { 220.dp.toPx() } }
+
     val coroutineScope = rememberCoroutineScope()
-    val offsetY = remember { Animatable(80f) }
+    val offsetY = remember { Animatable(startOffsetPx) }
     val alpha = remember { Animatable(0f) }
     val scrimAlpha = remember { Animatable(0f) }
 
@@ -151,10 +157,10 @@ fun QuickAddDialog(
             )
         }
         launch {
-            alpha.animateTo(1f, animationSpec = tween(durationMillis = 280, easing = FastOutSlowInEasing))
+            alpha.animateTo(1f, animationSpec = tween(durationMillis = 200, easing = FastOutSlowInEasing))
         }
         launch {
-            scrimAlpha.animateTo(0.4f, animationSpec = tween(durationMillis = 300, easing = FastOutSlowInEasing))
+            scrimAlpha.animateTo(0.4f, animationSpec = tween(durationMillis = 250, easing = FastOutSlowInEasing))
         }
     }
 
@@ -168,8 +174,8 @@ fun QuickAddDialog(
             coroutineScope.launch {
                 // 1. Мягкий подскок вверх (-12dp), затем плавный уход вниз
                 launch {
-                    offsetY.animateTo(-12f, tween(durationMillis = 90, easing = FastOutSlowInEasing))
-                    offsetY.animateTo(220f, tween(durationMillis = 260, easing = FastOutSlowInEasing))
+                    offsetY.animateTo(dismissNudgePx, tween(durationMillis = 90, easing = FastOutSlowInEasing))
+                    offsetY.animateTo(dismissDropPx, tween(durationMillis = 260, easing = FastOutSlowInEasing))
                 }
                 // 2. Плавное растворение карточки и затемнения фона за 300мс
                 launch {
@@ -193,8 +199,8 @@ fun QuickAddDialog(
             coroutineScope.launch {
                 // 1. Мягкий подскок вверх (-12dp), затем плавный уход вниз
                 launch {
-                    offsetY.animateTo(-12f, tween(durationMillis = 90, easing = FastOutSlowInEasing))
-                    offsetY.animateTo(220f, tween(durationMillis = 260, easing = FastOutSlowInEasing))
+                    offsetY.animateTo(dismissNudgePx, tween(durationMillis = 90, easing = FastOutSlowInEasing))
+                    offsetY.animateTo(dismissDropPx, tween(durationMillis = 260, easing = FastOutSlowInEasing))
                 }
                 // 2. Плавное растворение карточки и затемнения фона за 300мс
                 launch {
@@ -251,7 +257,8 @@ fun QuickAddDialog(
                     translationY = offsetY.value
                     this.alpha = alpha.value
                 }
-                .padding(top = 64.dp)
+                .statusBarsPadding()
+                .padding(top = 4.dp)
                 .fillMaxWidth()
                 .wrapContentHeight()
                 .clickable(
@@ -279,7 +286,11 @@ fun QuickAddDialog(
                                 modifier = Modifier.padding(end = 10.dp, top = 2.dp)
                             )
                             
-                            Column(modifier = Modifier.weight(1f)) {
+                            Column(
+                                modifier = Modifier
+                                    .weight(1f)
+                                    .padding(end = 40.dp)
+                            ) {
                                 Box(modifier = Modifier.fillMaxWidth()) {
                                     if (title.isEmpty()) {
                                         Text(
@@ -326,28 +337,32 @@ fun QuickAddDialog(
                                     BasicTextField(
                                         value = notes,
                                         onValueChange = { notes = it },
-                                        minLines = 5,
+                                        minLines = 4,
                                         textStyle = TextStyle(
                                             fontSize = MaterialTheme.typography.taskEditorNotes.fontSize,
                                             fontWeight = FontWeight.Normal,
                                             color = ThingsTextNotesLight
                                         ),
                                         cursorBrush = SolidColor(ThingsBlue),
-                                        modifier = Modifier.fillMaxWidth().heightIn(min = 140.dp)
+                                        modifier = Modifier.fillMaxWidth()
                                     )
                                 }
                             }
                         }
 
+                        Spacer(modifier = Modifier.height(16.dp))
+
                         // 3. Чеклист (InlineChecklistPanel)
-                        InlineChecklistPanel(
-                            itemId = "",
-                            checklist = checklist,
-                            onChecklistChange = { checklist = it },
-                            showChecklistHelper = showChecklistHelper,
-                            onShowChecklistHelperChange = { showChecklistHelper = it },
-                            expansionProgress = 1f
-                        )
+                        Box(modifier = Modifier.fillMaxWidth().padding(end = 40.dp)) {
+                            InlineChecklistPanel(
+                                itemId = "",
+                                checklist = checklist,
+                                onChecklistChange = { checklist = it },
+                                showChecklistHelper = showChecklistHelper,
+                                onShowChecklistHelperChange = { showChecklistHelper = it },
+                                expansionProgress = 1f
+                            )
+                        }
 
                         Spacer(modifier = Modifier.height(32.dp))
                         // 4. Панель индикаторов (активные теги, дата, дедлайн) + Панель инструментов (иконки действий)
