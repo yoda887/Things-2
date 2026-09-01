@@ -114,7 +114,6 @@ fun InlineMainInputRow(
                             .graphicsLayer {
                                 alpha = (1f - expansionProgress).coerceIn(0f, 1f)
                             }
-                            .background(Color.White)
                     )
                 }
 
