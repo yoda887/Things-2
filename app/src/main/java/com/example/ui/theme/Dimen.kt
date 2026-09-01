@@ -37,7 +37,11 @@ data class AppDimens(
     val taskExpandedTitleNotesGap: Dp = 10.dp,
     val taskCollapsedCornerRadius: Dp = 8.dp,
     val taskExpandedCornerRadius: Dp = 8.dp,
-    val listBottomSpacerHeight: Dp = 72.dp
+    val listBottomSpacerHeight: Dp = 72.dp,
+    /** Горизонтальный отступ контента внутри карточки задачи (start padding Row в TaskItemRow) */
+    val taskRowStartPadding: Dp = 10.dp,
+    /** Горизонтальный отступ контента в полностью раскрытом inline-редакторе */
+    val taskEditorExpandedStartPadding: Dp = 12.dp
 )
 
 val LocalAppDimens = staticCompositionLocalOf { AppDimens() }

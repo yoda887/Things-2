@@ -215,8 +215,13 @@ fun ThingsTaskInlineEditor(
         colors = CardDefaults.cardColors(containerColor = Color.Transparent),
         elevation = CardDefaults.cardElevation(defaultElevation = 0.dp)
     ) {
-        // Динамический startPadding и компенсирующий endPadding для постоянной ширины текста
-        val startPadding = (8 + 4 * expansionProgress).dp
+        // Линейная интерполяция: при p=0 совпадает с TaskItemRow.padding(start),
+        // при p=1 — дизайнерский отступ развёрнутого редактора
+        val startPadding = androidx.compose.ui.unit.lerp(
+            MaterialTheme.dimens.taskRowStartPadding,
+            MaterialTheme.dimens.taskEditorExpandedStartPadding,
+            expansionProgress
+        )
         val endPadding = (4 + 24 * expansionProgress).dp
         val collapsedTopPadding = MaterialTheme.dimens.taskCollapsedTopPadding
         val expandedTopPadding = MaterialTheme.dimens.taskExpandedTopPadding

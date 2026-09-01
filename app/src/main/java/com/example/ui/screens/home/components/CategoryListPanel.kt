@@ -407,25 +407,26 @@ fun ThingsCategoryListPanel(
                         focusManager.clearFocus()
                     })
                 }
-                // [ИЗМЕНЕНИЕ]: Уменьшено расстояние от левой и правой стороны экрана до списков с 20.dp до 14.dp
-                .padding(horizontal = 14.dp)
+                // [ИЗМЕНЕНИЕ]: Установлен аккуратный отступ 10.dp от края экрана до карточек задач
+                .padding(horizontal = 10.dp)
                 .testTag("tasks_lazy_list"),
             contentPadding = PaddingValues(top = topPaddingTotal, bottom = 100.dp)
         ) {
             item(key = "main_header") {
                 // Извлеченный подкомпонент заголовка
-                // [ИЗМЕНЕНИЕ]: Передаем state.allTasks вместо state.displayTasks, чтобы степень выполнения проекта рассчитывалась корректно с учетом завершенных задач
-                MainCategoryHeader(
-                    screen = screen,
-                    project = project,
-                    tasks = state.allTasks,
-                    area = area,
-                    scaleFactor = scaleFactor,
-                    textPrimaryColor = textPrimaryColor,
-                    globalDimAlpha = globalDimAlpha,
-                    onDeleteProject = { onEvent(ThingsCategoryListEvent.DeleteProject(it)) },
-                    onDeleteArea = { onEvent(ThingsCategoryListEvent.DeleteArea(it)) }
-                )
+                Box(modifier = Modifier.padding(horizontal = 8.dp)) {
+                    MainCategoryHeader(
+                        screen = screen,
+                        project = project,
+                        tasks = state.allTasks,
+                        area = area,
+                        scaleFactor = scaleFactor,
+                        textPrimaryColor = textPrimaryColor,
+                        globalDimAlpha = globalDimAlpha,
+                        onDeleteProject = { onEvent(ThingsCategoryListEvent.DeleteProject(it)) },
+                        onDeleteArea = { onEvent(ThingsCategoryListEvent.DeleteArea(it)) }
+                    )
+                }
             }
 
             if (screen == ActiveScreen.TODAY && todayCalendarEvents.isNotEmpty()) {
@@ -434,7 +435,9 @@ fun ThingsCategoryListPanel(
                         events = todayCalendarEvents,
                         textSecondaryColor = textSecondaryColor,
                         isDark = false,
-                        modifier = Modifier.graphicsLayer { alpha = globalDimAlpha }
+                        modifier = Modifier
+                            .padding(horizontal = 8.dp)
+                            .graphicsLayer { alpha = globalDimAlpha }
                     )
                     Spacer(modifier = Modifier.height(MaterialTheme.dimens.calendarBetweenSectionSpacing))
                 }
@@ -449,7 +452,9 @@ fun ThingsCategoryListPanel(
                         textSecondaryColor = textSecondaryColor,
                         dividerColor = dividerColor,
                         onTagSelect = { onEvent(ThingsCategoryListEvent.SelectTag(it)) },
-                        modifier = Modifier.graphicsLayer { alpha = globalDimAlpha }
+                        modifier = Modifier
+                            .padding(horizontal = 8.dp)
+                            .graphicsLayer { alpha = globalDimAlpha }
                     )
                     Spacer(modifier = Modifier.height(MaterialTheme.dimens.tagsBetweenSectionSpacing))
                 }
@@ -468,7 +473,9 @@ fun ThingsCategoryListPanel(
 
             if (!hasTasks) {
                 item {
-                    EmptyStateView(textSecondaryColor = textSecondaryColor)
+                    Box(modifier = Modifier.padding(horizontal = 8.dp)) {
+                        EmptyStateView(textSecondaryColor = textSecondaryColor)
+                    }
                 }
             } else {
                 items(flattened, key = { item ->
@@ -555,6 +562,7 @@ fun ThingsCategoryListPanel(
                                 textSecondaryColor = textSecondaryColor,
                                 dividerColor = dividerColor,
                                 modifier = Modifier
+                                    .padding(horizontal = 8.dp)
                                     .animateItem(
                                         placementSpec = placementSpec
                                     )
@@ -570,6 +578,7 @@ fun ThingsCategoryListPanel(
                             )
                             Column(
                                 modifier = Modifier
+                                    .padding(horizontal = 8.dp)
                                     .animateItem(
                                         placementSpec = placementSpec
                                     )
@@ -596,9 +605,11 @@ fun ThingsCategoryListPanel(
                                 textSecondaryColor = textSecondaryColor,
                                 dividerColor = dividerColor,
                                 dimAlpha = dimAlpha,
-                                modifier = Modifier.animateItem(
-                                    placementSpec = placementSpec
-                                )
+                                modifier = Modifier
+                                    .padding(horizontal = 8.dp)
+                                    .animateItem(
+                                        placementSpec = placementSpec
+                                    )
                             )
                         }
                     }

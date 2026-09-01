@@ -18,6 +18,7 @@ import androidx.compose.material.icons.outlined.FormatListBulleted
 import androidx.compose.material.icons.outlined.Flag
 import androidx.compose.material.icons.outlined.LocalOffer
 import androidx.compose.material3.Icon
+import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -63,7 +64,7 @@ fun TaskItemRow(
     isHighlighted: Boolean = false,
     isDimmed: Boolean = false,
     isBeingDeleted: Boolean = false,
-    leftColumnWidth: androidx.compose.ui.unit.Dp = androidx.compose.material3.MaterialTheme.dimens.taskLeftColumnWidthDefault,
+    leftColumnWidth: androidx.compose.ui.unit.Dp = androidx.compose.material3.MaterialTheme.dimens.mainCheckboxSize,
     spacingToText: androidx.compose.ui.unit.Dp = androidx.compose.material3.MaterialTheme.dimens.taskSpacingToTextDefault,
     screen: ActiveScreen = ActiveScreen.INBOX,
     areas: List<com.example.data.model.Area> = emptyList()
@@ -125,13 +126,14 @@ fun TaskItemRow(
     val scale by androidx.compose.animation.core.animateFloatAsState(if (isDragging) 1.04f else 1.0f)
     val elevation by androidx.compose.animation.core.animateDpAsState(if (isDragging) 6.dp else 0.dp)
 
-    val highlightColor by androidx.compose.animation.animateColorAsState(
-        targetValue = if (isHighlighted) ThingsBlue.copy(alpha = 0.18f) else Color.Transparent,
-        animationSpec = androidx.compose.animation.core.tween(durationMillis = 600)
-    )
+    val highlightColor = if (isHighlighted) {
+        ThingsBlue.copy(alpha = 0.15f)
+    } else {
+        Color.Transparent
+    }
 
     val rowBgColor = when {
-        isDragging || elevation > 0.dp -> if (isDark) Color(0xFF2C2C2E) else Color(0xFFF2F2F7)
+        isDragging -> MaterialTheme.colorScheme.surface
         else -> highlightColor
     }
 
@@ -163,7 +165,7 @@ fun TaskItemRow(
             .clip(RoundedCornerShape(8.dp))
             .drawBehind {
                 if (localCompleted && completionFillProgress > 0f) {
-                    val centerX = leftColumnWidth.toPx() / 2f
+                    val centerX = (10.dp + leftColumnWidth / 2f).toPx()
                     val centerY = size.height / 2f
                     val maxRadius = kotlin.math.hypot(size.width - centerX, centerY)
                     val currentRadius = maxRadius * completionFillProgress
@@ -181,7 +183,7 @@ fun TaskItemRow(
                 indication = if (isDimmed) null else androidx.compose.foundation.LocalIndication.current,
                 enabled = !isCalendarTask
             ) { onClick() }
-            .padding(start = 8.dp, end = 4.dp),
+            .padding(start = androidx.compose.material3.MaterialTheme.dimens.taskRowStartPadding, end = 8.dp),
         verticalAlignment = Alignment.CenterVertically
     ) {
             Box(
@@ -426,7 +428,7 @@ fun TaskItemRow(
                     text = project.name,
                     style = TextStyle(
                         fontSize = subFontSize,
-                        color = textSecondaryColor.copy(alpha = 0.85f),
+                        color = Color(0xFF8E8E93),
                         fontWeight = FontWeight.Normal
                     )
                 )
@@ -437,7 +439,7 @@ fun TaskItemRow(
                     text = area.title,
                     style = TextStyle(
                         fontSize = subFontSize,
-                        color = textSecondaryColor.copy(alpha = 0.85f),
+                        color = Color(0xFF8E8E93),
                         fontWeight = FontWeight.Normal
                     )
                 )

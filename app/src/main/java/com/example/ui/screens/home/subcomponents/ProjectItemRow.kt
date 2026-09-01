@@ -47,7 +47,7 @@ fun ProjectItemRow(
             .clip(RoundedCornerShape(10.dp))
             .clickable { onProjectClick(project) }
             .graphicsLayer { alpha = dimAlpha }
-            .padding(vertical = 8.dp, horizontal = 6.dp),
+            .padding(vertical = 8.dp, horizontal = 8.dp),
         verticalAlignment = Alignment.CenterVertically
     ) {
         Box(
