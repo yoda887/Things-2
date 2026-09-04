@@ -183,7 +183,7 @@ fun TaskItemRow(
                 indication = if (isDimmed) null else androidx.compose.foundation.LocalIndication.current,
                 enabled = !isCalendarTask
             ) { onClick() }
-            .padding(start = androidx.compose.material3.MaterialTheme.dimens.taskRowStartPadding, end = 8.dp),
+            .padding(start = androidx.compose.material3.MaterialTheme.dimens.taskRowStartPadding, end = androidx.compose.material3.MaterialTheme.dimens.taskRowEndPadding),
         verticalAlignment = Alignment.CenterVertically
     ) {
             Box(

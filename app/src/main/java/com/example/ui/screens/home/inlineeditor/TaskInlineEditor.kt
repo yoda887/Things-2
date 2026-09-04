@@ -222,7 +222,11 @@ fun ThingsTaskInlineEditor(
             MaterialTheme.dimens.taskEditorExpandedStartPadding,
             expansionProgress
         )
-        val endPadding = (4 + 24 * expansionProgress).dp
+        val endPadding = androidx.compose.ui.unit.lerp(
+            MaterialTheme.dimens.taskRowEndPadding,
+            MaterialTheme.dimens.taskEditorExpandedEndPadding,
+            expansionProgress
+        )
         val collapsedTopPadding = MaterialTheme.dimens.taskCollapsedTopPadding
         val expandedTopPadding = MaterialTheme.dimens.taskExpandedTopPadding
         val collapsedBottomPadding = MaterialTheme.dimens.taskCollapsedBottomPadding
