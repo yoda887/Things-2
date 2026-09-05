@@ -28,6 +28,8 @@ import com.example.ui.screens.home.inlineeditor.utils.isTodayDate
 import com.example.ui.screens.home.inlineeditor.utils.isTodayDateOrPast
 import java.text.SimpleDateFormat
 import java.util.*
+import android.view.HapticFeedbackConstants
+import androidx.compose.ui.platform.LocalView
 
 @Composable
 fun InlineEditorToolbar(
@@ -47,6 +49,7 @@ fun InlineEditorToolbar(
     val textPrimaryColor = Color(0xFF1C1C1E)
     val iconInactiveColor = Color(0xFFC7C7CC)
     val bodyFontSize = MaterialTheme.typography.bodyLarge.fontSize
+    val view = LocalView.current
 
     Row(
         modifier = Modifier.fillMaxWidth(),
@@ -82,7 +85,10 @@ fun InlineEditorToolbar(
                 verticalAlignment = Alignment.CenterVertically,
                 modifier = Modifier
                     .clip(RoundedCornerShape(6.dp))
-                    .clickable { onShowWhenDialogChange(true) }
+                    .clickable {
+                        view.performHapticFeedback(HapticFeedbackConstants.CLOCK_TICK)
+                        onShowWhenDialogChange(true)
+                    }
                     .padding(vertical = 4.dp)
             ) {
                 Icon(
@@ -130,7 +136,10 @@ fun InlineEditorToolbar(
                 tint = iconInactiveColor,
                 modifier = Modifier
                     .size(22.dp)
-                    .clickable { onShowWhenDialogChange(true) }
+                    .clickable {
+                        view.performHapticFeedback(HapticFeedbackConstants.CLOCK_TICK)
+                        onShowWhenDialogChange(true)
+                    }
             )
              
              }
@@ -142,7 +151,10 @@ fun InlineEditorToolbar(
                     tint = iconInactiveColor,
                     modifier = Modifier
                         .size(22.dp)
-                        .clickable { onShowTagHelperChange(true) }
+                        .clickable {
+                            view.performHapticFeedback(HapticFeedbackConstants.CLOCK_TICK)
+                            onShowTagHelperChange(true)
+                        }
                 )
             }
 
@@ -154,7 +166,10 @@ fun InlineEditorToolbar(
                     tint = iconInactiveColor,
                     modifier = Modifier
                         .size(22.dp)
-                        .clickable { onShowChecklistHelperChange(true) }
+                        .clickable {
+                            view.performHapticFeedback(HapticFeedbackConstants.CLOCK_TICK)
+                            onShowChecklistHelperChange(true)
+                        }
                 )
             }
 
@@ -166,7 +181,10 @@ fun InlineEditorToolbar(
                     tint = iconInactiveColor,
                     modifier = Modifier
                         .size(22.dp)
-                        .clickable { onShowDatePickerChange(true) }
+                        .clickable {
+                            view.performHapticFeedback(HapticFeedbackConstants.CLOCK_TICK)
+                            onShowDatePickerChange(true)
+                        }
                 )
             }
         }

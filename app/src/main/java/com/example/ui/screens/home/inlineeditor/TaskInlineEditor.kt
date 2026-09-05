@@ -52,6 +52,8 @@ import java.util.Locale
 import java.util.Date
 import java.text.SimpleDateFormat
 import androidx.compose.foundation.background
+import android.view.HapticFeedbackConstants
+import androidx.compose.ui.platform.LocalView
 
 @OptIn(ExperimentalMaterial3Api::class, ExperimentalLayoutApi::class)
 
@@ -108,6 +110,7 @@ fun ThingsTaskInlineEditor(
 
     var isDeleted by remember { mutableStateOf(false) }
     var isSavedManually by remember { mutableStateOf(false) }
+    val view = LocalView.current
 
     LaunchedEffect(showWhenDialog) {
         onWhenDialogVisibilityChange(showWhenDialog)
@@ -377,7 +380,10 @@ fun ThingsTaskInlineEditor(
                                     modifier = Modifier
                                         .clip(RoundedCornerShape(10.dp))
                                         .background(Color(0xFFD1EAE2)) // light-teal background
-                                        .clickable { showTagDialog = true }
+                                        .clickable {
+                                            view.performHapticFeedback(HapticFeedbackConstants.CLOCK_TICK)
+                                            showTagDialog = true
+                                        }
                                         .padding(horizontal = 10.dp, vertical = 4.dp)
                                 ) {
                                     Text(
@@ -402,7 +408,10 @@ fun ThingsTaskInlineEditor(
                         Row(
                             verticalAlignment = Alignment.CenterVertically,
                             modifier = Modifier
-                                .clickable { showWhenDialog = true }
+                                .clickable {
+                                    view.performHapticFeedback(HapticFeedbackConstants.CLOCK_TICK)
+                                    showWhenDialog = true
+                                }
                                 .padding(vertical = MaterialTheme.dimens.taskEditorIndicatorVerticalPadding)
                         ) {
                             Icon(
@@ -495,7 +504,10 @@ fun ThingsTaskInlineEditor(
                         Row(
                             verticalAlignment = Alignment.CenterVertically,
                             modifier = Modifier
-                                .clickable { showDatePicker = true }
+                                .clickable {
+                                    view.performHapticFeedback(HapticFeedbackConstants.CLOCK_TICK)
+                                    showDatePicker = true
+                                }
                                 .padding(vertical = MaterialTheme.dimens.taskEditorIndicatorVerticalPadding)
                         ) {
                             Icon(
@@ -549,7 +561,10 @@ fun ThingsTaskInlineEditor(
                                 tint = iconInactiveColor,
                                 modifier = Modifier
                                     .size(22.dp)
-                                    .clickable { showWhenDialog = true }
+                                    .clickable {
+                                        view.performHapticFeedback(HapticFeedbackConstants.CLOCK_TICK)
+                                        showWhenDialog = true
+                                    }
                             )
                         }
                     }
@@ -567,7 +582,10 @@ fun ThingsTaskInlineEditor(
                                 tint = iconInactiveColor,
                                 modifier = Modifier
                                     .size(22.dp)
-                                    .clickable { showTagDialog = true }
+                                    .clickable {
+                                        view.performHapticFeedback(HapticFeedbackConstants.CLOCK_TICK)
+                                        showTagDialog = true
+                                    }
                             )
                         }
                     }
@@ -585,7 +603,10 @@ fun ThingsTaskInlineEditor(
                                 tint = iconInactiveColor,
                                 modifier = Modifier
                                     .size(22.dp)
-                                    .clickable { showChecklistHelper = true }
+                                    .clickable {
+                                        view.performHapticFeedback(HapticFeedbackConstants.CLOCK_TICK)
+                                        showChecklistHelper = true
+                                    }
                             )
                         }
                     }
@@ -603,7 +624,10 @@ fun ThingsTaskInlineEditor(
                                 tint = iconInactiveColor,
                                 modifier = Modifier
                                     .size(22.dp)
-                                    .clickable { showDatePicker = true }
+                                    .clickable {
+                                        view.performHapticFeedback(HapticFeedbackConstants.CLOCK_TICK)
+                                        showDatePicker = true
+                                    }
                             )
                         }
                     }
