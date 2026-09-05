@@ -133,17 +133,17 @@ fun rememberFlattenedList(
     screen: ActiveScreen,
     standardToday: List<ItemWithChecklist>,
     eveningToday: List<ItemWithChecklist>,
-    draggedTaskId: String?,
+    draggedItemKey: Any?,
     upcomingDays: List<UpcomingDay>,
     projects: List<Item>,
     area: Area?,
     displayTasks: List<ItemWithChecklist>
 ): List<Any> {
-    return remember(screen, standardToday, eveningToday, draggedTaskId, upcomingDays, projects, area, displayTasks) {
+    return remember(screen, standardToday, eveningToday, draggedItemKey, upcomingDays, projects, area, displayTasks) {
         buildList<Any> {
             if (screen == ActiveScreen.TODAY) {
                 addAll(standardToday)
-                if (eveningToday.isNotEmpty() || draggedTaskId != null) {
+                if (eveningToday.isNotEmpty() || draggedItemKey != null) {
                     add("evening_header")
                     addAll(eveningToday)
                 }

@@ -5,6 +5,8 @@ import androidx.compose.foundation.lazy.LazyListState
 import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.composed
+import androidx.compose.ui.hapticfeedback.HapticFeedbackType
+import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.ui.platform.LocalView
 import com.example.data.model.Area
 import com.example.data.model.Item
@@ -47,6 +49,7 @@ fun Modifier.projectDragAndDrop(
     onExpandArea: (String) -> Unit
 ): Modifier = composed {
     val view = LocalView.current
+    val haptic = LocalHapticFeedback.current
     val coroutineScope = rememberCoroutineScope()
     val lazyListState = state.lazyListState
 
@@ -163,6 +166,12 @@ fun Modifier.projectDragAndDrop(
 
                 else -> false
             }
+        },
+        onDragStarted = {
+            haptic.performHapticFeedback(HapticFeedbackType.LongPress)
+        },
+        onMoveCommitted = {
+            view.performHapticFeedback(HapticFeedbackConstants.CLOCK_TICK)
         },
         onDragEnd = {
             hoverJob?.cancel()

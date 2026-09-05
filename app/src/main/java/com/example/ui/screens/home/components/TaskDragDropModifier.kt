@@ -11,7 +11,10 @@ import com.example.ui.components.dragdrop.GenericDragDropState
 import com.example.ui.components.dragdrop.universalDragAndDrop
 import kotlinx.coroutines.launch
 import java.util.Calendar
-import android.util.Log
+import android.view.HapticFeedbackConstants
+import androidx.compose.ui.hapticfeedback.HapticFeedbackType
+import androidx.compose.ui.platform.LocalHapticFeedback
+import androidx.compose.ui.platform.LocalView
 
 private const val MS_PER_DAY = 24 * 3600 * 1000L
 
@@ -39,7 +42,8 @@ fun Modifier.taskDragAndDrop(
     onLocalTasksListChange: (List<ItemWithChecklist>) -> Unit,
     onTasksReordered: (List<Item>) -> Unit,
 ): Modifier = composed {
-
+    val view = LocalView.current
+    val haptic = LocalHapticFeedback.current
     val lazyListState = state.lazyListState
 
     val currentTaskWrapper by rememberUpdatedState(taskWrapper)
@@ -193,6 +197,12 @@ fun Modifier.taskDragAndDrop(
                     true
                 }
             }
+        },
+        onDragStarted = {
+            haptic.performHapticFeedback(HapticFeedbackType.LongPress)
+        },
+        onMoveCommitted = {
+            view.performHapticFeedback(HapticFeedbackConstants.CLOCK_TICK)
         },
         onDragEnd = {
             // Перерасчет окончательных порядковых индексов (sortOrder) для сохранения изменений

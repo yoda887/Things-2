@@ -57,7 +57,6 @@ import com.example.data.model.Area
 import com.example.data.model.Tag
 import com.example.ui.components.ProjectProgressArc
 import com.example.ui.components.dragdrop.rememberGenericDragDropState
-import com.example.ui.components.dragdrop.draggedTaskId
 import com.example.ui.screens.home.ActiveScreen
 import com.example.ui.screens.home.subcomponents.TaskItemRow
 import com.example.ui.screens.home.inlineeditor.ThingsTaskInlineEditor
@@ -202,7 +201,7 @@ fun ThingsCategoryListPanel(
         screen = screen,
         standardToday = standardToday,
         eveningToday = eveningToday,
-        draggedTaskId = dragDropState.draggedTaskId,
+        draggedItemKey = dragDropState.draggedItemKey,
         upcomingDays = upcomingDays,
         projects = projects,
         area = area,
@@ -461,7 +460,7 @@ fun ThingsCategoryListPanel(
             }
 
             val hasTasks = when (screen) {
-                ActiveScreen.TODAY -> standardToday.isNotEmpty() || eveningToday.isNotEmpty() || dragDropState.draggedTaskId != null
+                ActiveScreen.TODAY -> standardToday.isNotEmpty() || eveningToday.isNotEmpty() || dragDropState.draggedItemKey != null
                 ActiveScreen.UPCOMING -> upcomingDays.isNotEmpty()
                 ActiveScreen.AREA_DETAIL -> {
                     val areaProjCount = projects.count { it.areaId == area?.id }
@@ -520,7 +519,7 @@ fun ThingsCategoryListPanel(
                                 onLocalTasksListChange = { localTasksList = it },
                                 lazyListState = lazyListState,
                                 onWhenDialogVisibilityChange = { isWhenDialogOpen = it },
-                                modifier = if (dragDropState.draggedTaskId == item.item.id) {
+                                modifier = if (dragDropState.draggedItemKey == item.item.id) {
                                     Modifier
                                 } else {
                                     Modifier.animateItem(

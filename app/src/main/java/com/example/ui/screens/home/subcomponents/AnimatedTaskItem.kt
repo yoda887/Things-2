@@ -31,7 +31,6 @@ import com.example.data.model.ChecklistItem
 import com.example.ui.screens.home.ActiveScreen
 import com.example.ui.screens.home.components.ThingsCategoryListEvent
 import com.example.ui.components.dragdrop.GenericDragDropState
-import com.example.ui.components.dragdrop.draggedTaskId
 import com.example.ui.screens.home.components.taskDragAndDrop
 import com.example.ui.screens.home.components.UpcomingDay
 import com.example.ui.screens.home.inlineeditor.ThingsTaskInlineEditor
@@ -106,7 +105,7 @@ fun AnimatedTaskItem(
     val currentArea = remember(task.areaId, areas) {
         areas.firstOrNull { it.id == task.areaId }
     }
-    val isDragTask = dragDropState.draggedTaskId == task.id
+    val isDragTask = dragDropState.draggedItemKey == task.id
     val isExpanded = inlineExpandedTaskId == task.id
     val shouldDim = inlineExpandedTaskId != null && !isExpanded
 
@@ -335,7 +334,7 @@ fun AnimatedTaskItem(
                         onSwipeLeft = { onEvent(ThingsCategoryListEvent.SwipeTaskLeft(taskWrapper)) },
                         onSwipeRight = { onEvent(ThingsCategoryListEvent.SwipeTaskRight(taskWrapper)) },
                         enabled = inlineExpandedTaskId == null
-                                && dragDropState.draggedTaskId == null
+                                && dragDropState.draggedItemKey == null
                                 && !task.id.startsWith("cal_")
                     ) {
                         TaskItemRow(

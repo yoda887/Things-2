@@ -9,11 +9,7 @@ import androidx.compose.foundation.lazy.LazyListItemInfo
 import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.composed
-import androidx.compose.ui.hapticfeedback.HapticFeedbackType
 import androidx.compose.ui.input.pointer.pointerInput
-import androidx.compose.ui.platform.LocalHapticFeedback
-import android.view.HapticFeedbackConstants
-import androidx.compose.ui.platform.LocalView
 import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.isActive
@@ -60,7 +56,7 @@ class GenericDragDropState(
 
     /**
      * Позволяет мгновенно и синхронно скорректировать смещение драга
-     * (например, при смене структуры/даты в процессе перетаскивания).
+     * (например, при программном изменении состава или порядка элементов списка в процессе перетаскивания).
      */
     fun adjustOffset(amount: Float) {
         dragAccumulatedY += amount
@@ -112,12 +108,6 @@ class GenericDragDropState(
     }
 }
 
-/**
- * Хелпер-расширение для приведения draggedItemKey к типу String? 
- * Это позволяет внешнему коду (например, списку задач) лаконично работать со строковыми ID задач.
- */
-val GenericDragDropState.draggedTaskId: String?
-    get() = draggedItemKey as? String
 
 /**
  * Создает и запоминает состояние GenericDragDropState, привязанное к текущему LazyListState.
@@ -190,8 +180,12 @@ private const val MOVE_THRESHOLD = 0.5f
  * @param key Уникальный ключ текущего перетаскиваемого элемента
  * @param canDropOver Предикат, определяющий возможность пересечения/свапа с целевым элементом по его ключу
  * @param onMoveIfNecessary Функция обратного вызова, принимающая ключ тащимого элемента и ключ цели,
- *                          на которую он наехал более чем на 50%. Возвращает true, если бизнес-логика
- *                          разрешила перемещение и перестроила список.
+ *                          с которой произошло геометрическое пересечение. Возвращает true, если
+ *                          внешний обработчик подтвердил перемещение и переупорядочил коллекцию.
+ * @param onDragStarted Функция обратного вызова при начале жеста перетаскивания (после долгого нажатия).
+ *                      Позволяет внешнему слою воспроизвести тактильный отклик (Haptic Feedback).
+ * @param onMoveCommitted Функция обратного вызова, уведомляющая о факте успешного перемещения элементов.
+ *                        Позволяет внешнему слою управлять тактильным откликом (Haptic Feedback).
  * @param onDragEnd Функция обратного вызова при успешном завершении жеста.
  */
 fun Modifier.universalDragAndDrop(
@@ -199,14 +193,17 @@ fun Modifier.universalDragAndDrop(
     key: Any,
     canDropOver: (targetKey: Any) -> Boolean = { true },
     onMoveIfNecessary: (draggedKey: Any, targetKey: Any) -> Boolean,
+    onDragStarted: () -> Unit = {},
+    onMoveCommitted: () -> Unit = {},
     onDragEnd: () -> Unit
 ): Modifier = composed {
-    val view = LocalView.current
     val coroutineScope = rememberCoroutineScope()
     val lazyListState = state.lazyListState
 
     val currentCanDropOver by rememberUpdatedState(canDropOver)
     val currentOnMoveIfNecessary by rememberUpdatedState(onMoveIfNecessary)
+    val currentOnDragStarted by rememberUpdatedState(onDragStarted)
+    val currentOnMoveCommitted by rememberUpdatedState(onMoveCommitted)
     val currentOnDragEnd by rememberUpdatedState(onDragEnd)
 
     /**
@@ -256,8 +253,8 @@ fun Modifier.universalDragAndDrop(
     }
 
     /**
-     * Инициализирует проверку пересечения и последующий вызов бизнес-логики.
-     * Компенсирует визуальное смещение задачи ровно на одну позицию списка.
+     * Выполняет геометрическую проверку пересечения элементов и обращение к внешнему обработчику перемещения.
+     * Компенсирует скачок смещения перетаскиваемого элемента на величину шага целевого слота.
      */
     fun performIntersectionCheck() {
         val visibleItems = lazyListState.layoutInfo.visibleItemsInfo
@@ -287,12 +284,12 @@ fun Modifier.universalDragAndDrop(
                 (draggedItem.offset - targetItem.offset).toFloat()
             }
 
-            // Запрашиваем бизнес-логику внешнего уровня
+            // Запрашиваем подтверждение перемещения у внешнего обработчика
             val swapAccepted = currentOnMoveIfNecessary(key, targetItem.key)
 
             // Если список перестроился, компенсируем прыжок с учётом полного расстояния
             if (swapAccepted) {
-                view.performHapticFeedback(HapticFeedbackConstants.CLOCK_TICK)
+                currentOnMoveCommitted()
                 state.adjustOffset(distanceToShift)
             }
         }
@@ -302,7 +299,7 @@ fun Modifier.universalDragAndDrop(
         state = state,
         key = key,
         onDragStart = {
-            // Резерв для обработки старта перетаскивания
+            currentOnDragStarted()
         },
         onDrag = { _ ->
             performIntersectionCheck()
@@ -333,7 +330,6 @@ fun Modifier.reorderableItem(
     onDragEnd: (afterAnimation: () -> Unit) -> Unit = {},
     onDragCancel: (afterAnimation: () -> Unit) -> Unit = {},
 ): Modifier = composed {
-    val haptic = LocalHapticFeedback.current
     val coroutineScope = rememberCoroutineScope()
     
     val currentOnDragStart by rememberUpdatedState(onDragStart)
@@ -398,7 +394,6 @@ fun Modifier.reorderableItem(
                 state.draggedItemKey = key
                 state.isInteracting = true
                 state.snapOffsetTo(0f)
-                haptic.performHapticFeedback(HapticFeedbackType.LongPress)
                 currentOnDragStart()
             },
             onDrag = { change, dragAmount ->
