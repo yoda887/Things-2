@@ -243,9 +243,34 @@ fun Modifier.universalDragAndDrop(
                 .minByOrNull { it.index }
 
             if (nextItem != null) {
-                val downThreshold = nextItem.offset + nextItem.size * threshold
-                if (dragBottom > downThreshold) {
-                    return nextItem
+                // Находим последний элемент целевого составного блока (включая связанные элементы !canDropOver)
+                var lastTarget = nextItem
+                val nextIdx = visibleItems.indexOfFirst { it.key == nextItem.key }
+                var isBlockFullyVisible = true
+                if (nextIdx != -1) {
+                    for (i in (nextIdx + 1)..visibleItems.lastIndex) {
+                        val item = visibleItems[i]
+                        if (!currentCanDropOver(item.key)) {
+                            lastTarget = item
+                        } else {
+                            break
+                        }
+                    }
+                    // Если дочерние элементы блока упираются в нижний край видимых элементов списка
+                    // и в общем списке ещё есть элементы, значит часть составного блока находится за пределами экрана
+                    val totalItemsCount = lazyListState.layoutInfo.totalItemsCount
+                    val isLastVisibleItem = lastTarget.index == visibleItems.last().index
+                    val hasMoreItemsInList = lastTarget.index < totalItemsCount - 1
+                    if (isLastVisibleItem && hasMoreItemsInList && !currentCanDropOver(lastTarget.key)) {
+                        isBlockFullyVisible = false
+                    }
+                }
+
+                if (isBlockFullyVisible) {
+                    val downThreshold = lastTarget.offset + lastTarget.size * threshold
+                    if (dragBottom > downThreshold) {
+                        return nextItem
+                    }
                 }
             }
         } else if (deltaY < 0f) {
