@@ -493,24 +493,23 @@ fun ThingsHomePanel(
                             .fillMaxWidth()
                     ) {
                         if (treeItem.showTopDivider) {
+                            Spacer(modifier = Modifier.height(13.dp))
                             HorizontalDivider(
                                 color = dividerColor,
-                                modifier = Modifier.padding(vertical = 0.dp)
+                                modifier = Modifier.padding(horizontal = 6.dp)
                             )
-                            Spacer(modifier = Modifier.height(20.dp))
+                            Spacer(modifier = Modifier.height(13.dp))
                         }
 
                         // Title block for Area
                         Row(
                             modifier = Modifier
                                 .fillMaxWidth()
-                                .then(
-                                    if (!hasProjects) Modifier.heightIn(min = 48.dp) else Modifier
-                                )
+                                .height(46.dp)
                                 .clip(RoundedCornerShape(10.dp))
                                 .background(if (isAreaEditing) ThingsBlue.copy(alpha = 0.15f) else Color.Transparent)
                                 .clickable(enabled = !isAreaEditing) { onAreaClick(area) }
-                                .padding(vertical = 2.dp, horizontal = 6.dp),
+                                .padding(horizontal = 6.dp),
                             verticalAlignment = Alignment.CenterVertically
                         ) {
                             AreaIconAnimated(
