@@ -55,6 +55,10 @@ fun Modifier.taskDragAndDrop(
     this.universalDragAndDrop(
         state = state,
         key = taskItem.id,
+        canDropOver = { targetKey ->
+            // Исключаем события календаря из целей свапа
+            !(targetKey as? String).orEmpty().startsWith("ev_")
+        },
         onMoveIfNecessary = { draggedKey, targetKey ->
             val draggedId = draggedKey as? String ?: return@universalDragAndDrop false
             val targetId = targetKey as? String ?: return@universalDragAndDrop false
@@ -102,11 +106,8 @@ fun Modifier.taskDragAndDrop(
                 }
 
                 // ПЕРЕТАСКИВАНИЕ НА ЗАГОЛОВОК ПРЕДСТОЯЩЕГО ДНЯ (Upcoming screen)
-                currentScreen == ActiveScreen.UPCOMING && 
-                        (targetId.startsWith("hdr_") || targetId.startsWith("ev_")) -> {
-
-                    val isEv = targetId.startsWith("ev_")
-                    val timestampStr = if (!isEv) targetId.substringAfter("hdr_") else targetId.substringAfterLast("_")
+                currentScreen == ActiveScreen.UPCOMING && targetId.startsWith("hdr_") -> {
+                    val timestampStr = targetId.substringAfter("hdr_")
                     val timestamp = timestampStr.toLongOrNull() ?: return@universalDragAndDrop false
 
                     val list = currentLocalTasksList.toMutableList()
@@ -116,18 +117,16 @@ fun Modifier.taskDragAndDrop(
                     val oldDayStart = moved.item.startDate?.dayStart() ?: tomorrowStart
 
                     // Определение целевого дня в зависимости от направления перетаскивания (вверх/вниз)
-                    val targetTimestamp = if (isEv) {
-                        timestamp
-                    } else {
-                        if (movingDown) timestamp else timestamp - MS_PER_DAY
-                    }
+                    val targetTimestamp = if (movingDown) timestamp else timestamp - MS_PER_DAY
 
                     val clipped = maxOf(targetTimestamp, tomorrowStart)
                     val targetDayStart = clipped.dayStart()
 
                     if (oldDayStart == targetDayStart) return@universalDragAndDrop false
 
-                    // Расположение задачи внутри блока целевого дня
+                    // Расположение задачи внутри блока целевого дня:
+                    // При движении вниз — в начало списка задач целевого дня
+                    // При движении вверх — в конец списка задач целевого дня
                     val insertAt = if (movingDown) {
                         list.indexOfFirst { it.item.startDate != null && it.item.startDate!! >= targetDayStart }
                             .takeIf { it != -1 } ?: list.size

@@ -26,6 +26,13 @@ private const val SCROLL_MAX_PX = 20f
 private const val DRAG_SCROLL_ACCELERATION_LIMIT_MS = 2_000f
 
 /**
+ * Обертка для предоставления актуального значения смещения через свойство .value.
+ */
+class DragOffsetHolder(private val getter: () -> Float) {
+    val value: Float get() = getter()
+}
+
+/**
  * Универсальное состояние для реализации жеста Drag-and-Drop в списках LazyColumn.
  * Инкапсулирует состояние взаимодействия и предоставляет плавное управление смещением.
  */
@@ -38,54 +45,68 @@ class GenericDragDropState(
     /** Флаг указывает, продолжает ли пользователь удерживать палец на экране во время перетаскивания */
     var isInteracting by mutableStateOf(false)
     
-    /** Накопленный оффсет смещения с использованием Animatable для плавного перемещения и возврата */
-    val dragAccumulatedOffset = Animatable(0f)
+    /** Актуальные синхронные значения смещения драга без задержек мьютекса */
+    var dragAccumulatedY by mutableFloatStateOf(0f)
+    var dragAccumulatedX by mutableFloatStateOf(0f)
+
+    /** Накопленный оффсет смещения для совместимости со сторонними читателями .value */
+    val dragAccumulatedOffset = DragOffsetHolder { dragAccumulatedY }
     
     /** Накопленный оффсет смещения по горизонтали для свободного перемещения */
-    val dragAccumulatedOffsetHorizontal = Animatable(0f)
+    val dragAccumulatedOffsetHorizontal = DragOffsetHolder { dragAccumulatedX }
     
     /** Временная метка начала авто-прокрутки для расчёта ускорения */
     var dragScrollStartMs by mutableStateOf(Long.MIN_VALUE)
 
     /**
-     * Позволяет скорректировать смещение накопленного драга внешними силами
+     * Позволяет мгновенно и синхронно скорректировать смещение драга
      * (например, при смене структуры/даты в процессе перетаскивания).
      */
-    suspend fun adjustOffset(amount: Float) {
-        dragAccumulatedOffset.snapTo(dragAccumulatedOffset.value + amount)
+    fun adjustOffset(amount: Float) {
+        dragAccumulatedY += amount
     }
 
     /**
-     * Позволяет скорректировать смещение накопленного драга внешними силами по горизонтали.
+     * Позволяет мгновенно и синхронно скорректировать смещение драга внешними силами по горизонтали.
      */
-    suspend fun adjustOffsetHorizontal(amount: Float) {
-        dragAccumulatedOffsetHorizontal.snapTo(dragAccumulatedOffsetHorizontal.value + amount)
+    fun adjustOffsetHorizontal(amount: Float) {
+        dragAccumulatedX += amount
     }
 
     /**
-     * Позволяет установить точное начальное смещение (например, сбросить в 0f).
+     * Позволяет мгновенно установить точное начальное смещение (например, сбросить в 0f).
      */
-    suspend fun snapOffsetTo(amount: Float) {
-        dragAccumulatedOffset.snapTo(amount)
-        dragAccumulatedOffsetHorizontal.snapTo(0f)
+    fun snapOffsetTo(amount: Float) {
+        dragAccumulatedY = amount
+        dragAccumulatedX = 0f
     }
 
     /**
      * Плавный возврат элемента на своё место с помощью анимации.
      */
     suspend fun animateOffsetToZero() {
+        val startY = dragAccumulatedY
+        val startX = dragAccumulatedX
+        if (startY == 0f && startX == 0f) return
+
+        val animY = Animatable(startY)
+        val animX = Animatable(startX)
         coroutineScope {
             launch {
-                dragAccumulatedOffset.animateTo(
+                animY.animateTo(
                     targetValue = 0f,
                     animationSpec = tween(durationMillis = 200)
-                )
+                ) {
+                    dragAccumulatedY = this.value
+                }
             }
             launch {
-                dragAccumulatedOffsetHorizontal.animateTo(
+                animX.animateTo(
                     targetValue = 0f,
                     animationSpec = tween(durationMillis = 200)
-                )
+                ) {
+                    dragAccumulatedX = this.value
+                }
             }
         }
     }
@@ -132,6 +153,33 @@ fun detectItemSpacing(
     return 0f
 }
 
+/**
+ * Вычисляет расстояние (spacing) для целевого элемента списка с учётом его соседей.
+ */
+fun getItemSpacing(
+    targetItem: LazyListItemInfo,
+    visibleItems: List<LazyListItemInfo>,
+): Float {
+    val targetIdx = visibleItems.indexOfFirst { it.key == targetItem.key }
+    if (targetIdx != -1) {
+        if (targetIdx < visibleItems.lastIndex) {
+            val next = visibleItems[targetIdx + 1]
+            if (next.index == targetItem.index + 1) {
+                val gap = next.offset - (targetItem.offset + targetItem.size)
+                if (gap >= 0) return gap.toFloat()
+            }
+        }
+        if (targetIdx > 0) {
+            val prev = visibleItems[targetIdx - 1]
+            if (prev.index == targetItem.index - 1) {
+                val gap = targetItem.offset - (prev.offset + prev.size)
+                if (gap >= 0) return gap.toFloat()
+            }
+        }
+    }
+    return detectItemSpacing(visibleItems)
+}
+
 private const val MOVE_THRESHOLD = 0.5f
 
 /**
@@ -140,6 +188,7 @@ private const val MOVE_THRESHOLD = 0.5f
  * 
  * @param state Общее состояние перетаскивания списка [GenericDragDropState]
  * @param key Уникальный ключ текущего перетаскиваемого элемента
+ * @param canDropOver Предикат, определяющий возможность пересечения/свапа с целевым элементом по его ключу
  * @param onMoveIfNecessary Функция обратного вызова, принимающая ключ тащимого элемента и ключ цели,
  *                          на которую он наехал более чем на 50%. Возвращает true, если бизнес-логика
  *                          разрешила перемещение и перестроила список.
@@ -148,6 +197,7 @@ private const val MOVE_THRESHOLD = 0.5f
 fun Modifier.universalDragAndDrop(
     state: GenericDragDropState,
     key: Any,
+    canDropOver: (targetKey: Any) -> Boolean = { true },
     onMoveIfNecessary: (draggedKey: Any, targetKey: Any) -> Boolean,
     onDragEnd: () -> Unit
 ): Modifier = composed {
@@ -155,12 +205,13 @@ fun Modifier.universalDragAndDrop(
     val coroutineScope = rememberCoroutineScope()
     val lazyListState = state.lazyListState
 
+    val currentCanDropOver by rememberUpdatedState(canDropOver)
     val currentOnMoveIfNecessary by rememberUpdatedState(onMoveIfNecessary)
     val currentOnDragEnd by rememberUpdatedState(onDragEnd)
 
     /**
      * Поиск элемента списка, с которым необходимо произвести обмен на основании геометрии.
-     * Реализует строгое пересечение по центру для заголовков и 50% наложение для других элементов.
+     * Реализует симметричную проверку пересечения центра для корректной работы с элементами любой высоты (включая заголовки и разделители).
      */
     fun checkSwap(
         draggedKey: Any,
@@ -170,63 +221,79 @@ fun Modifier.universalDragAndDrop(
         val draggedItem = visibleItems.firstOrNull { it.key == draggedKey } ?: return null
         
         val dragTop = draggedItem.offset + currentOffset
-        val dragBottom = dragTop + draggedItem.size
-        
+        val dragCenter = dragTop + draggedItem.size / 2f
 
-        return visibleItems.firstOrNull { target ->
-            if (target.key == draggedKey) return@firstOrNull false
-
-            
-
-
-
-
-
-
-
-
-
-
-
-
-            
-                val overlapTop = maxOf(dragTop, target.offset.toFloat())
-                val overlapBottom = minOf(dragBottom, (target.offset + target.size).toFloat())
-                val overlapAmount = overlapBottom - overlapTop
-                
-                
-                overlapAmount > (target.size * MOVE_THRESHOLD) // Универсальное правило 50%
+        // Фильтруем элементы согласно предикату canDropOver, исключая неподходящие цели для свапа
+        val candidates = visibleItems.filter { 
+            it.key != draggedKey && currentCanDropOver(it.key)
         }
+
+        // Проверяем следующий элемент ниже по списку (движение вниз)
+        val nextItem = candidates
+            .filter { it.index > draggedItem.index }
+            .minByOrNull { it.index }
+
+        if (nextItem != null) {
+            val targetCenter = nextItem.offset + nextItem.size / 2f
+            if (dragCenter > targetCenter) {
+                return nextItem
+            }
+        }
+
+        // Проверяем предыдущий элемент выше по списку (движение вверх)
+        val prevItem = candidates
+            .filter { it.index < draggedItem.index }
+            .maxByOrNull { it.index }
+
+        if (prevItem != null) {
+            val targetCenter = prevItem.offset + prevItem.size / 2f
+            if (dragCenter < targetCenter) {
+                return prevItem
+            }
+        }
+
+        return null
     }
 
     /**
      * Инициализирует проверку пересечения и последующий вызов бизнес-логики.
-
-
+     * Компенсирует визуальное смещение (прыжки) с учётом полных размеров целевых элементов
+     * и возможных непропускаемых элементов между ними.
      */
     fun performIntersectionCheck() {
         val visibleItems = lazyListState.layoutInfo.visibleItemsInfo
         val targetItem = checkSwap(key, visibleItems, state.dragAccumulatedOffset.value)
 
         if (targetItem != null) {
-             val draggedItem = visibleItems.firstOrNull { it.key == key } ?: return
+            val draggedItem = visibleItems.firstOrNull { it.key == key } ?: return
             
-            val spacing = detectItemSpacing(visibleItems)
             val distanceToShift = if (targetItem.index > draggedItem.index) {
-                -(targetItem.size + spacing)
+                // При движении вниз: если за целью следуют элементы, не участвующие в drag-and-drop (canDropOver == false),
+                // учитываем суммарную высоту всего блока
+                var lastBlockItem: LazyListItemInfo = targetItem
+                val targetIdx = visibleItems.indexOfFirst { it.key == targetItem.key }
+                if (targetIdx != -1) {
+                    var i = targetIdx + 1
+                    while (i < visibleItems.size && !currentCanDropOver(visibleItems[i].key) && visibleItems[i].index == lastBlockItem.index + 1) {
+                        lastBlockItem = visibleItems[i]
+                        i++
+                    }
+                }
+                val totalBlockHeight = (lastBlockItem.offset + lastBlockItem.size) - targetItem.offset
+                val spacing = getItemSpacing(lastBlockItem, visibleItems)
+                -(totalBlockHeight + spacing)
             } else {
-                (targetItem.size + spacing)
+                // При движении вверх: точное расстояние между исходной позицией тащимого элемента и позицией цели
+                (draggedItem.offset - targetItem.offset).toFloat()
             }
 
             // Запрашиваем бизнес-логику внешнего уровня
             val swapAccepted = currentOnMoveIfNecessary(key, targetItem.key)
 
-            // Если список перестроился, компенсируем прыжок
+            // Если список перестроился, компенсируем прыжок с учётом полного расстояния
             if (swapAccepted) {
                 view.performHapticFeedback(HapticFeedbackConstants.CLOCK_TICK)
-                coroutineScope.launch {
-                    state.adjustOffset(distanceToShift)
-                }
+                state.adjustOffset(distanceToShift)
             }
         }
     }
@@ -330,19 +397,15 @@ fun Modifier.reorderableItem(
             onDragStart = {
                 state.draggedItemKey = key
                 state.isInteracting = true
-                coroutineScope.launch {
-                    state.snapOffsetTo(0f)
-                }
+                state.snapOffsetTo(0f)
                 haptic.performHapticFeedback(HapticFeedbackType.LongPress)
                 currentOnDragStart()
             },
             onDrag = { change, dragAmount ->
                 change.consume()
-                coroutineScope.launch {
-                    state.adjustOffset(dragAmount.y)
-                    state.adjustOffsetHorizontal(dragAmount.x)
-                    currentOnDrag(dragAmount.y)
-                }
+                state.adjustOffset(dragAmount.y)
+                state.adjustOffsetHorizontal(dragAmount.x)
+                currentOnDrag(dragAmount.y)
             },
             onDragEnd = {
                 state.isInteracting = false

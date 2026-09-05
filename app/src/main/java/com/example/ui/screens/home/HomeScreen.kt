@@ -409,7 +409,8 @@ fun ThingsHomeScreen(viewModel: ThingsViewModel = hiltViewModel()) {
                             editingAreaId = editingAreaId,
                             onEditingAreaIdChange = { editingAreaId = it },
                             onUpdateProject = { viewModel.updateProject(it) },
-                            onUpdateArea = { viewModel.updateArea(it) }
+                            onUpdateArea = { viewModel.updateArea(it) },
+                            onProjectsReordered = { viewModel.updateTasks(it) }
                         )
                     }
                 }
