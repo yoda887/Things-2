@@ -55,7 +55,7 @@ interface TaskDao {
     @Query("SELECT * FROM areas WHERE id = :id")
     suspend fun getAreaById(id: String): Area?
 
-    @Insert(onConflict = OnConflictStrategy.REPLACE)
+    @Upsert
     suspend fun insertArea(area: Area)
 
     @Delete

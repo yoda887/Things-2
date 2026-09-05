@@ -16,4 +16,13 @@ class UpdateAreaUseCase @Inject constructor(private val repository: ITaskReposit
         // [ИЗМЕНЕНИЕ]: Вызов репозитория для сохранения обновленной области
         repository.insertArea(area)
     }
+
+    /**
+     * Пакетно обновляет порядок сфер (областей) деятельности в БД.
+     */
+    suspend operator fun invoke(areas: List<Area>) {
+        areas.forEachIndexed { index, area ->
+            repository.insertArea(area.copy(sortOrder = index))
+        }
+    }
 }

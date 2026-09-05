@@ -574,6 +574,15 @@ class ThingsViewModel @Inject constructor(
         }
     }
 
+    /**
+     * Пакетно обновляет порядок сфер (областей) в БД.
+     */
+    fun updateAreas(areas: List<Area>) {
+        viewModelScope.launch {
+            areaUseCases.updateArea(areas)
+        }
+    }
+
     fun deleteArea(area: Area) {
         viewModelScope.launch {
             areaUseCases.deleteArea(area)

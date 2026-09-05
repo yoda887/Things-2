@@ -131,7 +131,8 @@ fun ThingsHomePanel(
     onEditingAreaIdChange: (String?) -> Unit = {},
     onUpdateProject: (Item) -> Unit = {},
     onUpdateArea: (Area) -> Unit = {},
-    onProjectsReordered: (List<Item>) -> Unit = {}
+    onProjectsReordered: (List<Item>) -> Unit = {},
+    onAreasReordered: (List<Area>) -> Unit = {}
 ) {
     var rawTokenInput by remember { mutableStateOf(googleToken) }
     var isSyncConfigExpanded by remember { mutableStateOf(false) }
@@ -196,9 +197,15 @@ fun ThingsHomePanel(
     val dragDropState = rememberGenericDragDropState(lazyListState)
 
     var localProjects by remember { mutableStateOf(projects) }
-    LaunchedEffect(projects) {
-        if (!dragDropState.isInteracting) {
+    var localAreas by remember { mutableStateOf(areas) }
+    LaunchedEffect(projects, dragDropState.isInteracting, dragDropState.draggedItemKey) {
+        if (!dragDropState.isInteracting && dragDropState.draggedItemKey == null) {
             localProjects = projects
+        }
+    }
+    LaunchedEffect(areas, dragDropState.isInteracting, dragDropState.draggedItemKey) {
+        if (!dragDropState.isInteracting && dragDropState.draggedItemKey == null) {
+            localAreas = areas
         }
     }
 
@@ -282,13 +289,13 @@ fun ThingsHomePanel(
         }
 
         // Two-level Areas & Projects tree (flattened to maintain gesture detector lifecycle across areas)
-        val flattenedTree = remember(localProjects, areas, expandedStates.toMap()) {
+        val flattenedTree = remember(localProjects, localAreas, expandedStates.toMap()) {
             val result = mutableListOf<HomeTreeItem>()
             val noAreaProjects = localProjects.filter { it.areaId == null }
             noAreaProjects.forEach { project ->
                 result.add(HomeTreeItem.ProjectItem(project, null))
             }
-            areas.forEachIndexed { index, area ->
+            localAreas.forEachIndexed { index, area ->
                 val areaProjects = localProjects.filter { it.areaId == area.id }
                 val hasProjects = areaProjects.isNotEmpty()
                 val isExpanded = expandedStates[area.id] ?: true
@@ -460,7 +467,7 @@ fun ThingsHomePanel(
                         dragDropState = dragDropState,
                         originalProjects = projects,
                         localProjectsList = localProjects,
-                        areas = areas,
+                        areas = localAreas,
                         expandedStates = expandedStates,
                         cardSurfaceColor = cardSurfaceColor,
                         textPrimaryColor = textPrimaryColor,
@@ -485,12 +492,34 @@ fun ThingsHomePanel(
                         label = "rotationAngle_${area.id}"
                     )
 
+                    val isAreaDragging = dragDropState.draggedItemKey == "area_${area.id}"
+                    val areaDragScale by animateFloatAsState(
+                        targetValue = if (isAreaDragging) 1.04f else 1f,
+                        animationSpec = spring(),
+                        label = "areaDragScale_${area.id}"
+                    )
+                    val areaDragElev by animateDpAsState(
+                        targetValue = if (isAreaDragging) 8.dp else 0.dp,
+                        animationSpec = tween(
+                            durationMillis = 250,
+                            easing = FastOutSlowInEasing
+                        ),
+                        label = "areaDragElev_${area.id}"
+                    )
+                    val areaTranslationY = if (isAreaDragging) dragDropState.dragAccumulatedOffset.value else 0f
+                    val areaTranslationX = if (isAreaDragging) dragDropState.dragAccumulatedOffsetHorizontal.value else 0f
+                    val areaZIndex = if (isAreaDragging || areaDragElev > 0.dp) 100f else 0f
+
                     Column(
-                        modifier = Modifier
-                            .animateItem(
+                        modifier = (if (!isAreaDragging && areaDragElev == 0.dp) {
+                            Modifier.animateItem(
                                 placementSpec = tween(durationMillis = 200, easing = FastOutSlowInEasing)
                             )
+                        } else {
+                            Modifier
+                        })
                             .fillMaxWidth()
+                            .zIndex(areaZIndex)
                     ) {
                         if (treeItem.showTopDivider) {
                             Spacer(modifier = Modifier.height(13.dp))
@@ -502,16 +531,53 @@ fun ThingsHomePanel(
                         }
 
                         // Title block for Area
-                        Row(
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .height(46.dp)
-                                .clip(RoundedCornerShape(10.dp))
-                                .background(if (isAreaEditing) ThingsBlue.copy(alpha = 0.15f) else Color.Transparent)
-                                .clickable(enabled = !isAreaEditing) { onAreaClick(area) }
-                                .padding(horizontal = 6.dp),
-                            verticalAlignment = Alignment.CenterVertically
+                        Box(
+                            modifier = Modifier.fillMaxWidth()
                         ) {
+                            // Подложка на физическом месте области при перетаскивании (placeholder slot)
+                            if (isAreaDragging) {
+                                val isDark = isSystemInDarkTheme()
+                                val placeholderBgColor = if (isDark) Color(0xFF2C2D32) else Color(0xFFE5E6EB)
+                                Box(
+                                    modifier = Modifier
+                                        .matchParentSize()
+                                        .alpha(0.5f)
+                                        .background(placeholderBgColor, RoundedCornerShape(10.dp))
+                                )
+                            }
+
+                            Row(
+                                modifier = Modifier
+                                    .graphicsLayer {
+                                        translationX = areaTranslationX
+                                        translationY = areaTranslationY
+                                        scaleX = areaDragScale
+                                        scaleY = areaDragScale
+                                        shadowElevation = areaDragElev.toPx()
+                                        shape = RoundedCornerShape(10.dp)
+                                        this.clip = false
+                                    }
+                                    .fillMaxWidth()
+                                    .height(46.dp)
+                                    .clip(RoundedCornerShape(10.dp))
+                                    .background(
+                                        if (isAreaDragging || areaDragElev > 0.dp) cardSurfaceColor
+                                        else if (isAreaEditing) ThingsBlue.copy(alpha = 0.15f)
+                                        else Color.Transparent
+                                    )
+                                    .areaDragAndDrop(
+                                        state = dragDropState,
+                                        area = area,
+                                        originalAreas = areas,
+                                        localAreasList = localAreas,
+                                        expandedStates = expandedStates,
+                                        onLocalAreasListChange = { localAreas = it },
+                                        onAreasReordered = onAreasReordered
+                                    )
+                                    .clickable(enabled = !isAreaEditing && !isAreaDragging) { onAreaClick(area) }
+                                    .padding(horizontal = 6.dp),
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
                             AreaIconAnimated(
                                 isClosed = !isExpanded,
                                 onToggle = {},
@@ -615,6 +681,7 @@ fun ThingsHomePanel(
                         }
                     }
                 }
+            }
             }
         }
 
