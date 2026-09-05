@@ -266,11 +266,25 @@ fun Modifier.universalDragAndDrop(
         if (targetItem != null) {
             val draggedItem = visibleItems.firstOrNull { it.key == key } ?: return
             
-            val spacing = getItemSpacing(targetItem, visibleItems)
             val distanceToShift = if (targetItem.index > draggedItem.index) {
-                -(targetItem.size + spacing)
+                // Движение вниз: находим последний непропускаемый элемент в целевом блоке
+                var lastTarget = targetItem
+                val targetIdx = visibleItems.indexOfFirst { it.key == targetItem.key }
+                if (targetIdx != -1) {
+                    for (i in (targetIdx + 1)..visibleItems.lastIndex) {
+                        val item = visibleItems[i]
+                        if (!currentCanDropOver(item.key)) {
+                            lastTarget = item
+                        } else {
+                            break
+                        }
+                    }
+                }
+                val targetBottom = lastTarget.offset + lastTarget.size
+                (draggedItem.offset - (targetBottom - draggedItem.size)).toFloat()
             } else {
-                targetItem.size + spacing
+                // Движение вверх: целевой слот начинается на отступе targetItem
+                (draggedItem.offset - targetItem.offset).toFloat()
             }
 
             // Запрашиваем бизнес-логику внешнего уровня
