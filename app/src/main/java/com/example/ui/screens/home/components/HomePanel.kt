@@ -319,7 +319,7 @@ fun ThingsHomePanel(
                 .graphicsLayer { translationY = pullOffset.value }
                 // [ИЗМЕНЕНИЕ]: Уменьшено расстояние от левой и правой стороны экрана до списков с 20.dp до 14.dp
                 .padding(horizontal = 14.dp),
-            verticalArrangement = Arrangement.spacedBy(16.dp)
+            verticalArrangement = Arrangement.spacedBy(0.dp)
         ) {
         // Search Filter row
         item {
@@ -362,6 +362,7 @@ fun ThingsHomePanel(
                     }
                 }
             }
+            Spacer(modifier = Modifier.height(16.dp))
         }
 
         // Smart Lists Grid
@@ -432,6 +433,7 @@ fun ThingsHomePanel(
                     onClick = { onSmartListClick(ActiveScreen.LOGBOOK) }
                 )
             }
+            Spacer(modifier = Modifier.height(16.dp))
         }
 
         // [ИЗМЕНЕНИЕ]: Горизонтальный разделитель между списком умных категорий и началом списка проектов/областей
@@ -440,6 +442,7 @@ fun ThingsHomePanel(
                 color = dividerColor,
                 modifier = Modifier.padding(horizontal = 6.dp)
             )
+            Spacer(modifier = Modifier.height(12.dp))
         }
 
 
@@ -792,6 +795,7 @@ private fun LazyItemScope.ProjectItemRow(
                     this.clip = false
                 }
                 .fillMaxWidth()
+                .height(46.dp)
                 .clip(RoundedCornerShape(10.dp))
                 .background(
                     if (isDragging || dragElev > 0.dp) cardSurfaceColor
@@ -810,7 +814,7 @@ private fun LazyItemScope.ProjectItemRow(
                     onExpandArea = onExpandArea
                 )
                 .clickable(enabled = !isEditing && !isDragging) { onProjectClick(project) }
-                .padding(vertical = 6.dp, horizontal = 6.dp),
+                .padding(horizontal = 6.dp),
             verticalAlignment = Alignment.CenterVertically
         ) {
             Box(
