@@ -104,16 +104,12 @@ fun InlineMainInputRow(
                         text = subtitleText,
                         style = TextStyle(
                             fontSize = subFontSize,
-                            color = textSecondaryColor.copy(alpha = 0.85f),
+                            color = Color(0xFF8E8E93),
                             fontWeight = FontWeight.Normal
                         ),
                         maxLines = 1,
                         overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis,
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .graphicsLayer {
-                                alpha = (1f - expansionProgress).coerceIn(0f, 1f)
-                            }
+                        modifier = Modifier.fillMaxWidth()
                     )
                 }
 
@@ -203,29 +199,34 @@ fun TitleSubtitleLayout(
         // --- Calculate Y offsets ---
         // At progress = 0, we want the content (simulatedFullHeight) to be vertically centered in 46.dp.
         // The Layout itself is placed at topPadding (13.dp) inside the Card.
-        val cardHeightPx = 46.dp.roundToPx()
-        val topPaddingPx = 13.dp.roundToPx()
+        val cardHeightPx = 46.dp.toPx()
+        val topPaddingPx = 13.dp.toPx()
         
         // Absolute Y position in the Card where the content should start:
-        val targetAbsoluteY = (cardHeightPx - simulatedFullHeight) / 2
+        val targetAbsoluteY = (cardHeightPx - simulatedFullHeight.toFloat()) / 2f
         
         // Since Layout is at topPaddingPx, the offset relative to Layout is:
         val startOffset = targetAbsoluteY - topPaddingPx
         
-        // Current offset interpolates to 0 at progress = 1
-        val currentOffset = (startOffset * (1f - expansionProgress)).toInt()
+        // Current offset interpolates to 0 at progress = 1 (subpixel Float precision)
+        val currentOffset = startOffset * (1f - expansionProgress)
 
         val width = maxOf(titlePlaceable.width, subtitlePlaceable?.width ?: 0)
 
         // Reported height is simply titleHeight, since the card container smoothly animates its overall height
         layout(width, titleHeight) {
-            titlePlaceable.place(0, currentOffset)
+            titlePlaceable.placeWithLayer(0, 0) {
+                translationY = currentOffset
+            }
             
             // Subtitle starts below title's first line, and as progress goes to 1, it moves UP (overlaps title)
-            val subtitleStartY = startOffset + titleSingleHeight
-            val subtitleCurrentY = (subtitleStartY * (1f - expansionProgress)).toInt()
+            val subtitleStartY = startOffset + titleSingleHeight.toFloat()
+            val subtitleCurrentY = subtitleStartY * (1f - expansionProgress)
             
-            subtitlePlaceable?.place(0, subtitleCurrentY)
+            subtitlePlaceable?.placeWithLayer(0, 0) {
+                translationY = subtitleCurrentY
+                alpha = (1f - expansionProgress).coerceIn(0f, 1f)
+            }
         }
     }
 }
