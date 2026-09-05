@@ -20,6 +20,7 @@ private const val SCROLL_FRAME_MS = 16L
 private const val SCROLL_ZONE_FRACTION = 0.15f
 private const val SCROLL_MAX_PX = 20f
 private const val DRAG_SCROLL_ACCELERATION_LIMIT_MS = 2_000f
+private const val MOVE_THRESHOLD = 0.7f
 
 /**
  * Обертка для предоставления актуального значения смещения через свойство .value.
@@ -170,7 +171,6 @@ fun getItemSpacing(
     return detectItemSpacing(visibleItems)
 }
 
-private const val MOVE_THRESHOLD = 0.5f
 
 /**
  * Универсальный модификатор для реализации Drag-and-Drop, абстрагированный от бизнес-логики.
@@ -179,6 +179,8 @@ private const val MOVE_THRESHOLD = 0.5f
  * @param state Общее состояние перетаскивания списка [GenericDragDropState]
  * @param key Уникальный ключ текущего перетаскиваемого элемента
  * @param canDropOver Предикат, определяющий возможность пересечения/свапа с целевым элементом по его ключу
+ * @param thresholdFraction Порог смещения центра (от 0.1f до 0.9f) с направленным гистерезисом (Direction Lock).
+ *                          По умолчанию 0.5f (симметричное пересечение середин слотов).
  * @param onMoveIfNecessary Функция обратного вызова, принимающая ключ тащимого элемента и ключ цели,
  *                          с которой произошло геометрическое пересечение. Возвращает true, если
  *                          внешний обработчик подтвердил перемещение и переупорядочил коллекцию.
@@ -192,6 +194,7 @@ fun Modifier.universalDragAndDrop(
     state: GenericDragDropState,
     key: Any,
     canDropOver: (targetKey: Any) -> Boolean = { true },
+    thresholdFraction: Float = MOVE_THRESHOLD,
     onMoveIfNecessary: (draggedKey: Any, targetKey: Any) -> Boolean,
     onDragStarted: () -> Unit = {},
     onMoveCommitted: () -> Unit = {},
@@ -201,51 +204,58 @@ fun Modifier.universalDragAndDrop(
     val lazyListState = state.lazyListState
 
     val currentCanDropOver by rememberUpdatedState(canDropOver)
+    val currentThresholdFraction by rememberUpdatedState(thresholdFraction)
     val currentOnMoveIfNecessary by rememberUpdatedState(onMoveIfNecessary)
     val currentOnDragStarted by rememberUpdatedState(onDragStarted)
     val currentOnMoveCommitted by rememberUpdatedState(onMoveCommitted)
     val currentOnDragEnd by rememberUpdatedState(onDragEnd)
 
     /**
-     * Поиск элемента списка, с которым необходимо произвести обмен на основании геометрии.
-     * Реализует симметричную проверку пересечения центра для корректной работы с элементами любой высоты (включая заголовки и разделители).
+     * Поиск элемента списка, с которым необходимо произвести обмен на основании геометрии и вектора движения (Direction Lock).
+     * Исключает взаимный дребезг при любых порогах thresholdFraction (0.1f .. 0.9f).
      */
     fun checkSwap(
         draggedKey: Any,
         visibleItems: List<LazyListItemInfo>,
-        currentOffset: Float
+        currentOffset: Float,
+        deltaY: Float
     ): LazyListItemInfo? {
+        if (deltaY == 0f) return null
         val draggedItem = visibleItems.firstOrNull { it.key == draggedKey } ?: return null
         
         val dragTop = draggedItem.offset + currentOffset
-        val dragCenter = dragTop + draggedItem.size / 2f
+        val dragBottom = dragTop + draggedItem.size
 
         // Фильтруем элементы согласно предикату canDropOver, исключая неподходящие цели для свапа
         val candidates = visibleItems.filter { 
             it.key != draggedKey && currentCanDropOver(it.key)
         }
 
-        // Проверяем следующий элемент ниже по списку (движение вниз)
-        val nextItem = candidates
-            .filter { it.index > draggedItem.index }
-            .minByOrNull { it.index }
+        val threshold = currentThresholdFraction.coerceIn(0.1f, 0.9f)
 
-        if (nextItem != null) {
-            val targetCenter = nextItem.offset + nextItem.size / 2f
-            if (dragCenter > targetCenter) {
-                return nextItem
+        if (deltaY > 0f) {
+            // Движение строго ВНИЗ: ведущий край — нижний (dragBottom)
+            val nextItem = candidates
+                .filter { it.index > draggedItem.index }
+                .minByOrNull { it.index }
+
+            if (nextItem != null) {
+                val downThreshold = nextItem.offset + nextItem.size * threshold
+                if (dragBottom > downThreshold) {
+                    return nextItem
+                }
             }
-        }
+        } else if (deltaY < 0f) {
+            // Движение строго ВВЕРХ: ведущий край — верхний (dragTop)
+            val prevItem = candidates
+                .filter { it.index < draggedItem.index }
+                .maxByOrNull { it.index }
 
-        // Проверяем предыдущий элемент выше по списку (движение вверх)
-        val prevItem = candidates
-            .filter { it.index < draggedItem.index }
-            .maxByOrNull { it.index }
-
-        if (prevItem != null) {
-            val targetCenter = prevItem.offset + prevItem.size / 2f
-            if (dragCenter < targetCenter) {
-                return prevItem
+            if (prevItem != null) {
+                val upThreshold = prevItem.offset + prevItem.size * (1f - threshold)
+                if (dragTop < upThreshold) {
+                    return prevItem
+                }
             }
         }
 
@@ -256,9 +266,9 @@ fun Modifier.universalDragAndDrop(
      * Выполняет геометрическую проверку пересечения элементов и обращение к внешнему обработчику перемещения.
      * Компенсирует скачок смещения перетаскиваемого элемента на величину шага целевого слота.
      */
-    fun performIntersectionCheck() {
+    fun performIntersectionCheck(deltaY: Float) {
         val visibleItems = lazyListState.layoutInfo.visibleItemsInfo
-        val targetItem = checkSwap(key, visibleItems, state.dragAccumulatedOffset.value)
+        val targetItem = checkSwap(key, visibleItems, state.dragAccumulatedOffset.value, deltaY)
 
         if (targetItem != null) {
             val draggedItem = visibleItems.firstOrNull { it.key == key } ?: return
@@ -301,11 +311,11 @@ fun Modifier.universalDragAndDrop(
         onDragStart = {
             currentOnDragStarted()
         },
-        onDrag = { _ ->
-            performIntersectionCheck()
+        onDrag = { dragDeltaY ->
+            performIntersectionCheck(dragDeltaY)
         },
-        onDragged = {
-            performIntersectionCheck()
+        onDragged = { scrollDeltaY ->
+            performIntersectionCheck(scrollDeltaY)
         },
         onDragEnd = { runWithAnimation ->
             currentOnDragEnd()
@@ -326,7 +336,7 @@ fun Modifier.reorderableItem(
     key: Any,
     onDragStart: () -> Unit = {},
     onDrag: (dragAmount: Float) -> Unit = {},
-    onDragged: () -> Unit = {},
+    onDragged: (scrollDelta: Float) -> Unit = {},
     onDragEnd: (afterAnimation: () -> Unit) -> Unit = {},
     onDragCancel: (afterAnimation: () -> Unit) -> Unit = {},
 ): Modifier = composed {
@@ -378,7 +388,7 @@ fun Modifier.reorderableItem(
                     
                     val consumed = state.lazyListState.scrollBy(finalScroll)
                     state.adjustOffset(consumed)
-                    currentOnDragged()
+                    currentOnDragged(consumed)
                 } else {
                     state.dragScrollStartMs = Long.MIN_VALUE
                 }
