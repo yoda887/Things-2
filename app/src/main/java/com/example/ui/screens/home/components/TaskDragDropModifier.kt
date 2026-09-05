@@ -117,7 +117,16 @@ fun Modifier.taskDragAndDrop(
                     val oldDayStart = moved.item.startDate?.dayStart() ?: tomorrowStart
 
                     // Определение целевого дня в зависимости от направления перетаскивания (вверх/вниз)
-                    val targetTimestamp = if (movingDown) timestamp else timestamp - MS_PER_DAY
+                    val targetTimestamp = if (movingDown) {
+                        timestamp
+                    } else {
+                        val currentDayIdx = currentUpcomingDays.indexOfFirst { it.dateMillis.dayStart() == timestamp.dayStart() }
+                        if (currentDayIdx > 0) {
+                            currentUpcomingDays[currentDayIdx - 1].dateMillis
+                        } else {
+                            timestamp - MS_PER_DAY
+                        }
+                    }
 
                     val clipped = maxOf(targetTimestamp, tomorrowStart)
                     val targetDayStart = clipped.dayStart()

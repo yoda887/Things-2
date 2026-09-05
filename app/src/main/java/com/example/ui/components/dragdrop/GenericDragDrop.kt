@@ -257,8 +257,7 @@ fun Modifier.universalDragAndDrop(
 
     /**
      * Инициализирует проверку пересечения и последующий вызов бизнес-логики.
-     * Компенсирует визуальное смещение (прыжки) с учётом полных размеров целевых элементов
-     * и возможных непропускаемых элементов между ними.
+     * Компенсирует визуальное смещение задачи ровно на одну позицию списка.
      */
     fun performIntersectionCheck() {
         val visibleItems = lazyListState.layoutInfo.visibleItemsInfo
@@ -267,24 +266,11 @@ fun Modifier.universalDragAndDrop(
         if (targetItem != null) {
             val draggedItem = visibleItems.firstOrNull { it.key == key } ?: return
             
+            val spacing = getItemSpacing(targetItem, visibleItems)
             val distanceToShift = if (targetItem.index > draggedItem.index) {
-                // При движении вниз: если за целью следуют элементы, не участвующие в drag-and-drop (canDropOver == false),
-                // учитываем суммарную высоту всего блока
-                var lastBlockItem: LazyListItemInfo = targetItem
-                val targetIdx = visibleItems.indexOfFirst { it.key == targetItem.key }
-                if (targetIdx != -1) {
-                    var i = targetIdx + 1
-                    while (i < visibleItems.size && !currentCanDropOver(visibleItems[i].key) && visibleItems[i].index == lastBlockItem.index + 1) {
-                        lastBlockItem = visibleItems[i]
-                        i++
-                    }
-                }
-                val totalBlockHeight = (lastBlockItem.offset + lastBlockItem.size) - targetItem.offset
-                val spacing = getItemSpacing(lastBlockItem, visibleItems)
-                -(totalBlockHeight + spacing)
+                -(targetItem.size + spacing)
             } else {
-                // При движении вверх: точное расстояние между исходной позицией тащимого элемента и позицией цели
-                (draggedItem.offset - targetItem.offset).toFloat()
+                targetItem.size + spacing
             }
 
             // Запрашиваем бизнес-логику внешнего уровня
