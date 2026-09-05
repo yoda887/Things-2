@@ -19,6 +19,8 @@ import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import com.example.ui.theme.ThingsBlue
+import android.view.HapticFeedbackConstants
+import androidx.compose.ui.platform.LocalView
 
 /**
  * ThingsCheckbox: A high-fidelity, custom-designed checkbox that mimics the Things app's aesthetics.
@@ -59,6 +61,7 @@ fun ThingsCheckbox(
     )
 
     val interactionSource = remember { MutableInteractionSource() }
+    val view = LocalView.current
 
     Canvas(
         modifier = modifier
@@ -67,7 +70,10 @@ fun ThingsCheckbox(
             .clickable(
                 interactionSource = interactionSource,
                 indication = null 
-            ) { onCheckedChange() }
+            ) {
+                view.performHapticFeedback(HapticFeedbackConstants.CLOCK_TICK)
+                onCheckedChange()
+            }
     ) {
         val width = this.size.width
         val height = this.size.height

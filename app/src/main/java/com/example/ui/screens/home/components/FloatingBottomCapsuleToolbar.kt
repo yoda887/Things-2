@@ -43,6 +43,8 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import android.view.HapticFeedbackConstants
+import androidx.compose.ui.platform.LocalView
 import com.example.ui.theme.dimens
 
 /**
@@ -64,6 +66,7 @@ fun FloatingBottomCapsuleToolbar(
     modifier: Modifier = Modifier
 ) {
     var expandedDotsMenu by remember { mutableStateOf(false) }
+    val view = LocalView.current
 
     AnimatedVisibility(
         visible = visible,
@@ -89,7 +92,10 @@ fun FloatingBottomCapsuleToolbar(
                     modifier = Modifier
                         .sizeIn(minWidth = 48.dp, minHeight = 48.dp)
                         .clip(RoundedCornerShape(8.dp))
-                        .clickable { onMoveClick() }
+                        .clickable {
+                            view.performHapticFeedback(HapticFeedbackConstants.CLOCK_TICK)
+                            onMoveClick()
+                        }
                         .padding(horizontal = 8.dp),
                     verticalAlignment = Alignment.CenterVertically
                 ) {
@@ -113,7 +119,10 @@ fun FloatingBottomCapsuleToolbar(
                     modifier = Modifier
                         .sizeIn(minWidth = 48.dp, minHeight = 48.dp)
                         .clip(CircleShape)
-                        .clickable { onDeleteClick() },
+                        .clickable {
+                            view.performHapticFeedback(HapticFeedbackConstants.CLOCK_TICK)
+                            onDeleteClick()
+                        },
                     contentAlignment = Alignment.Center
                 ) {
                     Icon(
@@ -130,7 +139,10 @@ fun FloatingBottomCapsuleToolbar(
                         modifier = Modifier
                             .sizeIn(minWidth = 48.dp, minHeight = 48.dp)
                             .clip(CircleShape)
-                            .clickable { expandedDotsMenu = !expandedDotsMenu },
+                            .clickable {
+                                view.performHapticFeedback(HapticFeedbackConstants.CLOCK_TICK)
+                                expandedDotsMenu = !expandedDotsMenu
+                            },
                         contentAlignment = Alignment.Center
                     ) {
                         Icon(
@@ -156,6 +168,7 @@ fun FloatingBottomCapsuleToolbar(
                             },
                             text = { Text("Duplicate", color = Color.White, fontWeight = FontWeight.Normal) },
                             onClick = {
+                                view.performHapticFeedback(HapticFeedbackConstants.CLOCK_TICK)
                                 onDuplicateClick()
                                 expandedDotsMenu = false
                             }

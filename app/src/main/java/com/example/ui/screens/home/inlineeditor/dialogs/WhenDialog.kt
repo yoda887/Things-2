@@ -40,6 +40,8 @@ import com.example.ui.screens.home.inlineeditor.utils.isTodayDateOrPast
 import com.example.ui.screens.home.inlineeditor.utils.isSameDay
 import java.text.SimpleDateFormat
 import java.util.*
+import android.view.HapticFeedbackConstants
+import androidx.compose.ui.platform.LocalView
 
 sealed class CalendarCell {
     object Empty : CalendarCell()
@@ -125,6 +127,8 @@ fun ThingsWhenDialog(
         label = "alpha"
     )
 
+    val view = LocalView.current
+
     Dialog(
         onDismissRequest = onDismissRequest,
         properties = DialogProperties(usePlatformDefaultWidth = false)
@@ -196,6 +200,7 @@ fun ThingsWhenDialog(
                         .fillMaxWidth()
                         .clip(RoundedCornerShape(8.dp))
                         .clickable {
+                            view.performHapticFeedback(HapticFeedbackConstants.CLOCK_TICK)
                             onStartDateChange(System.currentTimeMillis())
                             onSectionChange(TaskSection.TODAY)
                             onIsTonightChange(false)
@@ -240,6 +245,7 @@ fun ThingsWhenDialog(
                         .fillMaxWidth()
                         .clip(RoundedCornerShape(8.dp))
                         .clickable {
+                            view.performHapticFeedback(HapticFeedbackConstants.CLOCK_TICK)
                             onStartDateChange(System.currentTimeMillis())
                             onSectionChange(TaskSection.TODAY)
                             onIsTonightChange(true)
@@ -416,6 +422,7 @@ fun ThingsWhenDialog(
                                                     }
                                                 )
                                                 .clickable {
+                                                    view.performHapticFeedback(HapticFeedbackConstants.CLOCK_TICK)
                                                     onStartDateChange(cell.timestamp)
                                                     onSectionChange(if (isTodayDate(cell.timestamp)) TaskSection.TODAY else TaskSection.UPCOMING)
                                                     onIsTonightChange(false)
@@ -503,6 +510,7 @@ fun ThingsWhenDialog(
                         .fillMaxWidth()
                         .clip(RoundedCornerShape(8.dp))
                         .clickable {
+                            view.performHapticFeedback(HapticFeedbackConstants.CLOCK_TICK)
                             onStartDateChange(null)
                             onSectionChange(TaskSection.SOMEDAY)
                             onIsTonightChange(false)
@@ -574,6 +582,7 @@ fun ThingsWhenDialog(
                     Spacer(modifier = Modifier.height(8.dp))
                     Button(
                         onClick = {
+                            view.performHapticFeedback(HapticFeedbackConstants.CLOCK_TICK)
                             onStartDateChange(null)
                             onSectionChange(TaskSection.ANYTIME)
                             onIsTonightChange(false)

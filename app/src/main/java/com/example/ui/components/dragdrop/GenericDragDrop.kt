@@ -12,6 +12,8 @@ import androidx.compose.ui.composed
 import androidx.compose.ui.hapticfeedback.HapticFeedbackType
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.platform.LocalHapticFeedback
+import android.view.HapticFeedbackConstants
+import androidx.compose.ui.platform.LocalView
 import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.isActive
@@ -149,6 +151,7 @@ fun Modifier.universalDragAndDrop(
     onMoveIfNecessary: (draggedKey: Any, targetKey: Any) -> Boolean,
     onDragEnd: () -> Unit
 ): Modifier = composed {
+    val view = LocalView.current
     val coroutineScope = rememberCoroutineScope()
     val lazyListState = state.lazyListState
 
@@ -220,9 +223,9 @@ fun Modifier.universalDragAndDrop(
 
             // Если список перестроился, компенсируем прыжок
             if (swapAccepted) {
+                view.performHapticFeedback(HapticFeedbackConstants.CLOCK_TICK)
                 coroutineScope.launch {
                     state.adjustOffset(distanceToShift)
-                    
                 }
             }
         }

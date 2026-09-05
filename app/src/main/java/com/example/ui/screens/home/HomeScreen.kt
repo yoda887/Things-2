@@ -251,8 +251,10 @@ fun ThingsHomeScreen(viewModel: ThingsViewModel = hiltViewModel()) {
                     animationSpec = tween(durationMillis = 200, easing = FastOutSlowInEasing)
                 ) + fadeOut(animationSpec = tween(durationMillis = 180))
             ) {
+                val view = androidx.compose.ui.platform.LocalView.current
                 FloatingActionButton(
                     onClick = {
+                        view.performHapticFeedback(android.view.HapticFeedbackConstants.CLOCK_TICK)
                         if (activeScreen == ActiveScreen.HOME) {
                             showFabMenu = true
                         } else {
