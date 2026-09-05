@@ -69,6 +69,10 @@ fun Modifier.projectDragAndDrop(
     this.universalDragAndDrop(
         state = state,
         key = "proj_${project.id}",
+        canDropOver = { targetKey ->
+            val keyStr = targetKey as? String ?: return@universalDragAndDrop false
+            keyStr == "root_divider" || keyStr.startsWith("area_") || keyStr.startsWith("proj_")
+        },
         onMoveIfNecessary = { draggedKey, targetKey ->
             val draggedKeyStr = draggedKey as? String ?: return@universalDragAndDrop false
             val targetKeyStr = targetKey as? String ?: return@universalDragAndDrop false
@@ -132,9 +136,30 @@ fun Modifier.projectDragAndDrop(
                     if (targetAreaIndex == -1) return@universalDragAndDrop false
 
                     val currentProjectAreaId = currentLocalProjectsList[fromIndex].areaId
-                    // Если проект уже принадлежит этой области, не переставляем на заголовок во избежание дребезга
                     if (currentProjectAreaId == targetAreaId) {
-                        return@universalDragAndDrop false
+                        if (movingDown) {
+                            return@universalDragAndDrop false
+                        }
+                        // Движение ВВЕРХ через заголовок собственной области:
+                        // Проект покидает текущую область и переходит в секцию выше
+                        val list = currentLocalProjectsList.toMutableList()
+                        if (targetAreaIndex > 0) {
+                            // Переносим в конец предыдущей (вышележащей) области
+                            val prevAreaId = currentAreas[targetAreaIndex - 1].id
+                            val moved = list.removeAt(fromIndex).copy(areaId = prevAreaId)
+                            val insertAt = findInsertionIndexForArea(list, currentAreas, prevAreaId, atStart = false)
+                            list.add(insertAt, moved)
+                            currentOnLocalProjectsListChange(list)
+                            return@universalDragAndDrop true
+                        } else {
+                            // Это первая область — переносим проект в конец секции "Без области"
+                            val moved = list.removeAt(fromIndex).copy(areaId = null)
+                            val lastNoArea = list.indexOfLast { it.areaId == null }
+                            val insertAt = if (lastNoArea != -1) lastNoArea + 1 else 0
+                            list.add(insertAt, moved)
+                            currentOnLocalProjectsListChange(list)
+                            return@universalDragAndDrop true
+                        }
                     }
 
                     val list = currentLocalProjectsList.toMutableList()
