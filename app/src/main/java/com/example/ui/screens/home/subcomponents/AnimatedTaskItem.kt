@@ -144,10 +144,6 @@ fun AnimatedTaskItem(
         targetValue = if (shouldDim) 0.3f else 1f,
         label = "dimAlpha_${task.id}"
     )
-    val dragScale by animateFloatAsState(
-        targetValue = if (isDragTask) 1.04f else 1.0f,
-        label = "dragScale_${task.id}"
-    )
     val dragElevation by animateDpAsState(
         targetValue = if (isDragTask) 8.dp else (if (isExpanded || expansionProgress > 0f) 8.dp else 0.dp),
         animationSpec = tween(
@@ -195,8 +191,6 @@ fun AnimatedTaskItem(
                 .graphicsLayer {
                     translationX = translationXVal
                     translationY = translationYVal
-                    scaleX = dragScale
-                    scaleY = dragScale
                     alpha = dimAlpha
                 }
                 .padding(top = verticalGapPadding, bottom = verticalGapPadding)

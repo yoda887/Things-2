@@ -14,12 +14,15 @@ import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
+import kotlin.math.pow
 
 // ─── Constants ───────────────────────────────────────────────────────────────
 private const val SCROLL_FRAME_MS = 16L
-private const val SCROLL_ZONE_FRACTION = 0.15f
-private const val SCROLL_MAX_PX = 20f
-private const val DRAG_SCROLL_ACCELERATION_LIMIT_MS = 2_000f
+private const val SCROLL_TOP_ZONE_FRACTION = 0.25f
+private const val SCROLL_BOTTOM_ZONE_FRACTION = 0.18f
+private const val SCROLL_MIN_PX = 6f
+private const val SCROLL_MAX_PX = 58f
+private const val SCROLL_CURVE_POWER = 1.3f
 private const val MOVE_THRESHOLD = 0.7f
 
 /**
@@ -352,45 +355,46 @@ fun Modifier.reorderableItem(
     val isDraggedKey = state.draggedItemKey
     LaunchedEffect(isDraggedKey) {
         while (isActive && isDraggedKey == key && state.isInteracting) {
-            val draggedItemInfo = state.lazyListState.layoutInfo.visibleItemsInfo
+            val layoutInfo = state.lazyListState.layoutInfo
+            val draggedItemInfo = layoutInfo.visibleItemsInfo
                 .firstOrNull { it.key == key }
 
             if (draggedItemInfo != null) {
-                val dragCenterY =
-                    draggedItemInfo.offset + draggedItemInfo.size / 2f + state.dragAccumulatedOffset.value
-                val viewportHeight = state.lazyListState.layoutInfo.viewportSize.height.toFloat()
-                val margin = viewportHeight * SCROLL_ZONE_FRACTION
+                val viewportStart = layoutInfo.viewportStartOffset.toFloat()
+                val viewportEnd = layoutInfo.viewportEndOffset.toFloat()
+                val viewportHeight = viewportEnd - viewportStart
 
-                val scrollAmount = when {
-                    dragCenterY < margin -> {
-                        val ratio = (1f - dragCenterY / margin).coerceIn(0f, 1f)
-                        val interpolatedRatio = outOfBoundsScrollCapInterpolator(ratio)
-                        -interpolatedRatio * SCROLL_MAX_PX
-                    }
-                    dragCenterY > viewportHeight - margin -> {
-                        val ratio = ((dragCenterY - (viewportHeight - margin)) / margin).coerceIn(0f, 1f)
-                        val interpolatedRatio = outOfBoundsScrollCapInterpolator(ratio)
-                        interpolatedRatio * SCROLL_MAX_PX
-                    }
-                    else -> 0f
-                }
+                if (viewportHeight > 0f) {
+                    val scrollTopZone = (viewportHeight * SCROLL_TOP_ZONE_FRACTION).coerceAtLeast(1f)
+                    val scrollBottomZone = (viewportHeight * SCROLL_BOTTOM_ZONE_FRACTION).coerceAtLeast(1f)
+                    val dragTop = draggedItemInfo.offset + state.dragAccumulatedOffset.value
+                    val dragBottom = dragTop + draggedItemInfo.size
 
-                if (scrollAmount != 0f) {
-                    val now = System.currentTimeMillis()
-                    if (state.dragScrollStartMs == Long.MIN_VALUE) {
-                        state.dragScrollStartMs = now
+                    val scrollAmount = when {
+                        // Верхний край элемента приблизился к верхней границе с учётом TopBar
+                        dragTop < viewportStart + scrollTopZone -> {
+                            val distanceIntoZone = (viewportStart + scrollTopZone - dragTop).coerceIn(0f, scrollTopZone)
+                            val ratio = distanceIntoZone / scrollTopZone
+                            val speed = SCROLL_MIN_PX + (SCROLL_MAX_PX - SCROLL_MIN_PX) * ratio.pow(SCROLL_CURVE_POWER)
+                            -speed
+                        }
+                        // Нижний край элемента приблизился к нижней границе viewport
+                        dragBottom > viewportEnd - scrollBottomZone -> {
+                            val distanceIntoZone = (dragBottom - (viewportEnd - scrollBottomZone)).coerceIn(0f, scrollBottomZone)
+                            val ratio = distanceIntoZone / scrollBottomZone
+                            val speed = SCROLL_MIN_PX + (SCROLL_MAX_PX - SCROLL_MIN_PX) * ratio.pow(SCROLL_CURVE_POWER)
+                            speed
+                        }
+                        else -> 0f
                     }
-                    val elapsed = (now - state.dragScrollStartMs)
-                        .coerceAtMost(DRAG_SCROLL_ACCELERATION_LIMIT_MS.toLong())
-                    val timeRatio = elapsed / DRAG_SCROLL_ACCELERATION_LIMIT_MS
-                    val interpolated = timeRatio * timeRatio * timeRatio * timeRatio * timeRatio
-                    val finalScroll = scrollAmount * interpolated.coerceAtLeast(0.05f)
-                    
-                    val consumed = state.lazyListState.scrollBy(finalScroll)
-                    state.adjustOffset(consumed)
-                    currentOnDragged(consumed)
-                } else {
-                    state.dragScrollStartMs = Long.MIN_VALUE
+
+                    if (scrollAmount != 0f) {
+                        val consumed = state.lazyListState.scrollBy(scrollAmount)
+                        if (consumed != 0f) {
+                            state.adjustOffset(consumed)
+                            currentOnDragged(consumed)
+                        }
+                    }
                 }
             }
             delay(SCROLL_FRAME_MS)
