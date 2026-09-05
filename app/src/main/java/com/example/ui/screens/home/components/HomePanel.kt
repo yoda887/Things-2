@@ -568,6 +568,7 @@ fun ThingsHomePanel(
                                     .areaDragAndDrop(
                                         state = dragDropState,
                                         area = area,
+                                        hasProjects = hasProjects,
                                         originalAreas = areas,
                                         localAreasList = localAreas,
                                         expandedStates = expandedStates,
@@ -579,7 +580,7 @@ fun ThingsHomePanel(
                                 verticalAlignment = Alignment.CenterVertically
                             ) {
                             AreaIconAnimated(
-                                isClosed = !isExpanded,
+                                isClosed = hasProjects && !isExpanded,
                                 onToggle = {},
                                 modifier = Modifier.size(width = 20.dp, height = 28.dp)
                             )

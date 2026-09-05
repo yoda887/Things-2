@@ -24,6 +24,7 @@ import com.example.ui.components.dragdrop.universalDragAndDrop
 fun Modifier.areaDragAndDrop(
     state: GenericDragDropState,
     area: Area,
+    hasProjects: Boolean,
     originalAreas: List<Area>,
     localAreasList: List<Area>,
     expandedStates: SnapshotStateMap<String, Boolean>,
@@ -33,6 +34,7 @@ fun Modifier.areaDragAndDrop(
     val view = LocalView.current
 
     val currentArea by rememberUpdatedState(area)
+    val currentHasProjects by rememberUpdatedState(hasProjects)
     val currentOriginalAreas by rememberUpdatedState(originalAreas)
     val currentLocalAreasList by rememberUpdatedState(localAreasList)
     val currentOnLocalAreasListChange by rememberUpdatedState(onLocalAreasListChange)
@@ -51,6 +53,7 @@ fun Modifier.areaDragAndDrop(
             isDraggingThisArea = false
             if (wasExpandedBeforeDrag) {
                 expandedStates[area.id] = true
+                wasExpandedBeforeDrag = false
             }
         }
     }
@@ -63,10 +66,12 @@ fun Modifier.areaDragAndDrop(
         },
         onDragStarted = {
             view.performHapticFeedback(HapticFeedbackConstants.LONG_PRESS)
-            val isExpanded = expandedStates[currentArea.id] ?: true
-            wasExpandedBeforeDrag = isExpanded
-            if (isExpanded) {
-                expandedStates[currentArea.id] = false
+            if (currentHasProjects) {
+                val isExpanded = expandedStates[currentArea.id] ?: true
+                wasExpandedBeforeDrag = isExpanded
+                if (isExpanded) {
+                    expandedStates[currentArea.id] = false
+                }
             }
         },
         onMoveIfNecessary = { draggedKey, targetKey ->
