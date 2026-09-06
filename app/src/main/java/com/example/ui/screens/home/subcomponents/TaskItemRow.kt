@@ -138,11 +138,15 @@ fun TaskItemRow(
         Color.Transparent
     }
 
-    val rowBgColor = when {
-        isDragging -> MaterialTheme.colorScheme.surface
-        isSelected -> ThingsBlue.copy(alpha = 0.22f)
-        else -> highlightColor
-    }
+    val animatedRowBgColor by androidx.compose.animation.animateColorAsState(
+        targetValue = when {
+            isDragging -> MaterialTheme.colorScheme.surface
+            isSelected -> ThingsBlue.copy(alpha = 0.22f)
+            else -> highlightColor
+        },
+        animationSpec = androidx.compose.animation.core.tween(durationMillis = 200),
+        label = "rowBgColor_${task.id}"
+    )
 
     val fillBgColor = if (androidx.compose.foundation.isSystemInDarkTheme()) Color(0xFF2C2D32) else Color(0xFFE5E6EB)
 
@@ -168,7 +172,7 @@ fun TaskItemRow(
                 scaleY = scale * cardScale
             }
             .shadow(elevation, RoundedCornerShape(8.dp))
-            .background(rowBgColor, RoundedCornerShape(8.dp))
+            .background(animatedRowBgColor, RoundedCornerShape(8.dp))
             .clip(RoundedCornerShape(8.dp))
             .drawBehind {
                 if (localCompleted && completionFillProgress > 0f) {
