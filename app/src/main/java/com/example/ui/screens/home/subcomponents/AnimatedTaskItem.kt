@@ -96,6 +96,9 @@ fun AnimatedTaskItem(
     onLocalTasksListChange: (List<ItemWithChecklist>) -> Unit,
     lazyListState: LazyListState,
     onWhenDialogVisibilityChange: (Boolean) -> Unit = {},
+    isSelectionMode: Boolean = false,
+    isSelected: Boolean = false,
+    onToggleSelect: () -> Unit = {},
     modifier: Modifier = Modifier
 ) {
     val task = taskWrapper.item
@@ -339,7 +342,9 @@ fun AnimatedTaskItem(
                             dividerColor = dividerColor,
                             onToggle = { onEvent(ThingsCategoryListEvent.ToggleTask(taskWrapper)) },
                             onClick = {
-                                if (inlineExpandedTaskId != null) {
+                                if (isSelectionMode) {
+                                    onToggleSelect()
+                                } else if (inlineExpandedTaskId != null) {
                                     onEvent(ThingsCategoryListEvent.ChangeInlineExpandedTaskId(null))
                                 } else {
                                     onEvent(ThingsCategoryListEvent.ChangeInlineExpandedTaskId(task.id))
@@ -354,6 +359,9 @@ fun AnimatedTaskItem(
                             isHighlighted = task.id == highlightedTaskId,
                             isDimmed = shouldDim,
                             isBeingDeleted = isBeingDeleted,
+                            isSelectionMode = isSelectionMode,
+                            isSelected = isSelected,
+                            onToggleSelect = onToggleSelect,
                             screen = screen
                         )
                     }

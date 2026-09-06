@@ -3,10 +3,13 @@ package com.example.ui.screens.home.subcomponents
 import androidx.compose.animation.core.animateDpAsState
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.Flag
 import androidx.compose.material.icons.filled.Reorder
 import androidx.compose.material.icons.filled.Star
@@ -64,6 +67,9 @@ fun TaskItemRow(
     isHighlighted: Boolean = false,
     isDimmed: Boolean = false,
     isBeingDeleted: Boolean = false,
+    isSelectionMode: Boolean = false,
+    isSelected: Boolean = false,
+    onToggleSelect: () -> Unit = {},
     leftColumnWidth: androidx.compose.ui.unit.Dp = androidx.compose.material3.MaterialTheme.dimens.mainCheckboxSize,
     spacingToText: androidx.compose.ui.unit.Dp = androidx.compose.material3.MaterialTheme.dimens.taskSpacingToTextDefault,
     screen: ActiveScreen = ActiveScreen.INBOX,
@@ -134,6 +140,7 @@ fun TaskItemRow(
 
     val rowBgColor = when {
         isDragging -> MaterialTheme.colorScheme.surface
+        isSelected -> ThingsBlue.copy(alpha = 0.22f)
         else -> highlightColor
     }
 
@@ -180,8 +187,8 @@ fun TaskItemRow(
             .then(dragModifier)
             .clickable(
                 interactionSource = rowInteractionSource,
-                indication = if (isDimmed) null else androidx.compose.foundation.LocalIndication.current,
-                enabled = !isCalendarTask
+                indication = if (isDimmed || isSelectionMode) null else androidx.compose.foundation.LocalIndication.current,
+                enabled = !isCalendarTask && !isSelectionMode
             ) { onClick() }
             .padding(start = androidx.compose.material3.MaterialTheme.dimens.taskRowStartPadding, end = androidx.compose.material3.MaterialTheme.dimens.taskRowEndPadding),
         verticalAlignment = Alignment.CenterVertically
@@ -443,6 +450,103 @@ fun TaskItemRow(
                         fontWeight = FontWeight.Normal
                     )
                 )
+            }
+        }
+
+        androidx.compose.animation.AnimatedVisibility(
+            visible = isSelectionMode,
+            enter = androidx.compose.animation.scaleIn(
+                animationSpec = androidx.compose.animation.core.spring(
+                    dampingRatio = androidx.compose.animation.core.Spring.DampingRatioMediumBouncy,
+                    stiffness = androidx.compose.animation.core.Spring.StiffnessMediumLow
+                )
+            ) + androidx.compose.animation.fadeIn() + androidx.compose.animation.expandHorizontally(),
+            exit = androidx.compose.animation.scaleOut() + androidx.compose.animation.fadeOut() + androidx.compose.animation.shrinkHorizontally()
+        ) {
+            val animatedBorderColor by androidx.compose.animation.animateColorAsState(
+                targetValue = if (isSelected) ThingsBlue else Color(0xFFC7C7CC),
+                animationSpec = androidx.compose.animation.core.tween(durationMillis = 200),
+                label = "selectionBorderColor"
+            )
+            val animatedCheckScale by androidx.compose.animation.core.animateFloatAsState(
+                targetValue = if (isSelected) 1f else 0f,
+                animationSpec = androidx.compose.animation.core.spring(
+                    dampingRatio = androidx.compose.animation.core.Spring.DampingRatioMediumBouncy,
+                    stiffness = androidx.compose.animation.core.Spring.StiffnessMediumLow
+                ),
+                label = "selectionCheckScale"
+            )
+
+            val iconBounceScale = remember { androidx.compose.animation.core.Animatable(1f) }
+            var isInitialComposition by remember { mutableStateOf(true) }
+
+            LaunchedEffect(isSelected) {
+                if (isInitialComposition) {
+                    isInitialComposition = false
+                } else {
+                    iconBounceScale.animateTo(
+                        targetValue = 1.18f,
+                        animationSpec = androidx.compose.animation.core.tween(
+                            durationMillis = 80,
+                            easing = androidx.compose.animation.core.FastOutSlowInEasing
+                        )
+                    )
+                    iconBounceScale.animateTo(
+                        targetValue = 1.0f,
+                        animationSpec = androidx.compose.animation.core.spring(
+                            dampingRatio = androidx.compose.animation.core.Spring.DampingRatioMediumBouncy,
+                            stiffness = androidx.compose.animation.core.Spring.StiffnessMediumLow
+                        )
+                    )
+                }
+            }
+
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Spacer(modifier = Modifier.width(8.dp))
+                val view = androidx.compose.ui.platform.LocalView.current
+                Box(
+                    modifier = Modifier
+                        .size(28.dp)
+                        .graphicsLayer {
+                            scaleX = iconBounceScale.value
+                            scaleY = iconBounceScale.value
+                        }
+                        .clickable(
+                            interactionSource = remember { androidx.compose.foundation.interaction.MutableInteractionSource() },
+                            indication = null
+                        ) {
+                            view.performHapticFeedback(android.view.HapticFeedbackConstants.CLOCK_TICK)
+                            onToggleSelect()
+                        },
+                    contentAlignment = Alignment.Center
+                ) {
+                    androidx.compose.foundation.Canvas(
+                        modifier = Modifier.size(24.dp)
+                    ) {
+                        val strokeWidth = 2.dp.toPx()
+                        val radius = size.minDimension / 2f
+                        
+                        // 1. Внешняя окружность с плавным переходом цвета
+                        drawCircle(
+                            color = animatedBorderColor,
+                            radius = radius - strokeWidth / 2f,
+                            style = androidx.compose.ui.graphics.drawscope.Stroke(width = strokeWidth)
+                        )
+
+                        // 2. Анимированное заполнение при выборе задачи (spring bounce)
+                        if (animatedCheckScale > 0.001f) {
+                            // Центральная синяя заливка с пружинным масштабированием
+                            val targetInnerRadius = (radius - strokeWidth) - 2.dp.toPx()
+                            val currentInnerRadius = targetInnerRadius * animatedCheckScale
+                            if (currentInnerRadius > 0f) {
+                                drawCircle(
+                                    color = ThingsBlue,
+                                    radius = currentInnerRadius
+                                )
+                            }
+                        }
+                    }
+                }
             }
         }
     }

@@ -88,6 +88,10 @@ class TaskRepositoryImpl @Inject constructor(
         localDataSource.deleteItem(item)
     }
 
+    override suspend fun deleteTasks(items: List<Item>): Unit = withContext(Dispatchers.IO) {
+        localDataSource.deleteItems(items)
+    }
+
     override suspend fun deleteTaskById(id: String): Unit = withContext(Dispatchers.IO) {
         localDataSource.deleteItemById(id)
     }

@@ -541,6 +541,112 @@ class ThingsViewModel @Inject constructor(
         }
     }
 
+    /**
+     * Пакетно удаляет список задач из базы данных.
+     */
+    fun deleteTasks(tasks: List<Item>) {
+        viewModelScope.launch {
+            taskUseCases.deleteTask(tasks)
+        }
+    }
+
+    /**
+     * Пакетно переключает статус выполнения для списка задач.
+     */
+    fun batchSetCompleted(taskWrappers: List<ItemWithChecklist>, isCompleted: Boolean) {
+        viewModelScope.launch {
+            val updated = taskWrappers.map { wrapper ->
+                wrapper.item.copy(
+                    status = if (isCompleted) 3 else 0,
+                    stopDate = if (isCompleted) System.currentTimeMillis() else null
+                )
+            }
+            taskUseCases.updateTask(updated)
+        }
+    }
+
+    /**
+     * Пакетно планирует дату и режим "сегодня вечером" для списка задач.
+     */
+    fun batchScheduleTasks(taskWrappers: List<ItemWithChecklist>, startDate: Long?, isTonight: Boolean) {
+        viewModelScope.launch {
+            val updated = taskWrappers.map { wrapper ->
+                wrapper.item.copy(
+                    startDate = startDate,
+                    isTonight = isTonight
+                )
+            }
+            taskUseCases.updateTask(updated)
+        }
+    }
+
+    /**
+     * Пакетно устанавливает дедлайн для списка задач.
+     */
+    fun batchSetDeadline(taskWrappers: List<ItemWithChecklist>, dueDate: Long?) {
+        viewModelScope.launch {
+            val updated = taskWrappers.map { wrapper ->
+                wrapper.item.copy(dueDate = dueDate)
+            }
+            taskUseCases.updateTask(updated)
+        }
+    }
+
+    /**
+     * Пакетно перемещает список задач в проект или сферу.
+     */
+    fun batchMoveTasks(taskWrappers: List<ItemWithChecklist>, projectId: String?, areaId: String?, moveToInbox: Boolean) {
+        viewModelScope.launch {
+            val updated = taskWrappers.map { wrapper ->
+                if (moveToInbox) {
+                    wrapper.item.copy(
+                        start = 0,
+                        projectId = null,
+                        areaId = null,
+                        startDate = null,
+                        dueDate = null,
+                        modificationDate = System.currentTimeMillis()
+                    )
+                } else {
+                    val newStart = if (wrapper.item.start == 0 && projectId != null) 2 else wrapper.item.start
+                    wrapper.item.copy(
+                        start = newStart,
+                        projectId = projectId,
+                        areaId = areaId,
+                        modificationDate = System.currentTimeMillis()
+                    )
+                }
+            }
+            taskUseCases.updateTask(updated)
+        }
+    }
+
+    /**
+     * Пакетно объединяет новые теги с уже имеющимися у задач тегами.
+     */
+    fun batchAddTags(taskWrappers: List<ItemWithChecklist>, newTags: List<String>) {
+        viewModelScope.launch {
+            val updated = taskWrappers.map { wrapper ->
+                val currentTags = wrapper.item.tags
+                val mergedTags = (currentTags + newTags).distinct()
+                val cachedString = mergedTags.joinToString(", ")
+                wrapper.item.copy(cachedTags = cachedString)
+            }
+            taskUseCases.updateTask(updated)
+        }
+    }
+
+    /**
+     * Пакетно дублирует список задач.
+     */
+    fun batchDuplicateTasks(taskWrappers: List<ItemWithChecklist>) {
+        viewModelScope.launch {
+            taskWrappers.forEach { wrapper ->
+                taskUseCases.duplicateTask(wrapper)
+            }
+        }
+    }
+
     // Сценарии работы с проектами
     fun addProject(name: String, notes: String = "", areaId: String? = null) {
         viewModelScope.launch {

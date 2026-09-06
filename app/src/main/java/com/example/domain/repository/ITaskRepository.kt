@@ -67,6 +67,12 @@ interface ITaskRepository {
     suspend fun deleteTask(item: Item)
 
     /**
+     * Пакетно удаляет список задач из базы данных.
+     * @param items Список задач для удаления
+     */
+    suspend fun deleteTasks(items: List<Item>)
+
+    /**
      * Удаляет задачу по ее идентификатору.
      * @param id Уникальный идентификатор задачи
      */

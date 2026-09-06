@@ -33,8 +33,14 @@ interface TaskDao {
     @Delete
     suspend fun deleteItem(item: Item)
 
+    @Delete
+    suspend fun deleteItems(items: List<Item>)
+
     @Query("DELETE FROM items WHERE id = :id")
     suspend fun deleteItemById(id: String)
+
+    @Query("DELETE FROM items WHERE id IN (:ids)")
+    suspend fun deleteItemsByIds(ids: List<String>)
 
     @Query("SELECT * FROM items WHERE googleTaskId = :googleTaskId")
     suspend fun getItemByGoogleTaskId(googleTaskId: String): Item?

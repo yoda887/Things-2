@@ -266,7 +266,9 @@ data class ThingsCategoryListState(
     val textSecondaryColor: Color = Color.Unspecified,
     val dividerColor: Color = Color.Unspecified,
     val allTasks: List<ItemWithChecklist> = emptyList(),
-    val projectProgressMap: Map<String, ProjectProgress> = emptyMap()
+    val projectProgressMap: Map<String, ProjectProgress> = emptyMap(),
+    val isSelectionMode: Boolean = false,
+    val selectedTaskIds: Set<String> = emptySet()
 )
 
 /**
@@ -312,8 +314,22 @@ sealed interface ThingsCategoryListEvent {
     data class DeleteProject(val project: Item) : ThingsCategoryListEvent
     data class DeleteArea(val area: Area) : ThingsCategoryListEvent
 
-    // Свайп-события (заглушки для будущей реализации мультиселекции и When/календаря)
+    // Свайп-события (для вызова мультиселекции и When/календаря)
     data class SwipeTaskLeft(val task: ItemWithChecklist) : ThingsCategoryListEvent
     data class SwipeTaskRight(val task: ItemWithChecklist) : ThingsCategoryListEvent
+
+    // Мультивыбор и пакетные операции
+    data class EnterSelectionMode(val initialTaskId: String?) : ThingsCategoryListEvent
+    data class ToggleTaskSelection(val taskId: String) : ThingsCategoryListEvent
+    object SelectAllTasks : ThingsCategoryListEvent
+    object DeselectAllTasks : ThingsCategoryListEvent
+    object ExitSelectionMode : ThingsCategoryListEvent
+    data class BatchCompleteTasks(val completed: Boolean) : ThingsCategoryListEvent
+    object BatchDeleteTasks : ThingsCategoryListEvent
+    object BatchDuplicateTasks : ThingsCategoryListEvent
+    data class BatchScheduleTasks(val startDate: Long?, val isTonight: Boolean) : ThingsCategoryListEvent
+    data class BatchMoveTasks(val projectId: String?, val areaId: String?, val moveToInbox: Boolean) : ThingsCategoryListEvent
+    data class BatchSetTags(val tags: List<String>) : ThingsCategoryListEvent
+    data class BatchSetDeadline(val deadline: Long?) : ThingsCategoryListEvent
 }
 

@@ -7,6 +7,8 @@ import androidx.compose.ui.graphics.StrokeCap
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.graphics.vector.path
 import androidx.compose.ui.unit.dp
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.outlined.FormatListBulleted
 
 // Группируем все кастомные иконки в один объект для удобного автокомплита
 object AppIcons {
@@ -358,5 +360,10 @@ object AppIcons {
                 curveToRelative(1f, -0.5f, 1.8f, -1.2f, 0.8f, -2.4f)
             }
         }.build()
+    }
+
+    // Иконка буллет-списка (чеклист / мультивыбор задач)
+    val BulletList: ImageVector by lazy(LazyThreadSafetyMode.NONE) {
+        androidx.compose.material.icons.Icons.Outlined.FormatListBulleted
     }
 }

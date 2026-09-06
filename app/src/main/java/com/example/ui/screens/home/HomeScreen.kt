@@ -162,6 +162,8 @@ fun ThingsHomeScreen(viewModel: ThingsViewModel = hiltViewModel()) {
     var isSearchOverlayActive by remember { mutableStateOf(false) }
     var newTaskTitlePrefill by remember { mutableStateOf("") }
     var isListDialogActive by remember { mutableStateOf(false) }
+    var isSelectionMode by remember { mutableStateOf(false) }
+    var selectedTaskIds by remember { mutableStateOf(setOf<String>()) }
 
     // [ИЗМЕНЕНИЕ]: Состояния для недавно искавшихся объектов и подсветки конкретной задачи
     var recentSearchItems by remember { mutableStateOf<List<SearchResultItem>>(emptyList()) }
@@ -212,6 +214,8 @@ fun ThingsHomeScreen(viewModel: ThingsViewModel = hiltViewModel()) {
 
     LaunchedEffect(activeScreen) {
         viewModel.setScreen(activeScreen)
+        isSelectionMode = false
+        selectedTaskIds = emptySet()
     }
     LaunchedEffect(selectedProject) {
         viewModel.setProject(selectedProject)
@@ -236,9 +240,9 @@ fun ThingsHomeScreen(viewModel: ThingsViewModel = hiltViewModel()) {
         // Поэтому на уровне главного Scaffold тулбар больше не отображается.
         topBar = {},
         floatingActionButton = {
-            // Скрывать FAB при открытии inline-редактора, FAB-меню, диалогов или окна быстрой задачи (QuickAddDialog)
+            // Скрывать FAB при открытии inline-редактора, FAB-меню, диалогов, окна быстрой задачи (QuickAddDialog) или режима мультивыбора
             AnimatedVisibility(
-                visible = inlineExpandedTaskId == null && !showFabMenu && !isListDialogActive && !showAddDialog,
+                visible = inlineExpandedTaskId == null && !showFabMenu && !isListDialogActive && !showAddDialog && !isSelectionMode,
                 enter = slideInVertically(
                     initialOffsetY = { it * 2 },
                     animationSpec = spring(
@@ -464,7 +468,9 @@ fun ThingsHomeScreen(viewModel: ThingsViewModel = hiltViewModel()) {
                         state = screenState.copy(
                             textPrimaryColor = textPrimaryColor,
                             textSecondaryColor = textSecondaryColor,
-                            dividerColor = dividerColor
+                            dividerColor = dividerColor,
+                            isSelectionMode = isSelectionMode,
+                            selectedTaskIds = selectedTaskIds
                         ),
                         onDialogsActiveChange = { isListDialogActive = it },
                         onEvent = { event ->
@@ -566,10 +572,85 @@ fun ThingsHomeScreen(viewModel: ThingsViewModel = hiltViewModel()) {
                                     selectedArea = null
                                 }
                                 is ThingsCategoryListEvent.SwipeTaskLeft -> {
-                                    // Заглушка для мультиселекции
+                                    inlineExpandedTaskId = null
+                                    if (isSelectionMode) {
+                                        val taskId = event.task.item.id
+                                        selectedTaskIds = if (selectedTaskIds.contains(taskId)) {
+                                            selectedTaskIds - taskId
+                                        } else {
+                                            selectedTaskIds + taskId
+                                        }
+                                    } else {
+                                        isSelectionMode = true
+                                        selectedTaskIds = setOf(event.task.item.id)
+                                    }
                                 }
                                 is ThingsCategoryListEvent.SwipeTaskRight -> {
                                     // Заглушка для When / Календаря
+                                }
+                                is ThingsCategoryListEvent.EnterSelectionMode -> {
+                                    inlineExpandedTaskId = null
+                                    isSelectionMode = true
+                                    selectedTaskIds = if (event.initialTaskId != null) setOf(event.initialTaskId) else emptySet()
+                                }
+                                is ThingsCategoryListEvent.ToggleTaskSelection -> {
+                                    selectedTaskIds = if (selectedTaskIds.contains(event.taskId)) {
+                                        selectedTaskIds - event.taskId
+                                    } else {
+                                        selectedTaskIds + event.taskId
+                                    }
+                                }
+                                ThingsCategoryListEvent.SelectAllTasks -> {
+                                    selectedTaskIds = screenState.displayTasks.map { it.item.id }.toSet()
+                                }
+                                ThingsCategoryListEvent.DeselectAllTasks -> {
+                                    selectedTaskIds = emptySet()
+                                }
+                                ThingsCategoryListEvent.ExitSelectionMode -> {
+                                    isSelectionMode = false
+                                    selectedTaskIds = emptySet()
+                                }
+                                is ThingsCategoryListEvent.BatchCompleteTasks -> {
+                                    val selectedTasks = screenState.allTasks.filter { selectedTaskIds.contains(it.item.id) }
+                                    viewModel.batchSetCompleted(selectedTasks, event.completed)
+                                    isSelectionMode = false
+                                    selectedTaskIds = emptySet()
+                                }
+                                ThingsCategoryListEvent.BatchDeleteTasks -> {
+                                    val selectedTasks = screenState.allTasks.filter { selectedTaskIds.contains(it.item.id) }.map { it.item }
+                                    viewModel.deleteTasks(selectedTasks)
+                                    isSelectionMode = false
+                                    selectedTaskIds = emptySet()
+                                }
+                                ThingsCategoryListEvent.BatchDuplicateTasks -> {
+                                    val selectedTasks = screenState.allTasks.filter { selectedTaskIds.contains(it.item.id) }
+                                    viewModel.batchDuplicateTasks(selectedTasks)
+                                    isSelectionMode = false
+                                    selectedTaskIds = emptySet()
+                                }
+                                is ThingsCategoryListEvent.BatchScheduleTasks -> {
+                                    val selectedTasks = screenState.allTasks.filter { selectedTaskIds.contains(it.item.id) }
+                                    viewModel.batchScheduleTasks(selectedTasks, event.startDate, event.isTonight)
+                                    isSelectionMode = false
+                                    selectedTaskIds = emptySet()
+                                }
+                                is ThingsCategoryListEvent.BatchMoveTasks -> {
+                                    val selectedTasks = screenState.allTasks.filter { selectedTaskIds.contains(it.item.id) }
+                                    viewModel.batchMoveTasks(selectedTasks, event.projectId, event.areaId, event.moveToInbox)
+                                    isSelectionMode = false
+                                    selectedTaskIds = emptySet()
+                                }
+                                is ThingsCategoryListEvent.BatchSetTags -> {
+                                    val selectedTasks = screenState.allTasks.filter { selectedTaskIds.contains(it.item.id) }
+                                    viewModel.batchAddTags(selectedTasks, event.tags)
+                                    isSelectionMode = false
+                                    selectedTaskIds = emptySet()
+                                }
+                                is ThingsCategoryListEvent.BatchSetDeadline -> {
+                                    val selectedTasks = screenState.allTasks.filter { selectedTaskIds.contains(it.item.id) }
+                                    viewModel.batchSetDeadline(selectedTasks, event.deadline)
+                                    isSelectionMode = false
+                                    selectedTaskIds = emptySet()
                                 }
                             }
                         }

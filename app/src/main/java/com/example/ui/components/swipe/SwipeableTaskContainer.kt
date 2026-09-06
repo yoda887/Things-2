@@ -143,9 +143,9 @@ fun SwipeableTaskContainer(
                             }
                     )
                 } else if (lockedDirection == SwipeDirection.LEFT) {
-                    // Свайп влево → Мультиселекция → AppIcons.Anytime
+                    // Свайп влево → Мультиселекция → AppIcons.BulletList
                     Icon(
-                        imageVector = AppIcons.Anytime,
+                        imageVector = AppIcons.BulletList,
                         contentDescription = "Select",
                         tint = Color.White,
                         modifier = Modifier

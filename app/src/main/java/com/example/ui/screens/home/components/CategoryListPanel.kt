@@ -82,6 +82,11 @@ import com.example.ui.screens.home.subcomponents.ProjectItemRow
 import com.example.ui.screens.home.subcomponents.EmptyStateView
 import com.example.ui.screens.home.subcomponents.CategoryListTopAppBar
 import com.example.ui.screens.home.subcomponents.AnimatedTaskItem
+import com.example.ui.screens.home.subcomponents.BatchActionToolbar
+import com.example.ui.screens.home.inlineeditor.DeadlineDatePickerDialog
+import com.example.ui.screens.home.inlineeditor.dialogs.ThingsTagDialog
+import androidx.activity.compose.BackHandler
+import androidx.compose.ui.platform.LocalContext
 
 private val TOP_APP_BAR_HEIGHT = 56.dp
 private const val DELETE_ANIMATION_DELAY_MS = 300L
@@ -171,9 +176,27 @@ fun ThingsCategoryListPanel(
     var isWhenDialogOpen by remember { mutableStateOf(false) }
     var swipeWhenTask by remember { mutableStateOf<ItemWithChecklist?>(null) }
     val deletedTaskIds = remember { mutableStateListOf<String>() }
+
+    // Состояния диалогов для пакетных операций
+    var showBatchWhenDialog by remember { mutableStateOf(false) }
+    var showBatchMoveDialog by remember { mutableStateOf(false) }
+    var showBatchDeleteConfirm by remember { mutableStateOf(false) }
+    var showBatchTagDialog by remember { mutableStateOf(false) }
+    var showBatchDeadlineDialog by remember { mutableStateOf(false) }
+
+    val context = LocalContext.current
+
+    // Обработка нажатия системной кнопки "Назад" для выхода из режима множественного выбора
+    BackHandler(enabled = state.isSelectionMode) {
+        onEvent(ThingsCategoryListEvent.ExitSelectionMode)
+    }
     
-    LaunchedEffect(showMoveDialog, showDeleteConfirm, isWhenDialogOpen, swipeWhenTask != null) {
-        val anyActive = showMoveDialog || showDeleteConfirm || isWhenDialogOpen || swipeWhenTask != null
+    LaunchedEffect(
+        showMoveDialog, showDeleteConfirm, isWhenDialogOpen, swipeWhenTask != null,
+        showBatchWhenDialog, showBatchMoveDialog, showBatchDeleteConfirm, showBatchTagDialog, showBatchDeadlineDialog
+    ) {
+        val anyActive = showMoveDialog || showDeleteConfirm || isWhenDialogOpen || swipeWhenTask != null ||
+                showBatchWhenDialog || showBatchMoveDialog || showBatchDeleteConfirm || showBatchTagDialog || showBatchDeadlineDialog
         onDialogsActiveChange(anyActive)
     }
     
@@ -519,6 +542,9 @@ fun ThingsCategoryListPanel(
                                 onLocalTasksListChange = { localTasksList = it },
                                 lazyListState = lazyListState,
                                 onWhenDialogVisibilityChange = { isWhenDialogOpen = it },
+                                isSelectionMode = state.isSelectionMode,
+                                isSelected = state.selectedTaskIds.contains(item.item.id),
+                                onToggleSelect = { onEvent(ThingsCategoryListEvent.ToggleTaskSelection(item.item.id)) },
                                 modifier = if (dragDropState.draggedItemKey == item.item.id) {
                                     Modifier
                                 } else {
@@ -631,7 +657,14 @@ fun ThingsCategoryListPanel(
             project = project,
             area = area,
             tasks = state.allTasks,
-            isScrolled = isScrolledPastHeader
+            isScrolled = isScrolledPastHeader,
+            isSelectionMode = state.isSelectionMode,
+            selectedCount = state.selectedTaskIds.size,
+            isAllSelected = state.selectedTaskIds.isNotEmpty() && state.selectedTaskIds.size == state.displayTasks.size,
+            onCancelSelection = { onEvent(ThingsCategoryListEvent.ExitSelectionMode) },
+            onSelectAllClick = { onEvent(ThingsCategoryListEvent.SelectAllTasks) },
+            onDeselectAllClick = { onEvent(ThingsCategoryListEvent.DeselectAllTasks) },
+            onEnterSelectionMode = { onEvent(ThingsCategoryListEvent.EnterSelectionMode(null)) }
         )
 
     // PullToSearchIndicator
@@ -734,6 +767,107 @@ fun ThingsCategoryListPanel(
         onDuplicateClick = {
             if (activeTask != null) {
                 onEvent(ThingsCategoryListEvent.DuplicateTask(activeTask))
+            }
+        },
+        modifier = Modifier.align(Alignment.BottomCenter)
+    )
+
+    // Диалоги для пакетных операций
+    if (showBatchWhenDialog) {
+        var batchStartDate by remember { mutableStateOf<Long?>(null) }
+        var batchSection by remember { mutableStateOf(TaskSection.TODAY) }
+        var batchIsTonight by remember { mutableStateOf(false) }
+
+        ThingsWhenDialog(
+            startDate = batchStartDate,
+            onStartDateChange = { batchStartDate = it },
+            section = batchSection,
+            onSectionChange = { batchSection = it },
+            isTonight = batchIsTonight,
+            onIsTonightChange = { batchIsTonight = it },
+            onShowCalendarHelperChange = { },
+            onDismissRequest = {
+                onEvent(ThingsCategoryListEvent.BatchScheduleTasks(batchStartDate, batchIsTonight))
+                showBatchWhenDialog = false
+            }
+        )
+    }
+
+    if (showBatchMoveDialog) {
+        ThingsMoveDialog(
+            currentProjectId = null,
+            currentAreaId = null,
+            currentIsInbox = false,
+            projects = projects,
+            areas = areasState,
+            allTasks = state.allTasks,
+            onMove = { projectId, areaId, moveToInbox ->
+                onEvent(ThingsCategoryListEvent.BatchMoveTasks(projectId, areaId, moveToInbox))
+                showBatchMoveDialog = false
+            },
+            onDismissRequest = { showBatchMoveDialog = false }
+        )
+    }
+
+    if (showBatchDeleteConfirm) {
+        DeleteConfirmDialog(
+            onDismissRequest = { showBatchDeleteConfirm = false },
+            onConfirmDelete = {
+                showBatchDeleteConfirm = false
+                onEvent(ThingsCategoryListEvent.BatchDeleteTasks)
+            }
+        )
+    }
+
+    if (showBatchTagDialog) {
+        ThingsTagDialog(
+            activeTags = emptyList(),
+            allSavedTags = allSavedTags,
+            allSavedTagObjects = allSavedTagObjects,
+            onNewTagCreated = { name, parentId -> onEvent(ThingsCategoryListEvent.CreateTag(name, parentId)) },
+            onDeleteTag = { tag -> onEvent(ThingsCategoryListEvent.DeleteTag(tag)) },
+            onUpdateTag = { tag -> onEvent(ThingsCategoryListEvent.UpdateTag(tag)) },
+            onUpdateTagsOrder = { tags -> onEvent(ThingsCategoryListEvent.UpdateTagsOrder(tags)) },
+            onTagsSelected = { newTags ->
+                onEvent(ThingsCategoryListEvent.BatchSetTags(newTags))
+                showBatchTagDialog = false
+            },
+            onDismissRequest = { showBatchTagDialog = false }
+        )
+    }
+
+    if (showBatchDeadlineDialog) {
+        DeadlineDatePickerDialog(
+            initialSelectedDateMillis = null,
+            onDateSelected = { deadline ->
+                onEvent(ThingsCategoryListEvent.BatchSetDeadline(deadline))
+                showBatchDeadlineDialog = false
+            },
+            onDismiss = { showBatchDeadlineDialog = false }
+        )
+    }
+
+    // Плавающий тулбар пакетных операций
+    BatchActionToolbar(
+        isVisible = state.isSelectionMode,
+        selectedCount = state.selectedTaskIds.size,
+        onWhenClick = { showBatchWhenDialog = true },
+        onMoveClick = { showBatchMoveDialog = true },
+        onDeleteClick = { showBatchDeleteConfirm = true },
+        onCompleteClick = { onEvent(ThingsCategoryListEvent.BatchCompleteTasks(true)) },
+        onSetTagsClick = { showBatchTagDialog = true },
+        onSetDeadlineClick = { showBatchDeadlineDialog = true },
+        onDuplicateClick = { onEvent(ThingsCategoryListEvent.BatchDuplicateTasks) },
+        onShareClick = {
+            val selectedTasks = state.allTasks.filter { state.selectedTaskIds.contains(it.item.id) }
+            val shareText = selectedTasks.joinToString("\n") { "• " + it.item.title }
+            if (shareText.isNotEmpty()) {
+                val sendIntent = android.content.Intent().apply {
+                    action = android.content.Intent.ACTION_SEND
+                    putExtra(android.content.Intent.EXTRA_TEXT, shareText)
+                    type = "text/plain"
+                }
+                context.startActivity(android.content.Intent.createChooser(sendIntent, null))
             }
         },
         modifier = Modifier.align(Alignment.BottomCenter)

@@ -23,4 +23,21 @@
     <string name="delete_task_confirm_cancel">Cancel</string>
     <string name="delete_task_confirm_delete">Delete</string>
     <string name="tomorrow">Tomorrow</string>
+    <string name="cancel">Cancel</string>
+    <string name="select_all">Select All</string>
+    <string name="deselect_all">Deselect All</string>
+    <string name="select_items">Select Items</string>
+    <string name="selected_count">%1$d Selected</string>
+    <string name="batch_delete_confirm_title">Delete Tasks</string>
+    <string name="batch_delete_confirm_message">Are you sure you want to delete the selected tasks? This cannot be undone.</string>
+    <string name="batch_action_when">When</string>
+    <string name="batch_action_move">Move</string>
+    <string name="batch_action_delete">Delete</string>
+    <string name="batch_action_more">More</string>
+    <string name="batch_action_complete">Mark as Completed</string>
+    <string name="batch_action_incomplete">Mark as Incomplete</string>
+    <string name="batch_action_set_tags">Set Tags</string>
+    <string name="batch_action_set_deadline">Set Deadline</string>
+    <string name="batch_action_duplicate">Duplicate</string>
+    <string name="batch_action_share">Share</string>
 </resources>

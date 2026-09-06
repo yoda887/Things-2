@@ -77,6 +77,14 @@ class LocalTaskDataSource(private val taskDao: TaskDao) {
     }
 
     /**
+     * Пакетно удаляет задачи или проекты из локальной базы данных.
+     * @param items Список объектов для удаления
+     */
+    suspend fun deleteItems(items: List<Item>) {
+        taskDao.deleteItems(items)
+    }
+
+    /**
      * Удаляет объект по его уникальному идентификатору.
      * @param id Идентификатор удаляемого объекта
      */

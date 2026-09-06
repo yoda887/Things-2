@@ -15,4 +15,11 @@ class DeleteTaskUseCase @Inject constructor(private val repository: ITaskReposit
     suspend operator fun invoke(item: Item) {
         repository.deleteTask(item)
     }
+
+    /**
+     * Пакетно удаляет список задач из БД.
+     */
+    suspend operator fun invoke(items: List<Item>) {
+        repository.deleteTasks(items)
+    }
 }
