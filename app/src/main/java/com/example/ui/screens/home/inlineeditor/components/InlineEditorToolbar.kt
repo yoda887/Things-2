@@ -24,6 +24,7 @@ import com.example.ui.theme.ThingsBlue
 import com.example.ui.theme.ThingsTodayStar
 import com.example.ui.theme.ThingsSomedayGrey
 import com.example.ui.theme.AppIcons
+import com.example.ui.theme.dimens
 import com.example.ui.screens.home.inlineeditor.utils.isTodayDate
 import com.example.ui.screens.home.inlineeditor.utils.isTodayDateOrPast
 import java.text.SimpleDateFormat
@@ -125,7 +126,7 @@ fun InlineEditorToolbar(
 
         // Right side: Tag, Checklist, Priority/Flag
         Row(
-            horizontalArrangement = Arrangement.spacedBy(12.dp),
+            horizontalArrangement = Arrangement.spacedBy(MaterialTheme.dimens.taskEditorActionIconsSpacing),
             verticalAlignment = Alignment.CenterVertically
         ) {
 

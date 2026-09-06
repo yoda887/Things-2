@@ -554,7 +554,7 @@ fun ThingsTaskInlineEditor(
                         enter = fadeIn() + expandHorizontally(expandFrom = Alignment.End),
                         exit = fadeOut() + shrinkHorizontally(shrinkTowards = Alignment.End)
                     ) {
-                        Box(modifier = Modifier.padding(start = 12.dp)) {
+                        Box(modifier = Modifier.padding(start = MaterialTheme.dimens.taskEditorActionIconsSpacing)) {
                             Icon(
                                 imageVector = AppIcons.Upcoming,
                                 contentDescription = "Schedule",
@@ -575,7 +575,7 @@ fun ThingsTaskInlineEditor(
                         enter = fadeIn() + expandHorizontally(expandFrom = Alignment.End),
                         exit = fadeOut() + shrinkHorizontally(shrinkTowards = Alignment.End)
                     ) {
-                        Box(modifier = Modifier.padding(start = 12.dp)) {
+                        Box(modifier = Modifier.padding(start = MaterialTheme.dimens.taskEditorActionIconsSpacing)) {
                             Icon(
                                 imageVector = Icons.Outlined.LocalOffer,
                                 contentDescription = "Tags",
@@ -596,7 +596,7 @@ fun ThingsTaskInlineEditor(
                         enter = fadeIn() + expandHorizontally(expandFrom = Alignment.End),
                         exit = fadeOut() + shrinkHorizontally(shrinkTowards = Alignment.End)
                     ) {
-                        Box(modifier = Modifier.padding(start = 12.dp)) {
+                        Box(modifier = Modifier.padding(start = MaterialTheme.dimens.taskEditorActionIconsSpacing)) {
                             Icon(
                                 imageVector = AppIcons.BulletList,
                                 contentDescription = "Checklists",
@@ -617,7 +617,7 @@ fun ThingsTaskInlineEditor(
                         enter = fadeIn() + expandHorizontally(expandFrom = Alignment.End),
                         exit = fadeOut() + shrinkHorizontally(shrinkTowards = Alignment.End)
                     ) {
-                        Box(modifier = Modifier.padding(start = 12.dp)) {
+                        Box(modifier = Modifier.padding(start = MaterialTheme.dimens.taskEditorActionIconsSpacing)) {
                             Icon(
                                 imageVector = AppIcons.Deadline,
                                 contentDescription = "Set Deadline",
