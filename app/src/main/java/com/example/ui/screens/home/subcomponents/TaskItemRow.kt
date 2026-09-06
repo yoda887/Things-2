@@ -19,6 +19,7 @@ import androidx.compose.material.icons.outlined.CalendarToday
 import androidx.compose.material.icons.outlined.Description
 import androidx.compose.material.icons.outlined.FormatListBulleted
 import androidx.compose.material.icons.outlined.Flag
+import com.example.ui.theme.AppIcons
 import androidx.compose.material.icons.outlined.LocalOffer
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
@@ -335,7 +336,7 @@ fun TaskItemRow(
                             }
                             if (task.checklistItemsCount > 0) {
                                 Icon(
-                                    imageVector = Icons.Outlined.FormatListBulleted,
+                                    imageVector = AppIcons.BulletList,
                                     contentDescription = "Has checklist",
                                     tint = textSecondaryColor.copy(alpha = 0.4f),
                                     modifier = Modifier.size(13.dp)
@@ -407,7 +408,7 @@ fun TaskItemRow(
                         modifier = Modifier.padding(end = 4.dp)
                     ) {
                         Icon(
-                            imageVector = Icons.Outlined.Flag,
+                            imageVector = AppIcons.Deadline,
                             contentDescription = "Deadline Flag",
                             tint = color,
                             modifier = Modifier.size(15.dp)

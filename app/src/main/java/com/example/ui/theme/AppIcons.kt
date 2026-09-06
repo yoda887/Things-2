@@ -362,8 +362,90 @@ object AppIcons {
         }.build()
     }
 
-    // Иконка буллет-списка (чеклист / мультивыбор задач)
+    // Кастомная иконка буллет-списка (чеклист / мультивыбор задач) из ic_format_list_bulleted_black_24dp.xml
     val BulletList: ImageVector by lazy(LazyThreadSafetyMode.NONE) {
-        androidx.compose.material.icons.Icons.Outlined.FormatListBulleted
+        ImageVector.Builder(
+            name = "BulletList",
+            defaultWidth = 24.dp,
+            defaultHeight = 24.dp,
+            viewportWidth = 24f,
+            viewportHeight = 24f
+        ).apply {
+            path(
+                stroke = SolidColor(Color.Black),
+                strokeLineWidth = 1.7f,
+                strokeLineCap = StrokeCap.Round,
+                strokeLineJoin = StrokeJoin.Round
+            ) {
+                // Точка 1 (середина: y=12)
+                moveTo(5f, 10.5f)
+                curveToRelative(-0.8f, 0f, -1.5f, 0.7f, -1.5f, 1.5f)
+                reflectiveCurveToRelative(0.7f, 1.5f, 1.5f, 1.5f)
+                reflectiveCurveToRelative(1.5f, -0.7f, 1.5f, -1.5f)
+                reflectiveCurveToRelative(-0.7f, -1.5f, -1.5f, -1.5f)
+                close()
+
+                // Точка 2 (верх: y=6)
+                moveTo(5f, 4.5f)
+                curveToRelative(-0.8f, 0f, -1.5f, 0.7f, -1.5f, 1.5f)
+                reflectiveCurveToRelative(0.7f, 1.5f, 1.5f, 1.5f)
+                reflectiveCurveToRelative(1.5f, -0.7f, 1.5f, -1.5f)
+                reflectiveCurveToRelative(-0.7f, -1.5f, -1.5f, -1.5f)
+                close()
+
+                // Точка 3 (низ: y=18)
+                moveTo(5f, 16.5f)
+                curveToRelative(-0.8f, 0f, -1.5f, 0.7f, -1.5f, 1.5f)
+                reflectiveCurveToRelative(0.7f, 1.5f, 1.5f, 1.5f)
+                reflectiveCurveToRelative(1.5f, -0.7f, 1.5f, -1.5f)
+                reflectiveCurveToRelative(-0.7f, -1.5f, -1.5f, -1.5f)
+                close()
+
+                // Линия 3 (низ: y=18)
+                moveTo(10f, 18f)
+                horizontalLineToRelative(11f)
+
+                // Линия 2 (середина: y=12)
+                moveTo(10f, 12f)
+                horizontalLineToRelative(11f)
+
+                // Линия 1 (верх: y=6)
+                moveTo(10f, 6f)
+                horizontalLineToRelative(11f)
+            }
+        }.build()
+    }
+
+    // Кастомная иконка дедлайна (флаг) из ic_deadline_24dp.xml
+    val Deadline: ImageVector by lazy(LazyThreadSafetyMode.NONE) {
+        ImageVector.Builder(
+            name = "Deadline",
+            defaultWidth = 24.dp,
+            defaultHeight = 24.dp,
+            viewportWidth = 24f,
+            viewportHeight = 24f
+        ).apply {
+            path(
+                stroke = SolidColor(Color.Black),
+                strokeLineWidth = 1.7f,
+                strokeLineCap = StrokeCap.Round,
+                strokeLineJoin = StrokeJoin.Round
+            ) {
+                // Древко флага
+                moveTo(6.5f, 4f)
+                horizontalLineToRelative(-0.3f)
+                verticalLineToRelative(17f)
+                horizontalLineToRelative(0.3f)
+                close()
+
+                // Полотно флага с вырезом
+                moveTo(8.5f, 4.5f)
+                horizontalLineToRelative(11f)
+                lineToRelative(-1f, 3.5f)
+                lineToRelative(1f, 3.5f)
+                horizontalLineToRelative(-11f)
+                close()
+            }
+        }.build()
     }
 }

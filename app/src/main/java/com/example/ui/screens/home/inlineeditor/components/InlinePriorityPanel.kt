@@ -67,7 +67,7 @@ fun InlinePriorityPanel(
             verticalAlignment = Alignment.CenterVertically
         ) {
             Icon(
-                imageVector = if (priority > 0) Icons.Filled.Flag else Icons.Outlined.Flag,
+                imageVector = if (priority > 0) Icons.Filled.Flag else AppIcons.Deadline,
                 contentDescription = "Priority",
                 tint = priorityColor,
                 modifier = Modifier.size(16.dp)

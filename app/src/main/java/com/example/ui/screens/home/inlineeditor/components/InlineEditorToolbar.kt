@@ -161,7 +161,7 @@ fun InlineEditorToolbar(
             // Checklist toggle
             if (!showChecklistHelper && checklist.isEmpty()) {
                 Icon(
-                    imageVector = Icons.Outlined.FormatListBulleted,
+                    imageVector = AppIcons.BulletList,
                     contentDescription = "Checklists",
                     tint = iconInactiveColor,
                     modifier = Modifier
@@ -176,7 +176,7 @@ fun InlineEditorToolbar(
             // Flag (Deadline)
             if (dueDate == null) {
                 Icon(
-                    imageVector = Icons.Outlined.Flag,
+                    imageVector = AppIcons.Deadline,
                     contentDescription = "Set Deadline",
                     tint = iconInactiveColor,
                     modifier = Modifier

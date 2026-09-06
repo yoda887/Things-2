@@ -14,6 +14,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.KeyboardArrowLeft
 import androidx.compose.material.icons.filled.*
 import androidx.compose.material.icons.outlined.*
+import com.example.ui.theme.AppIcons
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -379,7 +380,7 @@ fun DeepSearchResultRow(
                             }
                             if (wrapper.checklist.isNotEmpty()) {
                                 Icon(
-                                    imageVector = Icons.Outlined.FormatListBulleted,
+                                    imageVector = AppIcons.BulletList,
                                     contentDescription = "Has checklist",
                                     tint = textSecondaryColor.copy(alpha = 0.4f),
                                     modifier = Modifier.size(14.dp)

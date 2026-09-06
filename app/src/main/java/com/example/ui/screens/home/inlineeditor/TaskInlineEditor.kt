@@ -511,7 +511,7 @@ fun ThingsTaskInlineEditor(
                                 .padding(vertical = MaterialTheme.dimens.taskEditorIndicatorVerticalPadding)
                         ) {
                             Icon(
-                                imageVector = Icons.Outlined.Flag,
+                                imageVector = AppIcons.Deadline,
                                 contentDescription = "Deadline Flag",
                                 tint = primaryColor,
                                 modifier = Modifier.size(18.dp)
@@ -598,7 +598,7 @@ fun ThingsTaskInlineEditor(
                     ) {
                         Box(modifier = Modifier.padding(start = 12.dp)) {
                             Icon(
-                                imageVector = Icons.Outlined.FormatListBulleted,
+                                imageVector = AppIcons.BulletList,
                                 contentDescription = "Checklists",
                                 tint = iconInactiveColor,
                                 modifier = Modifier
@@ -619,7 +619,7 @@ fun ThingsTaskInlineEditor(
                     ) {
                         Box(modifier = Modifier.padding(start = 12.dp)) {
                             Icon(
-                                imageVector = Icons.Outlined.Flag,
+                                imageVector = AppIcons.Deadline,
                                 contentDescription = "Set Deadline",
                                 tint = iconInactiveColor,
                                 modifier = Modifier

@@ -19,7 +19,6 @@ import androidx.compose.material.icons.filled.MoreHoriz
 import androidx.compose.material.icons.outlined.CalendarToday
 import androidx.compose.material.icons.outlined.CheckCircleOutline
 import androidx.compose.material.icons.outlined.ContentCopy
-import androidx.compose.material.icons.outlined.Flag
 import androidx.compose.material.icons.outlined.LocalOffer
 import androidx.compose.material.icons.outlined.Share
 import androidx.compose.material.ripple.rememberRipple
@@ -178,7 +177,7 @@ fun BatchActionToolbar(
                             text = { Text(stringResource(R.string.batch_action_set_deadline), color = Color.White) },
                             leadingIcon = {
                                 Icon(
-                                    imageVector = Icons.Outlined.Flag,
+                                    imageVector = AppIcons.Deadline,
                                     contentDescription = null,
                                     tint = Color.White,
                                     modifier = Modifier.size(20.dp)

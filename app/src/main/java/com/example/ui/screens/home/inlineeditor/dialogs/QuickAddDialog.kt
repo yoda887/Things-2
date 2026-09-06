@@ -21,6 +21,7 @@ import androidx.compose.ui.text.input.KeyboardCapitalization
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.*
 import androidx.compose.material.icons.outlined.*
+import com.example.ui.theme.AppIcons
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -550,7 +551,7 @@ fun QuickAddDialog(
                                         .padding(vertical = 6.dp)
                                 ) {
                                     Icon(
-                                        imageVector = Icons.Outlined.Flag,
+                                        imageVector = AppIcons.Deadline,
                                         contentDescription = "Deadline Flag",
                                         tint = primaryColor,
                                         modifier = Modifier.size(18.dp)
@@ -632,7 +633,7 @@ fun QuickAddDialog(
                             ) {
                                 Box(modifier = Modifier.padding(start = 12.dp)) {
                                     Icon(
-                                        imageVector = Icons.Outlined.FormatListBulleted,
+                                        imageVector = AppIcons.BulletList,
                                         contentDescription = "Checklists",
                                         tint = iconInactiveColor,
                                         modifier = Modifier
@@ -650,7 +651,7 @@ fun QuickAddDialog(
                             ) {
                                 Box(modifier = Modifier.padding(start = 12.dp)) {
                                     Icon(
-                                        imageVector = Icons.Outlined.Flag,
+                                        imageVector = AppIcons.Deadline,
                                         contentDescription = "Set Deadline",
                                         tint = iconInactiveColor,
                                         modifier = Modifier
