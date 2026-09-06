@@ -105,6 +105,8 @@ fun CategoryListTopAppBar(
 
     CenterAlignedTopAppBar(
         title = {
+            // Временно отключено отображение количества выбранных задач по запросу пользователя:
+            /*
             if (isSelectionMode) {
                 Text(
                     text = stringResource(R.string.selected_count, selectedCount),
@@ -112,9 +114,10 @@ fun CategoryListTopAppBar(
                     color = textPrimaryColor,
                     fontWeight = FontWeight.SemiBold
                 )
-            } else {
-                // [ИЗМЕНЕНИЕ]: Анимированное появление заголовка и иконки при скрытии основного заголовка (выполняется slide в направлении снизу вверх)
-                AnimatedVisibility(
+            }
+            */
+            // [ИЗМЕНЕНИЕ]: Анимированное появление заголовка и иконки при скрытии основного заголовка (выполняется slide в направлении снизу вверх)
+            AnimatedVisibility(
                     visible = isScrolled,
                     enter = slideInVertically(
                         initialOffsetY = { it },
@@ -259,7 +262,6 @@ fun CategoryListTopAppBar(
                         }
                     }
                 }
-            }
         },
         navigationIcon = {
             if (isSelectionMode) {
