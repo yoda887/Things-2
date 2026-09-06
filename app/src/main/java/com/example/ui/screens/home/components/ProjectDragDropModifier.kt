@@ -16,6 +16,12 @@ import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 
+/** Время удержания карточки над свёрнутой областью для её автоматического раскрытия (Hover-to-Expand) */
+private const val HOVER_EXPAND_DELAY_MS = 1000L
+
+/** Доля высоты экрана для зон автоскролла сверху и снизу в списке проектов (10%) */
+private const val PROJECTS_SCROLL_ZONE_FRACTION = 0.10f
+
 /**
  * Обертка над универсальным [universalDragAndDrop] для привязки бизнес-логики
  * перетаскивания (Drag-and-Drop) проектов на главном экране (HomePanel).
@@ -23,7 +29,7 @@ import kotlinx.coroutines.launch
  * Поддерживает:
  * - Переупорядочивание проектов внутри области или внутри списка "Без области"
  * - Перенос проектов между областями и в список "Без области"
- * - Автоматическое раскрытие свёрнутой области при удержании пальца (hover) над её заголовком ~500 мс
+ * - Автоматическое раскрытие свёрнутой области при удержании пальца (hover) над её заголовком ~1000 мс
  * - Перенос проекта в пустую область
  * - Пересчёт sortOrder и сохранение изменённых проектов в базу данных
  *
@@ -66,9 +72,56 @@ fun Modifier.projectDragAndDrop(
     var hoveredCollapsedAreaId by remember { mutableStateOf<String?>(null) }
     var hoverJob by remember { mutableStateOf<Job?>(null) }
 
+    // Непрерывный мониторинг физического положения карточки на экране для отслеживания
+    // наведения (Hover-to-Expand, Сценарий Б) и отпускания (Drop, Сценарий В) над заголовком свёрнутой области.
+    val isDraggingThisProject = state.isInteracting && state.draggedItemKey == "proj_${project.id}"
+    LaunchedEffect(isDraggingThisProject) {
+        if (!isDraggingThisProject) {
+            hoverJob?.cancel()
+            return@LaunchedEffect
+        }
+        snapshotFlow {
+            val visible = lazyListState.layoutInfo.visibleItemsInfo
+            val dragged = visible.firstOrNull { it.key == "proj_${project.id}" }
+            if (dragged != null) {
+                dragged.offset + state.dragAccumulatedY + dragged.size / 2f
+            } else {
+                null
+            }
+        }.collect { cardCenter ->
+            if (cardCenter == null) return@collect
+            val visible = lazyListState.layoutInfo.visibleItemsInfo
+            val hoveredItem = visible.firstOrNull { item ->
+                val keyStr = item.key as? String ?: return@firstOrNull false
+                if (keyStr.startsWith("area_")) {
+                    val aId = keyStr.removePrefix("area_")
+                    val isCollapsed = currentExpandedStates[aId] == false
+                    isCollapsed && cardCenter >= item.offset && cardCenter <= (item.offset + item.size)
+                } else false
+            }
+            val newHoveredId = (hoveredItem?.key as? String)?.removePrefix("area_")
+            if (newHoveredId != hoveredCollapsedAreaId) {
+                hoverJob?.cancel()
+                hoveredCollapsedAreaId = newHoveredId
+                if (newHoveredId != null) {
+                    hoverJob = launch {
+                        delay(HOVER_EXPAND_DELAY_MS)
+                        if (state.isInteracting && state.draggedItemKey == "proj_${project.id}") {
+                            view.performHapticFeedback(HapticFeedbackConstants.CLOCK_TICK)
+                            currentOnExpandArea(newHoveredId)
+                            hoveredCollapsedAreaId = null
+                        }
+                    }
+                }
+            }
+        }
+    }
+
     this.universalDragAndDrop(
         state = state,
         key = "proj_${project.id}",
+        topScrollZoneFraction = PROJECTS_SCROLL_ZONE_FRACTION,
+        bottomScrollZoneFraction = PROJECTS_SCROLL_ZONE_FRACTION,
         canDropOver = { targetKey ->
             val keyStr = targetKey as? String ?: return@universalDragAndDrop false
             keyStr == "root_divider" || keyStr.startsWith("area_") || keyStr.startsWith("proj_")
@@ -108,59 +161,109 @@ fun Modifier.projectDragAndDrop(
                 // ── 2. Наведение на заголовок области (Area Header) ──
                 targetKeyStr.startsWith("area_") -> {
                     val targetAreaId = targetKeyStr.removePrefix("area_")
-                    val isExpanded = currentExpandedStates[targetAreaId] ?: true
+                    val targetAreaIndex = currentAreas.indexOfFirst { it.id == targetAreaId }
+                    if (targetAreaIndex == -1) return@universalDragAndDrop false
 
-                    if (!isExpanded) {
-                        // Область свёрнута: запускаем таймер hover на 500 мс для авто-раскрытия
-                        if (hoveredCollapsedAreaId != targetAreaId) {
-                            hoverJob?.cancel()
-                            hoveredCollapsedAreaId = targetAreaId
-                            hoverJob = coroutineScope.launch {
-                                delay(500L)
-                                if (state.isInteracting && state.draggedItemKey == draggedKey) {
-                                    view.performHapticFeedback(HapticFeedbackConstants.CLOCK_TICK)
-                                    currentOnExpandArea(targetAreaId)
-                                    hoveredCollapsedAreaId = null
+                    val currentProjectAreaId = currentLocalProjectsList[fromIndex].areaId
+
+                    // 2.1. Движение ВВЕРХ через заголовок собственной области:
+                    // Проект покидает текущую область и переходит в секцию выше (работает даже если область свёрнута)
+                    if (currentProjectAreaId == targetAreaId) {
+                        if (movingDown) {
+                            return@universalDragAndDrop false
+                        }
+                        hoverJob?.cancel()
+                        hoveredCollapsedAreaId = null
+
+                        // Ищем ближайшую вышележащую область, которая РАЗВЁРНУТА,
+                        // пропуская все подряд идущие свёрнутые области (Сценарий А: Пролёт мимо)
+                        var destAreaIndex = targetAreaIndex - 1
+                        val skippedCollapsedAreaIds = mutableListOf<String>()
+
+                        while (destAreaIndex >= 0) {
+                            val candidateArea = currentAreas[destAreaIndex]
+                            val isCandidateExpanded = currentExpandedStates[candidateArea.id] ?: true
+                            if (isCandidateExpanded) {
+                                break
+                            } else {
+                                skippedCollapsedAreaIds.add(candidateArea.id)
+                                destAreaIndex--
+                            }
+                        }
+
+                        val destAreaId = if (destAreaIndex >= 0) currentAreas[destAreaIndex].id else null
+
+                        // Компенсируем высоту всех пропущенных свёрнутых областей (Сценарий А: 0px скачка под пальцем)
+                        if (skippedCollapsedAreaIds.isNotEmpty()) {
+                            val highestSkippedAreaId = skippedCollapsedAreaIds.last()
+                            val highestSkippedItem = visibleItems.firstOrNull { it.key == "area_$highestSkippedAreaId" }
+                            if (highestSkippedItem != null) {
+                                val skippedHeight = targetItemInfo.offset - highestSkippedItem.offset
+                                if (skippedHeight > 0) {
+                                    state.adjustOffset(skippedHeight.toFloat())
                                 }
                             }
                         }
-                        // Пока область свёрнута, не сдвигаем элементы резко
-                        return@universalDragAndDrop false
+
+                        val list = currentLocalProjectsList.toMutableList()
+                        val moved = list.removeAt(fromIndex).copy(areaId = destAreaId)
+                        val insertAt = findInsertionIndexForArea(list, currentAreas, destAreaId, atStart = false)
+                        list.add(insertAt, moved)
+                        currentOnLocalProjectsListChange(list)
+                        return@universalDragAndDrop true
+                    }
+
+                    // 2.2. Наведение на ДРУГУЮ область (вход в чужую область):
+                    val isExpanded = currentExpandedStates[targetAreaId] ?: true
+                    if (!isExpanded) {
+                        if (movingDown) {
+                            // Ищем ближайшую нижележащую область, которая РАЗВЁРНУТА,
+                            // пропуская все подряд идущие свёрнутые области (Сценарий А: Пролёт мимо ВНИЗ)
+                            var destAreaIndex = targetAreaIndex
+                            val skippedCollapsedAreaIds = mutableListOf<String>()
+
+                            while (destAreaIndex < currentAreas.size) {
+                                val candidateArea = currentAreas[destAreaIndex]
+                                val isCandidateExpanded = currentExpandedStates[candidateArea.id] ?: true
+                                if (isCandidateExpanded) {
+                                    break
+                                } else {
+                                    skippedCollapsedAreaIds.add(candidateArea.id)
+                                    destAreaIndex++
+                                }
+                            }
+
+                            // Если все области ниже свёрнуты — карточка остаётся в текущей позиции до отпускания/hover
+                            if (destAreaIndex >= currentAreas.size) {
+                                return@universalDragAndDrop false
+                            }
+
+                            val destAreaId = currentAreas[destAreaIndex].id
+                            val destAreaHeader = visibleItems.firstOrNull { it.key == "area_$destAreaId" }
+                            val targetBottom = targetItemInfo.offset + targetItemInfo.size
+                            val extraShift = if (destAreaHeader != null) {
+                                val destBottom = destAreaHeader.offset + destAreaHeader.size
+                                (targetBottom - destBottom - draggedItemInfo.size).toFloat()
+                            } else {
+                                -((skippedCollapsedAreaIds.size * targetItemInfo.size) + draggedItemInfo.size).toFloat()
+                            }
+                            state.adjustOffset(extraShift)
+
+                            val list = currentLocalProjectsList.toMutableList()
+                            val moved = list.removeAt(fromIndex).copy(areaId = destAreaId)
+                            val insertAt = findInsertionIndexForArea(list, currentAreas, destAreaId, atStart = true)
+                            list.add(insertAt, moved)
+                            currentOnLocalProjectsListChange(list)
+                            return@universalDragAndDrop true
+                        } else {
+                            // Пока область свёрнута, не сдвигаем элементы резко (удержание и дроп отслеживаются LaunchedEffect)
+                            return@universalDragAndDrop false
+                        }
                     }
 
                     // Область развёрнута или пустая: сбрасываем hover таймер
                     hoverJob?.cancel()
                     hoveredCollapsedAreaId = null
-
-                    val targetAreaIndex = currentAreas.indexOfFirst { it.id == targetAreaId }
-                    if (targetAreaIndex == -1) return@universalDragAndDrop false
-
-                    val currentProjectAreaId = currentLocalProjectsList[fromIndex].areaId
-                    if (currentProjectAreaId == targetAreaId) {
-                        if (movingDown) {
-                            return@universalDragAndDrop false
-                        }
-                        // Движение ВВЕРХ через заголовок собственной области:
-                        // Проект покидает текущую область и переходит в секцию выше
-                        val list = currentLocalProjectsList.toMutableList()
-                        if (targetAreaIndex > 0) {
-                            // Переносим в конец предыдущей (вышележащей) области
-                            val prevAreaId = currentAreas[targetAreaIndex - 1].id
-                            val moved = list.removeAt(fromIndex).copy(areaId = prevAreaId)
-                            val insertAt = findInsertionIndexForArea(list, currentAreas, prevAreaId, atStart = false)
-                            list.add(insertAt, moved)
-                            currentOnLocalProjectsListChange(list)
-                            return@universalDragAndDrop true
-                        } else {
-                            // Это первая область — переносим проект в конец секции "Без области"
-                            val moved = list.removeAt(fromIndex).copy(areaId = null)
-                            val lastNoArea = list.indexOfLast { it.areaId == null }
-                            val insertAt = if (lastNoArea != -1) lastNoArea + 1 else 0
-                            list.add(insertAt, moved)
-                            currentOnLocalProjectsListChange(list)
-                            return@universalDragAndDrop true
-                        }
-                    }
 
                     val list = currentLocalProjectsList.toMutableList()
                     val moved = list.removeAt(fromIndex).copy(areaId = targetAreaId)
@@ -203,7 +306,7 @@ fun Modifier.projectDragAndDrop(
             val pendingAreaId = hoveredCollapsedAreaId
             hoveredCollapsedAreaId = null
 
-            // Если палец отпустили прямо над свёрнутой областью до истечения таймера — помещаем проект в неё
+            // Если палец отпустили прямо над свёрнутой областью (Сценарий В: Быстрый Drop) — помещаем проект в неё
             var list = currentLocalProjectsList.toMutableList()
             if (pendingAreaId != null) {
                 val fromIdx = list.indexOfFirst { it.id == currentProject.id }
@@ -247,9 +350,18 @@ fun Modifier.projectDragAndDrop(
 private fun findInsertionIndexForArea(
     list: List<Item>,
     areas: List<Area>,
-    targetAreaId: String,
+    targetAreaId: String?,
     atStart: Boolean
 ): Int {
+    if (targetAreaId == null) {
+        val lastNoArea = list.indexOfLast { it.areaId == null }
+        return if (atStart || lastNoArea == -1) {
+            if (lastNoArea != -1 && !atStart) lastNoArea + 1 else 0
+        } else {
+            lastNoArea + 1
+        }
+    }
+
     val existingInArea = list.filter { it.areaId == targetAreaId }
     if (existingInArea.isNotEmpty()) {
         return if (atStart) {

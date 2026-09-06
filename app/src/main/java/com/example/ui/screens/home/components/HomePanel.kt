@@ -289,7 +289,7 @@ fun ThingsHomePanel(
         }
 
         // Two-level Areas & Projects tree (flattened to maintain gesture detector lifecycle across areas)
-        val flattenedTree = remember(localProjects, localAreas, expandedStates.toMap()) {
+        val flattenedTree = remember(localProjects, localAreas, expandedStates.toMap(), dragDropState.draggedItemKey) {
             val result = mutableListOf<HomeTreeItem>()
             val noAreaProjects = localProjects.filter { it.areaId == null }
             noAreaProjects.forEach { project ->
@@ -312,6 +312,15 @@ fun ThingsHomePanel(
                 if (isExpanded && hasProjects) {
                     areaProjects.forEach { project ->
                         result.add(HomeTreeItem.ProjectItem(project, area.id))
+                    }
+                } else if (!isExpanded && hasProjects) {
+                    // Если область свёрнута, но один из её проектов сейчас удерживается/перетаскивается пользователем —
+                    // сохраняем его в дереве списка, чтобы жест не обрывался и карточка не прыгала из-под пальца
+                    val draggedKey = dragDropState.draggedItemKey
+                    if (draggedKey != null) {
+                        areaProjects.filter { "proj_${it.id}" == draggedKey }.forEach { project ->
+                            result.add(HomeTreeItem.ProjectItem(project, area.id))
+                        }
                     }
                 }
             }

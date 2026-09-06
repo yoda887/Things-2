@@ -204,6 +204,8 @@ fun Modifier.universalDragAndDrop(
     key: Any,
     canDropOver: (targetKey: Any) -> Boolean = { true },
     thresholdFraction: Float = MOVE_THRESHOLD,
+    topScrollZoneFraction: Float = SCROLL_TOP_ZONE_FRACTION,
+    bottomScrollZoneFraction: Float = SCROLL_BOTTOM_ZONE_FRACTION,
     onMoveIfNecessary: (draggedKey: Any, targetKey: Any) -> Boolean,
     onDragStarted: () -> Unit = {},
     onMoveCommitted: () -> Unit = {},
@@ -342,6 +344,8 @@ fun Modifier.universalDragAndDrop(
     this.reorderableItem(
         state = state,
         key = key,
+        topScrollZoneFraction = topScrollZoneFraction,
+        bottomScrollZoneFraction = bottomScrollZoneFraction,
         onDragStart = {
             currentOnDragStarted()
         },
@@ -368,6 +372,8 @@ fun Modifier.universalDragAndDrop(
 fun Modifier.reorderableItem(
     state: GenericDragDropState,
     key: Any,
+    topScrollZoneFraction: Float = SCROLL_TOP_ZONE_FRACTION,
+    bottomScrollZoneFraction: Float = SCROLL_BOTTOM_ZONE_FRACTION,
     onDragStart: () -> Unit = {},
     onDrag: (dragAmount: Float) -> Unit = {},
     onDragged: (scrollDelta: Float) -> Unit = {},
@@ -376,6 +382,8 @@ fun Modifier.reorderableItem(
 ): Modifier = composed {
     val coroutineScope = rememberCoroutineScope()
     
+    val currentTopScrollZoneFraction by rememberUpdatedState(topScrollZoneFraction)
+    val currentBottomScrollZoneFraction by rememberUpdatedState(bottomScrollZoneFraction)
     val currentOnDragStart by rememberUpdatedState(onDragStart)
     val currentOnDrag by rememberUpdatedState(onDrag)
     val currentOnDragged by rememberUpdatedState(onDragged)
@@ -396,8 +404,8 @@ fun Modifier.reorderableItem(
                 val viewportHeight = viewportEnd - viewportStart
 
                 if (viewportHeight > 0f) {
-                    val scrollTopZone = (viewportHeight * SCROLL_TOP_ZONE_FRACTION).coerceAtLeast(1f)
-                    val scrollBottomZone = (viewportHeight * SCROLL_BOTTOM_ZONE_FRACTION).coerceAtLeast(1f)
+                    val scrollTopZone = (viewportHeight * currentTopScrollZoneFraction).coerceAtLeast(1f)
+                    val scrollBottomZone = (viewportHeight * currentBottomScrollZoneFraction).coerceAtLeast(1f)
                     val dragTop = draggedItemInfo.offset + state.dragAccumulatedOffset.value
                     val dragBottom = dragTop + draggedItemInfo.size
 
