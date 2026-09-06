@@ -8,6 +8,7 @@ import androidx.compose.animation.core.Spring
 import androidx.compose.animation.core.tween
 import androidx.compose.animation.core.FastOutSlowInEasing
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -99,6 +100,8 @@ fun AnimatedTaskItem(
     isSelectionMode: Boolean = false,
     isSelected: Boolean = false,
     onToggleSelect: () -> Unit = {},
+    selectedTaskIds: Set<String> = emptySet(),
+    onExitSelectionMode: () -> Unit = {},
     modifier: Modifier = Modifier
 ) {
     val task = taskWrapper.item
@@ -147,6 +150,10 @@ fun AnimatedTaskItem(
         targetValue = if (shouldDim) 0.3f else 1f,
         label = "dimAlpha_${task.id}"
     )
+    val dragScale by animateFloatAsState(
+        targetValue = if (isDragTask) 1.04f else 1.0f,
+        label = "dragScale_${task.id}"
+    )
     val dragElevation by animateDpAsState(
         targetValue = if (isDragTask) 8.dp else (if (isExpanded || expansionProgress > 0f) 8.dp else 0.dp),
         animationSpec = tween(
@@ -168,25 +175,88 @@ fun AnimatedTaskItem(
     val currCornerShape = RoundedCornerShape(cornerRadiusValue)
 
     val extraPaddingDp = 10.dp * expansionProgress
-
     val verticalGapPadding = MaterialTheme.dimens.taskExpandedVerticalGap * expansionProgress
 
-    // Добавляем светло-серую подложку (плейсхолдер) на физическое место задачи во время перетаскивания (landing slot)
+    val isSecondaryBatchItem = dragDropState.batchDraggedKeys.isNotEmpty()
+        && dragDropState.batchDraggedKeys.contains(task.id)
+        && task.id != dragDropState.draggedItemKey
+
     Box(
         modifier = modifier
             .zIndex(zIndexValToUse)
     ) {
-        if (isDragTask) {
-            val isDark = isSystemInDarkTheme()
-            val placeholderBgColor = if (isDark) Color(0xFF2C2D32) else Color(0xFFE5E6EB)
-            Box(
-                modifier = Modifier
-                    .matchParentSize()
-                    .alpha(0.5f) // Полупрозрачный
-                    .zIndex(-1f) // Уровнем ниже всех задач в списке (в рамках контекста элемента)
-                    .background(placeholderBgColor, currCornerShape)
-            )
-        }
+        androidx.compose.animation.AnimatedVisibility(
+            visible = !isSecondaryBatchItem,
+            enter = androidx.compose.animation.expandVertically(
+                animationSpec = tween(
+                    durationMillis = 250,
+                    easing = FastOutSlowInEasing
+                )
+            ) + androidx.compose.animation.fadeIn(animationSpec = tween(200)),
+            exit = androidx.compose.animation.shrinkVertically(
+                animationSpec = tween(
+                    durationMillis = 250,
+                    easing = FastOutSlowInEasing
+                )
+            ) + androidx.compose.animation.fadeOut(animationSpec = tween(150))
+        ) {
+            Box {
+                // Каскадный эффект стопки карточек под ведущей задачей при групповом перетаскивании
+                if (isDragTask && dragDropState.isBatchDrag) {
+                val isDark = isSystemInDarkTheme()
+                val stackCardBg = if (isDark) Color(0xFF252629) else Color(0xFFFFFFFF)
+                val stackBorderColor = if (isDark) Color(0xFF38393D) else Color(0xFFE5E5EA)
+
+                // 3-й слой стопки (если в пачке 3 или более задач)
+                if (dragDropState.batchDraggedKeys.size >= 3) {
+                    Box(
+                        modifier = Modifier
+                            .matchParentSize()
+                            .graphicsLayer {
+                                translationX = translationXVal + 8.dp.toPx()
+                                translationY = translationYVal + 8.dp.toPx()
+                                scaleX = dragScale
+                                scaleY = dragScale
+                                rotationZ = 3.2f
+                                shadowElevation = 4.dp.toPx()
+                                shape = currCornerShape
+                                clip = true
+                            }
+                            .background(stackCardBg, currCornerShape)
+                            .border(0.5.dp, stackBorderColor, currCornerShape)
+                    )
+                }
+
+                // 2-й слой стопки
+                Box(
+                    modifier = Modifier
+                        .matchParentSize()
+                        .graphicsLayer {
+                            translationX = translationXVal + 4.dp.toPx()
+                            translationY = translationYVal + 4.dp.toPx()
+                            scaleX = dragScale
+                            scaleY = dragScale
+                            rotationZ = 1.6f
+                            shadowElevation = 6.dp.toPx()
+                            shape = currCornerShape
+                            clip = true
+                        }
+                        .background(stackCardBg, currCornerShape)
+                        .border(0.5.dp, stackBorderColor, currCornerShape)
+                )
+            }
+
+            if (isDragTask) {
+                val isDark = isSystemInDarkTheme()
+                val placeholderBgColor = if (isDark) Color(0xFF2C2D32) else Color(0xFFE5E6EB)
+                Box(
+                    modifier = Modifier
+                        .matchParentSize()
+                        .alpha(0.5f) // Полупрозрачный
+                        .zIndex(-1f) // Уровнем ниже всех задач в списке (в рамках контекста элемента)
+                        .background(placeholderBgColor, currCornerShape)
+                )
+            }
 
         Column(
             modifier = Modifier
@@ -194,6 +264,8 @@ fun AnimatedTaskItem(
                 .graphicsLayer {
                     translationX = translationXVal
                     translationY = translationYVal
+                    scaleX = dragScale
+                    scaleY = dragScale
                     alpha = dimAlpha
                 }
                 .padding(top = verticalGapPadding, bottom = verticalGapPadding)
@@ -326,7 +398,9 @@ fun AnimatedTaskItem(
                             onLocalTasksListChange = onLocalTasksListChange,
                             onTasksReordered = { items ->
                                 onEvent(ThingsCategoryListEvent.ReorderTasks(items))
-                            }
+                            },
+                            selectedTaskIds = selectedTaskIds,
+                            onExitSelectionMode = onExitSelectionMode
                         ),
                         onSwipeLeft = { onEvent(ThingsCategoryListEvent.SwipeTaskLeft(taskWrapper)) },
                         onSwipeRight = { onEvent(ThingsCategoryListEvent.SwipeTaskRight(taskWrapper)) },
@@ -449,7 +523,9 @@ fun AnimatedTaskItem(
                     }
                 }
             }
-        }
+            }
         }
     }
+}
+}
 }

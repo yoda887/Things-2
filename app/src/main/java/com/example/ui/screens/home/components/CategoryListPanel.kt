@@ -547,6 +547,8 @@ fun ThingsCategoryListPanel(
                                 isSelectionMode = state.isSelectionMode,
                                 isSelected = state.selectedTaskIds.contains(item.item.id),
                                 onToggleSelect = { onEvent(ThingsCategoryListEvent.ToggleTaskSelection(item.item.id)) },
+                                selectedTaskIds = state.selectedTaskIds,
+                                onExitSelectionMode = { onEvent(ThingsCategoryListEvent.ExitSelectionMode) },
                                 modifier = if (dragDropState.draggedItemKey == item.item.id) {
                                     Modifier
                                 } else {

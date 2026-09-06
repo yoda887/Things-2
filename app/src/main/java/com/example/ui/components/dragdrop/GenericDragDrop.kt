@@ -42,6 +42,12 @@ class GenericDragDropState(
     /** Ключ элемента, который сейчас перетаскивается. Может быть любого типа (String, Int, Long) */
     var draggedItemKey by mutableStateOf<Any?>(null)
     
+    /** Список ключей элементов, свернутых в пачку при групповом перетаскивании (первый ключ - ведущий) */
+    var batchDraggedKeys by mutableStateOf<List<Any>>(emptyList())
+
+    /** Флаг указывает, перетаскивается ли группа из нескольких элементов */
+    val isBatchDrag: Boolean get() = batchDraggedKeys.size > 1
+
     /** Флаг указывает, продолжает ли пользователь удерживать палец на экране во время перетаскивания */
     var isInteracting by mutableStateOf(false)
     
@@ -449,6 +455,7 @@ fun Modifier.reorderableItem(
                             state.animateOffsetToZero()
                         } finally {
                             state.draggedItemKey = null
+                            state.batchDraggedKeys = emptyList()
                             state.dragScrollStartMs = Long.MIN_VALUE
                         }
                     }
@@ -462,6 +469,7 @@ fun Modifier.reorderableItem(
                             state.animateOffsetToZero()
                         } finally {
                             state.draggedItemKey = null
+                            state.batchDraggedKeys = emptyList()
                             state.dragScrollStartMs = Long.MIN_VALUE
                         }
                     }

@@ -41,6 +41,8 @@ fun Modifier.taskDragAndDrop(
     filteredTasks: List<ItemWithChecklist>,
     onLocalTasksListChange: (List<ItemWithChecklist>) -> Unit,
     onTasksReordered: (List<Item>) -> Unit,
+    selectedTaskIds: Set<String> = emptySet(),
+    onExitSelectionMode: () -> Unit = {},
 ): Modifier = composed {
     val view = LocalView.current
     val haptic = LocalHapticFeedback.current
@@ -53,6 +55,8 @@ fun Modifier.taskDragAndDrop(
     val currentOnLocalTasksListChange by rememberUpdatedState(onLocalTasksListChange)
     val currentOnTasksReordered by rememberUpdatedState(onTasksReordered)
     val currentScreen by rememberUpdatedState(screen)
+    val currentSelectedTaskIds by rememberUpdatedState(selectedTaskIds)
+    val currentOnExitSelectionMode by rememberUpdatedState(onExitSelectionMode)
 
     val taskItem = currentTaskWrapper.item
 
@@ -60,8 +64,9 @@ fun Modifier.taskDragAndDrop(
         state = state,
         key = taskItem.id,
         canDropOver = { targetKey ->
-            // Исключаем события календаря из целей свапа
+            // Исключаем события календаря и сопутствующие задачи в пачке из целей свапа
             !(targetKey as? String).orEmpty().startsWith("ev_")
+                && !state.batchDraggedKeys.contains(targetKey)
         },
         onMoveIfNecessary = { draggedKey, targetKey ->
             val draggedId = draggedKey as? String ?: return@universalDragAndDrop false
@@ -200,13 +205,59 @@ fun Modifier.taskDragAndDrop(
         },
         onDragStarted = {
             haptic.performHapticFeedback(HapticFeedbackType.LongPress)
+            // Если перетаскиваемая задача входит в число выбранных задач:
+            if (currentSelectedTaskIds.contains(taskItem.id) && currentSelectedTaskIds.size > 1) {
+                // Ведущая задача первая, остальные выбранные - следом
+                val otherSelectedIds = currentSelectedTaskIds.filter { it != taskItem.id }
+                state.batchDraggedKeys = listOf(taskItem.id) + otherSelectedIds
+            } else {
+                state.batchDraggedKeys = emptyList()
+            }
+            // Режим выбора автоматически завершается при начале перетаскивания (включая одиночно выбранную задачу)
+            if (currentSelectedTaskIds.isNotEmpty()) {
+                currentOnExitSelectionMode()
+            }
         },
         onMoveCommitted = {
             view.performHapticFeedback(HapticFeedbackConstants.CLOCK_TICK)
         },
         onDragEnd = {
+            val isBatch = state.batchDraggedKeys.size > 1
+            val batchKeys = state.batchDraggedKeys.mapNotNull { it as? String }
+
+            val listWithBatchOrdered = if (isBatch && batchKeys.contains(taskItem.id)) {
+                val otherBatchKeys = batchKeys.filter { it != taskItem.id }.toSet()
+                val remainingList = currentLocalTasksList.filterNot { otherBatchKeys.contains(it.item.id) }.toMutableList()
+                val leadingIdx = remainingList.indexOfFirst { it.item.id == taskItem.id }
+
+                if (leadingIdx != -1) {
+                    val leadingTask = remainingList[leadingIdx]
+                    val targetTonight = leadingTask.item.isTonight
+                    val targetStartDate = leadingTask.item.startDate
+
+                    val orderedOtherBatch = batchKeys.drop(1).mapNotNull { key ->
+                        currentLocalTasksList.firstOrNull { it.item.id == key }
+                    }.map { wrapper ->
+                        var updated = wrapper
+                        if (updated.item.isTonight != targetTonight) {
+                            updated = updated.copyWithTonight(targetTonight)
+                        }
+                        if (updated.item.startDate != targetStartDate) {
+                            updated = updated.copyWithStartDate(targetStartDate)
+                        }
+                        updated
+                    }
+                    remainingList.addAll(leadingIdx + 1, orderedOtherBatch)
+                    remainingList
+                } else {
+                    currentLocalTasksList
+                }
+            } else {
+                currentLocalTasksList
+            }
+
             // Перерасчет окончательных порядковых индексов (sortOrder) для сохранения изменений
-            val updatedList = currentLocalTasksList.mapIndexed { index, wrapper ->
+            val updatedList = listWithBatchOrdered.mapIndexed { index, wrapper ->
                 val original = currentFilteredTasks.firstOrNull { it.item.id == wrapper.item.id }
                 val changed = original == null
                     || original.item.sortOrder != index
