@@ -600,6 +600,13 @@ fun ThingsHomeScreen(viewModel: ThingsViewModel = hiltViewModel()) {
                                         selectedTaskIds + event.taskId
                                     }
                                 }
+                                is ThingsCategoryListEvent.SetTaskSelected -> {
+                                    selectedTaskIds = if (event.selected) {
+                                        selectedTaskIds + event.taskId
+                                    } else {
+                                        selectedTaskIds - event.taskId
+                                    }
+                                }
                                 ThingsCategoryListEvent.SelectAllTasks -> {
                                     selectedTaskIds = screenState.displayTasks.map { it.item.id }.toSet()
                                 }

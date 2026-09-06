@@ -321,6 +321,7 @@ sealed interface ThingsCategoryListEvent {
     // Мультивыбор и пакетные операции
     data class EnterSelectionMode(val initialTaskId: String?) : ThingsCategoryListEvent
     data class ToggleTaskSelection(val taskId: String) : ThingsCategoryListEvent
+    data class SetTaskSelected(val taskId: String, val selected: Boolean) : ThingsCategoryListEvent
     object SelectAllTasks : ThingsCategoryListEvent
     object DeselectAllTasks : ThingsCategoryListEvent
     object ExitSelectionMode : ThingsCategoryListEvent

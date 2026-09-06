@@ -13,6 +13,8 @@ import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.gestures.detectDragGesturesAfterLongPress
 import androidx.compose.foundation.gestures.detectTapGestures
+import androidx.compose.foundation.gestures.awaitEachGesture
+import androidx.compose.foundation.gestures.awaitFirstDown
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyRow
@@ -844,6 +846,76 @@ fun ThingsCategoryListPanel(
                 showBatchDeadlineDialog = false
             },
             onDismiss = { showBatchDeadlineDialog = false }
+        )
+    }
+
+    // Полоса быстрого свайп-выбора задач (drag-to-select) в режиме множественного выбора
+    if (state.isSelectionMode) {
+        val currentSelectedIds by rememberUpdatedState(state.selectedTaskIds)
+        val currentOnEvent by rememberUpdatedState(onEvent)
+        val currentAllTasks by rememberUpdatedState(state.allTasks)
+        val currentView = androidx.compose.ui.platform.LocalView.current
+
+        Box(
+            modifier = Modifier
+                .align(Alignment.TopEnd)
+                .fillMaxHeight()
+                .width(60.dp)
+                .padding(top = topPaddingTotal, bottom = 100.dp)
+                .pointerInput(state.isSelectionMode) {
+                    awaitEachGesture {
+                        val down = awaitFirstDown(requireUnconsumed = false)
+
+                        // Поиск задач, пересекающих вертикальный интервал движения пальца [y1, y2]
+                        fun findTaskIdsInRange(y1: Float, y2: Float, isMovingDown: Boolean): List<String> {
+                            val minY = minOf(y1, y2) - pullOffset.value
+                            val maxY = maxOf(y1, y2) - pullOffset.value
+                            val items = lazyListState.layoutInfo.visibleItemsInfo
+                            val filtered = items.filter { itemInfo ->
+                                val top = itemInfo.offset.toFloat()
+                                val bottom = top + itemInfo.size.toFloat()
+                                top <= maxY && bottom >= minY
+                            }
+                            val ordered = if (isMovingDown) filtered else filtered.asReversed()
+                            return ordered.mapNotNull { hitItem ->
+                                val key = hitItem.key as? String ?: return@mapNotNull null
+                                if (currentAllTasks.any { it.item.id == key }) key else null
+                            }
+                        }
+
+                        var lastY = down.position.y
+                        val initialHitTasks = findTaskIdsInRange(lastY, lastY, isMovingDown = true)
+                        val hitTaskId = initialHitTasks.firstOrNull()
+
+                        if (hitTaskId != null) {
+                            down.consume()
+                            val initialSelected = currentSelectedIds.contains(hitTaskId)
+                            val targetSelected = !initialSelected
+                            val touchedTaskIds = mutableSetOf<String>()
+
+                            touchedTaskIds.add(hitTaskId)
+                            currentView.performHapticFeedback(android.view.HapticFeedbackConstants.CLOCK_TICK)
+                            currentOnEvent(ThingsCategoryListEvent.SetTaskSelected(hitTaskId, targetSelected))
+
+                            while (true) {
+                                val event = awaitPointerEvent()
+                                val change = event.changes.firstOrNull() ?: break
+                                if (!change.pressed) break
+                                change.consume()
+
+                                val currentY = change.position.y
+                                val crossedTaskIds = findTaskIdsInRange(lastY, currentY, isMovingDown = currentY >= lastY)
+                                for (taskId in crossedTaskIds) {
+                                    if (touchedTaskIds.add(taskId)) {
+                                        currentView.performHapticFeedback(android.view.HapticFeedbackConstants.CLOCK_TICK)
+                                        currentOnEvent(ThingsCategoryListEvent.SetTaskSelected(taskId, targetSelected))
+                                    }
+                                }
+                                lastY = currentY
+                            }
+                        }
+                    }
+                }
         )
     }
 
