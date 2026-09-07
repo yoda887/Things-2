@@ -290,10 +290,8 @@ fun ThingsHomePanel(
             }
         }
 
-        var collapsingProjectId by remember { mutableStateOf<String?>(null) }
-
         // Two-level Areas & Projects tree (flattened to maintain gesture detector lifecycle across areas)
-        val flattenedTree = remember(localProjects, localAreas, expandedStates.toMap(), dragDropState.draggedItemKey, collapsingProjectId) {
+        val flattenedTree = remember(localProjects, localAreas, expandedStates.toMap(), dragDropState.draggedItemKey) {
             val result = mutableListOf<HomeTreeItem>()
             val noAreaProjects = localProjects.filter { it.areaId == null }
             noAreaProjects.forEach { project ->
@@ -318,10 +316,9 @@ fun ThingsHomePanel(
                         result.add(HomeTreeItem.ProjectItem(project, area.id))
                     }
                 } else if (!isExpanded && hasProjects) {
-                    // Если область свёрнута, но один из её проектов сейчас удерживается/перетаскивается пользователем
-                    // или анимированно схлопывается после дропа — сохраняем его в дереве списка
+                    // Если область свёрнута, но один из её проектов сейчас удерживается/перетаскивается пользователем — сохраняем его в дереве списка
                     val draggedKey = dragDropState.draggedItemKey
-                    areaProjects.filter { "proj_${it.id}" == draggedKey || it.id == collapsingProjectId }.forEach { project ->
+                    areaProjects.filter { "proj_${it.id}" == draggedKey }.forEach { project ->
                         result.add(HomeTreeItem.ProjectItem(project, area.id))
                     }
                 }
@@ -480,9 +477,6 @@ fun ThingsHomePanel(
                         localProjectsList = localProjects,
                         areas = localAreas,
                         expandedStates = expandedStates,
-                        isCollapsing = treeItem.project.id == collapsingProjectId,
-                        onStartCollapse = { collapsingProjectId = it },
-                        onCollapseFinished = { collapsingProjectId = null },
                         cardSurfaceColor = cardSurfaceColor,
                         textPrimaryColor = textPrimaryColor,
                         textSecondaryColor = textSecondaryColor,
@@ -805,9 +799,6 @@ private fun LazyItemScope.ProjectItemRow(
     localProjectsList: List<Item>,
     areas: List<Area>,
     expandedStates: Map<String, Boolean>,
-    isCollapsing: Boolean = false,
-    onStartCollapse: (String) -> Unit = {},
-    onCollapseFinished: () -> Unit = {},
     cardSurfaceColor: Color,
     textPrimaryColor: Color,
     textSecondaryColor: Color,
@@ -826,19 +817,6 @@ private fun LazyItemScope.ProjectItemRow(
     val totalCount = projectTasks.size
 
     val isDragging = dragDropState.draggedItemKey == "proj_${project.id}"
-    val collapseAnim = remember { Animatable(1f) }
-    LaunchedEffect(isCollapsing) {
-        if (isCollapsing) {
-            collapseAnim.animateTo(
-                targetValue = 0f,
-                animationSpec = tween(durationMillis = 320, easing = FastOutSlowInEasing)
-            )
-            onCollapseFinished()
-        } else {
-            collapseAnim.snapTo(1f)
-        }
-    }
-    val collapseProgress = collapseAnim.value
     val dragScale by animateFloatAsState(
         targetValue = if (isDragging) 1.04f else 1f,
         animationSpec = spring(),
@@ -854,13 +832,13 @@ private fun LazyItemScope.ProjectItemRow(
     )
     val translationY = if (isDragging) dragDropState.dragAccumulatedOffset.value else 0f
     val translationX = if (isDragging) dragDropState.dragAccumulatedOffsetHorizontal.value else 0f
-    val zIndexVal = if (isDragging || dragElev > 0.dp || isCollapsing) 100f else 0f
+    val zIndexVal = if (isDragging || dragElev > 0.dp) 100f else 0f
 
     Box(
         modifier = Modifier
             .zIndex(zIndexVal)
             .then(
-                if (!isDragging && dragElev == 0.dp && !isCollapsing) {
+                if (!isDragging && dragElev == 0.dp) {
                     Modifier.animateItem(
                         placementSpec = tween(durationMillis = 200, easing = FastOutSlowInEasing)
                     )
@@ -868,17 +846,11 @@ private fun LazyItemScope.ProjectItemRow(
                     Modifier
                 }
             )
-            .then(
-                if (isCollapsing) {
-                    Modifier.height(46.dp * collapseProgress)
-                } else {
-                    Modifier.height(46.dp)
-                }
-            )
+            .height(46.dp)
             .fillMaxWidth()
     ) {
         // Подложка на физическом месте проекта при перетаскивании (placeholder slot)
-        if (isDragging && !isCollapsing) {
+        if (isDragging) {
             val isDark = isSystemInDarkTheme()
             val placeholderBgColor = if (isDark) Color(0xFF2C2D32) else Color(0xFFE5E6EB)
             Box(
@@ -895,19 +867,17 @@ private fun LazyItemScope.ProjectItemRow(
                 .graphicsLayer {
                     this.translationX = translationX
                     this.translationY = translationY
-                    this.scaleX = if (isCollapsing) (0.96f + 0.04f * collapseProgress) else dragScale
-                    this.scaleY = if (isCollapsing) collapseProgress else dragScale
-                    this.transformOrigin = TransformOrigin(0.5f, 0f)
-                    this.alpha = if (isCollapsing) collapseProgress else 1f
-                    this.shadowElevation = if (isCollapsing) 0f else dragElev.toPx()
+                    this.scaleX = dragScale
+                    this.scaleY = dragScale
+                    this.shadowElevation = dragElev.toPx()
                     this.shape = RoundedCornerShape(10.dp)
-                    this.clip = isCollapsing
+                    this.clip = false
                 }
                 .fillMaxWidth()
                 .height(46.dp)
                 .clip(RoundedCornerShape(10.dp))
                 .background(
-                    if (isDragging || dragElev > 0.dp || isCollapsing) cardSurfaceColor
+                    if (isDragging || dragElev > 0.dp) cardSurfaceColor
                     else if (isEditing) ThingsBlue.copy(alpha = 0.15f)
                     else Color.Transparent
                 )
@@ -920,10 +890,9 @@ private fun LazyItemScope.ProjectItemRow(
                     expandedStates = expandedStates,
                     onLocalProjectsListChange = onLocalProjectsListChange,
                     onProjectsReordered = onProjectsReordered,
-                    onExpandArea = onExpandArea,
-                    onDropInCollapsedArea = onStartCollapse
+                    onExpandArea = onExpandArea
                 )
-                .clickable(enabled = !isEditing && !isDragging && !isCollapsing) { onProjectClick(project) }
+                .clickable(enabled = !isEditing && !isDragging) { onProjectClick(project) }
                 .padding(horizontal = 6.dp),
             verticalAlignment = Alignment.CenterVertically
         ) {
