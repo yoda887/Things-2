@@ -70,6 +70,7 @@ fun TaskItemRow(
     isBeingDeleted: Boolean = false,
     isSelectionMode: Boolean = false,
     isSelected: Boolean = false,
+    isDragSelecting: Boolean = false,
     onToggleSelect: () -> Unit = {},
     leftColumnWidth: androidx.compose.ui.unit.Dp = androidx.compose.material3.MaterialTheme.dimens.mainCheckboxSize,
     spacingToText: androidx.compose.ui.unit.Dp = androidx.compose.material3.MaterialTheme.dimens.taskSpacingToTextDefault,
@@ -468,8 +469,13 @@ fun TaskItemRow(
             ) + androidx.compose.animation.fadeIn() + androidx.compose.animation.expandHorizontally(),
             exit = androidx.compose.animation.scaleOut() + androidx.compose.animation.fadeOut() + androidx.compose.animation.shrinkHorizontally()
         ) {
+            val targetBorderColor = when {
+                isSelected -> ThingsBlue
+                isDragSelecting -> ThingsBlue.copy(alpha = 0.5f)
+                else -> Color(0xFFC7C7CC)
+            }
             val animatedBorderColor by androidx.compose.animation.animateColorAsState(
-                targetValue = if (isSelected) ThingsBlue else Color(0xFFC7C7CC),
+                targetValue = targetBorderColor,
                 animationSpec = androidx.compose.animation.core.tween(durationMillis = 200),
                 label = "selectionBorderColor"
             )
@@ -480,6 +486,12 @@ fun TaskItemRow(
                     stiffness = androidx.compose.animation.core.Spring.StiffnessMediumLow
                 ),
                 label = "selectionCheckScale"
+            )
+
+            val animatedDragSelectScale by androidx.compose.animation.core.animateFloatAsState(
+                targetValue = if (isDragSelecting) 1.14f else 1f,
+                animationSpec = androidx.compose.animation.core.tween(durationMillis = 200),
+                label = "dragSelectScale"
             )
 
             val iconBounceScale = remember { androidx.compose.animation.core.Animatable(1f) }
@@ -513,8 +525,8 @@ fun TaskItemRow(
                     modifier = Modifier
                         .size(28.dp)
                         .graphicsLayer {
-                            scaleX = iconBounceScale.value
-                            scaleY = iconBounceScale.value
+                            scaleX = iconBounceScale.value * animatedDragSelectScale
+                            scaleY = iconBounceScale.value * animatedDragSelectScale
                         }
                         .clickable(
                             interactionSource = remember { androidx.compose.foundation.interaction.MutableInteractionSource() },

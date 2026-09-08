@@ -99,6 +99,7 @@ fun AnimatedTaskItem(
     onWhenDialogVisibilityChange: (Boolean) -> Unit = {},
     isSelectionMode: Boolean = false,
     isSelected: Boolean = false,
+    isDragSelecting: Boolean = false,
     onToggleSelect: () -> Unit = {},
     selectedTaskIds: Set<String> = emptySet(),
     onExitSelectionMode: () -> Unit = {},
@@ -435,6 +436,7 @@ fun AnimatedTaskItem(
                             isBeingDeleted = isBeingDeleted,
                             isSelectionMode = isSelectionMode,
                             isSelected = isSelected,
+                            isDragSelecting = isDragSelecting,
                             onToggleSelect = onToggleSelect,
                             screen = screen
                         )

@@ -185,8 +185,15 @@ fun ThingsCategoryListPanel(
     var showBatchDeleteConfirm by remember { mutableStateOf(false) }
     var showBatchTagDialog by remember { mutableStateOf(false) }
     var showBatchDeadlineDialog by remember { mutableStateOf(false) }
+    var isDragSelecting by remember { mutableStateOf(false) }
 
     val context = LocalContext.current
+
+    LaunchedEffect(state.isSelectionMode) {
+        if (!state.isSelectionMode) {
+            isDragSelecting = false
+        }
+    }
 
     // Обработка нажатия системной кнопки "Назад" для выхода из режима множественного выбора
     BackHandler(enabled = state.isSelectionMode) {
@@ -546,6 +553,7 @@ fun ThingsCategoryListPanel(
                                 onWhenDialogVisibilityChange = { isWhenDialogOpen = it },
                                 isSelectionMode = state.isSelectionMode,
                                 isSelected = state.selectedTaskIds.contains(item.item.id),
+                                isDragSelecting = isDragSelecting,
                                 onToggleSelect = { onEvent(ThingsCategoryListEvent.ToggleTaskSelection(item.item.id)) },
                                 selectedTaskIds = state.selectedTaskIds,
                                 onExitSelectionMode = { onEvent(ThingsCategoryListEvent.ExitSelectionMode) },
@@ -891,29 +899,34 @@ fun ThingsCategoryListPanel(
 
                         if (hitTaskId != null) {
                             down.consume()
-                            val initialSelected = currentSelectedIds.contains(hitTaskId)
-                            val targetSelected = !initialSelected
-                            val touchedTaskIds = mutableSetOf<String>()
+                            isDragSelecting = true
+                            try {
+                                val initialSelected = currentSelectedIds.contains(hitTaskId)
+                                val targetSelected = !initialSelected
+                                val touchedTaskIds = mutableSetOf<String>()
 
-                            touchedTaskIds.add(hitTaskId)
-                            currentView.performHapticFeedback(android.view.HapticFeedbackConstants.CLOCK_TICK)
-                            currentOnEvent(ThingsCategoryListEvent.SetTaskSelected(hitTaskId, targetSelected))
+                                touchedTaskIds.add(hitTaskId)
+                                currentView.performHapticFeedback(android.view.HapticFeedbackConstants.CLOCK_TICK)
+                                currentOnEvent(ThingsCategoryListEvent.SetTaskSelected(hitTaskId, targetSelected))
 
-                            while (true) {
-                                val event = awaitPointerEvent()
-                                val change = event.changes.firstOrNull() ?: break
-                                if (!change.pressed) break
-                                change.consume()
+                                while (true) {
+                                    val event = awaitPointerEvent()
+                                    val change = event.changes.firstOrNull() ?: break
+                                    if (!change.pressed) break
+                                    change.consume()
 
-                                val currentY = change.position.y
-                                val crossedTaskIds = findTaskIdsInRange(lastY, currentY, isMovingDown = currentY >= lastY)
-                                for (taskId in crossedTaskIds) {
-                                    if (touchedTaskIds.add(taskId)) {
-                                        currentView.performHapticFeedback(android.view.HapticFeedbackConstants.CLOCK_TICK)
-                                        currentOnEvent(ThingsCategoryListEvent.SetTaskSelected(taskId, targetSelected))
+                                    val currentY = change.position.y
+                                    val crossedTaskIds = findTaskIdsInRange(lastY, currentY, isMovingDown = currentY >= lastY)
+                                    for (taskId in crossedTaskIds) {
+                                        if (touchedTaskIds.add(taskId)) {
+                                            currentView.performHapticFeedback(android.view.HapticFeedbackConstants.CLOCK_TICK)
+                                            currentOnEvent(ThingsCategoryListEvent.SetTaskSelected(taskId, targetSelected))
+                                        }
                                     }
+                                    lastY = currentY
                                 }
-                                lastY = currentY
+                            } finally {
+                                isDragSelecting = false
                             }
                         }
                     }

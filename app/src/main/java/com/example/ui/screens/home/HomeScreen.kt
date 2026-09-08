@@ -575,10 +575,16 @@ fun ThingsHomeScreen(viewModel: ThingsViewModel = hiltViewModel()) {
                                     inlineExpandedTaskId = null
                                     if (isSelectionMode) {
                                         val taskId = event.task.item.id
-                                        selectedTaskIds = if (selectedTaskIds.contains(taskId)) {
-                                            selectedTaskIds - taskId
+                                        if (selectedTaskIds.contains(taskId)) {
+                                            val newSelected = selectedTaskIds - taskId
+                                            if (newSelected.isEmpty()) {
+                                                isSelectionMode = false
+                                                selectedTaskIds = emptySet()
+                                            } else {
+                                                selectedTaskIds = newSelected
+                                            }
                                         } else {
-                                            selectedTaskIds + taskId
+                                            selectedTaskIds = selectedTaskIds + taskId
                                         }
                                     } else {
                                         isSelectionMode = true
