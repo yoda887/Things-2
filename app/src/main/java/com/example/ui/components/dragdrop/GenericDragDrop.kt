@@ -50,7 +50,7 @@ class GenericDragDropState(
 
     /** Флаг указывает, продолжает ли пользователь удерживать палец на экране во время перетаскивания */
     var isInteracting by mutableStateOf(false)
-    
+
     /** Актуальные синхронные значения смещения драга без задержек мьютекса */
     var dragAccumulatedY by mutableFloatStateOf(0f)
     var dragAccumulatedX by mutableFloatStateOf(0f)
@@ -232,13 +232,18 @@ fun Modifier.universalDragAndDrop(
         deltaY: Float
     ): LazyListItemInfo? {
         if (deltaY == 0f) return null
-        val draggedItem = visibleItems.firstOrNull { it.key == draggedKey } ?: return null
+
+        // Исключаем вторичные элементы пачки (они свернуты в стопку под пальцем и не должны служить препятствиями)
+        val activeVisibleItems = visibleItems.filter {
+            it.key == draggedKey || !state.batchDraggedKeys.contains(it.key)
+        }
+        val draggedItem = activeVisibleItems.firstOrNull { it.key == draggedKey } ?: return null
         
         val dragTop = draggedItem.offset + currentOffset
         val dragBottom = dragTop + draggedItem.size
 
         // Фильтруем элементы согласно предикату canDropOver, исключая неподходящие цели для свапа
-        val candidates = visibleItems.filter { 
+        val candidates = activeVisibleItems.filter { 
             it.key != draggedKey && currentCanDropOver(it.key)
         }
 
@@ -253,11 +258,11 @@ fun Modifier.universalDragAndDrop(
             if (nextItem != null) {
                 // Находим последний элемент целевого составного блока (включая связанные элементы !canDropOver)
                 var lastTarget = nextItem
-                val nextIdx = visibleItems.indexOfFirst { it.key == nextItem.key }
+                val nextIdx = activeVisibleItems.indexOfFirst { it.key == nextItem.key }
                 var isBlockFullyVisible = true
                 if (nextIdx != -1) {
-                    for (i in (nextIdx + 1)..visibleItems.lastIndex) {
-                        val item = visibleItems[i]
+                    for (i in (nextIdx + 1)..activeVisibleItems.lastIndex) {
+                        val item = activeVisibleItems[i]
                         if (!currentCanDropOver(item.key)) {
                             lastTarget = item
                         } else {
@@ -267,7 +272,7 @@ fun Modifier.universalDragAndDrop(
                     // Если дочерние элементы блока упираются в нижний край видимых элементов списка
                     // и в общем списке ещё есть элементы, значит часть составного блока находится за пределами экрана
                     val totalItemsCount = lazyListState.layoutInfo.totalItemsCount
-                    val isLastVisibleItem = lastTarget.index == visibleItems.last().index
+                    val isLastVisibleItem = lastTarget.index == activeVisibleItems.last().index
                     val hasMoreItemsInList = lastTarget.index < totalItemsCount - 1
                     if (isLastVisibleItem && hasMoreItemsInList && !currentCanDropOver(lastTarget.key)) {
                         isBlockFullyVisible = false

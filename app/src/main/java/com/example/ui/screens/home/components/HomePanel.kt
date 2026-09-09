@@ -514,8 +514,6 @@ fun ThingsHomePanel(
                         ),
                         label = "areaDragElev_${area.id}"
                     )
-                    val areaTranslationY = if (isAreaDragging) dragDropState.dragAccumulatedOffset.value else 0f
-                    val areaTranslationX = if (isAreaDragging) dragDropState.dragAccumulatedOffsetHorizontal.value else 0f
                     val areaZIndex = if (isAreaDragging || areaDragElev > 0.dp) 100f else 0f
 
                     Column(
@@ -557,8 +555,8 @@ fun ThingsHomePanel(
                             Row(
                                 modifier = Modifier
                                     .graphicsLayer {
-                                        translationX = areaTranslationX
-                                        translationY = areaTranslationY
+                                        translationX = if (isAreaDragging) dragDropState.dragAccumulatedOffsetHorizontal.value else 0f
+                                        translationY = if (isAreaDragging) dragDropState.dragAccumulatedOffset.value else 0f
                                         scaleX = areaDragScale
                                         scaleY = areaDragScale
                                         shadowElevation = areaDragElev.toPx()
@@ -830,8 +828,6 @@ private fun LazyItemScope.ProjectItemRow(
         ),
         label = "projDragElev_${project.id}"
     )
-    val translationY = if (isDragging) dragDropState.dragAccumulatedOffset.value else 0f
-    val translationX = if (isDragging) dragDropState.dragAccumulatedOffsetHorizontal.value else 0f
     val zIndexVal = if (isDragging || dragElev > 0.dp) 100f else 0f
 
     Box(
@@ -865,8 +861,8 @@ private fun LazyItemScope.ProjectItemRow(
         Row(
             modifier = Modifier
                 .graphicsLayer {
-                    this.translationX = translationX
-                    this.translationY = translationY
+                    this.translationX = if (isDragging) dragDropState.dragAccumulatedOffsetHorizontal.value else 0f
+                    this.translationY = if (isDragging) dragDropState.dragAccumulatedOffset.value else 0f
                     this.scaleX = dragScale
                     this.scaleY = dragScale
                     this.shadowElevation = dragElev.toPx()

@@ -180,7 +180,7 @@ fun Modifier.taskDragAndDrop(
                     true
                 }
 
-                    // КЛАССИЧЕСКИЙ ОБМЕН ДВУХ ЗАДАЧ (Swap)
+                // КЛАССИЧЕСКИЙ ОБМЕН ДВУХ ЗАДАЧ (Swap)
                 else -> {
                     val toIndex = currentLocalTasksList.indexOfFirst { it.item.id == targetId }
                     if (toIndex == -1) return@universalDragAndDrop false

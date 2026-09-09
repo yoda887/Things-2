@@ -164,9 +164,6 @@ fun AnimatedTaskItem(
         label = "dragElev_${task.id}"
     )
     val zIndexValToUse = if (isDragTask) 100f else (if (isExpanded || expansionProgress > 0f) 1f else 0f)
-    // Извлечение значения из Animatable
-    val translationYVal = if (isDragTask) dragDropState.dragAccumulatedOffset.value else 0f
-    val translationXVal = if (isDragTask) dragDropState.dragAccumulatedOffsetHorizontal.value else 0f
 
     val containerBgColor = if (isExpanded || expansionProgress > 0f || isDragTask || dragElevation > 0.dp) MaterialTheme.colorScheme.background else Color.Transparent
 
@@ -199,7 +196,7 @@ fun AnimatedTaskItem(
                     durationMillis = 250,
                     easing = FastOutSlowInEasing
                 )
-            ) + androidx.compose.animation.fadeOut(animationSpec = tween(150))
+            ) + androidx.compose.animation.fadeOut(animationSpec = tween(200))
         ) {
             Box {
                 // Каскадный эффект стопки карточек под ведущей задачей при групповом перетаскивании
@@ -214,8 +211,10 @@ fun AnimatedTaskItem(
                         modifier = Modifier
                             .matchParentSize()
                             .graphicsLayer {
-                                translationX = translationXVal + 8.dp.toPx()
-                                translationY = translationYVal + 8.dp.toPx()
+                                val currentTranslationY = if (isDragTask) dragDropState.dragAccumulatedOffset.value else 0f
+                                val currentTranslationX = if (isDragTask) dragDropState.dragAccumulatedOffsetHorizontal.value else 0f
+                                translationX = currentTranslationX + 8.dp.toPx()
+                                translationY = currentTranslationY + 8.dp.toPx()
                                 scaleX = dragScale
                                 scaleY = dragScale
                                 rotationZ = 3.2f
@@ -233,8 +232,10 @@ fun AnimatedTaskItem(
                     modifier = Modifier
                         .matchParentSize()
                         .graphicsLayer {
-                            translationX = translationXVal + 4.dp.toPx()
-                            translationY = translationYVal + 4.dp.toPx()
+                            val currentTranslationY = if (isDragTask) dragDropState.dragAccumulatedOffset.value else 0f
+                            val currentTranslationX = if (isDragTask) dragDropState.dragAccumulatedOffsetHorizontal.value else 0f
+                            translationX = currentTranslationX + 4.dp.toPx()
+                            translationY = currentTranslationY + 4.dp.toPx()
                             scaleX = dragScale
                             scaleY = dragScale
                             rotationZ = 1.6f
@@ -263,8 +264,8 @@ fun AnimatedTaskItem(
             modifier = Modifier
                 .fillMaxWidth()
                 .graphicsLayer {
-                    translationX = translationXVal
-                    translationY = translationYVal
+                    translationX = if (isDragTask) dragDropState.dragAccumulatedOffsetHorizontal.value else 0f
+                    translationY = if (isDragTask) dragDropState.dragAccumulatedOffset.value else 0f
                     scaleX = dragScale
                     scaleY = dragScale
                     alpha = dimAlpha
