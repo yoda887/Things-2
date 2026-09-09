@@ -18,9 +18,11 @@ import androidx.compose.ui.node.ModifierNodeElement
 import androidx.compose.ui.node.currentValueOf
 import androidx.compose.ui.platform.InspectorInfo
 import androidx.compose.ui.platform.LocalView
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.delay
+import kotlinx.coroutines.ensureActive
 import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
 import kotlin.math.pow
@@ -469,6 +471,13 @@ private class ReorderableItemNode(
     /** Корутина автопрокрутки живёт ровно столько, сколько пользователь удерживает элемент */
     private var autoScrollJob: Job? = null
 
+    /**
+     * Ключ, которым владеет активный жест ЭТОГО узла. Фиксируется при старте перетаскивания
+     * и не меняется, даже если LazyColumn переиспользует узел под другой элемент.
+     * null — этот узел сейчас ничего не перетаскивает.
+     */
+    private var dragOwnerKey: Any? = null
+
     private val pointerInputNode = delegate(
         SuspendingPointerInputModifierNode {
             detectDragGesturesAfterLongPress(
@@ -512,12 +521,13 @@ private class ReorderableItemNode(
     // ── Обработка жеста ───────────────────────────────────────────────────────
 
     private fun handleDragStart() {
+        dragOwnerKey = key
         state.draggedItemKey = key
         state.isInteracting = true
         state.snapOffsetTo(0f)
         performHaptic(HapticFeedbackConstants.LONG_PRESS)
         onDragStart()
-        startAutoScroll()
+        startAutoScroll(key)
     }
 
     private fun handleDrag(change: PointerInputChange, dragAmount: Offset) {
@@ -530,31 +540,56 @@ private class ReorderableItemNode(
     }
 
     private fun handleDragEnd() {
-        stopInteraction()
+        val ownerKey = takeOwnedGesture() ?: return
+        state.isInteracting = false
         onDragEnd()
-        settle()
+        settle(ownerKey)
     }
 
     private fun handleDragCancel() {
-        stopInteraction()
-        settle()
+        val ownerKey = takeOwnedGesture() ?: return
+        state.isInteracting = false
+        settle(ownerKey)
     }
 
-    private fun stopInteraction() {
-        state.isInteracting = false
+    /**
+     * Проверяет, что завершаемый жест действительно принадлежит этому узлу, и освобождает
+     * его собственные ресурсы.
+     *
+     * Ключевой момент: detectDragGesturesAfterLongPress вызывает onDragCancel при отмене своей
+     * корутины — в том числе когда узел просто ждал касания, а LazyColumn выбросил элемент
+     * за пределы экрана. Во время автопрокрутки это происходит постоянно, и раньше такой
+     * «чужой» onDragCancel сбрасывал общее состояние (isInteracting) прямо посреди активного
+     * перетаскивания, из-за чего автоскролл вставал до конца жеста.
+     *
+     * @return ключ, которым владеет жест, либо null — если жест этому узлу не принадлежит
+     *         и общее состояние трогать нельзя.
+     */
+    private fun takeOwnedGesture(): Any? {
+        val ownerKey = dragOwnerKey
+        releaseOwnResources()
+        return ownerKey?.takeIf { state.draggedItemKey == it }
+    }
+
+    /** Освобождает только ресурсы самого узла, не касаясь общего состояния перетаскивания */
+    private fun releaseOwnResources() {
+        dragOwnerKey = null
         autoScrollJob?.cancel()
         autoScrollJob = null
     }
 
     /** Плавно возвращает элемент на место и очищает общее состояние перетаскивания */
-    private fun settle() {
+    private fun settle(ownerKey: Any) {
         coroutineScope.launch {
             try {
                 state.animateOffsetToZero()
             } finally {
-                state.draggedItemKey = null
-                state.batchDraggedKeys = emptyList()
-                state.dragScrollStartMs = Long.MIN_VALUE
+                // За время анимации перетаскивание мог перехватить другой элемент
+                if (state.draggedItemKey == ownerKey) {
+                    state.draggedItemKey = null
+                    state.batchDraggedKeys = emptyList()
+                    state.dragScrollStartMs = Long.MIN_VALUE
+                }
                 onDragSettled()
             }
         }
@@ -562,20 +597,38 @@ private class ReorderableItemNode(
 
     // ── Авто-скролл ───────────────────────────────────────────────────────────
 
-    private fun startAutoScroll() {
+    /**
+     * Цикл автопрокрутки привязан к ключу собственного жеста, а не к общему флагу isInteracting:
+     * общий флаг может сбросить другой элемент списка, и раньше это глушило автоскролл
+     * посреди активного перетаскивания.
+     */
+    private fun startAutoScroll(draggedKey: Any) {
         autoScrollJob?.cancel()
         autoScrollJob = coroutineScope.launch {
-            while (isActive && state.isInteracting && state.draggedItemKey == key) {
-                autoScrollStep()
+            while (isActive && dragOwnerKey == draggedKey && state.draggedItemKey == draggedKey) {
+                try {
+                    autoScrollStep(draggedKey)
+                } catch (cancellation: CancellationException) {
+                    // Наш scrollBy отменил чужой скролл через MutatorMutex списка.
+                    // Это не повод глушить автопрокрутку до конца жеста: если отменили
+                    // сам жест — ensureActive пробросит исключение, иначе идём дальше.
+                    coroutineContext.ensureActive()
+                }
                 delay(SCROLL_FRAME_MS)
             }
         }
     }
 
     /** Один кадр автопрокрутки, когда перетаскиваемый элемент подходит к границе viewport */
-    private suspend fun autoScrollStep() {
+    private suspend fun autoScrollStep(draggedKey: Any) {
         val layoutInfo = state.lazyListState.layoutInfo
-        val draggedItemInfo = layoutInfo.visibleItemsInfo.firstOrNull { it.key == key } ?: return
+
+        // Если слот элемента временно вышел за пределы видимой области, кадр пропускаем:
+        // переупорядочивание в этом состоянии всё равно невозможно, а цикл остаётся живым
+        // и продолжит работу, как только элемент вернётся в visibleItemsInfo.
+        val draggedItemInfo = layoutInfo.visibleItemsInfo.firstOrNull { it.key == draggedKey } ?: return
+        val dragTop = draggedItemInfo.offset + state.dragAccumulatedOffset.value
+        val dragBottom = dragTop + draggedItemInfo.size
 
         val viewportStart = layoutInfo.viewportStartOffset.toFloat()
         val viewportEnd = layoutInfo.viewportEndOffset.toFloat()
@@ -584,8 +637,6 @@ private class ReorderableItemNode(
 
         val scrollTopZone = (viewportHeight * topScrollZoneFraction).coerceAtLeast(1f)
         val scrollBottomZone = (viewportHeight * bottomScrollZoneFraction).coerceAtLeast(1f)
-        val dragTop = draggedItemInfo.offset + state.dragAccumulatedOffset.value
-        val dragBottom = dragTop + draggedItemInfo.size
 
         val scrollAmount = when {
             // Верхний край элемента приблизился к верхней границе с учётом TopBar
@@ -600,6 +651,7 @@ private class ReorderableItemNode(
             }
             else -> 0f
         }
+
         if (scrollAmount == 0f) return
 
         val consumed = state.lazyListState.scrollBy(scrollAmount)
