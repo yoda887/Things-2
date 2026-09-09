@@ -1,20 +1,12 @@
 package com.example.ui.screens.home.components
 
-import androidx.compose.foundation.lazy.LazyListState
-import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.composed
 import com.example.data.model.Item
 import com.example.data.model.ItemWithChecklist
 import com.example.ui.screens.home.ActiveScreen
 import com.example.ui.components.dragdrop.GenericDragDropState
 import com.example.ui.components.dragdrop.universalDragAndDrop
-import kotlinx.coroutines.launch
 import java.util.Calendar
-import android.view.HapticFeedbackConstants
-import androidx.compose.ui.hapticfeedback.HapticFeedbackType
-import androidx.compose.ui.platform.LocalHapticFeedback
-import androidx.compose.ui.platform.LocalView
 
 private const val MS_PER_DAY = 24 * 3600 * 1000L
 
@@ -43,24 +35,11 @@ fun Modifier.taskDragAndDrop(
     onTasksReordered: (List<Item>) -> Unit,
     selectedTaskIds: Set<String> = emptySet(),
     onExitSelectionMode: () -> Unit = {},
-): Modifier = composed {
-    val view = LocalView.current
-    val haptic = LocalHapticFeedback.current
+): Modifier {
     val lazyListState = state.lazyListState
+    val taskItem = taskWrapper.item
 
-    val currentTaskWrapper by rememberUpdatedState(taskWrapper)
-    val currentUpcomingDays by rememberUpdatedState(upcomingDays)
-    val currentLocalTasksList by rememberUpdatedState(localTasksList)
-    val currentFilteredTasks by rememberUpdatedState(filteredTasks)
-    val currentOnLocalTasksListChange by rememberUpdatedState(onLocalTasksListChange)
-    val currentOnTasksReordered by rememberUpdatedState(onTasksReordered)
-    val currentScreen by rememberUpdatedState(screen)
-    val currentSelectedTaskIds by rememberUpdatedState(selectedTaskIds)
-    val currentOnExitSelectionMode by rememberUpdatedState(onExitSelectionMode)
-
-    val taskItem = currentTaskWrapper.item
-
-    this.universalDragAndDrop(
+    return this.universalDragAndDrop(
         state = state,
         key = taskItem.id,
         canDropOver = { targetKey ->
@@ -72,7 +51,7 @@ fun Modifier.taskDragAndDrop(
             val draggedId = draggedKey as? String ?: return@universalDragAndDrop false
             val targetId = targetKey as? String ?: return@universalDragAndDrop false
 
-            val fromIndex = currentLocalTasksList.indexOfFirst { it.item.id == draggedId }
+            val fromIndex = localTasksList.indexOfFirst { it.item.id == draggedId }
             if (fromIndex == -1) return@universalDragAndDrop false
 
             // Определение направления движения на основании видимых элементов списка LazyColumn
@@ -85,7 +64,7 @@ fun Modifier.taskDragAndDrop(
             when {
                 // ПЕРЕТАСКИВАНИЕ НА ЗАГОЛОВОК "ВЕЧЕР"
                 targetId == "evening_header" -> {
-                    val list = currentLocalTasksList.toMutableList()
+                    val list = localTasksList.toMutableList()
                     var moved = list.removeAt(fromIndex)
                     val wasTonight = moved.item.isTonight
 
@@ -98,40 +77,40 @@ fun Modifier.taskDragAndDrop(
                     }
 
                     list.add(insertAt, moved)
-                    currentOnLocalTasksListChange(list)
+                    onLocalTasksListChange(list)
                     true
                 }
 
                 // ПЕРЕТАСКИВАНИЕ НА ЗАГОЛОВОК "MAIN" (Основной список дня)
                 targetId == "main_header" -> {
-                    val list = currentLocalTasksList.toMutableList()
+                    val list = localTasksList.toMutableList()
                     var moved = list.removeAt(fromIndex)
                     if (!moved.item.isTonight) return@universalDragAndDrop false
 
                     moved = moved.copyWithTonight(false)
                     list.add(0, moved)
-                    currentOnLocalTasksListChange(list)
+                    onLocalTasksListChange(list)
                     true
                 }
 
                 // ПЕРЕТАСКИВАНИЕ НА ЗАГОЛОВОК ПРЕДСТОЯЩЕГО ДНЯ (Upcoming screen)
-                currentScreen == ActiveScreen.UPCOMING && targetId.startsWith("hdr_") -> {
+                screen == ActiveScreen.UPCOMING && targetId.startsWith("hdr_") -> {
                     val timestampStr = targetId.substringAfter("hdr_")
                     val timestamp = timestampStr.toLongOrNull() ?: return@universalDragAndDrop false
 
-                    val list = currentLocalTasksList.toMutableList()
+                    val list = localTasksList.toMutableList()
                     var moved = list.removeAt(fromIndex)
 
-                    val tomorrowStart = currentUpcomingDays.firstOrNull()?.dateMillis ?: 0L
+                    val tomorrowStart = upcomingDays.firstOrNull()?.dateMillis ?: 0L
                     val oldDayStart = moved.item.startDate?.dayStart() ?: tomorrowStart
 
                     // Определение целевого дня в зависимости от направления перетаскивания (вверх/вниз)
                     val targetTimestamp = if (movingDown) {
                         timestamp
                     } else {
-                        val currentDayIdx = currentUpcomingDays.indexOfFirst { it.dateMillis.dayStart() == timestamp.dayStart() }
+                        val currentDayIdx = upcomingDays.indexOfFirst { it.dateMillis.dayStart() == timestamp.dayStart() }
                         if (currentDayIdx > 0) {
-                            currentUpcomingDays[currentDayIdx - 1].dateMillis
+                            upcomingDays[currentDayIdx - 1].dateMillis
                         } else {
                             timestamp - MS_PER_DAY
                         }
@@ -176,50 +155,46 @@ fun Modifier.taskDragAndDrop(
                     moved = moved.copy(item = moved.item.copy(sortOrder = if (movingDown) -1 else 99999))
 
                     list.add(insertAt, moved)
-                    currentOnLocalTasksListChange(list)
+                    onLocalTasksListChange(list)
                     true
                 }
 
                 // КЛАССИЧЕСКИЙ ОБМЕН ДВУХ ЗАДАЧ (Swap)
                 else -> {
-                    val toIndex = currentLocalTasksList.indexOfFirst { it.item.id == targetId }
+                    val toIndex = localTasksList.indexOfFirst { it.item.id == targetId }
                     if (toIndex == -1) return@universalDragAndDrop false
 
-                    val list = currentLocalTasksList.toMutableList()
+                    val list = localTasksList.toMutableList()
                     var moved = list.removeAt(fromIndex)
 
-                    val hoveredTask = currentLocalTasksList.firstOrNull { it.item.id == targetId }
+                    val hoveredTask = localTasksList.firstOrNull { it.item.id == targetId }
                     if (hoveredTask != null) {
                         // Изменяем статус "Вечер" только на экране "Сегодня" (ActiveScreen.TODAY)
-                        if (currentScreen == ActiveScreen.TODAY && hoveredTask.item.isTonight != moved.item.isTonight)
+                        if (screen == ActiveScreen.TODAY && hoveredTask.item.isTonight != moved.item.isTonight)
                             moved = moved.copyWithTonight(hoveredTask.item.isTonight)
-                        if (currentScreen == ActiveScreen.UPCOMING && hoveredTask.item.startDate != moved.item.startDate)
+                        if (screen == ActiveScreen.UPCOMING && hoveredTask.item.startDate != moved.item.startDate)
                             moved = moved.copyWithStartDate(hoveredTask.item.startDate)
                     }
 
                     list.add(toIndex, moved)
-                    currentOnLocalTasksListChange(list)
+                    onLocalTasksListChange(list)
                     true
                 }
             }
         },
         onDragStarted = {
-            haptic.performHapticFeedback(HapticFeedbackType.LongPress)
             // Если перетаскиваемая задача входит в число выбранных задач:
-            if (currentSelectedTaskIds.contains(taskItem.id) && currentSelectedTaskIds.size > 1) {
+            if (selectedTaskIds.contains(taskItem.id) && selectedTaskIds.size > 1) {
                 // Ведущая задача первая, остальные выбранные - следом
-                val otherSelectedIds = currentSelectedTaskIds.filter { it != taskItem.id }
+                val otherSelectedIds = selectedTaskIds.filter { it != taskItem.id }
                 state.batchDraggedKeys = listOf(taskItem.id) + otherSelectedIds
             } else {
                 state.batchDraggedKeys = emptyList()
             }
             // Режим выбора автоматически завершается при начале перетаскивания (включая одиночно выбранную задачу)
-            if (currentSelectedTaskIds.isNotEmpty()) {
-                currentOnExitSelectionMode()
+            if (selectedTaskIds.isNotEmpty()) {
+                onExitSelectionMode()
             }
-        },
-        onMoveCommitted = {
-            view.performHapticFeedback(HapticFeedbackConstants.CLOCK_TICK)
         },
         onDragEnd = {
             val isBatch = state.batchDraggedKeys.size > 1
@@ -227,7 +202,7 @@ fun Modifier.taskDragAndDrop(
 
             val listWithBatchOrdered = if (isBatch && batchKeys.contains(taskItem.id)) {
                 val otherBatchKeys = batchKeys.filter { it != taskItem.id }.toSet()
-                val remainingList = currentLocalTasksList.filterNot { otherBatchKeys.contains(it.item.id) }.toMutableList()
+                val remainingList = localTasksList.filterNot { otherBatchKeys.contains(it.item.id) }.toMutableList()
                 val leadingIdx = remainingList.indexOfFirst { it.item.id == taskItem.id }
 
                 if (leadingIdx != -1) {
@@ -236,7 +211,7 @@ fun Modifier.taskDragAndDrop(
                     val targetStartDate = leadingTask.item.startDate
 
                     val orderedOtherBatch = batchKeys.drop(1).mapNotNull { key ->
-                        currentLocalTasksList.firstOrNull { it.item.id == key }
+                        localTasksList.firstOrNull { it.item.id == key }
                     }.map { wrapper ->
                         var updated = wrapper
                         if (updated.item.isTonight != targetTonight) {
@@ -250,15 +225,15 @@ fun Modifier.taskDragAndDrop(
                     remainingList.addAll(leadingIdx + 1, orderedOtherBatch)
                     remainingList
                 } else {
-                    currentLocalTasksList
+                    localTasksList
                 }
             } else {
-                currentLocalTasksList
+                localTasksList
             }
 
             // Перерасчет окончательных порядковых индексов (sortOrder) для сохранения изменений
             val updatedList = listWithBatchOrdered.mapIndexed { index, wrapper ->
-                val original = currentFilteredTasks.firstOrNull { it.item.id == wrapper.item.id }
+                val original = filteredTasks.firstOrNull { it.item.id == wrapper.item.id }
                 val changed = original == null
                     || original.item.sortOrder != index
                     || original.item.isTonight != wrapper.item.isTonight
@@ -277,15 +252,15 @@ fun Modifier.taskDragAndDrop(
             }
 
             val changedTasks = updatedList.filter { wrapper ->
-                val original = currentFilteredTasks.firstOrNull { it.item.id == wrapper.item.id }
+                val original = filteredTasks.firstOrNull { it.item.id == wrapper.item.id }
                 original == null
                     || original.item.sortOrder != wrapper.item.sortOrder
                     || original.item.isTonight != wrapper.item.isTonight
                     || original.item.startDate != wrapper.item.startDate
             }
 
-            currentOnLocalTasksListChange(updatedList)
-            if (changedTasks.isNotEmpty()) currentOnTasksReordered(changedTasks.map { it.item })
+            onLocalTasksListChange(updatedList)
+            if (changedTasks.isNotEmpty()) onTasksReordered(changedTasks.map { it.item })
         }
     )
 }

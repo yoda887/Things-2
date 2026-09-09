@@ -90,56 +90,14 @@ data class Item(
     val name: String
         get() = title
 
+    /**
+     * Секция задачи на момент обращения.
+     * Для классификации больших списков используйте [DayBounds.sectionOf] — он не пересчитывает
+     * границы дня на каждый элемент.
+     */
     @get:Ignore
     val section: TaskSection
-        get() {
-            // First check the dueDate fallback: if dueDate is <= 3 days from today, it goes to TODAY
-            val dDate = dueDate
-            if (dDate != null) {
-                val cal = java.util.Calendar.getInstance()
-                val todayStart = cal.apply {
-                    set(java.util.Calendar.HOUR_OF_DAY, 0)
-                    set(java.util.Calendar.MINUTE, 0)
-                    set(java.util.Calendar.SECOND, 0)
-                    set(java.util.Calendar.MILLISECOND, 0)
-                }.timeInMillis
-                val calDue = java.util.Calendar.getInstance().apply {
-                    timeInMillis = dDate
-                    set(java.util.Calendar.HOUR_OF_DAY, 0)
-                    set(java.util.Calendar.MINUTE, 0)
-                    set(java.util.Calendar.SECOND, 0)
-                    set(java.util.Calendar.MILLISECOND, 0)
-                }
-                val diffMs = calDue.timeInMillis - todayStart
-                val diffDays = diffMs / (24 * 3600 * 1000)
-                if (diffDays <= 3) {
-                    return TaskSection.TODAY
-                }
-            }
-
-            if (startDate != null) {
-                val cal = java.util.Calendar.getInstance()
-                val endOfToday = cal.apply {
-                    set(java.util.Calendar.HOUR_OF_DAY, 23)
-                    set(java.util.Calendar.MINUTE, 59)
-                    set(java.util.Calendar.SECOND, 59)
-                    set(java.util.Calendar.MILLISECOND, 999)
-                }.timeInMillis
-
-                if (startDate > endOfToday) {
-                    return TaskSection.UPCOMING
-                } else {
-                    return TaskSection.TODAY
-                }
-            }
-            return when (start) {
-                0 -> TaskSection.INBOX
-                1 -> TaskSection.TODAY
-                2 -> TaskSection.ANYTIME
-                3 -> TaskSection.SOMEDAY
-                else -> TaskSection.INBOX
-            }
-        }
+        get() = DayBounds.now().sectionOf(this)
 
     /**
      * Determines if the task belongs to Inbox category.
@@ -150,112 +108,153 @@ data class Item(
 
     /**
      * Determines if the task belongs to Today category.
-     * This includes:
-     * - Manually placed in Today (start == 1)
-     * - Start date is today or in the past (startDate <= endOfToday)
-     * - Start date is in the future but due date is in less than 3 days
-     * - No start date but due date is within 3 days or less
+     * Для пакетной фильтрации используйте [DayBounds.isToday].
      */
     @get:Ignore
     val isToday: Boolean
-        get() {
-            if (type != 0 || isCompleted) return false
-            if (start == 1) return true
-            val dDate = dueDate
-            if (dDate != null) {
-                val cal = java.util.Calendar.getInstance()
-                val todayStart = cal.apply {
-                    set(java.util.Calendar.HOUR_OF_DAY, 0)
-                    set(java.util.Calendar.MINUTE, 0)
-                    set(java.util.Calendar.SECOND, 0)
-                    set(java.util.Calendar.MILLISECOND, 0)
-                }.timeInMillis
-                val calDue = java.util.Calendar.getInstance().apply {
-                    timeInMillis = dDate
-                    set(java.util.Calendar.HOUR_OF_DAY, 0)
-                    set(java.util.Calendar.MINUTE, 0)
-                    set(java.util.Calendar.SECOND, 0)
-                    set(java.util.Calendar.MILLISECOND, 0)
-                }
-                val diffMs = calDue.timeInMillis - todayStart
-                val diffDays = diffMs / (24 * 3600 * 1000)
-                if (diffDays <= 3) return true
-            }
-            val sDate = startDate
-            if (sDate != null) {
-                val cal = java.util.Calendar.getInstance()
-                val endOfToday = cal.apply {
-                    set(java.util.Calendar.HOUR_OF_DAY, 23)
-                    set(java.util.Calendar.MINUTE, 59)
-                    set(java.util.Calendar.SECOND, 59)
-                    set(java.util.Calendar.MILLISECOND, 999)
-                }.timeInMillis
-
-                if (sDate <= endOfToday) return true
-            }
-            return false
-        }
+        get() = DayBounds.now().isToday(this)
 
     /**
      * Determines if the task belongs to Upcoming category.
-     * Scheduled in the future (startDate > endOfToday) but due date
-     * is NOT less than 3 days away.
+     * Для пакетной фильтрации используйте [DayBounds.isUpcoming].
      */
     @get:Ignore
     val isUpcoming: Boolean
-        get() {
-            if (type != 0 || isCompleted) return false
-            if (isToday) return false
-            val sDate = startDate ?: return false
-            val cal = java.util.Calendar.getInstance()
-            val endOfToday = cal.apply {
-                set(java.util.Calendar.HOUR_OF_DAY, 23)
-                set(java.util.Calendar.MINUTE, 59)
-                set(java.util.Calendar.SECOND, 59)
-                set(java.util.Calendar.MILLISECOND, 999)
-            }.timeInMillis
-
-            return sDate > endOfToday
-        }
+        get() = DayBounds.now().isUpcoming(this)
 
     /**
      * Determines if the task belongs to Anytime category.
-     * Tasks that are actionable (not in Inbox, not Someday, not in the future).
-     * Includes active tasks with startDate <= endOfToday.
+     * Для пакетной фильтрации используйте [DayBounds.isAnytime].
      */
     @get:Ignore
     val isAnytime: Boolean
-        get() {
-            if (type != 0 || isCompleted) return false
-            if (isToday) return false
-            if (start == 0 && startDate == null && projectId == null) return false
-            if (start == 3) return false
-
-            val sDate = startDate
-            if (sDate != null) {
-                val cal = java.util.Calendar.getInstance()
-                val endOfToday = cal.apply {
-                    set(java.util.Calendar.HOUR_OF_DAY, 23)
-                    set(java.util.Calendar.MINUTE, 59)
-                    set(java.util.Calendar.SECOND, 59)
-                    set(java.util.Calendar.MILLISECOND, 999)
-                }.timeInMillis
-                if (sDate <= endOfToday) return true
-                return false
-            }
-            return start == 2 || start == 0 || projectId != null
-        }
+        get() = DayBounds.now().isAnytime(this)
 
     /**
      * Determines if the task belongs to Someday category.
+     * Для пакетной фильтрации используйте [DayBounds.isSomeday].
      */
     @get:Ignore
     val isSomeday: Boolean
-        get() = type == 0 && !isCompleted && !isToday && start == 3
+        get() = DayBounds.now().isSomeday(this)
 
     @get:Ignore
     val tags: List<String>
         get() = if (cachedTags.isBlank()) emptyList() else cachedTags.split(", ").map { it.trim() }
+}
+
+/**
+ * Границы текущего дня, вычисленные один раз для классификации целого списка задач.
+ * Позволяет отфильтровать список без создания [java.util.Calendar] на каждый элемент.
+ *
+ * Экземпляр фиксирует момент создания, поэтому для актуальной классификации
+ * создавайте новый через [DayBounds.now] на каждый пересчёт списка.
+ */
+class DayBounds private constructor(
+    /** Начало сегодняшнего дня (00:00:00.000) */
+    val todayStart: Long,
+    /** Последняя миллисекунда сегодняшнего дня */
+    val endOfToday: Long,
+    /** Последняя миллисекунда дня «сегодня + [DUE_SOON_DAYS]» */
+    private val dueSoonCutoff: Long
+) {
+
+    /**
+     * Дедлайн считается «горящим», если до него осталось не больше [DUE_SOON_DAYS] дней.
+     * Просроченные дедлайны тоже попадают под это правило.
+     */
+    fun isDueSoon(dueDate: Long?): Boolean = dueDate != null && dueDate <= dueSoonCutoff
+
+    /**
+     * Задача относится к категории «Сегодня»: помещена туда вручную,
+     * имеет горящий дедлайн или дату старта не позже конца сегодняшнего дня.
+     */
+    fun isToday(item: Item): Boolean {
+        if (item.type != 0 || item.isCompleted) return false
+        if (item.start == 1) return true
+        if (isDueSoon(item.dueDate)) return true
+        val startDate = item.startDate ?: return false
+        return startDate <= endOfToday
+    }
+
+    /**
+     * Задача относится к категории «Предстоящие»: запланирована на будущее
+     * и при этом не имеет горящего дедлайна.
+     */
+    fun isUpcoming(item: Item): Boolean {
+        if (item.type != 0 || item.isCompleted) return false
+        if (isToday(item)) return false
+        val startDate = item.startDate ?: return false
+        return startDate > endOfToday
+    }
+
+    /**
+     * Задача относится к категории «Когда-нибудь» (Anytime): её можно выполнять сейчас,
+     * но она не в Inbox, не в Someday и не запланирована на будущее.
+     */
+    fun isAnytime(item: Item): Boolean {
+        if (item.type != 0 || item.isCompleted) return false
+        if (isToday(item)) return false
+        if (item.start == 0 && item.startDate == null && item.projectId == null) return false
+        if (item.start == 3) return false
+
+        val startDate = item.startDate
+        if (startDate != null) return startDate <= endOfToday
+        return item.start == 2 || item.start == 0 || item.projectId != null
+    }
+
+    /**
+     * Задача отложена в «Когда-нибудь потом» (Someday).
+     */
+    fun isSomeday(item: Item): Boolean =
+        item.type == 0 && !item.isCompleted && !isToday(item) && item.start == 3
+
+    /**
+     * Секция, в которую попадает задача с учётом дедлайна и даты старта.
+     */
+    fun sectionOf(item: Item): TaskSection {
+        // Горящий дедлайн перекрывает всё остальное и поднимает задачу в «Сегодня»
+        if (isDueSoon(item.dueDate)) return TaskSection.TODAY
+
+        val startDate = item.startDate
+        if (startDate != null) {
+            return if (startDate > endOfToday) TaskSection.UPCOMING else TaskSection.TODAY
+        }
+        return when (item.start) {
+            0 -> TaskSection.INBOX
+            1 -> TaskSection.TODAY
+            2 -> TaskSection.ANYTIME
+            3 -> TaskSection.SOMEDAY
+            else -> TaskSection.INBOX
+        }
+    }
+
+    companion object {
+        /** Горизонт «горящего» дедлайна в днях */
+        const val DUE_SOON_DAYS = 3
+
+        /**
+         * Вычисляет границы дня для текущего момента. Создаёт ровно один [java.util.Calendar].
+         */
+        fun now(): DayBounds {
+            val cal = java.util.Calendar.getInstance()
+            cal.set(java.util.Calendar.HOUR_OF_DAY, 0)
+            cal.set(java.util.Calendar.MINUTE, 0)
+            cal.set(java.util.Calendar.SECOND, 0)
+            cal.set(java.util.Calendar.MILLISECOND, 0)
+            val todayStart = cal.timeInMillis
+
+            // Конец дня считаем как «следующая полночь минус миллисекунда»,
+            // чтобы не промахнуться в сутках с переводом часов
+            cal.add(java.util.Calendar.DAY_OF_YEAR, 1)
+            val endOfToday = cal.timeInMillis - 1
+
+            cal.add(java.util.Calendar.DAY_OF_YEAR, DUE_SOON_DAYS)
+            val dueSoonCutoff = cal.timeInMillis - 1
+
+            return DayBounds(todayStart, endOfToday, dueSoonCutoff)
+        }
+    }
 }
 
 @Entity(

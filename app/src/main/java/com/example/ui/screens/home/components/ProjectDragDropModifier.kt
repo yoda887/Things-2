@@ -1,20 +1,10 @@
 package com.example.ui.screens.home.components
 
-import android.view.HapticFeedbackConstants
-import androidx.compose.foundation.lazy.LazyListState
-import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.composed
-import androidx.compose.ui.hapticfeedback.HapticFeedbackType
-import androidx.compose.ui.platform.LocalHapticFeedback
-import androidx.compose.ui.platform.LocalView
 import com.example.data.model.Area
 import com.example.data.model.Item
 import com.example.ui.components.dragdrop.GenericDragDropState
 import com.example.ui.components.dragdrop.universalDragAndDrop
-import kotlinx.coroutines.Job
-import kotlinx.coroutines.delay
-import kotlinx.coroutines.launch
 
 /** Доля высоты экрана для зон автоскролла сверху и снизу в списке проектов (10%) */
 private const val PROJECTS_SCROLL_ZONE_FRACTION = 0.10f
@@ -50,21 +40,10 @@ fun Modifier.projectDragAndDrop(
     onLocalProjectsListChange: (List<Item>) -> Unit,
     onProjectsReordered: (List<Item>) -> Unit,
     onExpandArea: (String) -> Unit
-): Modifier = composed {
-    val view = LocalView.current
-    val haptic = LocalHapticFeedback.current
+): Modifier {
     val lazyListState = state.lazyListState
 
-    val currentProject by rememberUpdatedState(project)
-    val currentOriginalProjects by rememberUpdatedState(originalProjects)
-    val currentLocalProjectsList by rememberUpdatedState(localProjectsList)
-    val currentAreas by rememberUpdatedState(areas)
-    val currentExpandedStates by rememberUpdatedState(expandedStates)
-    val currentOnLocalProjectsListChange by rememberUpdatedState(onLocalProjectsListChange)
-    val currentOnProjectsReordered by rememberUpdatedState(onProjectsReordered)
-    val currentOnExpandArea by rememberUpdatedState(onExpandArea)
-
-    this.universalDragAndDrop(
+    return this.universalDragAndDrop(
         state = state,
         key = "proj_${project.id}",
         topScrollZoneFraction = PROJECTS_SCROLL_ZONE_FRACTION,
@@ -80,7 +59,7 @@ fun Modifier.projectDragAndDrop(
             if (!draggedKeyStr.startsWith("proj_")) return@universalDragAndDrop false
             val draggedId = draggedKeyStr.removePrefix("proj_")
 
-            val fromIndex = currentLocalProjectsList.indexOfFirst { it.id == draggedId }
+            val fromIndex = localProjectsList.indexOfFirst { it.id == draggedId }
             if (fromIndex == -1) return@universalDragAndDrop false
 
             val visibleItems = lazyListState.layoutInfo.visibleItemsInfo
@@ -92,23 +71,23 @@ fun Modifier.projectDragAndDrop(
             when {
                 // ── 1. Наведение на верхний разделитель списка ("Без области") ──
                 targetKeyStr == "root_divider" -> {
-                    val currentProjectAreaId = currentLocalProjectsList[fromIndex].areaId
+                    val currentProjectAreaId = localProjectsList[fromIndex].areaId
                     if (currentProjectAreaId == null) return@universalDragAndDrop false
 
-                    val list = currentLocalProjectsList.toMutableList()
+                    val list = localProjectsList.toMutableList()
                     val moved = list.removeAt(fromIndex).copy(areaId = null)
                     list.add(0, moved)
-                    currentOnLocalProjectsListChange(list)
+                    onLocalProjectsListChange(list)
                     true
                 }
 
                 // ── 2. Наведение на заголовок области (Area Header) ──
                 targetKeyStr.startsWith("area_") -> {
                     val targetAreaId = targetKeyStr.removePrefix("area_")
-                    val targetAreaIndex = currentAreas.indexOfFirst { it.id == targetAreaId }
+                    val targetAreaIndex = areas.indexOfFirst { it.id == targetAreaId }
                     if (targetAreaIndex == -1) return@universalDragAndDrop false
 
-                    val currentProjectAreaId = currentLocalProjectsList[fromIndex].areaId
+                    val currentProjectAreaId = localProjectsList[fromIndex].areaId
 
                     // 2.1. Движение ВВЕРХ через заголовок собственной области:
                     // Проект покидает текущую область и переходит в секцию выше (работает даже если область свёрнута)
@@ -118,16 +97,16 @@ fun Modifier.projectDragAndDrop(
                         }
 
                         // Предыдущая секция: область выше или список "Без области" (null)
-                        val destAreaId = if (targetAreaIndex > 0) currentAreas[targetAreaIndex - 1].id else null
-                        val isDestCollapsed = destAreaId != null && currentExpandedStates[destAreaId] == false
+                        val destAreaId = if (targetAreaIndex > 0) areas[targetAreaIndex - 1].id else null
+                        val isDestCollapsed = destAreaId != null && expandedStates[destAreaId] == false
 
-                        val list = currentLocalProjectsList.toMutableList()
+                        val list = localProjectsList.toMutableList()
                         val moved = list.removeAt(fromIndex).copy(areaId = destAreaId)
                         // При заходе снизу вверх: если область свёрнута — встаёт в начало списка (atStart = true),
                         // если развёрнута — в конец списка (atStart = false)
-                        val insertAt = findInsertionIndexForArea(list, currentAreas, destAreaId, atStart = isDestCollapsed)
+                        val insertAt = findInsertionIndexForArea(list, areas, destAreaId, atStart = isDestCollapsed)
                         list.add(insertAt, moved)
-                        currentOnLocalProjectsListChange(list)
+                        onLocalProjectsListChange(list)
                         return@universalDragAndDrop true
                     }
 
@@ -136,67 +115,61 @@ fun Modifier.projectDragAndDrop(
                     // чтобы при отпускании пальца и раскрытии области проект оказался самым первым в списке.
                     // Если развёрнута — при заходе сверху (movingDown = true) в начало списка (atStart = true),
                     // а при заходе снизу (movingDown = false) в конец списка (atStart = false).
-                    val isTargetCollapsed = currentExpandedStates[targetAreaId] == false
-                    val list = currentLocalProjectsList.toMutableList()
+                    val isTargetCollapsed = expandedStates[targetAreaId] == false
+                    val list = localProjectsList.toMutableList()
                     val moved = list.removeAt(fromIndex).copy(areaId = targetAreaId)
                     val insertAt = findInsertionIndexForArea(
                         list,
-                        currentAreas,
+                        areas,
                         targetAreaId,
                         atStart = if (isTargetCollapsed) true else movingDown
                     )
                     list.add(insertAt, moved)
-                    currentOnLocalProjectsListChange(list)
+                    onLocalProjectsListChange(list)
                     true
                 }
 
                 // ── 3. Наведение на другой проект (Project Swap) ──
                 targetKeyStr.startsWith("proj_") -> {
                     val targetId = targetKeyStr.removePrefix("proj_")
-                    val toIndex = currentLocalProjectsList.indexOfFirst { it.id == targetId }
+                    val toIndex = localProjectsList.indexOfFirst { it.id == targetId }
                     if (toIndex == -1 || toIndex == fromIndex) return@universalDragAndDrop false
 
-                    val targetProject = currentLocalProjectsList[toIndex]
-                    val list = currentLocalProjectsList.toMutableList()
+                    val targetProject = localProjectsList[toIndex]
+                    val list = localProjectsList.toMutableList()
                     val moved = list.removeAt(fromIndex).copy(areaId = targetProject.areaId)
                     list.add(toIndex, moved)
 
-                    currentOnLocalProjectsListChange(list)
+                    onLocalProjectsListChange(list)
                     true
                 }
 
                 else -> false
             }
         },
-        onDragStarted = {
-            haptic.performHapticFeedback(HapticFeedbackType.LongPress)
-        },
-        onMoveCommitted = {
-            view.performHapticFeedback(HapticFeedbackConstants.CLOCK_TICK)
-        },
         onDragEnd = {
-            val currentAreaId = currentLocalProjectsList.firstOrNull { it.id == currentProject.id }?.areaId
-            val finalProjectsList = if (currentAreaId != null && currentExpandedStates[currentAreaId] == false) {
+            val currentAreaId = localProjectsList.firstOrNull { it.id == project.id }?.areaId
+            val finalProjectsList = if (currentAreaId != null && expandedStates[currentAreaId] == false) {
                 // Если проект отпущен в свёрнутой области — гарантированно перемещаем его на самую первую позицию (индекс 0) этой области
-                val fromIndex = currentLocalProjectsList.indexOfFirst { it.id == currentProject.id }
+                val fromIndex = localProjectsList.indexOfFirst { it.id == project.id }
                 val adjustedList = if (fromIndex != -1) {
-                    val list = currentLocalProjectsList.toMutableList()
+                    val list = localProjectsList.toMutableList()
                     val moved = list.removeAt(fromIndex)
-                    val firstIndex = findInsertionIndexForArea(list, currentAreas, currentAreaId, atStart = true)
+                    val firstIndex = findInsertionIndexForArea(list, areas, currentAreaId, atStart = true)
                     list.add(firstIndex, moved)
                     list
                 } else {
-                    currentLocalProjectsList
+                    localProjectsList
                 }
-                currentOnExpandArea(currentAreaId)
+                onExpandArea(currentAreaId)
                 adjustedList
             } else {
-                currentLocalProjectsList
+                localProjectsList
             }
 
             // Перерасчёт порядковых индексов sortOrder для сохранения в БД
             val updatedList = finalProjectsList.mapIndexed { index, proj ->
-                val original = currentOriginalProjects.firstOrNull { it.id == proj.id }
+                val original = originalProjects.firstOrNull { it.id == proj.id }
                 val changed = original == null || original.sortOrder != index || original.areaId != proj.areaId
                 if (changed) {
                     proj.copy(
@@ -209,13 +182,13 @@ fun Modifier.projectDragAndDrop(
             }
 
             val changedProjects = updatedList.filter { proj ->
-                val original = currentOriginalProjects.firstOrNull { it.id == proj.id }
+                val original = originalProjects.firstOrNull { it.id == proj.id }
                 original == null || original.sortOrder != proj.sortOrder || original.areaId != proj.areaId
             }
 
-            currentOnLocalProjectsListChange(updatedList)
+            onLocalProjectsListChange(updatedList)
             if (changedProjects.isNotEmpty()) {
-                currentOnProjectsReordered(changedProjects)
+                onProjectsReordered(changedProjects)
             }
         }
     )

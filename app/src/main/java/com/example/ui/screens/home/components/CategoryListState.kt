@@ -46,6 +46,9 @@ object UpcomingHeaderItemHelper {
     class UpcomingEventItem(val event: Item, val dateMillis: Long)
 }
 
+/** Горизонт планирования экрана «Предстоящие» в днях */
+private const val UPCOMING_DAYS_HORIZON = 14
+
 /**
  * Вычисляет список запланированных дней (UpcomingDays) со сгруппированными задачами и событиями.
  */
@@ -54,50 +57,48 @@ fun computeUpcomingDays(
     calendarEvents: List<Item>
 ): List<UpcomingDay> {
     val daysList = mutableListOf<UpcomingDay>()
-    
-    // Начало завтрашнего дня в миллисекундах
-    val cal = Calendar.getInstance()
-    cal.add(Calendar.DAY_OF_YEAR, 1)
-    cal.set(Calendar.HOUR_OF_DAY, 0)
-    cal.set(Calendar.MINUTE, 0)
-    cal.set(Calendar.SECOND, 0)
-    cal.set(Calendar.MILLISECOND, 0)
-    val tomorrowStart = cal.timeInMillis
-    
-    for (offset in 0 until 14) {
-        val c = Calendar.getInstance()
-        c.timeInMillis = tomorrowStart
-        c.add(Calendar.DAY_OF_YEAR, offset)
-        val dayStart = c.timeInMillis
-        
-        val dayEnd = Calendar.getInstance().apply {
-            timeInMillis = dayStart
-            set(Calendar.HOUR_OF_DAY, 23)
-            set(Calendar.MINUTE, 59)
-            set(Calendar.SECOND, 59)
-            set(Calendar.MILLISECOND, 999)
-        }.timeInMillis
-        
+
+    // Один переиспользуемый курсор вместо трёх Calendar.getInstance() на каждый день цикла.
+    // Стартует с начала завтрашнего дня и сдвигается по суткам.
+    val cursor = Calendar.getInstance().apply {
+        add(Calendar.DAY_OF_YEAR, 1)
+        set(Calendar.HOUR_OF_DAY, 0)
+        set(Calendar.MINUTE, 0)
+        set(Calendar.SECOND, 0)
+        set(Calendar.MILLISECOND, 0)
+    }
+
+    // Форматтеры вынесены из цикла: их создание заметно дороже самого форматирования
+    val weekdayFormat = SimpleDateFormat("EEEE", Locale.ENGLISH)
+    val monthFormat = SimpleDateFormat("MMMM", Locale.ENGLISH)
+
+    for (offset in 0 until UPCOMING_DAYS_HORIZON) {
+        val dayStart = cursor.timeInMillis
+        val dayOfMonthLabel = cursor.get(Calendar.DAY_OF_MONTH).toString()
+
+        // Сдвигаем курсор на сутки — его новое значение служит верхней границей текущего дня
+        cursor.add(Calendar.DAY_OF_YEAR, 1)
+        val nextDayStart = cursor.timeInMillis
+
         // Находим все календарные события на этот день
         val dayEvents = calendarEvents.filter { event ->
-            event.eventStartMillis != null && event.eventStartMillis in dayStart..dayEnd
+            val eventStart = event.eventStartMillis
+            eventStart != null && eventStart >= dayStart && eventStart < nextDayStart
         }.map { ItemWithChecklist(item = it, checklist = emptyList()) }
-        
+
         // Находим все задачи на этот день
         val dayTasks = localTasksList.filter { wrapper ->
-            wrapper.item.startDate != null && wrapper.item.startDate in dayStart..dayEnd
+            val taskStart = wrapper.item.startDate
+            taskStart != null && taskStart >= dayStart && taskStart < nextDayStart
         }
-        
+
         if (dayEvents.isNotEmpty() || dayTasks.isNotEmpty()) {
-            val dayOfMonthLabel = Calendar.getInstance().apply { timeInMillis = dayStart }.get(Calendar.DAY_OF_MONTH).toString()
-            val dayOfWeekLabel = if (offset == 0) {
-                "Tomorrow"
-            } else if (offset < 6) {
-                SimpleDateFormat("EEEE", Locale.ENGLISH).format(Date(dayStart))
-            } else {
-                SimpleDateFormat("MMMM", Locale.ENGLISH).format(Date(dayStart))
+            val dayOfWeekLabel = when {
+                offset == 0 -> "Tomorrow"
+                offset < 6 -> weekdayFormat.format(Date(dayStart))
+                else -> monthFormat.format(Date(dayStart))
             }
-            
+
             daysList.add(
                 UpcomingDay(
                     dateMillis = dayStart,
@@ -253,9 +254,6 @@ data class ThingsCategoryListState(
     val selectedTagFilter: String? = null,
     val allTags: Set<String> = emptySet(),
     val displayTasks: List<ItemWithChecklist> = emptyList(),
-    val standardToday: List<ItemWithChecklist> = emptyList(),
-    val eveningToday: List<ItemWithChecklist> = emptyList(),
-    val upcomingDays: List<UpcomingDay> = emptyList(),
     val calendarEvents: List<Item> = emptyList(),
     val allSavedTags: List<String> = emptyList(),
     val allSavedTagObjects: List<Tag> = emptyList(),

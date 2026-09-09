@@ -155,7 +155,6 @@ fun ThingsHomeScreen(viewModel: ThingsViewModel = hiltViewModel()) {
     var showAddDialog by remember { mutableStateOf(false) }
     var showAddProjectDialog by remember { mutableStateOf(false) }
     var showAddAreaDialog by remember { mutableStateOf(false) }
-    var inlineExpandedTaskId by remember { mutableStateOf<String?>(null) }
     var editingProjectId by remember { mutableStateOf<String?>(null) }
     var editingAreaId by remember { mutableStateOf<String?>(null) }
     var showFabMenu by remember { mutableStateOf(false) }
@@ -167,8 +166,13 @@ fun ThingsHomeScreen(viewModel: ThingsViewModel = hiltViewModel()) {
 
     // [ИЗМЕНЕНИЕ]: Состояния для недавно искавшихся объектов и подсветки конкретной задачи
     var recentSearchItems by remember { mutableStateOf<List<SearchResultItem>>(emptyList()) }
-    var highlightedTaskId by remember { mutableStateOf<String?>(null) }
-    
+
+    // Развёрнутая и подсвеченная задачи живут только во ViewModel: экран их читает, но не хранит копию,
+    // поэтому состояние переживает поворот экрана и не может разойтись с тем, что видит список
+    val inlineExpandedTaskId by viewModel.inlineExpandedTaskId.collectAsState()
+    val highlightedTaskId by viewModel.highlightedTaskId.collectAsState()
+
+
     // [ИЗМЕНЕНИЕ]: Функция для сохранения недавно искавшихся и нажатых объектов в поиске
     val addToRecent: (SearchResultItem) -> Unit = remember(recentSearchItems) {
         { item ->
@@ -210,24 +214,9 @@ fun ThingsHomeScreen(viewModel: ThingsViewModel = hiltViewModel()) {
     val textSecondaryColor = if (isDark) ThingsTextSecondaryDark else ThingsTextSecondaryLight
     val dividerColor = if (isDark) ThingsDividerDark else ThingsDividerLight
 
-    val categoryListState by viewModel.categoryListState.collectAsState()
-
     LaunchedEffect(activeScreen) {
-        viewModel.setScreen(activeScreen)
         isSelectionMode = false
         selectedTaskIds = emptySet()
-    }
-    LaunchedEffect(selectedProject) {
-        viewModel.setProject(selectedProject)
-    }
-    LaunchedEffect(selectedArea) {
-        viewModel.setArea(selectedArea)
-    }
-    LaunchedEffect(inlineExpandedTaskId) {
-        viewModel.setInlineExpandedTaskId(inlineExpandedTaskId)
-    }
-    LaunchedEffect(highlightedTaskId) {
-        viewModel.setHighlightedTaskId(highlightedTaskId)
     }
 
     Scaffold(
@@ -310,7 +299,7 @@ fun ThingsHomeScreen(viewModel: ThingsViewModel = hiltViewModel()) {
                             )
 
                             viewModel.updateTask(newTask)
-                            inlineExpandedTaskId = newTaskId
+                            viewModel.setInlineExpandedTaskId(newTaskId)
                         }
                     },
                     containerColor = ThingsBlue,
@@ -459,10 +448,15 @@ fun ThingsHomeScreen(viewModel: ThingsViewModel = hiltViewModel()) {
                     val screenProject = remember(screen) { selectedProject }
                     val screenArea = remember(screen) { selectedArea }
 
+                    // Поток холодный: подписка живёт ровно столько, сколько отображается экран.
+                    // Снимок нужен как начальное значение, пока первая эмиссия считается в фоне.
                     val screenStateFlow = remember(screen, screenProject, screenArea) {
                         viewModel.getCategoryListStateFlow(screen, screenProject, screenArea)
                     }
-                    val screenState by screenStateFlow.collectAsState()
+                    val initialScreenState = remember(screen, screenProject, screenArea) {
+                        viewModel.getCategoryListStateSnapshot(screen, screenProject, screenArea)
+                    }
+                    val screenState by screenStateFlow.collectAsState(initial = initialScreenState)
 
                     ThingsCategoryListPanel(
                         state = screenState.copy(
@@ -482,7 +476,7 @@ fun ThingsHomeScreen(viewModel: ThingsViewModel = hiltViewModel()) {
                                     viewModel.toggleTaskCompletion(event.task)
                                 }
                                 is ThingsCategoryListEvent.ClickTask -> {
-                                    inlineExpandedTaskId = event.task.item.id
+                                    viewModel.setInlineExpandedTaskId(event.task.item.id)
                                 }
                                 is ThingsCategoryListEvent.ClickProject -> {
                                     selectedProject = event.project
@@ -493,7 +487,7 @@ fun ThingsHomeScreen(viewModel: ThingsViewModel = hiltViewModel()) {
                                     navigateTo(ActiveScreen.AREA_DETAIL)
                                 }
                                 is ThingsCategoryListEvent.ChangeInlineExpandedTaskId -> {
-                                    inlineExpandedTaskId = event.taskId
+                                    viewModel.setInlineExpandedTaskId(event.taskId)
                                 }
                                 ThingsCategoryListEvent.ClickSearch -> {
                                     isSearchOverlayActive = true
@@ -572,7 +566,7 @@ fun ThingsHomeScreen(viewModel: ThingsViewModel = hiltViewModel()) {
                                     selectedArea = null
                                 }
                                 is ThingsCategoryListEvent.SwipeTaskLeft -> {
-                                    inlineExpandedTaskId = null
+                                    viewModel.setInlineExpandedTaskId(null)
                                     if (isSelectionMode) {
                                         val taskId = event.task.item.id
                                         if (selectedTaskIds.contains(taskId)) {
@@ -595,7 +589,7 @@ fun ThingsHomeScreen(viewModel: ThingsViewModel = hiltViewModel()) {
                                     // Заглушка для When / Календаря
                                 }
                                 is ThingsCategoryListEvent.EnterSelectionMode -> {
-                                    inlineExpandedTaskId = null
+                                    viewModel.setInlineExpandedTaskId(null)
                                     isSelectionMode = true
                                     selectedTaskIds = if (event.initialTaskId != null) setOf(event.initialTaskId) else emptySet()
                                 }
@@ -768,11 +762,12 @@ fun ThingsHomeScreen(viewModel: ThingsViewModel = hiltViewModel()) {
                         navigateTo(targetScreen)
                         
                         // [ИЗМЕНЕНИЕ]: Кликнутая задача более не разворачивается для редактирования, а кратковременно подсвечивается
-                        highlightedTaskId = task.item.id
+                        viewModel.setHighlightedTaskId(task.item.id)
                         scope.launch {
                             kotlinx.coroutines.delay(1500)
-                            if (highlightedTaskId == task.item.id) {
-                                highlightedTaskId = null
+                            // Снимаем подсветку только если за это время не подсветили другую задачу
+                            if (viewModel.highlightedTaskId.value == task.item.id) {
+                                viewModel.setHighlightedTaskId(null)
                             }
                         }
                         

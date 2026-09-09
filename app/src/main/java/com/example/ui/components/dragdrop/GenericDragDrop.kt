@@ -1,5 +1,6 @@
 package com.example.ui.components.dragdrop
 
+import android.view.HapticFeedbackConstants
 import androidx.compose.animation.core.Animatable
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.gestures.detectDragGesturesAfterLongPress
@@ -8,8 +9,16 @@ import androidx.compose.foundation.lazy.LazyListState
 import androidx.compose.foundation.lazy.LazyListItemInfo
 import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.composed
-import androidx.compose.ui.input.pointer.pointerInput
+import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.input.pointer.PointerInputChange
+import androidx.compose.ui.input.pointer.SuspendingPointerInputModifierNode
+import androidx.compose.ui.node.CompositionLocalConsumerModifierNode
+import androidx.compose.ui.node.DelegatingNode
+import androidx.compose.ui.node.ModifierNodeElement
+import androidx.compose.ui.node.currentValueOf
+import androidx.compose.ui.platform.InspectorInfo
+import androidx.compose.ui.platform.LocalView
+import kotlinx.coroutines.Job
 import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.isActive
@@ -184,7 +193,11 @@ fun getItemSpacing(
 /**
  * Универсальный модификатор для реализации Drag-and-Drop, абстрагированный от бизнес-логики.
  * Отвечает ТОЛЬКО за жесты, математику пересечений и компенсацию визуального смещения (прыжков).
- * 
+ *
+ * Обычная функция поверх [reorderableItem]: раньше здесь был Modifier.composed, из-за которого
+ * Compose не мог переиспользовать модификатор и пересобирал его подкомпозицию для каждого
+ * элемента списка на каждой рекомпозиции.
+ *
  * @param state Общее состояние перетаскивания списка [GenericDragDropState]
  * @param key Уникальный ключ текущего перетаскиваемого элемента
  * @param canDropOver Предикат, определяющий возможность пересечения/свапа с целевым элементом по его ключу
@@ -194,10 +207,11 @@ fun getItemSpacing(
  *                          с которой произошло геометрическое пересечение. Возвращает true, если
  *                          внешний обработчик подтвердил перемещение и переупорядочил коллекцию.
  * @param onDragStarted Функция обратного вызова при начале жеста перетаскивания (после долгого нажатия).
- *                      Позволяет внешнему слою воспроизвести тактильный отклик (Haptic Feedback).
- * @param onMoveCommitted Функция обратного вызова, уведомляющая о факте успешного перемещения элементов.
- *                        Позволяет внешнему слою управлять тактильным откликом (Haptic Feedback).
- * @param onDragEnd Функция обратного вызова при успешном завершении жеста.
+ *                      Тактильный отклик воспроизводит сам движок, дублировать его не нужно.
+ * @param onDragEnd Функция обратного вызова при успешном завершении жеста, до анимации возврата.
+ * @param onDragSettled Функция обратного вызова после завершения анимации возврата, в том числе
+ *                      при отмене жеста. Здесь удобно восстанавливать состояние, которое было
+ *                      временно изменено на время перетаскивания.
  */
 fun Modifier.universalDragAndDrop(
     state: GenericDragDropState,
@@ -208,18 +222,10 @@ fun Modifier.universalDragAndDrop(
     bottomScrollZoneFraction: Float = SCROLL_BOTTOM_ZONE_FRACTION,
     onMoveIfNecessary: (draggedKey: Any, targetKey: Any) -> Boolean,
     onDragStarted: () -> Unit = {},
-    onMoveCommitted: () -> Unit = {},
-    onDragEnd: () -> Unit
-): Modifier = composed {
-    val coroutineScope = rememberCoroutineScope()
+    onDragEnd: () -> Unit,
+    onDragSettled: () -> Unit = {}
+): Modifier {
     val lazyListState = state.lazyListState
-
-    val currentCanDropOver by rememberUpdatedState(canDropOver)
-    val currentThresholdFraction by rememberUpdatedState(thresholdFraction)
-    val currentOnMoveIfNecessary by rememberUpdatedState(onMoveIfNecessary)
-    val currentOnDragStarted by rememberUpdatedState(onDragStarted)
-    val currentOnMoveCommitted by rememberUpdatedState(onMoveCommitted)
-    val currentOnDragEnd by rememberUpdatedState(onDragEnd)
 
     /**
      * Поиск элемента списка, с которым необходимо произвести обмен на основании геометрии и вектора движения (Direction Lock).
@@ -238,16 +244,16 @@ fun Modifier.universalDragAndDrop(
             it.key == draggedKey || !state.batchDraggedKeys.contains(it.key)
         }
         val draggedItem = activeVisibleItems.firstOrNull { it.key == draggedKey } ?: return null
-        
+
         val dragTop = draggedItem.offset + currentOffset
         val dragBottom = dragTop + draggedItem.size
 
         // Фильтруем элементы согласно предикату canDropOver, исключая неподходящие цели для свапа
-        val candidates = activeVisibleItems.filter { 
-            it.key != draggedKey && currentCanDropOver(it.key)
+        val candidates = activeVisibleItems.filter {
+            it.key != draggedKey && canDropOver(it.key)
         }
 
-        val threshold = currentThresholdFraction.coerceIn(0.1f, 0.9f)
+        val threshold = thresholdFraction.coerceIn(0.1f, 0.9f)
 
         if (deltaY > 0f) {
             // Движение строго ВНИЗ: ведущий край — нижний (dragBottom)
@@ -263,7 +269,7 @@ fun Modifier.universalDragAndDrop(
                 if (nextIdx != -1) {
                     for (i in (nextIdx + 1)..activeVisibleItems.lastIndex) {
                         val item = activeVisibleItems[i]
-                        if (!currentCanDropOver(item.key)) {
+                        if (!canDropOver(item.key)) {
                             lastTarget = item
                         } else {
                             break
@@ -274,7 +280,7 @@ fun Modifier.universalDragAndDrop(
                     val totalItemsCount = lazyListState.layoutInfo.totalItemsCount
                     val isLastVisibleItem = lastTarget.index == activeVisibleItems.last().index
                     val hasMoreItemsInList = lastTarget.index < totalItemsCount - 1
-                    if (isLastVisibleItem && hasMoreItemsInList && !currentCanDropOver(lastTarget.key)) {
+                    if (isLastVisibleItem && hasMoreItemsInList && !canDropOver(lastTarget.key)) {
                         isBlockFullyVisible = false
                     }
                 }
@@ -306,73 +312,77 @@ fun Modifier.universalDragAndDrop(
     /**
      * Выполняет геометрическую проверку пересечения элементов и обращение к внешнему обработчику перемещения.
      * Компенсирует скачок смещения перетаскиваемого элемента на величину шага целевого слота.
+     *
+     * @return true, если внешний обработчик подтвердил перемещение — движок воспроизведёт тактильный отклик.
      */
-    fun performIntersectionCheck(deltaY: Float) {
+    fun performIntersectionCheck(deltaY: Float): Boolean {
         val visibleItems = lazyListState.layoutInfo.visibleItemsInfo
-        val targetItem = checkSwap(key, visibleItems, state.dragAccumulatedOffset.value, deltaY)
+        val targetItem = checkSwap(key, visibleItems, state.dragAccumulatedOffset.value, deltaY) ?: return false
+        val draggedItem = visibleItems.firstOrNull { it.key == key } ?: return false
 
-        if (targetItem != null) {
-            val draggedItem = visibleItems.firstOrNull { it.key == key } ?: return
-            
-            val distanceToShift = if (targetItem.index > draggedItem.index) {
-                // Движение вниз: находим последний непропускаемый элемент в целевом блоке
-                var lastTarget = targetItem
-                val targetIdx = visibleItems.indexOfFirst { it.key == targetItem.key }
-                if (targetIdx != -1) {
-                    for (i in (targetIdx + 1)..visibleItems.lastIndex) {
-                        val item = visibleItems[i]
-                        if (!currentCanDropOver(item.key)) {
-                            lastTarget = item
-                        } else {
-                            break
-                        }
+        val distanceToShift = if (targetItem.index > draggedItem.index) {
+            // Движение вниз: находим последний непропускаемый элемент в целевом блоке
+            var lastTarget = targetItem
+            val targetIdx = visibleItems.indexOfFirst { it.key == targetItem.key }
+            if (targetIdx != -1) {
+                for (i in (targetIdx + 1)..visibleItems.lastIndex) {
+                    val item = visibleItems[i]
+                    if (!canDropOver(item.key)) {
+                        lastTarget = item
+                    } else {
+                        break
                     }
                 }
-                val targetBottom = lastTarget.offset + lastTarget.size
-                (draggedItem.offset - (targetBottom - draggedItem.size)).toFloat()
-            } else {
-                // Движение вверх: целевой слот начинается на отступе targetItem
-                (draggedItem.offset - targetItem.offset).toFloat()
             }
-
-            // Запрашиваем подтверждение перемещения у внешнего обработчика
-            val swapAccepted = currentOnMoveIfNecessary(key, targetItem.key)
-
-            // Если список перестроился, компенсируем прыжок с учётом полного расстояния
-            if (swapAccepted) {
-                currentOnMoveCommitted()
-                state.adjustOffset(distanceToShift)
-            }
+            val targetBottom = lastTarget.offset + lastTarget.size
+            (draggedItem.offset - (targetBottom - draggedItem.size)).toFloat()
+        } else {
+            // Движение вверх: целевой слот начинается на отступе targetItem
+            (draggedItem.offset - targetItem.offset).toFloat()
         }
+
+        // Запрашиваем подтверждение перемещения у внешнего обработчика
+        val swapAccepted = onMoveIfNecessary(key, targetItem.key)
+
+        // Если список перестроился, компенсируем прыжок с учётом полного расстояния
+        if (swapAccepted) {
+            state.adjustOffset(distanceToShift)
+        }
+        return swapAccepted
     }
 
-    this.reorderableItem(
+    return this.reorderableItem(
         state = state,
         key = key,
         topScrollZoneFraction = topScrollZoneFraction,
         bottomScrollZoneFraction = bottomScrollZoneFraction,
-        onDragStart = {
-            currentOnDragStarted()
-        },
-        onDrag = { dragDeltaY ->
-            performIntersectionCheck(dragDeltaY)
-        },
-        onDragged = { scrollDeltaY ->
-            performIntersectionCheck(scrollDeltaY)
-        },
-        onDragEnd = { runWithAnimation ->
-            currentOnDragEnd()
-            runWithAnimation()
-        },
-        onDragCancel = { runWithAnimation ->
-            runWithAnimation()
-        }
+        onDragStart = onDragStarted,
+        onDrag = { dragDeltaY -> performIntersectionCheck(dragDeltaY) },
+        onDragged = { scrollDeltaY -> performIntersectionCheck(scrollDeltaY) },
+        onDragEnd = onDragEnd,
+        onDragSettled = onDragSettled
     )
 }
 
 /**
  * Общий модификатор для перетаскивания элементов списка.
- * Управляет жестами долгого нажатия, физического драга по оси Y и умного авто-скролла.
+ * Управляет жестами долгого нажатия, физического драга по оси Y, умного авто-скролла
+ * и тактильного отклика.
+ *
+ * Реализован на Modifier.Node вместо Modifier.composed. Это даёт две вещи:
+ * модификатор переиспользуется между рекомпозициями вместо пересборки подкомпозиции на каждый
+ * элемент списка, и корутина автопрокрутки заводится одна на жест — раньше LaunchedEffect
+ * с ключом draggedItemKey перезапускался у каждого элемента списка при каждом старте драга.
+ *
+ * Обратите внимание: содержимое элементов (AnimatedTaskItem и подобные) по-прежнему читает
+ * draggedItemKey в композиции, чтобы применить стили перетаскивания, поэтому старт и конец
+ * жеста всё ещё один раз рекомпозируют видимые элементы.
+ *
+ * @param onDrag Вызывается на каждое движение пальца. Должен вернуть true, если перемещение
+ *               элементов состоялось — движок воспроизведёт тактильный отклик.
+ * @param onDragged То же самое для смещения, вызванного автопрокруткой.
+ * @param onDragEnd Вызывается при завершении жеста, до анимации возврата. При отмене не вызывается.
+ * @param onDragSettled Вызывается после анимации возврата, в том числе при отмене жеста.
  */
 fun Modifier.reorderableItem(
     state: GenericDragDropState,
@@ -380,114 +390,232 @@ fun Modifier.reorderableItem(
     topScrollZoneFraction: Float = SCROLL_TOP_ZONE_FRACTION,
     bottomScrollZoneFraction: Float = SCROLL_BOTTOM_ZONE_FRACTION,
     onDragStart: () -> Unit = {},
-    onDrag: (dragAmount: Float) -> Unit = {},
-    onDragged: (scrollDelta: Float) -> Unit = {},
-    onDragEnd: (afterAnimation: () -> Unit) -> Unit = {},
-    onDragCancel: (afterAnimation: () -> Unit) -> Unit = {},
-): Modifier = composed {
-    val coroutineScope = rememberCoroutineScope()
-    
-    val currentTopScrollZoneFraction by rememberUpdatedState(topScrollZoneFraction)
-    val currentBottomScrollZoneFraction by rememberUpdatedState(bottomScrollZoneFraction)
-    val currentOnDragStart by rememberUpdatedState(onDragStart)
-    val currentOnDrag by rememberUpdatedState(onDrag)
-    val currentOnDragged by rememberUpdatedState(onDragged)
-    val currentOnDragEnd by rememberUpdatedState(onDragEnd)
-    val currentOnDragCancel by rememberUpdatedState(onDragCancel)
+    onDrag: (dragAmount: Float) -> Boolean = { false },
+    onDragged: (scrollDelta: Float) -> Boolean = { false },
+    onDragEnd: () -> Unit = {},
+    onDragSettled: () -> Unit = {},
+): Modifier = this then ReorderableItemElement(
+    state = state,
+    key = key,
+    topScrollZoneFraction = topScrollZoneFraction,
+    bottomScrollZoneFraction = bottomScrollZoneFraction,
+    onDragStart = onDragStart,
+    onDrag = onDrag,
+    onDragged = onDragged,
+    onDragEnd = onDragEnd,
+    onDragSettled = onDragSettled
+)
 
-    // ── Auto-scroll ───────────────────────────────────────────────────────────
-    val isDraggedKey = state.draggedItemKey
-    LaunchedEffect(isDraggedKey) {
-        while (isActive && isDraggedKey == key && state.isInteracting) {
-            val layoutInfo = state.lazyListState.layoutInfo
-            val draggedItemInfo = layoutInfo.visibleItemsInfo
-                .firstOrNull { it.key == key }
+private data class ReorderableItemElement(
+    val state: GenericDragDropState,
+    val key: Any,
+    val topScrollZoneFraction: Float,
+    val bottomScrollZoneFraction: Float,
+    val onDragStart: () -> Unit,
+    val onDrag: (Float) -> Boolean,
+    val onDragged: (Float) -> Boolean,
+    val onDragEnd: () -> Unit,
+    val onDragSettled: () -> Unit
+) : ModifierNodeElement<ReorderableItemNode>() {
 
-            if (draggedItemInfo != null) {
-                val viewportStart = layoutInfo.viewportStartOffset.toFloat()
-                val viewportEnd = layoutInfo.viewportEndOffset.toFloat()
-                val viewportHeight = viewportEnd - viewportStart
+    override fun create() = ReorderableItemNode(
+        state = state,
+        key = key,
+        topScrollZoneFraction = topScrollZoneFraction,
+        bottomScrollZoneFraction = bottomScrollZoneFraction,
+        onDragStart = onDragStart,
+        onDrag = onDrag,
+        onDragged = onDragged,
+        onDragEnd = onDragEnd,
+        onDragSettled = onDragSettled
+    )
 
-                if (viewportHeight > 0f) {
-                    val scrollTopZone = (viewportHeight * currentTopScrollZoneFraction).coerceAtLeast(1f)
-                    val scrollBottomZone = (viewportHeight * currentBottomScrollZoneFraction).coerceAtLeast(1f)
-                    val dragTop = draggedItemInfo.offset + state.dragAccumulatedOffset.value
-                    val dragBottom = dragTop + draggedItemInfo.size
+    override fun update(node: ReorderableItemNode) {
+        node.update(
+            state = state,
+            key = key,
+            topScrollZoneFraction = topScrollZoneFraction,
+            bottomScrollZoneFraction = bottomScrollZoneFraction,
+            onDragStart = onDragStart,
+            onDrag = onDrag,
+            onDragged = onDragged,
+            onDragEnd = onDragEnd,
+            onDragSettled = onDragSettled
+        )
+    }
 
-                    val scrollAmount = when {
-                        // Верхний край элемента приблизился к верхней границе с учётом TopBar
-                        dragTop < viewportStart + scrollTopZone -> {
-                            val distanceIntoZone = (viewportStart + scrollTopZone - dragTop).coerceIn(0f, scrollTopZone)
-                            val ratio = distanceIntoZone / scrollTopZone
-                            val speed = SCROLL_MIN_PX + (SCROLL_MAX_PX - SCROLL_MIN_PX) * ratio.pow(SCROLL_CURVE_POWER)
-                            -speed
-                        }
-                        // Нижний край элемента приблизился к нижней границе viewport
-                        dragBottom > viewportEnd - scrollBottomZone -> {
-                            val distanceIntoZone = (dragBottom - (viewportEnd - scrollBottomZone)).coerceIn(0f, scrollBottomZone)
-                            val ratio = distanceIntoZone / scrollBottomZone
-                            val speed = SCROLL_MIN_PX + (SCROLL_MAX_PX - SCROLL_MIN_PX) * ratio.pow(SCROLL_CURVE_POWER)
-                            speed
-                        }
-                        else -> 0f
-                    }
+    override fun InspectorInfo.inspectableProperties() {
+        name = "reorderableItem"
+        properties["key"] = key
+    }
+}
 
-                    if (scrollAmount != 0f) {
-                        val consumed = state.lazyListState.scrollBy(scrollAmount)
-                        if (consumed != 0f) {
-                            state.adjustOffset(consumed)
-                            currentOnDragged(consumed)
-                        }
-                    }
-                }
-            }
-            delay(SCROLL_FRAME_MS)
+/**
+ * Узел жеста перетаскивания: долгое нажатие, перемещение пальца, автопрокрутка у границ
+ * списка и тактильный отклик.
+ */
+private class ReorderableItemNode(
+    private var state: GenericDragDropState,
+    private var key: Any,
+    private var topScrollZoneFraction: Float,
+    private var bottomScrollZoneFraction: Float,
+    private var onDragStart: () -> Unit,
+    private var onDrag: (Float) -> Boolean,
+    private var onDragged: (Float) -> Boolean,
+    private var onDragEnd: () -> Unit,
+    private var onDragSettled: () -> Unit
+) : DelegatingNode(), CompositionLocalConsumerModifierNode {
+
+    /** Корутина автопрокрутки живёт ровно столько, сколько пользователь удерживает элемент */
+    private var autoScrollJob: Job? = null
+
+    private val pointerInputNode = delegate(
+        SuspendingPointerInputModifierNode {
+            detectDragGesturesAfterLongPress(
+                onDragStart = { handleDragStart() },
+                onDrag = { change, dragAmount -> handleDrag(change, dragAmount) },
+                onDragEnd = { handleDragEnd() },
+                onDragCancel = { handleDragCancel() }
+            )
+        }
+    )
+
+    fun update(
+        state: GenericDragDropState,
+        key: Any,
+        topScrollZoneFraction: Float,
+        bottomScrollZoneFraction: Float,
+        onDragStart: () -> Unit,
+        onDrag: (Float) -> Boolean,
+        onDragged: (Float) -> Boolean,
+        onDragEnd: () -> Unit,
+        onDragSettled: () -> Unit
+    ) {
+        // Аналог pointerInput(key): при смене ключа или общего состояния жест начинается заново
+        val gestureRestartNeeded = this.key != key || this.state !== state
+
+        this.state = state
+        this.key = key
+        this.topScrollZoneFraction = topScrollZoneFraction
+        this.bottomScrollZoneFraction = bottomScrollZoneFraction
+        this.onDragStart = onDragStart
+        this.onDrag = onDrag
+        this.onDragged = onDragged
+        this.onDragEnd = onDragEnd
+        this.onDragSettled = onDragSettled
+
+        if (gestureRestartNeeded) {
+            pointerInputNode.resetPointerInputHandler()
         }
     }
 
-    // ── Pointer Input ─────────────────────────────────────────────────────────
-    pointerInput(key) {
-        detectDragGesturesAfterLongPress(
-            onDragStart = {
-                state.draggedItemKey = key
-                state.isInteracting = true
-                state.snapOffsetTo(0f)
-                currentOnDragStart()
-            },
-            onDrag = { change, dragAmount ->
-                change.consume()
-                state.adjustOffset(dragAmount.y)
-                state.adjustOffsetHorizontal(dragAmount.x)
-                currentOnDrag(dragAmount.y)
-            },
-            onDragEnd = {
-                state.isInteracting = false
-                currentOnDragEnd {
-                    coroutineScope.launch {
-                        try {
-                            state.animateOffsetToZero()
-                        } finally {
-                            state.draggedItemKey = null
-                            state.batchDraggedKeys = emptyList()
-                            state.dragScrollStartMs = Long.MIN_VALUE
-                        }
-                    }
-                }
-            },
-            onDragCancel = {
-                state.isInteracting = false
-                currentOnDragCancel {
-                    coroutineScope.launch {
-                        try {
-                            state.animateOffsetToZero()
-                        } finally {
-                            state.draggedItemKey = null
-                            state.batchDraggedKeys = emptyList()
-                            state.dragScrollStartMs = Long.MIN_VALUE
-                        }
-                    }
-                }
+    // ── Обработка жеста ───────────────────────────────────────────────────────
+
+    private fun handleDragStart() {
+        state.draggedItemKey = key
+        state.isInteracting = true
+        state.snapOffsetTo(0f)
+        performHaptic(HapticFeedbackConstants.LONG_PRESS)
+        onDragStart()
+        startAutoScroll()
+    }
+
+    private fun handleDrag(change: PointerInputChange, dragAmount: Offset) {
+        change.consume()
+        state.adjustOffset(dragAmount.y)
+        state.adjustOffsetHorizontal(dragAmount.x)
+        if (onDrag(dragAmount.y)) {
+            performHaptic(HapticFeedbackConstants.CLOCK_TICK)
+        }
+    }
+
+    private fun handleDragEnd() {
+        stopInteraction()
+        onDragEnd()
+        settle()
+    }
+
+    private fun handleDragCancel() {
+        stopInteraction()
+        settle()
+    }
+
+    private fun stopInteraction() {
+        state.isInteracting = false
+        autoScrollJob?.cancel()
+        autoScrollJob = null
+    }
+
+    /** Плавно возвращает элемент на место и очищает общее состояние перетаскивания */
+    private fun settle() {
+        coroutineScope.launch {
+            try {
+                state.animateOffsetToZero()
+            } finally {
+                state.draggedItemKey = null
+                state.batchDraggedKeys = emptyList()
+                state.dragScrollStartMs = Long.MIN_VALUE
+                onDragSettled()
             }
-        )
+        }
+    }
+
+    // ── Авто-скролл ───────────────────────────────────────────────────────────
+
+    private fun startAutoScroll() {
+        autoScrollJob?.cancel()
+        autoScrollJob = coroutineScope.launch {
+            while (isActive && state.isInteracting && state.draggedItemKey == key) {
+                autoScrollStep()
+                delay(SCROLL_FRAME_MS)
+            }
+        }
+    }
+
+    /** Один кадр автопрокрутки, когда перетаскиваемый элемент подходит к границе viewport */
+    private suspend fun autoScrollStep() {
+        val layoutInfo = state.lazyListState.layoutInfo
+        val draggedItemInfo = layoutInfo.visibleItemsInfo.firstOrNull { it.key == key } ?: return
+
+        val viewportStart = layoutInfo.viewportStartOffset.toFloat()
+        val viewportEnd = layoutInfo.viewportEndOffset.toFloat()
+        val viewportHeight = viewportEnd - viewportStart
+        if (viewportHeight <= 0f) return
+
+        val scrollTopZone = (viewportHeight * topScrollZoneFraction).coerceAtLeast(1f)
+        val scrollBottomZone = (viewportHeight * bottomScrollZoneFraction).coerceAtLeast(1f)
+        val dragTop = draggedItemInfo.offset + state.dragAccumulatedOffset.value
+        val dragBottom = dragTop + draggedItemInfo.size
+
+        val scrollAmount = when {
+            // Верхний край элемента приблизился к верхней границе с учётом TopBar
+            dragTop < viewportStart + scrollTopZone -> {
+                val distanceIntoZone = (viewportStart + scrollTopZone - dragTop).coerceIn(0f, scrollTopZone)
+                -scrollSpeed(distanceIntoZone / scrollTopZone)
+            }
+            // Нижний край элемента приблизился к нижней границе viewport
+            dragBottom > viewportEnd - scrollBottomZone -> {
+                val distanceIntoZone = (dragBottom - (viewportEnd - scrollBottomZone)).coerceIn(0f, scrollBottomZone)
+                scrollSpeed(distanceIntoZone / scrollBottomZone)
+            }
+            else -> 0f
+        }
+        if (scrollAmount == 0f) return
+
+        val consumed = state.lazyListState.scrollBy(scrollAmount)
+        if (consumed != 0f) {
+            state.adjustOffset(consumed)
+            if (onDragged(consumed)) {
+                performHaptic(HapticFeedbackConstants.CLOCK_TICK)
+            }
+        }
+    }
+
+    /** Скорость автопрокрутки нарастает по мере погружения элемента в зону у края экрана */
+    private fun scrollSpeed(ratio: Float): Float =
+        SCROLL_MIN_PX + (SCROLL_MAX_PX - SCROLL_MIN_PX) * ratio.pow(SCROLL_CURVE_POWER)
+
+    private fun performHaptic(feedbackConstant: Int) {
+        currentValueOf(LocalView).performHapticFeedback(feedbackConstant)
     }
 }

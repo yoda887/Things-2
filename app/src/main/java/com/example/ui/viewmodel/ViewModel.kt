@@ -6,6 +6,7 @@ import androidx.lifecycle.viewModelScope
 import javax.inject.Inject
 import dagger.hilt.android.lifecycle.HiltViewModel
 import com.example.data.model.Area
+import com.example.data.model.DayBounds
 import com.example.data.model.Item
 import com.example.data.model.ItemWithChecklist
 import com.example.data.model.Tag
@@ -21,12 +22,14 @@ import com.example.domain.usecase.QueryUseCases
 import com.example.ui.screens.home.ActiveScreen
 import com.example.ui.screens.home.components.ProjectProgress
 import com.example.ui.screens.home.components.ThingsCategoryListState
-import com.example.ui.screens.home.components.computeUpcomingDays
 import com.example.data.model.toStartVal
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.combine
+import kotlinx.coroutines.flow.flowOn
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.map
@@ -78,32 +81,11 @@ class ThingsViewModel @Inject constructor(
     val searchQuery = MutableStateFlow("")
     val selectedTagFilter = MutableStateFlow<String?>(null)
 
-    private val _currentScreen = MutableStateFlow(ActiveScreen.INBOX)
-    val currentScreen: StateFlow<ActiveScreen> = _currentScreen.asStateFlow()
-
-    private val _currentProject = MutableStateFlow<Item?>(null)
-    val currentProject: StateFlow<Item?> = _currentProject.asStateFlow()
-
-    private val _currentArea = MutableStateFlow<Area?>(null)
-    val currentArea: StateFlow<Area?> = _currentArea.asStateFlow()
-
     private val _inlineExpandedTaskId = MutableStateFlow<String?>(null)
     val inlineExpandedTaskId: StateFlow<String?> = _inlineExpandedTaskId.asStateFlow()
 
     private val _highlightedTaskId = MutableStateFlow<String?>(null)
     val highlightedTaskId: StateFlow<String?> = _highlightedTaskId.asStateFlow()
-
-    fun setScreen(screen: ActiveScreen) {
-        _currentScreen.value = screen
-    }
-
-    fun setProject(project: Item?) {
-        _currentProject.value = project
-    }
-
-    fun setArea(area: Area?) {
-        _currentArea.value = area
-    }
 
     fun setInlineExpandedTaskId(taskId: String?) {
         _inlineExpandedTaskId.value = taskId
@@ -158,6 +140,9 @@ class ThingsViewModel @Inject constructor(
         allTagsSet: Set<String>,
         highlighted: String?
     ): ThingsCategoryListState {
+        // Границы дня считаем один раз на весь список, а не в геттерах каждой задачи
+        val bounds = DayBounds.now()
+
         val listTasks = taskList.filter { wrapper ->
             val task = wrapper.item
             if (task.id == expandedTaskId) {
@@ -165,10 +150,10 @@ class ThingsViewModel @Inject constructor(
             } else {
                 when (screen) {
                     ActiveScreen.INBOX -> task.isInbox && !task.isCompleted
-                    ActiveScreen.TODAY -> task.isToday
-                    ActiveScreen.UPCOMING -> task.isUpcoming
-                    ActiveScreen.ANYTIME -> task.isAnytime
-                    ActiveScreen.SOMEDAY -> task.isSomeday
+                    ActiveScreen.TODAY -> bounds.isToday(task)
+                    ActiveScreen.UPCOMING -> bounds.isUpcoming(task)
+                    ActiveScreen.ANYTIME -> bounds.isAnytime(task)
+                    ActiveScreen.SOMEDAY -> bounds.isSomeday(task)
                     ActiveScreen.LOGBOOK -> task.isCompleted
                     ActiveScreen.PROJECT_DETAIL -> task.projectId == project?.id && !task.isCompleted
                     ActiveScreen.AREA_DETAIL -> task.areaId == area?.id && task.type == 0 && !task.isCompleted
@@ -182,10 +167,6 @@ class ThingsViewModel @Inject constructor(
         } else {
             listTasks.filter { it.item.tags.contains(selectedTag) || it.item.id == expandedTaskId }
         }
-
-        val standardToday = displayTasks.filter { !it.item.isTonight }
-        val eveningToday = displayTasks.filter { it.item.isTonight }
-        val upcomingDays = computeUpcomingDays(displayTasks, calEvents)
 
         val projectProgressMap = taskList
             .filter { !it.item.projectId.isNullOrEmpty() }
@@ -205,9 +186,6 @@ class ThingsViewModel @Inject constructor(
             selectedTagFilter = selectedTag,
             allTags = allTagsSet,
             displayTasks = displayTasks,
-            standardToday = standardToday,
-            eveningToday = eveningToday,
-            upcomingDays = upcomingDays,
             calendarEvents = calEvents,
             allSavedTags = savedTags,
             allSavedTagObjects = savedTagObjs,
@@ -219,6 +197,11 @@ class ThingsViewModel @Inject constructor(
         )
     }
 
+    /**
+     * Синхронный снимок состояния экрана по текущим значениям потоков.
+     * Используется как начальное значение для [getCategoryListStateFlow], чтобы первый кадр
+     * отрисовался без мигания пустым списком, пока считается первая эмиссия.
+     */
     fun getCategoryListStateSnapshot(
         screen: ActiveScreen,
         project: Item?,
@@ -241,12 +224,22 @@ class ThingsViewModel @Inject constructor(
         )
     }
 
+    /**
+     * Холодный поток состояния для конкретного экрана.
+     *
+     * Намеренно не превращается в StateFlow через stateIn(viewModelScope): такой поток жил бы
+     * до смерти ViewModel и накапливался бы по одному на каждую посещённую пару экран/проект.
+     * Подписка живёт ровно столько, сколько экран отображается, а начальное значение
+     * даёт [getCategoryListStateSnapshot].
+     *
+     * Пересчёт вынесен на [Dispatchers.Default] — фильтрация и группировка всего списка задач
+     * не должны выполняться на главном потоке.
+     */
     fun getCategoryListStateFlow(
         screen: ActiveScreen,
         project: Item?,
         area: Area?
-    ): StateFlow<ThingsCategoryListState> {
-        val initialValue = getCategoryListStateSnapshot(screen, project, area)
+    ): Flow<ThingsCategoryListState> {
         return combine(
             listOf(
                 inlineExpandedTaskId,
@@ -294,63 +287,8 @@ class ThingsViewModel @Inject constructor(
                 allTagsSet = allTagsSet,
                 highlighted = highlighted
             )
-        }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), initialValue)
+        }.flowOn(Dispatchers.Default)
     }
-
-    val categoryListState: StateFlow<ThingsCategoryListState> = combine(
-        listOf(
-            currentScreen,
-            currentProject,
-            currentArea,
-            inlineExpandedTaskId,
-            selectedTagFilter,
-            tasks,
-            projects,
-            areas,
-            calendarEvents,
-            allSavedTags,
-            allSavedTagObjects,
-            allTags,
-            highlightedTaskId
-        )
-    ) { array ->
-        val screen = array[0] as ActiveScreen
-        val project = array[1] as? Item
-        val area = array[2] as? Area
-        val expandedTaskId = array[3] as? String
-        val selectedTag = array[4] as? String
-        @Suppress("UNCHECKED_CAST")
-        val taskList = array[5] as List<ItemWithChecklist>
-        @Suppress("UNCHECKED_CAST")
-        val projectList = array[6] as List<Item>
-        @Suppress("UNCHECKED_CAST")
-        val areaList = array[7] as List<Area>
-        @Suppress("UNCHECKED_CAST")
-        val calEvents = array[8] as List<Item>
-        @Suppress("UNCHECKED_CAST")
-        val savedTags = array[9] as List<String>
-        @Suppress("UNCHECKED_CAST")
-        val savedTagObjs = array[10] as List<Tag>
-        @Suppress("UNCHECKED_CAST")
-        val allTagsSet = array[11] as Set<String>
-        val highlighted = array[12] as? String
-
-        computeCategoryListState(
-            screen = screen,
-            project = project,
-            area = area,
-            expandedTaskId = expandedTaskId,
-            selectedTag = selectedTag,
-            taskList = taskList,
-            projectList = projectList,
-            areaList = areaList,
-            calEvents = calEvents,
-            savedTags = savedTags,
-            savedTagObjs = savedTagObjs,
-            allTagsSet = allTagsSet,
-            highlighted = highlighted
-        )
-    }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), ThingsCategoryListState())
 
     fun insertTag(tagTitle: String, parentId: String? = null) {
         viewModelScope.launch {

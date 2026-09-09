@@ -1,11 +1,9 @@
 package com.example.ui.screens.home.components
 
-import android.view.HapticFeedbackConstants
 import androidx.compose.runtime.*
 import androidx.compose.runtime.snapshots.SnapshotStateMap
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.composed
-import androidx.compose.ui.platform.LocalView
 import com.example.data.model.Area
 import com.example.ui.components.dragdrop.GenericDragDropState
 import com.example.ui.components.dragdrop.universalDragAndDrop
@@ -31,8 +29,9 @@ fun Modifier.areaDragAndDrop(
     onLocalAreasListChange: (List<Area>) -> Unit,
     onAreasReordered: (List<Area>) -> Unit
 ): Modifier = composed {
-    val view = LocalView.current
-
+    // composed нужен здесь ради единственного флага ниже: он должен пережить рекомпозицию
+    // между началом жеста и завершением анимации возврата. Сфер на экране немного,
+    // поэтому цена подкомпозиции пренебрежима — в отличие от списка задач.
     val currentArea by rememberUpdatedState(area)
     val currentHasProjects by rememberUpdatedState(hasProjects)
     val currentOriginalAreas by rememberUpdatedState(originalAreas)
@@ -42,21 +41,6 @@ fun Modifier.areaDragAndDrop(
 
     // Запоминаем, была ли данная сфера развернута до начала перетаскивания
     var wasExpandedBeforeDrag by remember { mutableStateOf(false) }
-    var isDraggingThisArea by remember { mutableStateOf(false) }
-
-    LaunchedEffect(state.draggedItemKey) {
-        val draggedKeyStr = state.draggedItemKey as? String
-        if (draggedKeyStr == "area_${area.id}") {
-            isDraggingThisArea = true
-        } else if (isDraggingThisArea && draggedKeyStr == null) {
-            // Анимация возврата завершилась, восстанавливаем состояние раскрытия
-            isDraggingThisArea = false
-            if (wasExpandedBeforeDrag) {
-                expandedStates[area.id] = true
-                wasExpandedBeforeDrag = false
-            }
-        }
-    }
 
     this.universalDragAndDrop(
         state = state,
@@ -65,7 +49,6 @@ fun Modifier.areaDragAndDrop(
             (targetKey as? String)?.startsWith("area_") == true
         },
         onDragStarted = {
-            view.performHapticFeedback(HapticFeedbackConstants.LONG_PRESS)
             if (currentHasProjects) {
                 val isExpanded = expandedStates[currentArea.id] ?: true
                 wasExpandedBeforeDrag = isExpanded
@@ -98,15 +81,19 @@ fun Modifier.areaDragAndDrop(
             currentOnLocalAreasListChange(list)
             true
         },
-        onMoveCommitted = {
-            view.performHapticFeedback(HapticFeedbackConstants.CLOCK_TICK)
-        },
         onDragEnd = {
             // Если порядок сфер изменился относительно исходного, сохраняем в БД
             val originalIds = currentOriginalAreas.map { it.id }
             val currentIds = currentLocalAreasList.map { it.id }
             if (originalIds != currentIds) {
                 currentOnAreasReordered(currentLocalAreasList)
+            }
+        },
+        onDragSettled = {
+            // Анимация возврата завершилась — восстанавливаем состояние раскрытия
+            if (wasExpandedBeforeDrag) {
+                expandedStates[currentArea.id] = true
+                wasExpandedBeforeDrag = false
             }
         }
     )
