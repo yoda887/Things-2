@@ -175,8 +175,8 @@ fun AnimatedTaskItem(
     val extraPaddingDp = 10.dp * expansionProgress
     val verticalGapPadding = MaterialTheme.dimens.taskExpandedVerticalGap * expansionProgress
 
-    val isSecondaryBatchItem = dragDropState.batchDraggedKeys.isNotEmpty()
-        && dragDropState.batchDraggedKeys.contains(task.id)
+    val isSecondaryBatchItem = dragDropState.stackedDragKeys.isNotEmpty()
+        && dragDropState.stackedDragKeys.contains(task.id)
         && task.id != dragDropState.draggedItemKey
 
     Box(
@@ -200,19 +200,19 @@ fun AnimatedTaskItem(
         ) {
             Box {
                 // Каскадный эффект стопки карточек под ведущей задачей при групповом перетаскивании
-                if (isDragTask && dragDropState.isBatchDrag) {
+                if (isDragTask && dragDropState.hasStackedItems) {
                 val isDark = isSystemInDarkTheme()
                 val stackCardBg = if (isDark) Color(0xFF252629) else Color(0xFFFFFFFF)
                 val stackBorderColor = if (isDark) Color(0xFF38393D) else Color(0xFFE5E5EA)
 
                 // 3-й слой стопки (если в пачке 3 или более задач)
-                if (dragDropState.batchDraggedKeys.size >= 3) {
+                if (dragDropState.stackedDragKeys.size >= 3) {
                     Box(
                         modifier = Modifier
                             .matchParentSize()
                             .graphicsLayer {
-                                val currentTranslationY = if (isDragTask) dragDropState.dragAccumulatedOffset.value else 0f
-                                val currentTranslationX = if (isDragTask) dragDropState.dragAccumulatedOffsetHorizontal.value else 0f
+                                val currentTranslationY = if (isDragTask) dragDropState.dragAccumulatedY else 0f
+                                val currentTranslationX = if (isDragTask) dragDropState.dragAccumulatedX else 0f
                                 translationX = currentTranslationX + 8.dp.toPx()
                                 translationY = currentTranslationY + 8.dp.toPx()
                                 scaleX = dragScale
@@ -232,8 +232,8 @@ fun AnimatedTaskItem(
                     modifier = Modifier
                         .matchParentSize()
                         .graphicsLayer {
-                            val currentTranslationY = if (isDragTask) dragDropState.dragAccumulatedOffset.value else 0f
-                            val currentTranslationX = if (isDragTask) dragDropState.dragAccumulatedOffsetHorizontal.value else 0f
+                            val currentTranslationY = if (isDragTask) dragDropState.dragAccumulatedY else 0f
+                            val currentTranslationX = if (isDragTask) dragDropState.dragAccumulatedX else 0f
                             translationX = currentTranslationX + 4.dp.toPx()
                             translationY = currentTranslationY + 4.dp.toPx()
                             scaleX = dragScale
@@ -264,8 +264,8 @@ fun AnimatedTaskItem(
             modifier = Modifier
                 .fillMaxWidth()
                 .graphicsLayer {
-                    translationX = if (isDragTask) dragDropState.dragAccumulatedOffsetHorizontal.value else 0f
-                    translationY = if (isDragTask) dragDropState.dragAccumulatedOffset.value else 0f
+                    translationX = if (isDragTask) dragDropState.dragAccumulatedX else 0f
+                    translationY = if (isDragTask) dragDropState.dragAccumulatedY else 0f
                     scaleX = dragScale
                     scaleY = dragScale
                     alpha = dimAlpha

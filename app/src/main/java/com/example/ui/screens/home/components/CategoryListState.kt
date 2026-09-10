@@ -46,6 +46,53 @@ object UpcomingHeaderItemHelper {
     class UpcomingEventItem(val event: Item, val dateMillis: Long)
 }
 
+/**
+ * Ключи элементов LazyColumn на экране списка задач.
+ *
+ * Единый источник правды: по этим же ключам модификаторы перетаскивания решают, куда задачу
+ * класть можно, а куда нельзя. Раньше строки дублировались в двух файлах — переименование
+ * ключа в панели молча ломало фильтр целей.
+ *
+ * Движок перетаскивания про эти ключи ничего не знает: для него ключ — просто `Any`.
+ */
+object TaskListKeys {
+    /** Заголовок экрана */
+    const val MAIN_HEADER = "main_header"
+
+    /** Заголовок вечерней секции экрана «Сегодня» */
+    const val EVENING_HEADER = "evening_header"
+
+    /** Заголовок секции проектов на экране сферы */
+    const val PROJECTS_HEADING = "projects_heading"
+
+    /** Заголовок секции задач на экране сферы */
+    const val TASKS_HEADING = "tasks_heading"
+
+    /** Префикс заголовка дня на экране «Предстоящие» */
+    const val DAY_HEADER_PREFIX = "hdr_"
+
+    /** Префикс события календаря */
+    const val CALENDAR_EVENT_PREFIX = "ev_"
+
+    /** Виджет событий календаря в шапке экрана «Сегодня» */
+    const val CALENDAR_WIDGET = "calendar_events"
+
+    /** Строка фильтра по тегам */
+    const val TAG_FILTER = "tag_filter"
+
+    /** Заглушка пустого списка */
+    const val EMPTY_STATE = "empty_state"
+
+    /**
+     * Строки, целями перетаскивания быть не могут: обработчик перемещения их всё равно
+     * отклонит, а как ближайшая цель сверху они запирают задачу и не дают подняться выше.
+     *
+     * Заголовки, у которых есть осмысленная обработка сброса ([MAIN_HEADER], [EVENING_HEADER],
+     * [DAY_HEADER_PREFIX]), сюда не входят.
+     */
+    val nonDroppable = setOf(CALENDAR_WIDGET, TAG_FILTER, EMPTY_STATE, PROJECTS_HEADING, TASKS_HEADING)
+}
+
 /** Горизонт планирования экрана «Предстоящие» в днях */
 private const val UPCOMING_DAYS_HORIZON = 14
 
@@ -145,7 +192,7 @@ fun rememberFlattenedList(
             if (screen == ActiveScreen.TODAY) {
                 addAll(standardToday)
                 if (eveningToday.isNotEmpty() || draggedItemKey != null) {
-                    add("evening_header")
+                    add(TaskListKeys.EVENING_HEADER)
                     addAll(eveningToday)
                 }
             } else if (screen == ActiveScreen.UPCOMING) {
@@ -161,12 +208,12 @@ fun rememberFlattenedList(
             } else if (screen == ActiveScreen.AREA_DETAIL) {
                 val areaProjects = projects.filter { it.areaId == area?.id }
                 if (areaProjects.isNotEmpty()) {
-                    add("projects_heading")
+                    add(TaskListKeys.PROJECTS_HEADING)
                     addAll(areaProjects)
                 }
                 val areaDirectTasks = displayTasks.filter { it.item.areaId == area?.id && (it.item.projectId == null || it.item.projectId == "") }
                 if (areaDirectTasks.isNotEmpty()) {
-                    add("tasks_heading")
+                    add(TaskListKeys.TASKS_HEADING)
                     addAll(areaDirectTasks)
                 }
             } else {

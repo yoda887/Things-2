@@ -45,19 +45,19 @@ fun Modifier.projectDragAndDrop(
 
     return this.universalDragAndDrop(
         state = state,
-        key = "proj_${project.id}",
+        key = HomeListKeys.project(project.id),
         topScrollZoneFraction = PROJECTS_SCROLL_ZONE_FRACTION,
         bottomScrollZoneFraction = PROJECTS_SCROLL_ZONE_FRACTION,
         canDropOver = { targetKey ->
             val keyStr = targetKey as? String ?: return@universalDragAndDrop false
-            keyStr == "root_divider" || keyStr.startsWith("area_") || keyStr.startsWith("proj_")
+            keyStr == HomeListKeys.ROOT_DIVIDER || keyStr.startsWith(HomeListKeys.AREA_PREFIX) || keyStr.startsWith(HomeListKeys.PROJECT_PREFIX)
         },
         onMoveIfNecessary = { draggedKey, targetKey ->
             val draggedKeyStr = draggedKey as? String ?: return@universalDragAndDrop false
             val targetKeyStr = targetKey as? String ?: return@universalDragAndDrop false
 
-            if (!draggedKeyStr.startsWith("proj_")) return@universalDragAndDrop false
-            val draggedId = draggedKeyStr.removePrefix("proj_")
+            if (!draggedKeyStr.startsWith(HomeListKeys.PROJECT_PREFIX)) return@universalDragAndDrop false
+            val draggedId = draggedKeyStr.removePrefix(HomeListKeys.PROJECT_PREFIX)
 
             val fromIndex = localProjectsList.indexOfFirst { it.id == draggedId }
             if (fromIndex == -1) return@universalDragAndDrop false
@@ -70,7 +70,7 @@ fun Modifier.projectDragAndDrop(
 
             when {
                 // ── 1. Наведение на верхний разделитель списка ("Без области") ──
-                targetKeyStr == "root_divider" -> {
+                targetKeyStr == HomeListKeys.ROOT_DIVIDER -> {
                     val currentProjectAreaId = localProjectsList[fromIndex].areaId
                     if (currentProjectAreaId == null) return@universalDragAndDrop false
 
@@ -82,8 +82,8 @@ fun Modifier.projectDragAndDrop(
                 }
 
                 // ── 2. Наведение на заголовок области (Area Header) ──
-                targetKeyStr.startsWith("area_") -> {
-                    val targetAreaId = targetKeyStr.removePrefix("area_")
+                targetKeyStr.startsWith(HomeListKeys.AREA_PREFIX) -> {
+                    val targetAreaId = targetKeyStr.removePrefix(HomeListKeys.AREA_PREFIX)
                     val targetAreaIndex = areas.indexOfFirst { it.id == targetAreaId }
                     if (targetAreaIndex == -1) return@universalDragAndDrop false
 
@@ -130,8 +130,8 @@ fun Modifier.projectDragAndDrop(
                 }
 
                 // ── 3. Наведение на другой проект (Project Swap) ──
-                targetKeyStr.startsWith("proj_") -> {
-                    val targetId = targetKeyStr.removePrefix("proj_")
+                targetKeyStr.startsWith(HomeListKeys.PROJECT_PREFIX) -> {
+                    val targetId = targetKeyStr.removePrefix(HomeListKeys.PROJECT_PREFIX)
                     val toIndex = localProjectsList.indexOfFirst { it.id == targetId }
                     if (toIndex == -1 || toIndex == fromIndex) return@universalDragAndDrop false
 

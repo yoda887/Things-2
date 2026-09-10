@@ -29,6 +29,7 @@ import com.example.data.model.Area
 import com.example.data.model.Item
 import com.example.data.model.ItemWithChecklist
 import com.example.ui.components.ProjectProgressArc
+import com.example.ui.screens.home.components.TaskListKeys
 import com.example.ui.screens.home.ActiveScreen
 import com.example.ui.theme.*
 
@@ -437,7 +438,7 @@ fun SubCategoryHeader(
     dimAlpha: Float,
     modifier: Modifier = Modifier
 ) {
-    if (headerText == "projects_heading") {
+    if (headerText == TaskListKeys.PROJECTS_HEADING) {
         Column(
             modifier = modifier
                 .fillMaxWidth()
@@ -461,7 +462,7 @@ fun SubCategoryHeader(
                     .background(dividerColor)
             )
         }
-    } else if (headerText == "tasks_heading") {
+    } else if (headerText == TaskListKeys.TASKS_HEADING) {
         Column(
             modifier = modifier
                 .fillMaxWidth()

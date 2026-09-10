@@ -443,7 +443,7 @@ fun ThingsCategoryListPanel(
                 .testTag("tasks_lazy_list"),
             contentPadding = PaddingValues(top = topPaddingTotal, bottom = 100.dp)
         ) {
-            item(key = "main_header") {
+            item(key = TaskListKeys.MAIN_HEADER) {
                 // Извлеченный подкомпонент заголовка
                 Box(modifier = Modifier.padding(horizontal = 8.dp)) {
                     MainCategoryHeader(
@@ -461,7 +461,7 @@ fun ThingsCategoryListPanel(
             }
 
             if (screen == ActiveScreen.TODAY && todayCalendarEvents.isNotEmpty()) {
-                item {
+                item(key = TaskListKeys.CALENDAR_WIDGET) {
                     CalendarEventsWidget(
                         events = todayCalendarEvents,
                         textSecondaryColor = textSecondaryColor,
@@ -475,7 +475,7 @@ fun ThingsCategoryListPanel(
             }
 
             if (allTags.isNotEmpty()) {
-                item {
+                item(key = TaskListKeys.TAG_FILTER) {
                     // Извлеченный подкомпонент строки тегов
                     TagFilterRow(
                         allTags = allTags,
@@ -503,7 +503,7 @@ fun ThingsCategoryListPanel(
             }
 
             if (!hasTasks) {
-                item {
+                item(key = TaskListKeys.EMPTY_STATE) {
                     Box(modifier = Modifier.padding(horizontal = 8.dp)) {
                         EmptyStateView(textSecondaryColor = textSecondaryColor)
                     }
@@ -513,8 +513,8 @@ fun ThingsCategoryListPanel(
                     when (item) {
                         is ItemWithChecklist -> item.item.id
                         is Item -> item.id
-                        is UpcomingHeaderItem -> "hdr_${item.dateMillis}"
-                        is UpcomingEventItem -> "ev_${item.event.id}_${item.dateMillis}"
+                        is UpcomingHeaderItem -> "${TaskListKeys.DAY_HEADER_PREFIX}${item.dateMillis}"
+                        is UpcomingEventItem -> "${TaskListKeys.CALENDAR_EVENT_PREFIX}${item.event.id}_${item.dateMillis}"
                         else -> item.toString()
                     }
                 }) { item ->
@@ -628,7 +628,7 @@ fun ThingsCategoryListPanel(
                                 )
                             }
                         }
-                        else -> { // like "evening_header", "projects_heading", "tasks_heading"
+                        else -> { // заголовки секций: вечер, проекты сферы, задачи сферы
                             val headerText = item as String
                             val shouldDim = inlineExpandedTaskId != null
                             val dimAlpha by animateFloatAsState(

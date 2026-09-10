@@ -9,6 +9,9 @@ import com.example.ui.components.dragdrop.universalDragAndDrop
 import java.util.Calendar
 
 private const val MS_PER_DAY = 24 * 3600 * 1000L
+private const val TASK_SCROLL_TOP_ZONE_FRACTION = 0.22f
+private const val TASK_SCROLL_BOTTOM_ZONE_FRACTION = 0.18f
+
 
 /**
  * Обертка над универсальным [universalDragAndDrop] для привязки бизнес-логики перетаскивания задач.
@@ -42,10 +45,29 @@ fun Modifier.taskDragAndDrop(
     return this.universalDragAndDrop(
         state = state,
         key = taskItem.id,
+        topScrollZoneFraction = TASK_SCROLL_TOP_ZONE_FRACTION,
+        bottomScrollZoneFraction = TASK_SCROLL_BOTTOM_ZONE_FRACTION,
         canDropOver = { targetKey ->
-            // Исключаем события календаря и сопутствующие задачи в пачке из целей свапа
-            !(targetKey as? String).orEmpty().startsWith("ev_")
-                && !state.batchDraggedKeys.contains(targetKey)
+            val keyStr = targetKey as? String
+            when {
+                // Элементы списка без явного ключа — не цели
+                keyStr == null -> false
+                // События календаря
+                keyStr.startsWith(TaskListKeys.CALENDAR_EVENT_PREFIX) -> false
+                // Неинтерактивные строки шапки. Раньше они проходили фильтр и становились
+                // ближайшей целью сверху, а обработчик их отклонял — задача упиралась в них
+                // и не могла подняться выше
+                keyStr in TaskListKeys.nonDroppable -> false
+                // Задачи, а также заголовки: экрана, вечерней секции и дня
+                else -> true
+            }
+        },
+        isBlockContinuation = { targetKey ->
+            // Продолжение блока — только события календаря под заголовком дня: сбрасывая задачу
+            // на заголовок, её кладут ПОСЛЕ событий этого дня. Всё остальное (включая хвостовую
+            // распорку списка) продолжением не является, иначе её высота попадёт в компенсацию
+            // прыжка и в конце списка карточка выскочит из-под пальца вверх.
+            (targetKey as? String)?.startsWith(TaskListKeys.CALENDAR_EVENT_PREFIX) == true
         },
         onMoveIfNecessary = { draggedKey, targetKey ->
             val draggedId = draggedKey as? String ?: return@universalDragAndDrop false
@@ -63,7 +85,7 @@ fun Modifier.taskDragAndDrop(
 
             when {
                 // ПЕРЕТАСКИВАНИЕ НА ЗАГОЛОВОК "ВЕЧЕР"
-                targetId == "evening_header" -> {
+                targetId == TaskListKeys.EVENING_HEADER -> {
                     val list = localTasksList.toMutableList()
                     var moved = list.removeAt(fromIndex)
                     val wasTonight = moved.item.isTonight
@@ -82,7 +104,7 @@ fun Modifier.taskDragAndDrop(
                 }
 
                 // ПЕРЕТАСКИВАНИЕ НА ЗАГОЛОВОК "MAIN" (Основной список дня)
-                targetId == "main_header" -> {
+                targetId == TaskListKeys.MAIN_HEADER -> {
                     val list = localTasksList.toMutableList()
                     var moved = list.removeAt(fromIndex)
                     if (!moved.item.isTonight) return@universalDragAndDrop false
@@ -94,8 +116,8 @@ fun Modifier.taskDragAndDrop(
                 }
 
                 // ПЕРЕТАСКИВАНИЕ НА ЗАГОЛОВОК ПРЕДСТОЯЩЕГО ДНЯ (Upcoming screen)
-                screen == ActiveScreen.UPCOMING && targetId.startsWith("hdr_") -> {
-                    val timestampStr = targetId.substringAfter("hdr_")
+                screen == ActiveScreen.UPCOMING && targetId.startsWith(TaskListKeys.DAY_HEADER_PREFIX) -> {
+                    val timestampStr = targetId.substringAfter(TaskListKeys.DAY_HEADER_PREFIX)
                     val timestamp = timestampStr.toLongOrNull() ?: return@universalDragAndDrop false
 
                     val list = localTasksList.toMutableList()
@@ -162,7 +184,7 @@ fun Modifier.taskDragAndDrop(
                 // КЛАССИЧЕСКИЙ ОБМЕН ДВУХ ЗАДАЧ (Swap)
                 else -> {
                     val toIndex = localTasksList.indexOfFirst { it.item.id == targetId }
-                    if (toIndex == -1) return@universalDragAndDrop false
+                    if (toIndex == -1 || toIndex == fromIndex) return@universalDragAndDrop false
 
                     val list = localTasksList.toMutableList()
                     var moved = list.removeAt(fromIndex)
@@ -187,9 +209,9 @@ fun Modifier.taskDragAndDrop(
             if (selectedTaskIds.contains(taskItem.id) && selectedTaskIds.size > 1) {
                 // Ведущая задача первая, остальные выбранные - следом
                 val otherSelectedIds = selectedTaskIds.filter { it != taskItem.id }
-                state.batchDraggedKeys = listOf(taskItem.id) + otherSelectedIds
+                state.stackedDragKeys = listOf(taskItem.id) + otherSelectedIds
             } else {
-                state.batchDraggedKeys = emptyList()
+                state.stackedDragKeys = emptyList()
             }
             // Режим выбора автоматически завершается при начале перетаскивания (включая одиночно выбранную задачу)
             if (selectedTaskIds.isNotEmpty()) {
@@ -197,8 +219,8 @@ fun Modifier.taskDragAndDrop(
             }
         },
         onDragEnd = {
-            val isBatch = state.batchDraggedKeys.size > 1
-            val batchKeys = state.batchDraggedKeys.mapNotNull { it as? String }
+            val isBatch = state.stackedDragKeys.size > 1
+            val batchKeys = state.stackedDragKeys.mapNotNull { it as? String }
 
             val listWithBatchOrdered = if (isBatch && batchKeys.contains(taskItem.id)) {
                 val otherBatchKeys = batchKeys.filter { it != taskItem.id }.toSet()

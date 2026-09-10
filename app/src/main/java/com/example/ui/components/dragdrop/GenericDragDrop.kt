@@ -17,31 +17,37 @@ import androidx.compose.ui.node.DelegatingNode
 import androidx.compose.ui.node.ModifierNodeElement
 import androidx.compose.ui.node.currentValueOf
 import androidx.compose.ui.platform.InspectorInfo
+import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.LocalView
+import androidx.compose.ui.unit.dp
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.coroutineScope
-import kotlinx.coroutines.delay
 import kotlinx.coroutines.ensureActive
 import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
+import kotlin.math.hypot
 import kotlin.math.pow
 
 // ─── Constants ───────────────────────────────────────────────────────────────
-private const val SCROLL_FRAME_MS = 16L
-private const val SCROLL_TOP_ZONE_FRACTION = 0.25f
-private const val SCROLL_BOTTOM_ZONE_FRACTION = 0.18f
-private const val SCROLL_MIN_PX = 6f
-private const val SCROLL_MAX_PX = 58f
-private const val SCROLL_CURVE_POWER = 1.3f
-private const val MOVE_THRESHOLD = 0.7f
+private const val NANOS_PER_SECOND = 1_000_000_000f
 
 /**
- * Обертка для предоставления актуального значения смещения через свойство .value.
+ * Потолок длительности кадра в расчёте автопрокрутки. Если кадр надолго провалился
+ * (сборка мусора, тяжёлая перекомпоновка), список не должен телепортироваться.
  */
-class DragOffsetHolder(private val getter: () -> Float) {
-    val value: Float get() = getter()
-}
+private const val MAX_SCROLL_FRAME_SECONDS = 0.05f
+
+private const val SCROLL_TOP_ZONE_FRACTION = 0.25f
+private const val SCROLL_BOTTOM_ZONE_FRACTION = 0.18f
+
+// Скорость автопрокрутки в пикселях в секунду: 6 и 58 пикселей за кадр при 60 Гц
+private const val SCROLL_MIN_PX_PER_SECOND = 360f
+private const val SCROLL_MAX_PX_PER_SECOND = 3480f
+
+private const val SCROLL_CURVE_POWER = 1.3f
+private const val MOVE_THRESHOLD = 0.7f
+private const val DRAG_AUTOSCROLL_SLOP_DP = 12f
 
 /**
  * Универсальное состояние для реализации жеста Drag-and-Drop в списках LazyColumn.
@@ -53,27 +59,54 @@ class GenericDragDropState(
     /** Ключ элемента, который сейчас перетаскивается. Может быть любого типа (String, Int, Long) */
     var draggedItemKey by mutableStateOf<Any?>(null)
     
-    /** Список ключей элементов, свернутых в пачку при групповом перетаскивании (первый ключ - ведущий) */
-    var batchDraggedKeys by mutableStateOf<List<Any>>(emptyList())
+    /**
+     * Ключи элементов, свёрнутых в одну стопку под пальцем; первый — ведущий, его геометрию
+     * движок и отслеживает. Остальные визуально отсутствуют в потоке списка.
+     *
+     * Движок не знает и не решает, из чего собрана стопка — это дело вызывающего слоя.
+     * Для него это чисто геометрический факт: перечисленных элементов на своих местах нет,
+     * поэтому они не могут быть ни целями обмена, ни частью составного блока.
+     */
+    var stackedDragKeys by mutableStateOf<List<Any>>(emptyList())
 
-    /** Флаг указывает, перетаскивается ли группа из нескольких элементов */
-    val isBatchDrag: Boolean get() = batchDraggedKeys.size > 1
+    /** Под пальцем больше одного элемента */
+    val hasStackedItems: Boolean get() = stackedDragKeys.size > 1
 
     /** Флаг указывает, продолжает ли пользователь удерживать палец на экране во время перетаскивания */
     var isInteracting by mutableStateOf(false)
 
-    /** Актуальные синхронные значения смещения драга без задержек мьютекса */
+    /**
+     * Накопленное смещение перетаскиваемого элемента относительно его места в списке.
+     *
+     * Это snapshot-состояние, поэтому читать его лучше прямо в лямбде `graphicsLayer`:
+     * такое чтение обновляет отрисовку без рекомпозиции элемента.
+     */
     var dragAccumulatedY by mutableFloatStateOf(0f)
     var dragAccumulatedX by mutableFloatStateOf(0f)
 
-    /** Накопленный оффсет смещения для совместимости со сторонними читателями .value */
-    val dragAccumulatedOffset = DragOffsetHolder { dragAccumulatedY }
-    
-    /** Накопленный оффсет смещения по горизонтали для свободного перемещения */
-    val dragAccumulatedOffsetHorizontal = DragOffsetHolder { dragAccumulatedX }
-    
-    /** Временная метка начала авто-прокрутки для расчёта ускорения */
-    var dragScrollStartMs by mutableStateOf(Long.MIN_VALUE)
+    /**
+     * Экранное положение верхней грани перетаскиваемого элемента, каким оно обязано остаться
+     * сразу после последней перестановки.
+     *
+     * Движок рассчитывает компенсацию прыжка геометрически, но реальное место вставки знает
+     * только бизнес-логика: заголовки и составные блоки кладут элемент не туда, куда указывает
+     * геометрия. Поэтому на следующем кадре предсказание сверяется с фактическим раскладом
+     * и разница добирается — ошибка расчёта больше не уводит карточку из-под пальца.
+     *
+     * NaN — сверять нечего.
+     */
+    internal var expectedDragTopAfterMove = Float.NaN
+
+    /**
+     * Ключ последнего элемента, с которым был успешно подтверждён обмен
+     * (защита от повторного свапа до рекомпозиции).
+     *
+     * Внутренняя бухгалтерия движка — обёрткам её трогать не нужно.
+     */
+    internal var lastSwappedTargetKey: Any? = null
+
+    /** Направление последнего подтверждённого обмена (true — вниз, false — вверх) */
+    internal var lastSwapMovingDown: Boolean? = null
 
     /**
      * Позволяет мгновенно и синхронно скорректировать смещение драга
@@ -138,59 +171,6 @@ fun rememberGenericDragDropState(lazyListState: LazyListState): GenericDragDropS
     return remember(lazyListState) { GenericDragDropState(lazyListState) }
 }
 
-/**
- * Замедляющийся пятистепенной (quintic) интерполятор из AOSP для плавной автопрокрутки у границ экрана.
- */
-fun outOfBoundsScrollCapInterpolator(t: Float): Float {
-    val time = t - 1f
-    return time * time * time * time * time + 1f
-}
-
-/**
- * Вычисляет расстояние (spacing) между элементами списка на основе видимой информации о макете.
- * Метод вынесен в общий движок, чтобы оставаться доступным для всех модификаторов.
- */
-fun detectItemSpacing(
-    visibleItems: List<LazyListItemInfo>,
-): Float {
-    for (i in 0 until visibleItems.lastIndex) {
-        val cur = visibleItems[i]
-        val next = visibleItems[i + 1]
-        if (next.index == cur.index + 1) {
-            val gap = next.offset - (cur.offset + cur.size)
-            if (gap >= 0) return gap.toFloat()
-        }
-    }
-    return 0f
-}
-
-/**
- * Вычисляет расстояние (spacing) для целевого элемента списка с учётом его соседей.
- */
-fun getItemSpacing(
-    targetItem: LazyListItemInfo,
-    visibleItems: List<LazyListItemInfo>,
-): Float {
-    val targetIdx = visibleItems.indexOfFirst { it.key == targetItem.key }
-    if (targetIdx != -1) {
-        if (targetIdx < visibleItems.lastIndex) {
-            val next = visibleItems[targetIdx + 1]
-            if (next.index == targetItem.index + 1) {
-                val gap = next.offset - (targetItem.offset + targetItem.size)
-                if (gap >= 0) return gap.toFloat()
-            }
-        }
-        if (targetIdx > 0) {
-            val prev = visibleItems[targetIdx - 1]
-            if (prev.index == targetItem.index - 1) {
-                val gap = targetItem.offset - (prev.offset + prev.size)
-                if (gap >= 0) return gap.toFloat()
-            }
-        }
-    }
-    return detectItemSpacing(visibleItems)
-}
-
 
 /**
  * Универсальный модификатор для реализации Drag-and-Drop, абстрагированный от бизнес-логики.
@@ -203,6 +183,13 @@ fun getItemSpacing(
  * @param state Общее состояние перетаскивания списка [GenericDragDropState]
  * @param key Уникальный ключ текущего перетаскиваемого элемента
  * @param canDropOver Предикат, определяющий возможность пересечения/свапа с целевым элементом по его ключу
+ * @param isBlockContinuation Предикат: является ли элемент продолжением блока, начатого элементом выше
+ *                          (например, события календаря под заголовком дня). Такие элементы движок
+ *                          считает частью целевого блока и приземляет перетаскиваемый элемент за ними.
+ *                          Отвечать true нужно ТОЛЬКО для настоящих продолжений: если пометить так
+ *                          постороннюю строку — скажем, хвостовую распорку списка, — компенсация
+ *                          прыжка раздуется на её высоту и карточка уйдёт из-под пальца.
+ *                          По умолчанию продолжений нет.
  * @param thresholdFraction Порог смещения центра (от 0.1f до 0.9f) с направленным гистерезисом (Direction Lock).
  *                          По умолчанию 0.5f (симметричное пересечение середин слотов).
  * @param onMoveIfNecessary Функция обратного вызова, принимающая ключ тащимого элемента и ключ цели,
@@ -219,6 +206,7 @@ fun Modifier.universalDragAndDrop(
     state: GenericDragDropState,
     key: Any,
     canDropOver: (targetKey: Any) -> Boolean = { true },
+    isBlockContinuation: (targetKey: Any) -> Boolean = { false },
     thresholdFraction: Float = MOVE_THRESHOLD,
     topScrollZoneFraction: Float = SCROLL_TOP_ZONE_FRACTION,
     bottomScrollZoneFraction: Float = SCROLL_BOTTOM_ZONE_FRACTION,
@@ -228,6 +216,18 @@ fun Modifier.universalDragAndDrop(
     onDragSettled: () -> Unit = {}
 ): Modifier {
     val lazyListState = state.lazyListState
+
+    /**
+     * Видимые элементы списка без тех, что свёрнуты в стопку под пальцем.
+     *
+     * Свёрнутых элементов фактически нет в потоке списка, поэтому они не могут быть ни целями
+     * обмена, ни частью составного блока, ни ориентиром для границ видимой области.
+     * Ведущий элемент стопки остаётся — именно его геометрию движок и отслеживает.
+     */
+    fun activeItems(visibleItems: List<LazyListItemInfo>, draggedKey: Any): List<LazyListItemInfo> {
+        if (state.stackedDragKeys.isEmpty()) return visibleItems
+        return visibleItems.filter { it.key == draggedKey || !state.stackedDragKeys.contains(it.key) }
+    }
 
     /**
      * Поиск элемента списка, с которым необходимо произвести обмен на основании геометрии и вектора движения (Direction Lock).
@@ -241,10 +241,7 @@ fun Modifier.universalDragAndDrop(
     ): LazyListItemInfo? {
         if (deltaY == 0f) return null
 
-        // Исключаем вторичные элементы пачки (они свернуты в стопку под пальцем и не должны служить препятствиями)
-        val activeVisibleItems = visibleItems.filter {
-            it.key == draggedKey || !state.batchDraggedKeys.contains(it.key)
-        }
+        val activeVisibleItems = activeItems(visibleItems, draggedKey)
         val draggedItem = activeVisibleItems.firstOrNull { it.key == draggedKey } ?: return null
 
         val dragTop = draggedItem.offset + currentOffset
@@ -264,14 +261,14 @@ fun Modifier.universalDragAndDrop(
                 .minByOrNull { it.index }
 
             if (nextItem != null) {
-                // Находим последний элемент целевого составного блока (включая связанные элементы !canDropOver)
+                // Находим последний элемент целевого составного блока вместе с его продолжениями
                 var lastTarget = nextItem
                 val nextIdx = activeVisibleItems.indexOfFirst { it.key == nextItem.key }
                 var isBlockFullyVisible = true
                 if (nextIdx != -1) {
                     for (i in (nextIdx + 1)..activeVisibleItems.lastIndex) {
                         val item = activeVisibleItems[i]
-                        if (!canDropOver(item.key)) {
+                        if (isBlockContinuation(item.key)) {
                             lastTarget = item
                         } else {
                             break
@@ -282,7 +279,7 @@ fun Modifier.universalDragAndDrop(
                     val totalItemsCount = lazyListState.layoutInfo.totalItemsCount
                     val isLastVisibleItem = lastTarget.index == activeVisibleItems.last().index
                     val hasMoreItemsInList = lastTarget.index < totalItemsCount - 1
-                    if (isLastVisibleItem && hasMoreItemsInList && !canDropOver(lastTarget.key)) {
+                    if (isLastVisibleItem && hasMoreItemsInList && isBlockContinuation(lastTarget.key)) {
                         isBlockFullyVisible = false
                     }
                 }
@@ -318,18 +315,30 @@ fun Modifier.universalDragAndDrop(
      * @return true, если внешний обработчик подтвердил перемещение — движок воспроизведёт тактильный отклик.
      */
     fun performIntersectionCheck(deltaY: Float): Boolean {
-        val visibleItems = lazyListState.layoutInfo.visibleItemsInfo
-        val targetItem = checkSwap(key, visibleItems, state.dragAccumulatedOffset.value, deltaY) ?: return false
+        val rawVisibleItems = lazyListState.layoutInfo.visibleItemsInfo
+        val targetItem = checkSwap(key, rawVisibleItems, state.dragAccumulatedY, deltaY) ?: return false
+
+        // Тот же список, с которым работает checkSwap: свёрнутые в стопку элементы
+        // не должны попадать в обход составного блока и раздувать компенсацию
+        val visibleItems = activeItems(rawVisibleItems, key)
         val draggedItem = visibleItems.firstOrNull { it.key == key } ?: return false
 
-        val distanceToShift = if (targetItem.index > draggedItem.index) {
-            // Движение вниз: находим последний непропускаемый элемент в целевом блоке
+        val isMovingDown = targetItem.index > draggedItem.index
+
+        // Защита движка от повторного свапа с тем же элементом в том же направлении,
+        // пока LazyColumn ещё не успел завершить рекомпозицию и обновить visibleItemsInfo
+        if (targetItem.key == state.lastSwappedTargetKey && isMovingDown == state.lastSwapMovingDown) {
+            return false
+        }
+
+        val distanceToShift = if (isMovingDown) {
+            // Движение вниз: находим последний элемент целевого блока вместе с его продолжениями
             var lastTarget = targetItem
             val targetIdx = visibleItems.indexOfFirst { it.key == targetItem.key }
             if (targetIdx != -1) {
                 for (i in (targetIdx + 1)..visibleItems.lastIndex) {
                     val item = visibleItems[i]
-                    if (!canDropOver(item.key)) {
+                    if (isBlockContinuation(item.key)) {
                         lastTarget = item
                     } else {
                         break
@@ -343,12 +352,25 @@ fun Modifier.universalDragAndDrop(
             (draggedItem.offset - targetItem.offset).toFloat()
         }
 
+        // Экранное положение карточки до перестановки — оно обязано остаться прежним
+        val dragTopBeforeMove = draggedItem.offset + state.dragAccumulatedY
+
         // Запрашиваем подтверждение перемещения у внешнего обработчика
         val swapAccepted = onMoveIfNecessary(key, targetItem.key)
 
         // Если список перестроился, компенсируем прыжок с учётом полного расстояния
         if (swapAccepted) {
+            state.lastSwappedTargetKey = targetItem.key
+            state.lastSwapMovingDown = isMovingDown
             state.adjustOffset(distanceToShift)
+            // Расчёт выше — только предсказание. Куда бизнес-логика реально вставила элемент,
+            // движок узнает на следующем кадре и доберёт разницу (см. expectedDragTopAfterMove)
+            state.expectedDragTopAfterMove = dragTopBeforeMove
+        } else {
+            if (targetItem.key == state.lastSwappedTargetKey) {
+                state.lastSwappedTargetKey = null
+                state.lastSwapMovingDown = null
+            }
         }
         return swapAccepted
     }
@@ -478,6 +500,24 @@ private class ReorderableItemNode(
      */
     private var dragOwnerKey: Any? = null
 
+    /** Флаг указывает, сместил ли пользователь карточку хотя бы на минимальный порог с момента долгого нажатия */
+    private var hasMovedPastSlop = false
+
+    /** Находилась ли карточка изначально (при фиксации долгого нажатия) в верхней зоне автоскролла */
+    private var wasInitiallyInTopZone = false
+
+    /** Находилась ли карточка изначально (при фиксации долгого нажатия) в нижней зоне автоскролла */
+    private var wasInitiallyInBottomZone = false
+
+    /** Чистое накопленное физическое смещение пальца по оси Y (не зависит от скролла списка scrollBy) */
+    private var fingerOffsetY = 0f
+
+    /** Сверка предсказанной компенсации прыжка с фактическим раскладом на следующем кадре */
+    private var moveCorrectionJob: Job? = null
+
+    /** Значение [fingerOffsetY] на момент последней перестановки */
+    private var fingerOffsetAtMove = 0f
+
     private val pointerInputNode = delegate(
         SuspendingPointerInputModifierNode {
             detectDragGesturesAfterLongPress(
@@ -525,6 +565,26 @@ private class ReorderableItemNode(
         state.draggedItemKey = key
         state.isInteracting = true
         state.snapOffsetTo(0f)
+        state.lastSwappedTargetKey = null
+        state.lastSwapMovingDown = null
+        state.expectedDragTopAfterMove = Float.NaN
+        hasMovedPastSlop = false
+        fingerOffsetY = 0f
+        fingerOffsetAtMove = 0f
+
+        val layoutInfo = state.lazyListState.layoutInfo
+        val draggedItemInfo = layoutInfo.visibleItemsInfo.firstOrNull { it.key == key }
+        val initialTop = draggedItemInfo?.offset?.toFloat() ?: 0f
+        val initialBottom = initialTop + (draggedItemInfo?.size ?: 0)
+        val viewportHeight = (layoutInfo.viewportEndOffset - layoutInfo.viewportStartOffset).toFloat()
+        val scrollTopZone = (viewportHeight * topScrollZoneFraction).coerceAtLeast(1f)
+        val scrollBottomZone = (viewportHeight * bottomScrollZoneFraction).coerceAtLeast(1f)
+        // Границы зон те же, что в autoScrollStep: сверху отсчёт от начала контента,
+        // иначе гейт начальной зоны и сам автоскролл сработают на разных рубежах
+        val contentStart = layoutInfo.viewportStartOffset + layoutInfo.beforeContentPadding
+        wasInitiallyInTopZone = initialTop < contentStart + scrollTopZone
+        wasInitiallyInBottomZone = initialBottom > layoutInfo.viewportEndOffset - scrollBottomZone
+
         performHaptic(HapticFeedbackConstants.LONG_PRESS)
         onDragStart()
         startAutoScroll(key)
@@ -532,10 +592,53 @@ private class ReorderableItemNode(
 
     private fun handleDrag(change: PointerInputChange, dragAmount: Offset) {
         change.consume()
+        fingerOffsetY += dragAmount.y
         state.adjustOffset(dragAmount.y)
         state.adjustOffsetHorizontal(dragAmount.x)
+        if (!hasMovedPastSlop) {
+            val slopPx = with(currentValueOf(LocalDensity)) { DRAG_AUTOSCROLL_SLOP_DP.dp.toPx() }
+            if (hypot(state.dragAccumulatedX, fingerOffsetY) >= slopPx) {
+                hasMovedPastSlop = true
+            }
+        }
         if (onDrag(dragAmount.y)) {
             performHaptic(HapticFeedbackConstants.CLOCK_TICK)
+            dragOwnerKey?.let { scheduleMoveCorrection(it) }
+        }
+    }
+
+    /**
+     * Сверяет предсказанную компенсацию прыжка с тем, куда элемент встал на самом деле.
+     *
+     * Движок считает компенсацию геометрически, исходя из того, что элемент займёт слот цели.
+     * Для заголовков и составных блоков это не так: бизнес-логика вставляет элемент в другое
+     * место, и карточка уезжает из-под пальца на величину ошибки. Здесь ошибка добирается
+     * по факту, поэтому неточность расчёта больше не видна.
+     */
+    private fun scheduleMoveCorrection(draggedKey: Any) {
+        moveCorrectionJob?.cancel()
+        fingerOffsetAtMove = fingerOffsetY
+
+        moveCorrectionJob = coroutineScope.launch {
+            // К началу следующего кадра LazyColumn уже разложен с новым порядком элементов
+            withFrameNanos { }
+
+            val expectedDragTop = state.expectedDragTopAfterMove
+            state.expectedDragTopAfterMove = Float.NaN
+            if (expectedDragTop.isNaN() || state.draggedItemKey != draggedKey) return@launch
+
+            val itemInfo = state.lazyListState.layoutInfo.visibleItemsInfo
+                .firstOrNull { it.key == draggedKey } ?: return@launch
+
+            // Палец мог сдвинуться между перестановкой и этим кадром — это законное смещение,
+            // его вычитать нельзя. Скролл списка на dragTop не влияет: adjustOffset его гасит.
+            val fingerShift = fingerOffsetY - fingerOffsetAtMove
+            val actualDragTop = itemInfo.offset + state.dragAccumulatedY
+            val residual = (expectedDragTop + fingerShift) - actualDragTop
+
+            if (residual != 0f) {
+                state.adjustOffset(residual)
+            }
         }
     }
 
@@ -574,8 +677,15 @@ private class ReorderableItemNode(
     /** Освобождает только ресурсы самого узла, не касаясь общего состояния перетаскивания */
     private fun releaseOwnResources() {
         dragOwnerKey = null
+        hasMovedPastSlop = false
+        wasInitiallyInTopZone = false
+        wasInitiallyInBottomZone = false
+        fingerOffsetY = 0f
+        fingerOffsetAtMove = 0f
         autoScrollJob?.cancel()
         autoScrollJob = null
+        moveCorrectionJob?.cancel()
+        moveCorrectionJob = null
     }
 
     /** Плавно возвращает элемент на место и очищает общее состояние перетаскивания */
@@ -587,8 +697,9 @@ private class ReorderableItemNode(
                 // За время анимации перетаскивание мог перехватить другой элемент
                 if (state.draggedItemKey == ownerKey) {
                     state.draggedItemKey = null
-                    state.batchDraggedKeys = emptyList()
-                    state.dragScrollStartMs = Long.MIN_VALUE
+                    state.stackedDragKeys = emptyList()
+                    state.lastSwappedTargetKey = null
+                    state.lastSwapMovingDown = null
                 }
                 onDragSettled()
             }
@@ -605,29 +716,44 @@ private class ReorderableItemNode(
     private fun startAutoScroll(draggedKey: Any) {
         autoScrollJob?.cancel()
         autoScrollJob = coroutineScope.launch {
+            // Первый кадр только задаёт точку отсчёта времени
+            var lastFrameNanos = withFrameNanos { it }
+
             while (isActive && dragOwnerKey == draggedKey && state.draggedItemKey == draggedKey) {
+                val frameNanos = withFrameNanos { it }
+                val frameSeconds = ((frameNanos - lastFrameNanos) / NANOS_PER_SECOND)
+                    .coerceIn(0f, MAX_SCROLL_FRAME_SECONDS)
+                lastFrameNanos = frameNanos
+
                 try {
-                    autoScrollStep(draggedKey)
+                    autoScrollStep(draggedKey, frameSeconds)
                 } catch (cancellation: CancellationException) {
                     // Наш scrollBy отменил чужой скролл через MutatorMutex списка.
                     // Это не повод глушить автопрокрутку до конца жеста: если отменили
                     // сам жест — ensureActive пробросит исключение, иначе идём дальше.
                     coroutineContext.ensureActive()
                 }
-                delay(SCROLL_FRAME_MS)
             }
         }
     }
 
-    /** Один кадр автопрокрутки, когда перетаскиваемый элемент подходит к границе viewport */
-    private suspend fun autoScrollStep(draggedKey: Any) {
+    /**
+     * Один кадр автопрокрутки, когда перетаскиваемый элемент подходит к границе viewport.
+     *
+     * @param frameSeconds фактическая длительность кадра. Скорость задана в пикселях в секунду,
+     *        поэтому неровный кадр даёт пропорционально больший сдвиг, и движение остаётся ровным.
+     */
+    private suspend fun autoScrollStep(draggedKey: Any, frameSeconds: Float) {
+        // До тех пор, пока пользователь явно не сдвинул карточку после долгого нажатия, автоскролл заблокирован
+        if (!hasMovedPastSlop) return
+
         val layoutInfo = state.lazyListState.layoutInfo
 
         // Если слот элемента временно вышел за пределы видимой области, кадр пропускаем:
         // переупорядочивание в этом состоянии всё равно невозможно, а цикл остаётся живым
         // и продолжит работу, как только элемент вернётся в visibleItemsInfo.
         val draggedItemInfo = layoutInfo.visibleItemsInfo.firstOrNull { it.key == draggedKey } ?: return
-        val dragTop = draggedItemInfo.offset + state.dragAccumulatedOffset.value
+        val dragTop = draggedItemInfo.offset + state.dragAccumulatedY
         val dragBottom = dragTop + draggedItemInfo.size
 
         val viewportStart = layoutInfo.viewportStartOffset.toFloat()
@@ -638,16 +764,36 @@ private class ReorderableItemNode(
         val scrollTopZone = (viewportHeight * topScrollZoneFraction).coerceAtLeast(1f)
         val scrollBottomZone = (viewportHeight * bottomScrollZoneFraction).coerceAtLeast(1f)
 
+        // Верхнюю зону отсчитываем от начала контента, а не от viewportStartOffset: последний
+        // уходит под верхний contentPadding, эта полоса закрыта тулбаром и карточка туда не
+        // попадает. Считая от viewportStartOffset, мы дарили тулбару часть зоны — палец не мог
+        // погрузиться в неё глубже середины, и вверх список шёл вдвое медленнее, чем вниз.
+        // Снизу такой поправки не нужно: нижний contentPadding — это свободное место на экране,
+        // палец достаёт до самого низа viewport.
+        val contentStart = viewportStart + layoutInfo.beforeContentPadding
+
+        // Как только карточка физически вышла из начальной зоны автоскролла ИЛИ пользователь сместил её в сторону края, флаг сбрасывается:
+        // карточка считается свободно перемещаемой, и при возврате к любому краю автоскролл активируется безусловно
+        if (wasInitiallyInTopZone && (dragTop >= contentStart + scrollTopZone || fingerOffsetY < -5f)) {
+            wasInitiallyInTopZone = false
+        }
+        if (wasInitiallyInBottomZone && (dragBottom <= viewportEnd - scrollBottomZone || fingerOffsetY > 5f)) {
+            wasInitiallyInBottomZone = false
+        }
+
+        val canScrollTop = if (wasInitiallyInTopZone) fingerOffsetY < 0f else true
+        val canScrollBottom = if (wasInitiallyInBottomZone) fingerOffsetY > 0f else true
+
         val scrollAmount = when {
-            // Верхний край элемента приблизился к верхней границе с учётом TopBar
-            dragTop < viewportStart + scrollTopZone -> {
-                val distanceIntoZone = (viewportStart + scrollTopZone - dragTop).coerceIn(0f, scrollTopZone)
-                -scrollSpeed(distanceIntoZone / scrollTopZone)
+            // Верхний край элемента приблизился к верхней границе, и пользователь ведёт карточку вверх
+            dragTop < contentStart + scrollTopZone && canScrollTop -> {
+                val distanceIntoZone = (contentStart + scrollTopZone - dragTop).coerceIn(0f, scrollTopZone)
+                -scrollDistance(distanceIntoZone / scrollTopZone, frameSeconds)
             }
-            // Нижний край элемента приблизился к нижней границе viewport
-            dragBottom > viewportEnd - scrollBottomZone -> {
+            // Нижний край элемента приблизился к нижней границе viewport, и пользователь ведёт карточку вниз
+            dragBottom > viewportEnd - scrollBottomZone && canScrollBottom -> {
                 val distanceIntoZone = (dragBottom - (viewportEnd - scrollBottomZone)).coerceIn(0f, scrollBottomZone)
-                scrollSpeed(distanceIntoZone / scrollBottomZone)
+                scrollDistance(distanceIntoZone / scrollBottomZone, frameSeconds)
             }
             else -> 0f
         }
@@ -663,9 +809,15 @@ private class ReorderableItemNode(
         }
     }
 
-    /** Скорость автопрокрутки нарастает по мере погружения элемента в зону у края экрана */
-    private fun scrollSpeed(ratio: Float): Float =
-        SCROLL_MIN_PX + (SCROLL_MAX_PX - SCROLL_MIN_PX) * ratio.pow(SCROLL_CURVE_POWER)
+    /**
+     * Сдвиг за один кадр. Скорость нарастает по мере погружения элемента в зону у края экрана
+     * и задана в пикселях в секунду, поэтому длительность кадра входит в расчёт напрямую.
+     */
+    private fun scrollDistance(ratio: Float, frameSeconds: Float): Float {
+        val pixelsPerSecond = SCROLL_MIN_PX_PER_SECOND +
+            (SCROLL_MAX_PX_PER_SECOND - SCROLL_MIN_PX_PER_SECOND) * ratio.pow(SCROLL_CURVE_POWER)
+        return pixelsPerSecond * frameSeconds
+    }
 
     private fun performHaptic(feedbackConstant: Int) {
         currentValueOf(LocalView).performHapticFeedback(feedbackConstant)

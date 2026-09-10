@@ -13,7 +13,7 @@ import com.example.ui.components.dragdrop.universalDragAndDrop
  * сфер/областей (Area) на главном экране (HomePanel).
  *
  * Логика работы:
- * - Сферы перемещаются исключительно относительно других сфер (canDropOver: только ключи "area_").
+ * - Сферы перемещаются исключительно относительно других сфер (canDropOver: только ключи сфер).
  * - При начале перетаскивания (onDragStarted) развернутая область автоматически временно сворачивается,
  *   а после отпускания (onDragEnd) восстанавливается в исходное состояние.
  * - При успешном пересечении с другой сферой элементы переупорядочиваются в localAreas.
@@ -44,9 +44,9 @@ fun Modifier.areaDragAndDrop(
 
     this.universalDragAndDrop(
         state = state,
-        key = "area_${area.id}",
+        key = HomeListKeys.area(area.id),
         canDropOver = { targetKey ->
-            (targetKey as? String)?.startsWith("area_") == true
+            (targetKey as? String)?.startsWith(HomeListKeys.AREA_PREFIX) == true
         },
         onDragStarted = {
             if (currentHasProjects) {
@@ -61,12 +61,12 @@ fun Modifier.areaDragAndDrop(
             val draggedKeyStr = draggedKey as? String ?: return@universalDragAndDrop false
             val targetKeyStr = targetKey as? String ?: return@universalDragAndDrop false
 
-            if (!draggedKeyStr.startsWith("area_") || !targetKeyStr.startsWith("area_")) {
+            if (!draggedKeyStr.startsWith(HomeListKeys.AREA_PREFIX) || !targetKeyStr.startsWith(HomeListKeys.AREA_PREFIX)) {
                 return@universalDragAndDrop false
             }
 
-            val draggedId = draggedKeyStr.removePrefix("area_")
-            val targetId = targetKeyStr.removePrefix("area_")
+            val draggedId = draggedKeyStr.removePrefix(HomeListKeys.AREA_PREFIX)
+            val targetId = targetKeyStr.removePrefix(HomeListKeys.AREA_PREFIX)
 
             val fromIndex = currentLocalAreasList.indexOfFirst { it.id == draggedId }
             val toIndex = currentLocalAreasList.indexOfFirst { it.id == targetId }

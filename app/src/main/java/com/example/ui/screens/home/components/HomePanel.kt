@@ -85,7 +85,7 @@ private sealed interface HomeTreeItem {
         val project: Item,
         val areaId: String?
     ) : HomeTreeItem {
-        override val key: String get() = "proj_${project.id}"
+        override val key: String get() = HomeListKeys.project(project.id)
         override val contentType: String get() = "project"
     }
 
@@ -96,9 +96,40 @@ private sealed interface HomeTreeItem {
         val isExpanded: Boolean,
         val showTopDivider: Boolean
     ) : HomeTreeItem {
-        override val key: String get() = "area_${area.id}"
+        override val key: String get() = HomeListKeys.area(area.id)
         override val contentType: String get() = "area_header"
     }
+}
+
+/**
+ * Ключи элементов LazyColumn на главном экране.
+ *
+ * Единый источник правды: по этим же ключам модификаторы перетаскивания проектов и сфер
+ * решают, куда что можно класть. Раньше строки дублировались в трёх файлах.
+ *
+ * Движок перетаскивания про эти ключи ничего не знает: для него ключ — просто `Any`.
+ */
+internal object HomeListKeys {
+    /** Префикс строки проекта */
+    const val PROJECT_PREFIX = "proj_"
+
+    /** Префикс заголовка сферы */
+    const val AREA_PREFIX = "area_"
+
+    /** Разделитель над списком проектов «без области» */
+    const val ROOT_DIVIDER = "root_divider"
+
+    fun project(projectId: String): String = "$PROJECT_PREFIX$projectId"
+
+    fun area(areaId: String): String = "$AREA_PREFIX$areaId"
+
+    /** Идентификатор проекта из ключа строки, либо null — если ключ не проектный */
+    fun projectIdOrNull(key: String): String? =
+        if (key.startsWith(PROJECT_PREFIX)) key.removePrefix(PROJECT_PREFIX) else null
+
+    /** Идентификатор сферы из ключа строки, либо null — если ключ не сферный */
+    fun areaIdOrNull(key: String): String? =
+        if (key.startsWith(AREA_PREFIX)) key.removePrefix(AREA_PREFIX) else null
 }
 
 @Composable
@@ -318,7 +349,7 @@ fun ThingsHomePanel(
                 } else if (!isExpanded && hasProjects) {
                     // Если область свёрнута, но один из её проектов сейчас удерживается/перетаскивается пользователем — сохраняем его в дереве списка
                     val draggedKey = dragDropState.draggedItemKey
-                    areaProjects.filter { "proj_${it.id}" == draggedKey }.forEach { project ->
+                    areaProjects.filter { HomeListKeys.project(it.id) == draggedKey }.forEach { project ->
                         result.add(HomeTreeItem.ProjectItem(project, area.id))
                     }
                 }
@@ -452,7 +483,7 @@ fun ThingsHomePanel(
         }
 
         // [ИЗМЕНЕНИЕ]: Горизонтальный разделитель между списком умных категорий и началом списка проектов/областей
-        item(key = "root_divider") {
+        item(key = HomeListKeys.ROOT_DIVIDER) {
             HorizontalDivider(
                 color = dividerColor,
                 modifier = Modifier.padding(horizontal = 6.dp)
@@ -500,7 +531,7 @@ fun ThingsHomePanel(
                         label = "rotationAngle_${area.id}"
                     )
 
-                    val isAreaDragging = dragDropState.draggedItemKey == "area_${area.id}"
+                    val isAreaDragging = dragDropState.draggedItemKey == HomeListKeys.area(area.id)
                     val areaDragScale by animateFloatAsState(
                         targetValue = if (isAreaDragging) 1.04f else 1f,
                         animationSpec = spring(),
@@ -555,8 +586,8 @@ fun ThingsHomePanel(
                             Row(
                                 modifier = Modifier
                                     .graphicsLayer {
-                                        translationX = if (isAreaDragging) dragDropState.dragAccumulatedOffsetHorizontal.value else 0f
-                                        translationY = if (isAreaDragging) dragDropState.dragAccumulatedOffset.value else 0f
+                                        translationX = if (isAreaDragging) dragDropState.dragAccumulatedX else 0f
+                                        translationY = if (isAreaDragging) dragDropState.dragAccumulatedY else 0f
                                         scaleX = areaDragScale
                                         scaleY = areaDragScale
                                         shadowElevation = areaDragElev.toPx()
@@ -814,7 +845,7 @@ private fun LazyItemScope.ProjectItemRow(
     val completedCount = projectTasks.count { it.item.isCompleted }
     val totalCount = projectTasks.size
 
-    val isDragging = dragDropState.draggedItemKey == "proj_${project.id}"
+    val isDragging = dragDropState.draggedItemKey == HomeListKeys.project(project.id)
     val dragScale by animateFloatAsState(
         targetValue = if (isDragging) 1.04f else 1f,
         animationSpec = spring(),
@@ -861,8 +892,8 @@ private fun LazyItemScope.ProjectItemRow(
         Row(
             modifier = Modifier
                 .graphicsLayer {
-                    this.translationX = if (isDragging) dragDropState.dragAccumulatedOffsetHorizontal.value else 0f
-                    this.translationY = if (isDragging) dragDropState.dragAccumulatedOffset.value else 0f
+                    this.translationX = if (isDragging) dragDropState.dragAccumulatedX else 0f
+                    this.translationY = if (isDragging) dragDropState.dragAccumulatedY else 0f
                     this.scaleX = dragScale
                     this.scaleY = dragScale
                     this.shadowElevation = dragElev.toPx()
