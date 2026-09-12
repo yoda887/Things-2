@@ -18,6 +18,8 @@ import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.withContext
+import androidx.room.withTransaction
+import com.example.data.local.AppDatabase
 
 /**
  * Реализация репозитория управления задачами, проектами и областями.
@@ -27,12 +29,19 @@ import kotlinx.coroutines.withContext
  * @property localDataSource Локальный источник данных (БД Room)
  * @property remoteDataSource Удаленный источник данных (Google Tasks API)
  * @property calendarDataSource Источник данных календаря устройства
+ * @property database База Room — для транзакций, объединяющих несколько записей
  */
 class TaskRepositoryImpl @Inject constructor(
     private val localDataSource: LocalTaskDataSource,
     private val remoteDataSource: RemoteTaskDataSource,
-    private val calendarDataSource: DeviceCalendarDataSource
+    private val calendarDataSource: DeviceCalendarDataSource,
+    private val database: AppDatabase
 ) : ITaskRepository {
+
+    // Внутри транзакции можно звать только suspend-методы DAO: Room сам переносит их на поток
+    // транзакции, даже из-под withContext(Dispatchers.IO). Блокирующий вызов DAO с другого потока
+    // ждал бы окончания транзакции, а она — его.
+    override suspend fun <R> inTransaction(block: suspend () -> R): R = database.withTransaction { block() }
 
     override fun observeAllTasks(): Flow<List<ItemWithChecklist>> = combine(
         localDataSource.getAllItems(),

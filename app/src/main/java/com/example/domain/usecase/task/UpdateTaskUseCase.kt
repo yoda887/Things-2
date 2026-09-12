@@ -16,16 +16,23 @@ class UpdateTaskUseCase @Inject constructor(private val repository: ITaskReposit
      * Обновляет задачу базовой информацией.
      */
     suspend operator fun invoke(item: Item) {
-        repository.insertTask(item)
-        resolveAndAttachTags(item)
+        repository.inTransaction {
+            repository.insertTask(item)
+            resolveAndAttachTags(item)
+        }
     }
 
     /**
      * Обновляет задачу вместе с её чек-листом.
+     *
+     * Все записи — задача, чек-лист с его счётчиками, теги — идут одной транзакцией: иначе списки
+     * задач пересобирались бы после каждой из них, прямо во время анимации сворачивания редактора.
      */
     suspend operator fun invoke(item: Item, checklist: List<ChecklistItem>) {
-        repository.insertTask(item, checklist)
-        resolveAndAttachTags(item)
+        repository.inTransaction {
+            repository.insertTask(item, checklist)
+            resolveAndAttachTags(item)
+        }
     }
 
     /**

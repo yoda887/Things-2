@@ -44,6 +44,7 @@ import com.example.ui.theme.dimens
 import com.example.ui.theme.taskEditorDate
 import com.example.ui.screens.home.inlineeditor.utils.isTodayDate
 import com.example.ui.screens.home.inlineeditor.utils.isTodayDateOrPast
+import com.example.ui.screens.home.inlineeditor.utils.hasUnsavedChanges
 import com.example.ui.screens.home.inlineeditor.components.*
 import com.example.ui.screens.home.inlineeditor.dialogs.ThingsWhenDialog
 import com.example.ui.screens.home.inlineeditor.dialogs.ThingsTagDialog
@@ -157,7 +158,8 @@ fun ThingsTaskInlineEditor(
         }
     }
 
-    // Save changes immediately when collapse animation starts so ViewModel & TaskItemRow have updated title before collapse finishes
+    // Save changes immediately when collapse animation starts so ViewModel & TaskItemRow have updated title before collapse finishes.
+    // Без изменений не сохраняем — см. hasUnsavedChanges.
     LaunchedEffect(isExpanded) {
         if (!isExpanded && !isDeleted && !isDeletedExternally() && !isSavedManually) {
             isSavedManually = true
@@ -167,21 +169,26 @@ fun ThingsTaskInlineEditor(
                 val tagList = tagInput.split(",")
                     .map { it.trim() }
                     .filter { it.isNotEmpty() }
-                onSave(
-                    title,
-                    notes,
-                    section,
-                    isTonight,
-                    startDate,
-                    dueDate,
-                    tagList,
-                    task.item.projectId,
-                    checklist,
-                    priority
-                )
+                if (hasUnsavedChanges(task, title, notes, section, isTonight, startDate, dueDate, tagList, checklist, priority)) {
+                    onSave(
+                        title,
+                        notes,
+                        section,
+                        isTonight,
+                        startDate,
+                        dueDate,
+                        tagList,
+                        task.item.projectId,
+                        checklist,
+                        priority
+                    )
+                }
             }
         }
     }
+
+    val currentTask by rememberUpdatedState(task)
+    val currentOnDone by rememberUpdatedState(onDone)
 
     // Save changes automatically when focus is cleared or editor is disposed (e.g., clicking outside)
     DisposableEffect(Unit) {
@@ -193,18 +200,27 @@ fun ThingsTaskInlineEditor(
                     val tagList = currentTagInput.split(",")
                         .map { it.trim() }
                         .filter { it.isNotEmpty() }
-                    currentOnSave(
-                        currentTitle,
-                        currentNotes,
-                        currentSection,
-                        currentIsTonight,
-                        currentStartDate,
-                        currentDueDate,
-                        tagList,
-                        currentProjectId, // preserve original project safely
-                        currentChecklist,
-                        currentPriority
+                    val changed = hasUnsavedChanges(
+                        currentTask, currentTitle, currentNotes, currentSection, currentIsTonight,
+                        currentStartDate, currentDueDate, tagList, currentChecklist, currentPriority
                     )
+                    if (changed) {
+                        currentOnSave(
+                            currentTitle,
+                            currentNotes,
+                            currentSection,
+                            currentIsTonight,
+                            currentStartDate,
+                            currentDueDate,
+                            tagList,
+                            currentProjectId, // preserve original project safely
+                            currentChecklist,
+                            currentPriority
+                        )
+                    } else {
+                        // Сохранение заодно сбрасывало раскрытую задачу; без изменений делаем только это
+                        currentOnDone()
+                    }
                 }
             }
         }

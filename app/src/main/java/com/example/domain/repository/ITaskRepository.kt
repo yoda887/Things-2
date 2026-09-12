@@ -61,6 +61,12 @@ interface ITaskRepository {
     suspend fun insertTasks(items: List<Item>)
 
     /**
+     * Выполняет [block] одной транзакцией базы: наблюдатели (списки задач) получают одно изменение,
+     * а не отдельное на каждую запись внутри.
+     */
+    suspend fun <R> inTransaction(block: suspend () -> R): R
+
+    /**
      * Удаляет задачу из локальной базы данных.
      * @param item Объект удаляемой задачи
      */
