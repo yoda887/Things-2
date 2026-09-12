@@ -45,7 +45,8 @@ fun InlineMainInputRow(
     onNotesChange: (String) -> Unit,
     isCompleted: Boolean,
     onCheckboxClick: () -> Unit,
-    expansionProgress: Float = 1f,
+    // Читается только при размещении и в graphicsLayer — анимация раскрытия не пересобирает поля.
+    expansionProgress: () -> Float = { 1f },
     subtitleText: String? = null,
     showCursor: Boolean = true
 ) {
@@ -72,7 +73,7 @@ private fun InlineMainInputRowContent(
     onNotesChange: (String) -> Unit,
     isCompleted: Boolean,
     onCheckboxClick: () -> Unit,
-    expansionProgress: Float,
+    expansionProgress: () -> Float,
     subtitleText: String?,
     cursorBrush: Brush
 ) {
@@ -166,7 +167,7 @@ private fun InlineMainInputRowContent(
                 modifier = Modifier
                     .fillMaxWidth()
                     .graphicsLayer {
-                        alpha = expansionProgress
+                        alpha = expansionProgress()
                     }
             ) {
                 Spacer(modifier = Modifier.height(MaterialTheme.dimens.taskExpandedTitleNotesGap))
@@ -207,7 +208,7 @@ private fun InlineMainInputRowContent(
 @Composable
 fun TitleSubtitleLayout(
     hasSubtitle: Boolean,
-    expansionProgress: Float,
+    expansionProgress: () -> Float,
     modifier: Modifier = Modifier,
     content: @Composable () -> Unit
 ) {
@@ -244,24 +245,23 @@ fun TitleSubtitleLayout(
         // Since Layout is at topPaddingPx, the offset relative to Layout is:
         val startOffset = targetAbsoluteY - topPaddingPx
         
-        // Current offset interpolates to 0 at progress = 1 (subpixel Float precision)
-        val currentOffset = startOffset * (1f - expansionProgress)
-
         val width = maxOf(titlePlaceable.width, subtitlePlaceable?.width ?: 0)
 
-        // Reported height is simply titleHeight, since the card container smoothly animates its overall height
+        // Subtitle starts below title's first line, and as progress goes to 1, it moves UP (overlaps title)
+        val subtitleStartY = startOffset + titleSingleHeight.toFloat()
+
+        // Reported height is simply titleHeight, since the card container smoothly animates its overall height.
+        // Прогресс читается только внутри блоков слоёв: анимация обновляет их свойства без
+        // перекомпозиции и без повторного измерения. Offsets interpolate to 0 at progress = 1.
         layout(width, titleHeight) {
             titlePlaceable.placeWithLayer(0, 0) {
-                translationY = currentOffset
+                translationY = startOffset * (1f - expansionProgress())
             }
-            
-            // Subtitle starts below title's first line, and as progress goes to 1, it moves UP (overlaps title)
-            val subtitleStartY = startOffset + titleSingleHeight.toFloat()
-            val subtitleCurrentY = subtitleStartY * (1f - expansionProgress)
-            
+
             subtitlePlaceable?.placeWithLayer(0, 0) {
-                translationY = subtitleCurrentY
-                alpha = (1f - expansionProgress).coerceIn(0f, 1f)
+                val progress = expansionProgress()
+                translationY = subtitleStartY * (1f - progress)
+                alpha = (1f - progress).coerceIn(0f, 1f)
             }
         }
     }

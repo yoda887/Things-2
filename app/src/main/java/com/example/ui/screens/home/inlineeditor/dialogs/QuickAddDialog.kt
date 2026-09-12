@@ -370,8 +370,7 @@ fun QuickAddDialog(
                                     checklist = checklist,
                                     onChecklistChange = { checklist = it },
                                     showChecklistHelper = showChecklistHelper,
-                                    onShowChecklistHelperChange = { showChecklistHelper = it },
-                                    expansionProgress = 1f
+                                    onShowChecklistHelperChange = { showChecklistHelper = it }
                                 )
                             }
                         }

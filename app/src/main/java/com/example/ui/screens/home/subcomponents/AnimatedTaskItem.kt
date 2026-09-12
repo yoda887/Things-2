@@ -18,8 +18,14 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.alpha
-import androidx.compose.ui.draw.shadow
+import androidx.compose.ui.draw.drawBehind
+import androidx.compose.ui.geometry.CornerRadius
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.RectangleShape
+import androidx.compose.ui.unit.Dp
+import androidx.compose.ui.unit.lerp
+import androidx.compose.foundation.layout.PaddingValues
+import com.example.ui.components.progressPadding
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.layout.layout
 import androidx.compose.ui.unit.dp
@@ -120,7 +126,10 @@ fun AnimatedTaskItem(
     val isExpanded = inlineExpandedTaskId == task.id
     val shouldDim = inlineExpandedTaskId != null && !isExpanded
 
-    val expansionProgress by animateFloatAsState(
+    // Прогресс раскрытия читается только в лямбдах раскладки и отрисовки (layout, graphicsLayer,
+    // drawBehind) и в snapshotFlow: иначе строка и весь встроенный редактор пересобирались бы
+    // на каждом кадре анимации.
+    val expansionProgressState = animateFloatAsState(
         targetValue = if (isExpanded) 1f else 0f,
         animationSpec = tween(
             durationMillis = com.example.ui.theme.AnimationConstants.TASK_EXPANSION_DURATION_MS.toInt(),
@@ -128,6 +137,12 @@ fun AnimatedTaskItem(
         ),
         label = "expansionProgress_${task.id}"
     )
+    val expansionProgress: () -> Float = remember(expansionProgressState) { { expansionProgressState.value } }
+    // Меняется только в начале раскрытия и в конце сворачивания — композиция узнаёт лишь об этих переходах.
+    val isExpansionVisible by remember(expansionProgressState) {
+        derivedStateOf { expansionProgressState.value > 0f }
+    }
+    val showEditor = isExpanded || isExpansionVisible
 
     val density = androidx.compose.ui.platform.LocalDensity.current
     val verticalGapLimit = MaterialTheme.dimens.taskExpandedVerticalGap
@@ -138,13 +153,15 @@ fun AnimatedTaskItem(
     val totalCompensationPx = verticalGapLimitPx + extraTopPaddingPx
     var prevPaddingPx by remember(task.id) { mutableStateOf(0f) }
 
-    LaunchedEffect(expansionProgress) {
-        val currentPaddingPx = verticalGapLimitPx * expansionProgress
-        val delta = currentPaddingPx - prevPaddingPx
-        if (delta != 0f) {
-            lazyListState.dispatchRawDelta(delta)
+    LaunchedEffect(lazyListState, verticalGapLimitPx) {
+        snapshotFlow { expansionProgressState.value }.collect { progress ->
+            val currentPaddingPx = verticalGapLimitPx * progress
+            val delta = currentPaddingPx - prevPaddingPx
+            if (delta != 0f) {
+                lazyListState.dispatchRawDelta(delta)
+            }
+            prevPaddingPx = currentPaddingPx
         }
-        prevPaddingPx = currentPaddingPx
     }
 
     val isBeingDeleted by remember(task.id) {
@@ -159,25 +176,29 @@ fun AnimatedTaskItem(
         targetValue = if (isDragTask) 1.04f else 1.0f,
         label = "dragScale_${task.id}"
     )
-    val dragElevation by animateDpAsState(
-        targetValue = if (isDragTask) 8.dp else (if (isExpanded || expansionProgress > 0f) 8.dp else 0.dp),
+    // Высота тени тоже читается только при отрисовке слоя (см. graphicsLayer карточки ниже).
+    val dragElevationState = animateDpAsState(
+        targetValue = if (isDragTask || showEditor) 8.dp else 0.dp,
         animationSpec = tween(
             durationMillis = com.example.ui.theme.AnimationConstants.TASK_EXPANSION_DURATION_MS.toInt(),
             easing = FastOutSlowInEasing
         ),
         label = "dragElev_${task.id}"
     )
-    val zIndexValToUse = if (isDragTask) 100f else (if (isExpanded || expansionProgress > 0f) 1f else 0f)
+    val hasElevation by remember(dragElevationState) {
+        derivedStateOf { dragElevationState.value > 0.dp }
+    }
+    val zIndexValToUse = if (isDragTask) 100f else (if (showEditor) 1f else 0f)
 
-    val containerBgColor = if (isExpanded || expansionProgress > 0f || isDragTask || dragElevation > 0.dp) MaterialTheme.colorScheme.background else Color.Transparent
+    val containerBgColor = if (showEditor || isDragTask || hasElevation) MaterialTheme.colorScheme.background else Color.Transparent
 
     val collapsedRadius = MaterialTheme.dimens.taskCollapsedCornerRadius
     val expandedRadius = MaterialTheme.dimens.taskExpandedCornerRadius
-    val cornerRadiusValue = (collapsedRadius.value + (expandedRadius.value - collapsedRadius.value) * expansionProgress).dp
-    val currCornerShape = RoundedCornerShape(cornerRadiusValue)
-
-    val extraPaddingDp = 10.dp * expansionProgress
-    val verticalGapPadding = MaterialTheme.dimens.taskExpandedVerticalGap * expansionProgress
+    // Текущий радиус скругления карточки — только для чтения в лямбдах раскладки и отрисовки.
+    val cornerRadius: () -> Dp = { lerp(collapsedRadius, expandedRadius, expansionProgress()) }
+    // Форма для слоёв перетаскивания: вне перетаскивания прогресс в композиции не читается,
+    // а во время перетаскивания он не меняется.
+    val dragCornerShape = if (isDragTask) RoundedCornerShape(cornerRadius()) else RectangleShape
 
     val isSecondaryBatchItem = dragDropState.stackedDragKeys.isNotEmpty()
         && dragDropState.stackedDragKeys.contains(task.id)
@@ -223,11 +244,11 @@ fun AnimatedTaskItem(
                                 scaleY = dragScale
                                 rotationZ = 3.2f
                                 shadowElevation = 4.dp.toPx()
-                                shape = currCornerShape
+                                shape = dragCornerShape
                                 clip = true
                             }
-                            .background(stackCardBg, currCornerShape)
-                            .border(0.5.dp, stackBorderColor, currCornerShape)
+                            .background(stackCardBg, dragCornerShape)
+                            .border(0.5.dp, stackBorderColor, dragCornerShape)
                     )
                 }
 
@@ -244,11 +265,11 @@ fun AnimatedTaskItem(
                             scaleY = dragScale
                             rotationZ = 1.6f
                             shadowElevation = 6.dp.toPx()
-                            shape = currCornerShape
+                            shape = dragCornerShape
                             clip = true
                         }
-                        .background(stackCardBg, currCornerShape)
-                        .border(0.5.dp, stackBorderColor, currCornerShape)
+                        .background(stackCardBg, dragCornerShape)
+                        .border(0.5.dp, stackBorderColor, dragCornerShape)
                 )
             }
 
@@ -260,7 +281,7 @@ fun AnimatedTaskItem(
                         .matchParentSize()
                         .alpha(0.5f) // Полупрозрачный
                         .zIndex(-1f) // Уровнем ниже всех задач в списке (в рамках контекста элемента)
-                        .background(placeholderBgColor, currCornerShape)
+                        .background(placeholderBgColor, dragCornerShape)
                 )
             }
 
@@ -274,7 +295,11 @@ fun AnimatedTaskItem(
                     scaleY = dragScale
                     alpha = dimAlpha
                 }
-                .padding(top = verticalGapPadding, bottom = verticalGapPadding)
+                .progressPadding(
+                    progress = expansionProgress,
+                    collapsed = PaddingValues(0.dp),
+                    expanded = PaddingValues(vertical = verticalGapLimit)
+                )
         ) {
             Column(
                 modifier = Modifier
@@ -285,10 +310,10 @@ fun AnimatedTaskItem(
                         // prevPaddingPx = сколько уже скомпенсировано скроллом (dispatchRawDelta)
                         // Разница компенсируется graphicsLayer мгновенно, в том же кадре отрисовки.
                         // По мере того как dispatchRawDelta догоняет, graphicsLayer плавно уменьшает компенсацию.
-                        translationY = -(totalCompensationPx * expansionProgress - prevPaddingPx)
+                        translationY = -(totalCompensationPx * expansionProgress() - prevPaddingPx)
                     }
                     .layout { measurable, constraints ->
-                        val extraPaddingPx = extraPaddingDp.roundToPx()
+                        val extraPaddingPx = (10.dp * expansionProgress()).roundToPx()
                         val extendedConstraints = constraints.copy(
                             minWidth = (constraints.minWidth + extraPaddingPx * 2).coerceAtMost(constraints.maxWidth + extraPaddingPx * 2),
                             maxWidth = (constraints.maxWidth + extraPaddingPx * 2)
@@ -298,10 +323,23 @@ fun AnimatedTaskItem(
                             placeable.place(-extraPaddingPx, 0)
                         }
                     }
-                    .shadow(dragElevation, currCornerShape)
-                    .background(containerBgColor, currCornerShape)
+                    .graphicsLayer {
+                        // То же, что shadow(dragElevation, shape): тень и обрезка по скруглению,
+                        // но высота и радиус читаются при отрисовке слоя, а не в композиции.
+                        val elevation = dragElevationState.value
+                        shadowElevation = elevation.toPx()
+                        shape = RoundedCornerShape(cornerRadius())
+                        clip = elevation > 0.dp
+                    }
+                    .drawBehind {
+                        // То же, что background(containerBgColor, shape) со скруглением текущего радиуса.
+                        if (containerBgColor != Color.Transparent) {
+                            val radius = cornerRadius().toPx()
+                            drawRoundRect(containerBgColor, cornerRadius = CornerRadius(radius, radius))
+                        }
+                    }
             ) {
-                if (isExpanded || expansionProgress > 0f) {
+                if (showEditor) {
                     ThingsTaskInlineEditor(
                         task = taskWrapper,
                         projects = projects,
@@ -452,7 +490,7 @@ fun AnimatedTaskItem(
             }
 
         // Project/Area indicator row (drawn under/outside the Card)
-        if (isExpanded || expansionProgress > 0f) {
+        if (showEditor) {
             if (currentProject != null || currentArea != null) {
                 androidx.compose.animation.AnimatedVisibility(
                     visible = isExpanded,
@@ -468,7 +506,7 @@ fun AnimatedTaskItem(
                         modifier = Modifier
                             .fillMaxWidth()
                             .layout { measurable, constraints ->
-                                val extraPaddingPx = extraPaddingDp.roundToPx()
+                                val extraPaddingPx = (10.dp * expansionProgress()).roundToPx()
                                 val extendedConstraints = constraints.copy(
                                     minWidth = (constraints.minWidth + extraPaddingPx * 2).coerceAtMost(constraints.maxWidth + extraPaddingPx * 2),
                                     maxWidth = (constraints.maxWidth + extraPaddingPx * 2)

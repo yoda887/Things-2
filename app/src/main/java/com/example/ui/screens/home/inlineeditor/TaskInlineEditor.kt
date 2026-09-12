@@ -56,6 +56,7 @@ import androidx.compose.foundation.background
 import android.view.HapticFeedbackConstants
 import androidx.compose.ui.platform.LocalView
 import com.example.ui.components.hideSoftKeyboardNow
+import com.example.ui.components.progressPadding
 
 @OptIn(ExperimentalMaterial3Api::class, ExperimentalLayoutApi::class)
 
@@ -85,7 +86,9 @@ fun ThingsTaskInlineEditor(
     onUpdateTagsOrder: (List<Tag>) -> Unit = {},
     isDeletedExternally: () -> Boolean = { false },
     isExpanded: Boolean = true,
-    expansionProgress: Float = 1f,
+    // Прогресс раскрытия (0..1) — функцией, а не числом: его читают только лямбды раскладки
+    // и graphicsLayer, поэтому анимация не пересобирает редактор на каждом кадре.
+    expansionProgress: () -> Float = { 1f },
     onWhenDialogVisibilityChange: (Boolean) -> Unit = {},
     areas: List<com.example.data.model.Area> = emptyList(),
     onNavigateToProject: ((Item) -> Unit)? = null,
@@ -239,7 +242,7 @@ fun ThingsTaskInlineEditor(
                 val placeable = measurable.measure(constraints)
                 val fullHeight = placeable.height
                 val collapsedHeight = 46.dp.roundToPx()
-                val targetHeight = (collapsedHeight + (fullHeight - collapsedHeight) * expansionProgress).toInt()
+                val targetHeight = (collapsedHeight + (fullHeight - collapsedHeight) * expansionProgress()).toInt()
                 layout(placeable.width, targetHeight) {
                     placeable.place(0, 0)
                 }
@@ -248,25 +251,20 @@ fun ThingsTaskInlineEditor(
         colors = CardDefaults.cardColors(containerColor = Color.Transparent),
         elevation = CardDefaults.cardElevation(defaultElevation = 0.dp)
     ) {
-        // Линейная интерполяция: при p=0 совпадает с TaskItemRow.padding(start),
-        // при p=1 — дизайнерский отступ развёрнутого редактора
-        val startPadding = androidx.compose.ui.unit.lerp(
-            MaterialTheme.dimens.taskRowStartPadding,
-            MaterialTheme.dimens.taskEditorExpandedStartPadding,
-            expansionProgress
+        // Линейная интерполяция отступов: при p=0 совпадают с TaskItemRow.padding,
+        // при p=1 — дизайнерские отступы развёрнутого редактора
+        val collapsedContentPadding = PaddingValues(
+            start = MaterialTheme.dimens.taskRowStartPadding,
+            end = MaterialTheme.dimens.taskRowEndPadding,
+            top = MaterialTheme.dimens.taskCollapsedTopPadding,
+            bottom = MaterialTheme.dimens.taskCollapsedBottomPadding
         )
-        val endPadding = androidx.compose.ui.unit.lerp(
-            MaterialTheme.dimens.taskRowEndPadding,
-            MaterialTheme.dimens.taskEditorExpandedEndPadding,
-            expansionProgress
+        val expandedContentPadding = PaddingValues(
+            start = MaterialTheme.dimens.taskEditorExpandedStartPadding,
+            end = MaterialTheme.dimens.taskEditorExpandedEndPadding,
+            top = MaterialTheme.dimens.taskExpandedTopPadding,
+            bottom = MaterialTheme.dimens.taskExpandedBottomPadding
         )
-        val collapsedTopPadding = MaterialTheme.dimens.taskCollapsedTopPadding
-        val expandedTopPadding = MaterialTheme.dimens.taskExpandedTopPadding
-        val collapsedBottomPadding = MaterialTheme.dimens.taskCollapsedBottomPadding
-        val expandedBottomPadding = MaterialTheme.dimens.taskExpandedBottomPadding
-
-        val topPadding = (collapsedTopPadding.value + (expandedTopPadding.value - collapsedTopPadding.value) * expansionProgress).dp
-        val bottomPadding = (collapsedBottomPadding.value + (expandedBottomPadding.value - collapsedBottomPadding.value) * expansionProgress).dp
 
         val currentProject = remember(task.item.projectId, projects) {
             projects.firstOrNull { it.id == task.item.projectId }
@@ -283,12 +281,7 @@ fun ThingsTaskInlineEditor(
         Column(
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(
-                    start = startPadding,
-                    end = endPadding,
-                    top = topPadding,
-                    bottom = bottomPadding
-                )
+                .progressPadding(expansionProgress, collapsedContentPadding, expandedContentPadding)
         ) {
             // Main Top Content: Checkbox, Title and Notes
                 InlineMainInputRow(
@@ -328,7 +321,7 @@ fun ThingsTaskInlineEditor(
                     modifier = Modifier
                         .fillMaxWidth()
                         .graphicsLayer {
-                            alpha = expansionProgress
+                            alpha = expansionProgress()
                         }
                 ) {
                     // Checklist Items Panel
@@ -337,8 +330,7 @@ fun ThingsTaskInlineEditor(
                     checklist = checklist,
                     onChecklistChange = { checklist = it },
                     showChecklistHelper = showChecklistHelper,
-                    onShowChecklistHelperChange = { showChecklistHelper = it },
-                    expansionProgress = expansionProgress
+                    onShowChecklistHelperChange = { showChecklistHelper = it }
                 )
 
             Spacer(modifier = Modifier.height(16.dp))

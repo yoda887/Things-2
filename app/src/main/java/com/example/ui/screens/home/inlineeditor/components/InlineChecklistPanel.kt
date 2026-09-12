@@ -41,8 +41,7 @@ fun InlineChecklistPanel(
     checklist: List<ChecklistItem>,
     onChecklistChange: (List<ChecklistItem>) -> Unit,
     showChecklistHelper: Boolean,
-    onShowChecklistHelperChange: (Boolean) -> Unit,
-    expansionProgress: Float = 1f
+    onShowChecklistHelperChange: (Boolean) -> Unit
 ) {
     val showPanel = showChecklistHelper || checklist.isNotEmpty()
 
