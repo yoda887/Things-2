@@ -58,6 +58,8 @@ import com.example.ui.theme.AppIcons
 import androidx.compose.runtime.remember
 import androidx.compose.ui.unit.sp
 import com.example.ui.components.ProjectProgressArc
+import com.example.ui.components.hideSoftKeyboardNow
+import androidx.compose.ui.platform.LocalView
 import com.example.ui.screens.home.components.ProjectProgress
 import androidx.compose.material.icons.outlined.ChevronRight
 import androidx.compose.material.icons.Icons
@@ -103,9 +105,11 @@ fun AnimatedTaskItem(
     onToggleSelect: () -> Unit = {},
     selectedTaskIds: Set<String> = emptySet(),
     onExitSelectionMode: () -> Unit = {},
+    dateBadge: String? = null,
     modifier: Modifier = Modifier
 ) {
     val task = taskWrapper.item
+    val view = LocalView.current
     val currentProject = remember(task.projectId, projects) {
         projects.firstOrNull { it.id == task.projectId }
     }
@@ -421,6 +425,7 @@ fun AnimatedTaskItem(
                                 if (isSelectionMode) {
                                     onToggleSelect()
                                 } else if (inlineExpandedTaskId != null) {
+                                    view.hideSoftKeyboardNow()
                                     onEvent(ThingsCategoryListEvent.ChangeInlineExpandedTaskId(null))
                                 } else {
                                     onEvent(ThingsCategoryListEvent.ChangeInlineExpandedTaskId(task.id))
@@ -439,7 +444,8 @@ fun AnimatedTaskItem(
                             isSelected = isSelected,
                             isDragSelecting = isDragSelecting,
                             onToggleSelect = onToggleSelect,
-                            screen = screen
+                            screen = screen,
+                            dateBadge = dateBadge
                         )
                     }
                 }

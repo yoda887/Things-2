@@ -546,7 +546,7 @@ fun UpcomingDateHeader(
     Row(
         modifier = modifier
             .fillMaxWidth()
-            .padding(top = 22.dp, bottom = 10.dp),
+            .padding(top = 36.dp, bottom = 10.dp),
         verticalAlignment = Alignment.Bottom
     ) {
         Text(
@@ -558,22 +558,60 @@ fun UpcomingDateHeader(
             )
         )
         Spacer(modifier = Modifier.width(8.dp))
+        Column(
+            modifier = Modifier
+                .weight(1f)
+                .align(Alignment.Bottom)
+                .padding(bottom = 4.dp)
+        ) {
+            Box(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(0.6.dp)
+                    .background(dividerColor)
+            )
+            Spacer(modifier = Modifier.height(4.dp))
+            Text(
+                text = dayOfWeekLabel,
+                style = TextStyle(
+                    fontSize = 16.sp,
+                    fontWeight = FontWeight.Bold,
+                    color = textSecondaryColor.copy(alpha = 0.5f)
+                )
+            )
+        }
+    }
+}
+
+/**
+ * Заголовок месяца на экране «Предстоящие» (Upcoming) для событий и задач позже 14 дней.
+ */
+@Composable
+fun UpcomingMonthHeader(
+    monthLabel: String,
+    textPrimaryColor: Color,
+    dividerColor: Color,
+    modifier: Modifier = Modifier
+) {
+    Column(
+        modifier = modifier
+            .fillMaxWidth()
+            .padding(top = 40.dp, bottom = 8.dp)
+    ) {
+        Box(
+            modifier = Modifier
+                .fillMaxWidth()
+                .height(0.6.dp)
+                .background(dividerColor)
+        )
+        Spacer(modifier = Modifier.height(6.dp))
         Text(
-            text = dayOfWeekLabel,
+            text = monthLabel,
             style = TextStyle(
                 fontSize = 16.sp,
                 fontWeight = FontWeight.Bold,
-                color = textSecondaryColor.copy(alpha = 0.5f)
-            ),
-            modifier = Modifier.padding(bottom = 4.dp)
-        )
-        Spacer(modifier = Modifier.width(12.dp))
-        Box(
-            modifier = Modifier
-                .weight(1f)
-                .height(0.6.dp)
-                .background(dividerColor)
-                .padding(bottom = 4.dp)
+                color = textPrimaryColor
+            )
         )
     }
 }

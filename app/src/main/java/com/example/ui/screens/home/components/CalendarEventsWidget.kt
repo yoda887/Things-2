@@ -180,7 +180,16 @@ fun CalendarEventsWidget(
  */
 data class UpcomingEventItem(
     val event: Item,
-    val dateMillis: Long
+    val dateMillis: Long,
+    val dayOfMonthLabel: String? = null,
+    /**
+     * Последнее событие своего дня или месяца — под ним выводится отступ.
+     *
+     * Несмотря на название, флаг НЕ зависит от того, есть ли после события задачи: наличие задач
+     * меняется во время перетаскивания, и высота строки менялась бы вместе с ним, из-за чего
+     * карточка дёргалась бы при переходе через день.
+     */
+    val isLastBeforeTasks: Boolean = false
 )
 
 /**
@@ -194,7 +203,8 @@ data class UpcomingEventItem(
 fun UpcomingCalendarEventRow(
     event: Item,
     textSecondaryColor: Color,
-    textPrimaryColor: Color
+    textPrimaryColor: Color,
+    datePrefix: String? = null
 ) {
     val eventStart = event.eventStartMillis ?: 0L
     val hasTime = !event.isAllDay && eventStart > 0
@@ -208,6 +218,38 @@ fun UpcomingCalendarEventRow(
         }
     }
     
+    // В секциях месяцев отображается только число месяца в цвете календаря и название события в этом же цвете
+    if (datePrefix != null) {
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(vertical = 2.dp, horizontal = 4.dp),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Text(
+                text = datePrefix,
+                style = TextStyle(
+                    fontSize = 15.sp,
+                    fontWeight = FontWeight.Normal,
+                    color = baseColor
+                ),
+                modifier = Modifier.padding(end = 8.dp)
+            )
+            Text(
+                text = event.title,
+                style = TextStyle(
+                    fontSize = 15.sp,
+                    fontWeight = FontWeight.Normal,
+                    color = baseColor
+                ),
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis,
+                modifier = Modifier.weight(1f)
+            )
+        }
+        return
+    }
+
     Row(
         modifier = Modifier
             .fillMaxWidth()

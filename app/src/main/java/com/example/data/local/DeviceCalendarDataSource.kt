@@ -16,7 +16,7 @@ import java.util.Calendar
 class DeviceCalendarDataSource(private val context: Context) {
 
     /**
-     * Запрашивает события системного календаря за текущий день и ближайшие 14 дней.
+     * Запрашивает события системного календаря за текущий день и на 1 год вперед (для отображения в днях и месяцах Upcoming).
      * Если разрешение не предоставлено или возникает ошибка, возвращает резервные/тестовые данные.
      *
      * @return [Result] со списком обнаруженных событий в виде объектов [Item]
@@ -42,9 +42,9 @@ class DeviceCalendarDataSource(private val context: Context) {
             cal.set(Calendar.MILLISECOND, 0)
             val startDay = cal.timeInMillis
             
-            // Вычисляем конец периода (14 дней вперед)
+            // Вычисляем конец периода (1 год вперед для отображения событий во всех месяцах Upcoming)
             val calEnd = Calendar.getInstance()
-            calEnd.add(Calendar.DAY_OF_YEAR, 14)
+            calEnd.add(Calendar.YEAR, 1)
             calEnd.set(Calendar.HOUR_OF_DAY, 23)
             calEnd.set(Calendar.MINUTE, 59)
             calEnd.set(Calendar.SECOND, 59)
@@ -223,6 +223,29 @@ class DeviceCalendarDataSource(private val context: Context) {
                 calendarColor = android.graphics.Color.parseColor("#4CD964"),
                 calendarDisplayName = "Work",
                 eventStartMillis = confStart,
+                isAllDay = false
+            )
+        )
+
+        val nextMonthCal = Calendar.getInstance().apply { add(Calendar.DAY_OF_YEAR, 25) }
+        val nextMonthEventStart = Calendar.getInstance().apply {
+            timeInMillis = nextMonthCal.timeInMillis
+            set(Calendar.HOUR_OF_DAY, 11)
+            set(Calendar.MINUTE, 0)
+            set(Calendar.SECOND, 0)
+        }.timeInMillis
+        events.add(
+            Item(
+                id = "cal_mock_future_plan",
+                type = 0,
+                title = "Quarterly Strategy Review",
+                notes = "Local Calendar Event",
+                start = 1,
+                status = 0,
+                cachedTags = "Calendar",
+                calendarColor = android.graphics.Color.parseColor("#4CD964"),
+                calendarDisplayName = "Work",
+                eventStartMillis = nextMonthEventStart,
                 isAllDay = false
             )
         )

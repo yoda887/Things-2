@@ -75,7 +75,8 @@ fun TaskItemRow(
     leftColumnWidth: androidx.compose.ui.unit.Dp = androidx.compose.material3.MaterialTheme.dimens.mainCheckboxSize,
     spacingToText: androidx.compose.ui.unit.Dp = androidx.compose.material3.MaterialTheme.dimens.taskSpacingToTextDefault,
     screen: ActiveScreen = ActiveScreen.INBOX,
-    areas: List<com.example.data.model.Area> = emptyList()
+    areas: List<com.example.data.model.Area> = emptyList(),
+    dateBadge: String? = null
 ) {
     val isDark = false
     val titleFontSize = androidx.compose.material3.MaterialTheme.typography.titleMedium.fontSize
@@ -263,7 +264,27 @@ fun TaskItemRow(
                         modifier = Modifier.weight(1f),
                         verticalAlignment = Alignment.CenterVertically
                     ) {
-                        if (screen == ActiveScreen.PROJECT_DETAIL && dateIndicator != null) {
+                        if (dateBadge != null) {
+                            val isSystemDark = androidx.compose.foundation.isSystemInDarkTheme()
+                            val badgeTextColor = if (isSystemDark) Color(0xFFE0E0E0) else Color(0xFF5F6368)
+                            val badgeBgColor = if (isSystemDark) Color(0xFF2C2C2E) else Color(0xFFECECEC)
+
+                            Text(
+                                text = dateBadge,
+                                style = TextStyle(
+                                    fontSize = 11.sp,
+                                    fontWeight = FontWeight.Medium,
+                                    color = badgeTextColor
+                                ),
+                                modifier = Modifier
+                                    .background(
+                                        color = badgeBgColor,
+                                        shape = RoundedCornerShape(4.dp)
+                                    )
+                                    .padding(horizontal = 6.dp, vertical = 2.dp)
+                            )
+                            Spacer(modifier = Modifier.width(6.dp))
+                        } else if (screen == ActiveScreen.PROJECT_DETAIL && dateIndicator != null) {
                             when (dateIndicator) {
                                 is DateIndicatorResult.IconIndicator -> {
                                     Icon(

@@ -28,7 +28,23 @@ import androidx.compose.ui.unit.sp
 import com.example.ui.theme.ThingsBlue
 import com.example.ui.theme.dimens
 import com.example.ui.theme.taskEditorNotes
+import androidx.compose.foundation.text.selection.LocalTextSelectionColors
+import androidx.compose.foundation.text.selection.TextSelectionColors
+import androidx.compose.runtime.CompositionLocalProvider
+import androidx.compose.ui.graphics.Brush
 
+/** Маркер курсора и выделение прозрачного цвета — чтобы спрятать их, не снимая фокус с поля. */
+private val HiddenTextSelectionColors = TextSelectionColors(
+    handleColor = Color.Transparent,
+    backgroundColor = Color.Transparent
+)
+
+/**
+ * @param showCursor при `false` курсор и его маркер не рисуются, но поле остаётся в фокусе.
+ * Нужен на время сворачивания редактора: снять там фокус или выключить поле (`enabled = false`)
+ * нельзя — Compose сразу вызовет restartInput, и ещё видимая клавиатура перерисуется
+ * (см. hideSoftKeyboardNow).
+ */
 @Composable
 fun InlineMainInputRow(
     title: String,
@@ -38,7 +54,37 @@ fun InlineMainInputRow(
     isCompleted: Boolean,
     onCheckboxClick: () -> Unit,
     expansionProgress: Float = 1f,
-    subtitleText: String? = null
+    subtitleText: String? = null,
+    showCursor: Boolean = true
+) {
+    CompositionLocalProvider(
+        LocalTextSelectionColors provides if (showCursor) LocalTextSelectionColors.current else HiddenTextSelectionColors
+    ) {
+        InlineMainInputRowContent(
+            title = title,
+            onTitleChange = onTitleChange,
+            notes = notes,
+            onNotesChange = onNotesChange,
+            isCompleted = isCompleted,
+            onCheckboxClick = onCheckboxClick,
+            expansionProgress = expansionProgress,
+            subtitleText = subtitleText,
+            cursorBrush = SolidColor(if (showCursor) ThingsBlue else Color.Unspecified)
+        )
+    }
+}
+
+@Composable
+private fun InlineMainInputRowContent(
+    title: String,
+    onTitleChange: (String) -> Unit,
+    notes: String,
+    onNotesChange: (String) -> Unit,
+    isCompleted: Boolean,
+    onCheckboxClick: () -> Unit,
+    expansionProgress: Float,
+    subtitleText: String?,
+    cursorBrush: Brush
 ) {
     val textPrimaryColor = Color(0xFF1C1C1E) // blackish font
     val textSecondaryColor = com.example.ui.theme.ThingsTextNotesLight
@@ -80,7 +126,7 @@ fun InlineMainInputRow(
                         fontWeight = FontWeight.Normal,
                         color = textPrimaryColor
                     ),
-                    cursorBrush = SolidColor(ThingsBlue),
+                    cursorBrush = cursorBrush,
                     modifier = Modifier
                         .fillMaxWidth()
                         .testTag("task_title_input"),
@@ -144,7 +190,7 @@ fun InlineMainInputRow(
                         fontWeight = FontWeight.Normal,
                         color = textSecondaryColor
                     ),
-                    cursorBrush = SolidColor(ThingsBlue),
+                    cursorBrush = cursorBrush,
                     modifier = Modifier
                         .fillMaxWidth()
                         .heightIn(min = 44.dp)

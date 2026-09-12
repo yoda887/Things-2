@@ -181,6 +181,65 @@ fun Modifier.taskDragAndDrop(
                     true
                 }
 
+                // ПЕРЕТАСКИВАНИЕ НА ЗАГОЛОВОК МЕСЯЦА (Upcoming screen)
+                screen == ActiveScreen.UPCOMING && targetId.startsWith(TaskListKeys.MONTH_HEADER_PREFIX) -> {
+                    val timestampStr = targetId.substringAfter(TaskListKeys.MONTH_HEADER_PREFIX)
+                    val monthTimestamp = timestampStr.toLongOrNull() ?: return@universalDragAndDrop false
+
+                    val list = localTasksList.toMutableList()
+                    var moved = list.removeAt(fromIndex)
+
+                    // Защита от no-op: если задача уже физически лежит в разделе этого заголовка,
+                    // обмен принимать не нужно (аналог oldDayStart == targetDayStart в ветке дней).
+                    // Сравнение по (год, месяц) само по себе неверно для первого раздела после
+                    // 14-дневного горизонта — это не целый месяц, а его остаток, и monthTimestamp
+                    // для него не 1-е число, а конец горизонта. Задача из тех же календарных суток,
+                    // но ещё внутри 14 дней, принадлежит разделу «дни», а не этому заголовку —
+                    // поэтому условие "уже в этом разделе" дополнительно требует oldStart >= horizonEnd.
+                    val horizonEndMillis = upcomingDays.lastOrNull()?.let { it.dateMillis + MS_PER_DAY } ?: 0L
+                    val oldStart = moved.item.startDate
+                    if (oldStart != null && oldStart >= horizonEndMillis) {
+                        val oldCal = Calendar.getInstance().apply { timeInMillis = oldStart }
+                        val targetCal = Calendar.getInstance().apply { timeInMillis = monthTimestamp }
+                        val alreadyInThisSection = oldCal.get(Calendar.YEAR) == targetCal.get(Calendar.YEAR)
+                            && oldCal.get(Calendar.MONTH) == targetCal.get(Calendar.MONTH)
+                        if (alreadyInThisSection) return@universalDragAndDrop false
+                    }
+
+                    val targetDateMillis = if (movingDown) {
+                        // При движении вниз — задача помещается в начало месяца или периода (после событий календаря)
+                        Calendar.getInstance().apply {
+                            timeInMillis = monthTimestamp
+                            set(Calendar.HOUR_OF_DAY, 12)
+                            set(Calendar.MINUTE, 0)
+                            set(Calendar.SECOND, 0)
+                            set(Calendar.MILLISECOND, 0)
+                        }.timeInMillis
+                    } else {
+                        // При движении вверх через заголовок месяца — задача переходит в предшествующий раздел
+                        val prevCal = Calendar.getInstance().apply {
+                            timeInMillis = monthTimestamp
+                            add(Calendar.DAY_OF_MONTH, -1)
+                            set(Calendar.HOUR_OF_DAY, 12)
+                            set(Calendar.MINUTE, 0)
+                            set(Calendar.SECOND, 0)
+                            set(Calendar.MILLISECOND, 0)
+                        }
+                        val tomorrowStart = upcomingDays.firstOrNull()?.dateMillis ?: 0L
+                        maxOf(prevCal.timeInMillis, tomorrowStart)
+                    }
+
+                    val insertAt = list.indexOfFirst { it.item.startDate != null && it.item.startDate!! >= monthTimestamp }
+                        .takeIf { it != -1 } ?: list.size
+
+                    moved = moved.copyWithStartDate(targetDateMillis)
+                    moved = moved.copy(item = moved.item.copy(sortOrder = if (movingDown) -1 else 99999))
+
+                    list.add(insertAt, moved)
+                    onLocalTasksListChange(list)
+                    true
+                }
+
                 // КЛАССИЧЕСКИЙ ОБМЕН ДВУХ ЗАДАЧ (Swap)
                 else -> {
                     val toIndex = localTasksList.indexOfFirst { it.item.id == targetId }

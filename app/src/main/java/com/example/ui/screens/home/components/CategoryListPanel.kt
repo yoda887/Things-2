@@ -40,7 +40,7 @@ import androidx.compose.ui.input.nestedscroll.NestedScrollConnection
 import androidx.compose.ui.input.nestedscroll.NestedScrollSource
 import androidx.compose.ui.input.nestedscroll.nestedScroll
 import androidx.compose.ui.input.pointer.pointerInput
-import androidx.compose.ui.platform.LocalFocusManager
+import com.example.ui.components.hideSoftKeyboardNow
 import androidx.compose.ui.unit.Velocity
 import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.testTag
@@ -79,6 +79,7 @@ import java.text.SimpleDateFormat
 import com.example.ui.screens.home.subcomponents.MainCategoryHeader
 import com.example.ui.screens.home.subcomponents.SubCategoryHeader
 import com.example.ui.screens.home.subcomponents.UpcomingDateHeader
+import com.example.ui.screens.home.subcomponents.UpcomingMonthHeader
 import com.example.ui.screens.home.subcomponents.TagFilterRow
 import com.example.ui.screens.home.subcomponents.ProjectItemRow
 import com.example.ui.screens.home.subcomponents.EmptyStateView
@@ -171,7 +172,7 @@ fun ThingsCategoryListPanel(
         }
     }
 
-    val focusManager = LocalFocusManager.current
+    val view = androidx.compose.ui.platform.LocalView.current
 
     var showMoveDialog by remember { mutableStateOf(false) }
     var showDeleteConfirm by remember { mutableStateOf(false) }
@@ -220,8 +221,11 @@ fun ThingsCategoryListPanel(
         }
     }
 
-    // Извлечение состояния предстоящих дней (UpcomingDays)
-    val upcomingDays = rememberUpcomingDays(localTasksList, calendarEvents)
+    // Извлечение состояния предстоящих дней (UpcomingDays) и месяцев
+    val upcomingSchedule = rememberUpcomingSchedule(localTasksList, calendarEvents)
+    val upcomingDays = upcomingSchedule.days
+    val upcomingMonths = upcomingSchedule.months
+    val monthTaskBadges = upcomingSchedule.monthTaskBadges
 
     val standardToday = remember(localTasksList) { localTasksList.filter { !it.item.isTonight } }
     val eveningToday = remember(localTasksList) { localTasksList.filter { it.item.isTonight } }
@@ -235,6 +239,7 @@ fun ThingsCategoryListPanel(
         eveningToday = eveningToday,
         draggedItemKey = dragDropState.draggedItemKey,
         upcomingDays = upcomingDays,
+        upcomingMonths = upcomingMonths,
         projects = projects,
         area = area,
         displayTasks = displayTasks
@@ -434,8 +439,10 @@ fun ThingsCategoryListPanel(
                 .graphicsLayer { translationY = pullOffset.value }
                 .pointerInput(Unit) {
                     detectTapGestures(onTap = {
+                        // Клавиатуру прячем первой — в этом же кадре (см. hideSoftKeyboardNow),
+                        // не дожидаясь, пока сворачивание редактора пройдёт через цепочку ViewModel.
+                        view.hideSoftKeyboardNow()
                         onEvent(ThingsCategoryListEvent.ChangeInlineExpandedTaskId(null))
-                        focusManager.clearFocus()
                     })
                 }
                 // [ИЗМЕНЕНИЕ]: Установлен аккуратный отступ 10.dp от края экрана до карточек задач
@@ -514,6 +521,7 @@ fun ThingsCategoryListPanel(
                         is ItemWithChecklist -> item.item.id
                         is Item -> item.id
                         is UpcomingHeaderItem -> "${TaskListKeys.DAY_HEADER_PREFIX}${item.dateMillis}"
+                        is UpcomingMonthHeaderItem -> "${TaskListKeys.MONTH_HEADER_PREFIX}${item.monthMillis}"
                         is UpcomingEventItem -> "${TaskListKeys.CALENDAR_EVENT_PREFIX}${item.event.id}_${item.dateMillis}"
                         else -> item.toString()
                     }
@@ -522,6 +530,7 @@ fun ThingsCategoryListPanel(
                         is ItemWithChecklist -> {
                             AnimatedTaskItem(
                                 taskWrapper = item,
+                                dateBadge = monthTaskBadges[item.item.id],
                                 dragDropState = dragDropState,
                                 inlineExpandedTaskId = inlineExpandedTaskId,
                                 textPrimaryColor = textPrimaryColor,
@@ -606,6 +615,25 @@ fun ThingsCategoryListPanel(
                                     .graphicsLayer { alpha = dimAlpha }
                             )
                         }
+                        is UpcomingMonthHeaderItem -> {
+                            val header = item
+                            val shouldDim = inlineExpandedTaskId != null
+                            val dimAlpha by animateFloatAsState(
+                                targetValue = if (shouldDim) 0.3f else 1f,
+                                label = "dimAlpha_mhdr_${header.monthMillis}"
+                            )
+                            UpcomingMonthHeader(
+                                monthLabel = header.monthLabel,
+                                textPrimaryColor = textPrimaryColor,
+                                dividerColor = dividerColor,
+                                modifier = Modifier
+                                    .padding(horizontal = 8.dp)
+                                    .animateItem(
+                                        placementSpec = placementSpec
+                                    )
+                                    .graphicsLayer { alpha = dimAlpha }
+                            )
+                        }
                         is UpcomingEventItem -> {
                             val event = item.event
                             val shouldDim = inlineExpandedTaskId != null
@@ -613,9 +641,11 @@ fun ThingsCategoryListPanel(
                                 targetValue = if (shouldDim) 0.3f else 1f,
                                 label = "dimAlpha_ev_${event.id}"
                             )
+                            val bottomSpacing = if (item.isLastBeforeTasks) 11.dp else 0.dp
                             Column(
                                 modifier = Modifier
                                     .padding(horizontal = 8.dp)
+                                    .padding(bottom = bottomSpacing)
                                     .animateItem(
                                         placementSpec = placementSpec
                                     )
@@ -624,7 +654,8 @@ fun ThingsCategoryListPanel(
                                 UpcomingCalendarEventRow(
                                     event = event,
                                     textSecondaryColor = textSecondaryColor,
-                                    textPrimaryColor = textPrimaryColor
+                                    textPrimaryColor = textPrimaryColor,
+                                    datePrefix = item.dayOfMonthLabel
                                 )
                             }
                         }

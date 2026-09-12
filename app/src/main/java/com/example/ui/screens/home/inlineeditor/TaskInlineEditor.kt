@@ -54,6 +54,7 @@ import java.text.SimpleDateFormat
 import androidx.compose.foundation.background
 import android.view.HapticFeedbackConstants
 import androidx.compose.ui.platform.LocalView
+import com.example.ui.components.hideSoftKeyboardNow
 
 @OptIn(ExperimentalMaterial3Api::class, ExperimentalLayoutApi::class)
 
@@ -141,6 +142,19 @@ fun ThingsTaskInlineEditor(
 
     LaunchedEffect(task.checklist) {
         checklist = task.checklist
+    }
+
+    // Клавиатуру убираем в момент начала сворачивания, а не когда редактор покинет композицию:
+    // иначе она висела бы всю анимацию сворачивания (300 мс). Это страховка для путей закрытия,
+    // которые не прячут клавиатуру сами: чекбокс, переход в проект.
+    // Фокус здесь НЕ снимаем и поля не выключаем (enabled = false действует так же): Compose сразу
+    // вызвал бы restartInput, и ещё видимая Gboard перерисовалась бы в раскладку с рядом цифр
+    // прямо во время скрытия. Сессия ввода закончится сама, когда редактор покинет композицию, —
+    // к этому моменту hideSoftKeyboardNow уже полностью скроет клавиатуру.
+    LaunchedEffect(isExpanded) {
+        if (!isExpanded) {
+            view.hideSoftKeyboardNow()
+        }
     }
 
     // Save changes immediately when collapse animation starts so ViewModel & TaskItemRow have updated title before collapse finishes
@@ -269,6 +283,7 @@ fun ThingsTaskInlineEditor(
                     isCompleted = task.item.isCompleted,
                     expansionProgress = expansionProgress,
                     subtitleText = subtitleText,
+                    showCursor = isExpanded,
                     onCheckboxClick = {
                         isSavedManually = true
                         if (title.isBlank() && notes.isBlank() && checklist.isEmpty()) {
