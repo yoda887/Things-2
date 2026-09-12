@@ -41,6 +41,7 @@ import com.example.ui.components.dragdrop.GenericDragDropState
 import com.example.ui.screens.home.components.taskDragAndDrop
 import com.example.ui.screens.home.components.UpcomingDay
 import com.example.ui.screens.home.inlineeditor.ThingsTaskInlineEditor
+import com.example.ui.screens.home.inlineeditor.utils.EditorOutsideTouch
 import com.example.ui.theme.dimens
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.delay
@@ -112,6 +113,7 @@ fun AnimatedTaskItem(
     selectedTaskIds: Set<String> = emptySet(),
     onExitSelectionMode: () -> Unit = {},
     dateBadge: String? = null,
+    editorOutsideTouch: EditorOutsideTouch? = null,
     modifier: Modifier = Modifier
 ) {
     val task = taskWrapper.item
@@ -351,6 +353,7 @@ fun AnimatedTaskItem(
                         onUpdateTagsOrder = { tags -> onEvent(ThingsCategoryListEvent.UpdateTagsOrder(tags)) },
                         isDeletedExternally = { deletedTaskIds.contains(task.id) },
                         isExpanded = isExpanded,
+                        outsideTouch = editorOutsideTouch,
                         expansionProgress = expansionProgress,
                         screen = screen,
                         onSave = { title, notes, section, isTonight, startDate, dueDate, tags, projectId, checklist, priority ->
@@ -463,6 +466,7 @@ fun AnimatedTaskItem(
                                 if (isSelectionMode) {
                                     onToggleSelect()
                                 } else if (inlineExpandedTaskId != null) {
+                                    editorOutsideTouch?.onCollapseRequested()
                                     view.hideSoftKeyboardNow()
                                     onEvent(ThingsCategoryListEvent.ChangeInlineExpandedTaskId(null))
                                 } else {
@@ -525,6 +529,7 @@ fun AnimatedTaskItem(
                                 .clip(androidx.compose.foundation.shape.RoundedCornerShape(6.dp))
                                 .clickable {
                                     // Save task automatically and navigate
+                                    editorOutsideTouch?.onCollapseRequested()
                                     onEvent(ThingsCategoryListEvent.ChangeInlineExpandedTaskId(null))
                                     if (currentProject != null) {
                                         onEvent(ThingsCategoryListEvent.ClickProject(currentProject))

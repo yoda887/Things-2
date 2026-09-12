@@ -45,6 +45,8 @@ import com.example.ui.theme.taskEditorDate
 import com.example.ui.screens.home.inlineeditor.utils.isTodayDate
 import com.example.ui.screens.home.inlineeditor.utils.isTodayDateOrPast
 import com.example.ui.screens.home.inlineeditor.utils.hasUnsavedChanges
+import com.example.ui.screens.home.inlineeditor.utils.EditorOutsideTouch
+import com.example.ui.screens.home.inlineeditor.utils.markTouchesInsideEditor
 import com.example.ui.screens.home.inlineeditor.components.*
 import com.example.ui.screens.home.inlineeditor.dialogs.ThingsWhenDialog
 import com.example.ui.screens.home.inlineeditor.dialogs.ThingsTagDialog
@@ -86,6 +88,8 @@ fun ThingsTaskInlineEditor(
     onUpdateTagsOrder: (List<Tag>) -> Unit = {},
     isDeletedExternally: () -> Boolean = { false },
     isExpanded: Boolean = true,
+    // Касания списка вне редактора: по ним маркеры курсора прячутся ещё до начала сворачивания
+    outsideTouch: EditorOutsideTouch? = null,
     // Прогресс раскрытия (0..1) — функцией, а не числом: его читают только лямбды раскладки
     // и graphicsLayer, поэтому анимация не пересобирает редактор на каждом кадре.
     expansionProgress: () -> Float = { 1f },
@@ -237,6 +241,7 @@ fun ThingsTaskInlineEditor(
         modifier = Modifier
             .fillMaxWidth()
             .testTag("task_inline_editor")
+            .then(if (outsideTouch != null) Modifier.markTouchesInsideEditor(outsideTouch) else Modifier)
             .clip(RoundedCornerShape(8.dp))
             .layout { measurable, constraints ->
                 val placeable = measurable.measure(constraints)
@@ -292,7 +297,7 @@ fun ThingsTaskInlineEditor(
                     isCompleted = task.item.isCompleted,
                     expansionProgress = expansionProgress,
                     subtitleText = subtitleText,
-                    showCursor = isExpanded,
+                    showCursor = isExpanded && outsideTouch?.hideHandles != true,
                     onCheckboxClick = {
                         isSavedManually = true
                         if (title.isBlank() && notes.isBlank() && checklist.isEmpty()) {

@@ -137,8 +137,21 @@ private val imeHideTimeout = Runnable { finishImeHide() }
 
 private fun View.hideSoftKeyboard(onHidden: (() -> Unit)?) {
     if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R && hideImeWithControlledAnimation(onHidden)) return
-    hideImeViaInputMethodManager()
+    if (mayHaveSoftKeyboard()) hideImeViaInputMethodManager()
     onHidden?.invoke()
+}
+
+/**
+ * Может ли клавиатура быть на экране или вот-вот появиться. Если нет — вызов IMM не нужен: на HyperOS
+ * даже холостой `hideSoftInputFromWindow` занимает ~4 мс главного потока, а зовётся он из обработчика
+ * нажатия, с которого начинается сворачивание редактора.
+ */
+private fun View.mayHaveSoftKeyboard(): Boolean {
+    if (Build.VERSION.SDK_INT < Build.VERSION_CODES.R) return true
+    if (rootWindowInsets?.isVisible(WindowInsets.Type.ime()) == true) return true
+    // Поле с сессией ввода: клавиатуру могли запросить, но она ещё не начала появляться
+    val imm = context.getSystemService(InputMethodManager::class.java) ?: return false
+    return imm.isAcceptingText
 }
 
 private fun View.hideImeViaInputMethodManager() {

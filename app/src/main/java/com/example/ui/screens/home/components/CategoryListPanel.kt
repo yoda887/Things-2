@@ -1,5 +1,8 @@
 package com.example.ui.screens.home.components
 
+import com.example.ui.screens.home.inlineeditor.utils.EditorOutsideTouch
+import com.example.ui.screens.home.inlineeditor.utils.observeTouchesOutsideEditor
+
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.delay
 
@@ -135,6 +138,8 @@ fun ThingsCategoryListPanel(
     val lazyListState = rememberLazyListState()
     // Используем новое универсальное состояние жестов перетаскивания вместо старого TaskDragDropState
     val dragDropState = rememberGenericDragDropState(lazyListState)
+    // Касания вне раскрытого редактора: маркеры курсора прячутся ещё до отпускания пальца
+    val editorOutsideTouch = remember { EditorOutsideTouch() }
     
     var localTasksList by remember { mutableStateOf(state.displayTasks) }
     val currentDisplayTasks by rememberUpdatedState(state.displayTasks)
@@ -280,6 +285,10 @@ fun ThingsCategoryListPanel(
     }
 
     val anyExpanded = inlineExpandedTaskId != null
+    val isEditorOpen by rememberUpdatedState(anyExpanded)
+    LaunchedEffect(inlineExpandedTaskId) {
+        if (inlineExpandedTaskId != null) editorOutsideTouch.reset()
+    }
 
     // --- Scroll_B: аккумулятор ручного скролла пользователя ---
     val manualScrollDelta = remember { FloatAccumulator() }
@@ -437,8 +446,10 @@ fun ThingsCategoryListPanel(
                 .nestedScroll(nestedScrollConnection)
                 .nestedScroll(scrollTrackingConnection)
                 .graphicsLayer { translationY = pullOffset.value }
+                .observeTouchesOutsideEditor(editorOutsideTouch) { isEditorOpen }
                 .pointerInput(Unit) {
                     detectTapGestures(onTap = {
+                        editorOutsideTouch.onCollapseRequested()
                         // Клавиатуру прячем первой — в этом же кадре (см. hideSoftKeyboardNow),
                         // не дожидаясь, пока сворачивание редактора пройдёт через цепочку ViewModel.
                         view.hideSoftKeyboardNow()
@@ -533,6 +544,7 @@ fun ThingsCategoryListPanel(
                                 dateBadge = monthTaskBadges[item.item.id],
                                 dragDropState = dragDropState,
                                 inlineExpandedTaskId = inlineExpandedTaskId,
+                                editorOutsideTouch = editorOutsideTouch,
                                 textPrimaryColor = textPrimaryColor,
                                 textSecondaryColor = textSecondaryColor,
                                 dividerColor = dividerColor,
