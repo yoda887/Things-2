@@ -196,9 +196,13 @@ fun Modifier.taskDragAndDrop(
                     // для него не 1-е число, а конец горизонта. Задача из тех же календарных суток,
                     // но ещё внутри 14 дней, принадлежит разделу «дни», а не этому заголовку —
                     // поэтому условие "уже в этом разделе" дополнительно требует oldStart >= horizonEnd.
+                    // Только при движении вниз: вверх через заголовок своего раздела задача как раз
+                    // уходит в предыдущий раздел. Раньше проверка срабатывала в обе стороны, и задачу
+                    // нельзя было поднять из месяца выше его заголовка — слот оставался внизу,
+                    // уезжал за экран, и автопрокрутка вставала.
                     val horizonEndMillis = upcomingDays.lastOrNull()?.let { it.dateMillis + MS_PER_DAY } ?: 0L
                     val oldStart = moved.item.startDate
-                    if (oldStart != null && oldStart >= horizonEndMillis) {
+                    if (movingDown && oldStart != null && oldStart >= horizonEndMillis) {
                         val oldCal = Calendar.getInstance().apply { timeInMillis = oldStart }
                         val targetCal = Calendar.getInstance().apply { timeInMillis = monthTimestamp }
                         val alreadyInThisSection = oldCal.get(Calendar.YEAR) == targetCal.get(Calendar.YEAR)

@@ -12,6 +12,8 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.input.pointer.PointerInputChange
 import androidx.compose.ui.input.pointer.SuspendingPointerInputModifierNode
+import androidx.compose.ui.layout.LocalPinnableContainer
+import androidx.compose.ui.layout.PinnableContainer
 import androidx.compose.ui.node.CompositionLocalConsumerModifierNode
 import androidx.compose.ui.node.DelegatingNode
 import androidx.compose.ui.node.ModifierNodeElement
@@ -284,7 +286,14 @@ fun Modifier.universalDragAndDrop(
                     }
                 }
 
-                if (isBlockFullyVisible) {
+                // Место, куда встанет элемент, должно остаться в видимой области. Иначе у нижнего
+                // края (особенно при автопрокрутке) слот уезжает за экран, LazyColumn выгружает
+                // строку, жест отменяется и карточка пропадает из-под пальца. Пока цель видна
+                // не целиком, ждём: автопрокрутка сама вытянет её на экран.
+                val targetInViewport =
+                    lastTarget.offset + lastTarget.size <= lazyListState.layoutInfo.viewportEndOffset
+
+                if (isBlockFullyVisible && targetInViewport) {
                     val downThreshold = lastTarget.offset + lastTarget.size * threshold
                     if (dragBottom > downThreshold) {
                         return nextItem
@@ -297,7 +306,8 @@ fun Modifier.universalDragAndDrop(
                 .filter { it.index < draggedItem.index }
                 .maxByOrNull { it.index }
 
-            if (prevItem != null) {
+            // То же у верхнего края: слот займёт место цели, и оно должно быть в видимой области
+            if (prevItem != null && prevItem.offset >= lazyListState.layoutInfo.viewportStartOffset) {
                 val upThreshold = prevItem.offset + prevItem.size * (1f - threshold)
                 if (dragTop < upThreshold) {
                     return prevItem
@@ -518,6 +528,12 @@ private class ReorderableItemNode(
     /** Значение [fingerOffsetY] на момент последней перестановки */
     private var fingerOffsetAtMove = 0f
 
+    /**
+     * Закрепление строки в LazyColumn на время жеста: пока оно держится, список не выгружает
+     * элемент, даже если его слот ушёл за экран. Выгрузка отменила бы жест посреди перетаскивания.
+     */
+    private var pinnedHandle: PinnableContainer.PinnedHandle? = null
+
     private val pointerInputNode = delegate(
         SuspendingPointerInputModifierNode {
             detectDragGesturesAfterLongPress(
@@ -584,6 +600,9 @@ private class ReorderableItemNode(
         val contentStart = layoutInfo.viewportStartOffset + layoutInfo.beforeContentPadding
         wasInitiallyInTopZone = initialTop < contentStart + scrollTopZone
         wasInitiallyInBottomZone = initialBottom > layoutInfo.viewportEndOffset - scrollBottomZone
+
+        pinnedHandle?.release()
+        pinnedHandle = currentValueOf(LocalPinnableContainer)?.pin()
 
         performHaptic(HapticFeedbackConstants.LONG_PRESS)
         onDragStart()
@@ -671,7 +690,16 @@ private class ReorderableItemNode(
     private fun takeOwnedGesture(): Any? {
         val ownerKey = dragOwnerKey
         releaseOwnResources()
-        return ownerKey?.takeIf { state.draggedItemKey == it }
+        val owned = ownerKey?.takeIf { state.draggedItemKey == it }
+        // Жест этого узла закончился, но общее состояние уже принадлежит другому элементу:
+        // анимации возврата не будет, закрепление снимаем сразу
+        if (owned == null) releasePin()
+        return owned
+    }
+
+    private fun releasePin() {
+        pinnedHandle?.release()
+        pinnedHandle = null
     }
 
     /** Освобождает только ресурсы самого узла, не касаясь общего состояния перетаскивания */
@@ -690,20 +718,33 @@ private class ReorderableItemNode(
 
     /** Плавно возвращает элемент на место и очищает общее состояние перетаскивания */
     private fun settle(ownerKey: Any) {
+        // Узел уже отсоединён (строку выгрузили посреди жеста): его корутины отменены, и запущенная
+        // здесь корутина не выполнилась бы ни разу — карточка так и висела бы в режиме
+        // перетаскивания. Без анимации возвращаем всё на место сразу.
+        if (!isAttached) {
+            if (state.draggedItemKey == ownerKey) state.snapOffsetTo(0f)
+            finishSettle(ownerKey)
+            return
+        }
         coroutineScope.launch {
             try {
                 state.animateOffsetToZero()
             } finally {
-                // За время анимации перетаскивание мог перехватить другой элемент
-                if (state.draggedItemKey == ownerKey) {
-                    state.draggedItemKey = null
-                    state.stackedDragKeys = emptyList()
-                    state.lastSwappedTargetKey = null
-                    state.lastSwapMovingDown = null
-                }
-                onDragSettled()
+                finishSettle(ownerKey)
             }
         }
+    }
+
+    private fun finishSettle(ownerKey: Any) {
+        // За время анимации перетаскивание мог перехватить другой элемент
+        if (state.draggedItemKey == ownerKey) {
+            state.draggedItemKey = null
+            state.stackedDragKeys = emptyList()
+            state.lastSwappedTargetKey = null
+            state.lastSwapMovingDown = null
+        }
+        releasePin()
+        onDragSettled()
     }
 
     // ── Авто-скролл ───────────────────────────────────────────────────────────
@@ -805,6 +846,10 @@ private class ReorderableItemNode(
             state.adjustOffset(consumed)
             if (onDragged(consumed)) {
                 performHaptic(HapticFeedbackConstants.CLOCK_TICK)
+                // Перестановка во время автопрокрутки так же, как от движения пальца, требует
+                // сверки: на заголовках бизнес-логика вставляет элемент не туда, куда указывает
+                // геометрия, и без сверки карточка отскакивала от пальца
+                scheduleMoveCorrection(draggedKey)
             }
         }
     }
