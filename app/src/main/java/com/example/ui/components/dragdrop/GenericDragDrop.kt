@@ -111,6 +111,26 @@ class GenericDragDropState(
     internal var lastSwapMovingDown: Boolean? = null
 
     /**
+     * Смещение, с которым перетаскиваемый элемент [key] нужно РИСОВАТЬ: как [dragAccumulatedY], но верхняя
+     * грань элемента не поднимается выше начала контента списка.
+     *
+     * Верхний contentPadding списка обычно закрыт панелью инструментов, а над ней строка состояния.
+     * Палец у самого верхнего края уводил карточку туда, и её не было видно, пока идёт автопрокрутка.
+     * Здесь карточка упирается в границу контента и остаётся на виду. Сам жест по-прежнему считается
+     * по [dragAccumulatedY] — положению под пальцем: глубина погружения в зону автопрокрутки, а с ней
+     * и скорость у края, не меняются.
+     *
+     * Читать в лямбде graphicsLayer: значение зависит от раскладки списка и обновляет только слой.
+     */
+    fun visualDragOffsetY(key: Any): Float {
+        val offset = dragAccumulatedY
+        val layoutInfo = lazyListState.layoutInfo
+        val itemInfo = layoutInfo.visibleItemsInfo.firstOrNull { it.key == key } ?: return offset
+        val contentTop = layoutInfo.viewportStartOffset + layoutInfo.beforeContentPadding
+        return maxOf(offset, (contentTop - itemInfo.offset).toFloat())
+    }
+
+    /**
      * Позволяет мгновенно и синхронно скорректировать смещение драга
      * (например, при программном изменении состава или порядка элементов списка в процессе перетаскивания).
      */
@@ -738,6 +758,11 @@ private class ReorderableItemNode(
             if (state.draggedItemKey == ownerKey) state.snapOffsetTo(0f)
             finishSettle(ownerKey)
             return
+        }
+        // Возврат начинается оттуда, где карточку видно: если палец ушёл выше края контента,
+        // рисовалась она прижатой к нему (см. visualDragOffsetY), а не под пальцем
+        if (state.draggedItemKey == ownerKey) {
+            state.dragAccumulatedY = state.visualDragOffsetY(ownerKey)
         }
         coroutineScope.launch {
             try {

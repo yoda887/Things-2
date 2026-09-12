@@ -238,7 +238,7 @@ fun AnimatedTaskItem(
                         modifier = Modifier
                             .matchParentSize()
                             .graphicsLayer {
-                                val currentTranslationY = if (isDragTask) dragDropState.dragAccumulatedY else 0f
+                                val currentTranslationY = if (isDragTask) dragDropState.visualDragOffsetY(task.id) else 0f
                                 val currentTranslationX = if (isDragTask) dragDropState.dragAccumulatedX else 0f
                                 translationX = currentTranslationX + 8.dp.toPx()
                                 translationY = currentTranslationY + 8.dp.toPx()
@@ -259,7 +259,7 @@ fun AnimatedTaskItem(
                     modifier = Modifier
                         .matchParentSize()
                         .graphicsLayer {
-                            val currentTranslationY = if (isDragTask) dragDropState.dragAccumulatedY else 0f
+                            val currentTranslationY = if (isDragTask) dragDropState.visualDragOffsetY(task.id) else 0f
                             val currentTranslationX = if (isDragTask) dragDropState.dragAccumulatedX else 0f
                             translationX = currentTranslationX + 4.dp.toPx()
                             translationY = currentTranslationY + 4.dp.toPx()
@@ -292,7 +292,7 @@ fun AnimatedTaskItem(
                 .fillMaxWidth()
                 .graphicsLayer {
                     translationX = if (isDragTask) dragDropState.dragAccumulatedX else 0f
-                    translationY = if (isDragTask) dragDropState.dragAccumulatedY else 0f
+                    translationY = if (isDragTask) dragDropState.visualDragOffsetY(task.id) else 0f
                     scaleX = dragScale
                     scaleY = dragScale
                     alpha = dimAlpha
