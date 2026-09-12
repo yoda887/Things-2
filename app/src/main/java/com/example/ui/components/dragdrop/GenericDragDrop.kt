@@ -562,6 +562,17 @@ private class ReorderableItemNode(
     private var fingerOffsetAtMove = 0f
 
     /**
+     * Верхняя грань карточки в координатах списка — там, где она должна быть под пальцем.
+     * В начале жеста совпадает со слотом, дальше меняется только от движения пальца: ни прокрутка,
+     * ни перестановки её не сдвигают. По ней считаются зоны автопрокрутки — в том числе когда слота
+     * элемента нет среди видимых — и с ней сверяется смещение карточки.
+     */
+    private var cardTop = 0f
+
+    /** Высота перетаскиваемого элемента — для кадров, когда его слота нет среди видимых */
+    private var cardSize = 0
+
+    /**
      * Закрепление строки в LazyColumn на время жеста: пока оно держится, список не выгружает
      * элемент, даже если его слот ушёл за экран. Выгрузка отменила бы жест посреди перетаскивания.
      */
@@ -625,6 +636,8 @@ private class ReorderableItemNode(
         val draggedItemInfo = layoutInfo.visibleItemsInfo.firstOrNull { it.key == key }
         val initialTop = draggedItemInfo?.offset?.toFloat() ?: 0f
         val initialBottom = initialTop + (draggedItemInfo?.size ?: 0)
+        cardTop = initialTop
+        cardSize = draggedItemInfo?.size ?: 0
         val viewportHeight = (layoutInfo.viewportEndOffset - layoutInfo.viewportStartOffset).toFloat()
         val scrollTopZone = (viewportHeight * topScrollZoneFraction).coerceAtLeast(1f)
         val scrollBottomZone = (viewportHeight * bottomScrollZoneFraction).coerceAtLeast(1f)
@@ -645,6 +658,7 @@ private class ReorderableItemNode(
     private fun handleDrag(change: PointerInputChange, dragAmount: Offset) {
         change.consume()
         fingerOffsetY += dragAmount.y
+        cardTop += dragAmount.y
         state.adjustOffset(dragAmount.y)
         state.adjustOffsetHorizontal(dragAmount.x)
         if (!hasMovedPastSlop) {
@@ -828,12 +842,26 @@ private class ReorderableItemNode(
 
         val layoutInfo = state.lazyListState.layoutInfo
 
-        // Если слот элемента временно вышел за пределы видимой области, кадр пропускаем:
-        // переупорядочивание в этом состоянии всё равно невозможно, а цикл остаётся живым
-        // и продолжит работу, как только элемент вернётся в visibleItemsInfo.
-        val draggedItemInfo = layoutInfo.visibleItemsInfo.firstOrNull { it.key == draggedKey } ?: return
-        val dragTop = draggedItemInfo.offset + state.dragAccumulatedY
-        val dragBottom = dragTop + draggedItemInfo.size
+        // Слота элемента может не быть среди видимых: бизнес-логика вставляет элемент не туда, куда
+        // указывает геометрия (на заголовке месяца — после всех событий месяца), и слот оказывается
+        // за краем экрана. Раньше такой кадр пропускался — автопрокрутка вставала и до конца жеста
+        // уже не возобновлялась, потому что вернуть слот на экран могла только она сама. Теперь зоны
+        // считаются по положению карточки под пальцем (cardTop): прокрутка продолжается и сама
+        // вытягивает слот обратно, а перестановки возобновляются, как только он снова виден.
+        val draggedItemInfo = layoutInfo.visibleItemsInfo.firstOrNull { it.key == draggedKey }
+        if (draggedItemInfo != null) {
+            cardSize = draggedItemInfo.size
+            // Смещение карточки — ровно от слота до места под пальцем: так добирается расхождение,
+            // накопившееся, пока слот был вне экрана. Сразу после перестановки раскладка списка
+            // здесь ещё старая, и до сверки перестановки (expectedDragTopAfterMove) не трогаем —
+            // иначе пересчёт по устаревшему слоту отменил бы компенсацию прыжка
+            if (state.expectedDragTopAfterMove.isNaN()) {
+                val desiredOffset = cardTop - draggedItemInfo.offset
+                if (desiredOffset != state.dragAccumulatedY) state.dragAccumulatedY = desiredOffset
+            }
+        }
+        val dragTop = cardTop
+        val dragBottom = dragTop + cardSize
 
         val viewportStart = layoutInfo.viewportStartOffset.toFloat()
         val viewportEnd = layoutInfo.viewportEndOffset.toFloat()
@@ -880,7 +908,9 @@ private class ReorderableItemNode(
         if (scrollAmount == 0f) return
 
         val consumed = state.lazyListState.scrollBy(scrollAmount)
-        if (consumed != 0f) {
+        // Пока слота не видно, смещение карточки не трогаем: её положение на экране задаёт палец,
+        // а точное смещение от слота выставится в первом кадре, где слот снова виден
+        if (consumed != 0f && draggedItemInfo != null) {
             state.adjustOffset(consumed)
             if (onDragged(consumed)) {
                 performHaptic(HapticFeedbackConstants.CLOCK_TICK)
