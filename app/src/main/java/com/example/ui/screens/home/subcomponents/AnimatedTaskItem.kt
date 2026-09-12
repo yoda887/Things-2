@@ -125,6 +125,16 @@ fun AnimatedTaskItem(
         areas.firstOrNull { it.id == task.areaId }
     }
     val isDragTask = dragDropState.draggedItemKey == task.id
+    // На время перетаскивания вид строки замораживается: задача и метка даты — такие, какими были,
+    // когда её подняли. Во время жеста бизнес-логика меняет задаче дату и раздел (в Upcoming у задач
+    // за 14-дневным горизонтом есть метка даты, у задач в днях — нет), и карточка под пальцем мигала
+    // меткой на каждом заголовке. Куда встанет задача, показывает слот; новый вид строка получит
+    // после отпускания. Сам жест работает с живыми данными (taskWrapper).
+    val dragAppearance = remember(isDragTask) {
+        if (isDragTask) taskWrapper.item to dateBadge else null
+    }
+    val rowTask = dragAppearance?.first ?: taskWrapper.item
+    val rowDateBadge = if (dragAppearance != null) dragAppearance.second else dateBadge
     val isExpanded = inlineExpandedTaskId == task.id
     val shouldDim = inlineExpandedTaskId != null && !isExpanded
 
@@ -457,7 +467,7 @@ fun AnimatedTaskItem(
                     ) {
                         TaskItemRow(
                             modifier = Modifier,
-                            task = taskWrapper.item,
+                            task = rowTask,
                             textPrimaryColor = textPrimaryColor,
                             textSecondaryColor = textSecondaryColor,
                             dividerColor = dividerColor,
@@ -487,7 +497,7 @@ fun AnimatedTaskItem(
                             isDragSelecting = isDragSelecting,
                             onToggleSelect = onToggleSelect,
                             screen = screen,
-                            dateBadge = dateBadge
+                            dateBadge = rowDateBadge
                         )
                     }
                 }
