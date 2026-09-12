@@ -365,11 +365,24 @@ fun Modifier.universalDragAndDrop(
         // Экранное положение карточки до перестановки — оно обязано остаться прежним
         val dragTopBeforeMove = draggedItem.offset + state.dragAccumulatedY
 
+        // Позиция прокрутки до перестановки: первая видимая строка и её смещение
+        val firstVisibleIndex = lazyListState.firstVisibleItemIndex
+        val firstVisibleOffset = lazyListState.firstVisibleItemScrollOffset
+
         // Запрашиваем подтверждение перемещения у внешнего обработчика
         val swapAccepted = onMoveIfNecessary(key, targetItem.key)
 
         // Если список перестроился, компенсируем прыжок с учётом полного расстояния
         if (swapAccepted) {
+            // LazyColumn держит прокрутку за КЛЮЧ первой видимой строки. Если она сама участвует
+            // в перестановке (или элемент переезжает через неё), список сдвигается вслед за её
+            // ключом: у верхнего края слот перетаскиваемого элемента уходил выше экрана,
+            // автопрокрутка без видимого слота вставала до конца жеста, а у ведущего элемента
+            // наверху прыгало всё содержимое. Оставляем на месте ту же ПОЗИЦИЮ с тем же смещением —
+            // экран стоит, как стоял, и слот остаётся там, где его ждёт расчёт компенсации.
+            if (targetItem.index <= firstVisibleIndex || draggedItem.index <= firstVisibleIndex) {
+                lazyListState.requestScrollToItem(firstVisibleIndex, firstVisibleOffset)
+            }
             state.lastSwappedTargetKey = targetItem.key
             state.lastSwapMovingDown = isMovingDown
             state.adjustOffset(distanceToShift)
