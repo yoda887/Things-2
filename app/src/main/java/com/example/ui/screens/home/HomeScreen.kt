@@ -5,6 +5,7 @@ import android.content.pm.PackageManager
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.animation.*
+import com.example.ui.components.holdForSoftKeyboardHide
 import androidx.compose.animation.core.spring
 import androidx.compose.animation.core.tween
 import androidx.compose.animation.core.CubicBezierEasing
@@ -723,9 +724,11 @@ fun ThingsHomeScreen(viewModel: ThingsViewModel = hiltViewModel()) {
                     ),
                     targetScale = 0.6f,
                     transformOrigin = TransformOrigin(0.5f, 0.05f)
-                )
+                    // Видимая часть гаснет за ~170 мс, а поле поиска должно уйти после полного скрытия клавиатуры
+                ) + holdForSoftKeyboardHide()
             ) {
                 ThingsSearchOverlay(
+                    isClosing = !isSearchOverlayActive,
                     searchQuery = searchQuery,
                     onSearchQueryChange = { viewModel.setSearchQuery(it) },
                     allTasks = allTasksRaw,

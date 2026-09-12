@@ -46,6 +46,9 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
+import androidx.compose.ui.platform.LocalView
+import com.example.ui.components.hideSoftKeyboardNow
+import com.example.ui.components.hideSoftKeyboardThen
 
 import com.example.R
 import com.example.data.model.Tag
@@ -390,11 +393,20 @@ fun ThingsTagDialog(
         onDismissRequest = onDismissRequest,
         properties = DialogProperties(usePlatformDefaultWidth = false)
     ) {
+        // У диалога своё окно, и клавиатура сейчас принадлежит ему — прячем её через его View
+        val dialogView = LocalView.current
+        // Экран ввода тега уезжает 300 мс — клавиатуру прячем в момент ухода с него (см. hideSoftKeyboardNow)
+        LaunchedEffect(currentScreen) {
+            if (currentScreen != DialogScreen.CREATE && currentScreen != DialogScreen.EDIT) {
+                dialogView.hideSoftKeyboardNow()
+            }
+        }
         Box(
             modifier = Modifier
                 .fillMaxSize()
                 .pointerInput(Unit) {
-                    detectTapGestures(onTap = { onDismissRequest() })
+                    // Окно диалога исчезает сразу — сначала дожидаемся скрытия клавиатуры
+                    detectTapGestures(onTap = { dialogView.hideSoftKeyboardThen(onDismissRequest) })
                 },
             contentAlignment = Alignment.Center
         ) {

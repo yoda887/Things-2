@@ -34,8 +34,9 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.SolidColor
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.platform.LocalDensity
-import androidx.compose.ui.platform.LocalFocusManager
-import androidx.compose.ui.platform.LocalSoftwareKeyboardController
+import androidx.compose.ui.platform.LocalView
+import com.example.ui.components.HideTextSelectionHandles
+import com.example.ui.components.hideSoftKeyboardNow
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
@@ -110,8 +111,7 @@ fun QuickAddDialog(
     var showChecklistHelper by remember { mutableStateOf(false) }
 
     val titleFocusRequester = remember { FocusRequester() }
-    val keyboardController = LocalSoftwareKeyboardController.current
-    val focusManager = LocalFocusManager.current
+    val view = LocalView.current
 
     LaunchedEffect(Unit) {
         delay(150)
@@ -171,8 +171,9 @@ fun QuickAddDialog(
     val handleDismiss: () -> Unit = {
         if (!isClosing) {
             isClosing = true
-            keyboardController?.hide()
-            focusManager.clearFocus()
+            // Клавиатуру прячем сразу, а фокус не снимаем: поле уйдёт вместе с диалогом через 300 мс,
+            // когда клавиатура уже скрыта полностью (см. hideSoftKeyboardNow)
+            view.hideSoftKeyboardNow()
             coroutineScope.launch {
                 // 1. Мягкий подскок вверх (-12dp), затем плавный уход вниз
                 launch {
@@ -196,8 +197,9 @@ fun QuickAddDialog(
     val handleSave: () -> Unit = {
         if (!isClosing) {
             isClosing = true
-            keyboardController?.hide()
-            focusManager.clearFocus()
+            // Клавиатуру прячем сразу, а фокус не снимаем: поле уйдёт вместе с диалогом через 300 мс,
+            // когда клавиатура уже скрыта полностью (см. hideSoftKeyboardNow)
+            view.hideSoftKeyboardNow()
             coroutineScope.launch {
                 // 1. Мягкий подскок вверх (-12dp), затем плавный уход вниз
                 launch {
@@ -304,22 +306,26 @@ fun QuickAddDialog(
                                             )
                                         )
                                     }
-                                    BasicTextField(
-                                        value = title,
-                                        onValueChange = { title = it },
-                                        textStyle = TextStyle(
-                                            fontSize = MaterialTheme.typography.titleMedium.fontSize,
-                                            fontWeight = FontWeight.Normal,
-                                            color = Color(0xFF1C1C1E)
-                                        ),
-                                        singleLine = false,
-                                        maxLines = 4,
-                                        keyboardOptions = KeyboardOptions(capitalization = KeyboardCapitalization.Sentences),
-                                        cursorBrush = SolidColor(ThingsBlue),
-                                        modifier = Modifier
-                                            .fillMaxWidth()
-                                            .focusRequester(titleFocusRequester)
-                                    )
+                                    // Пока диалог закрывается, курсор и его маркер не рисуем: фокус остаётся
+                                    // до полного скрытия клавиатуры (см. hideSoftKeyboardNow)
+                                    HideTextSelectionHandles(hidden = isClosing) {
+                                        BasicTextField(
+                                            value = title,
+                                            onValueChange = { title = it },
+                                            textStyle = TextStyle(
+                                                fontSize = MaterialTheme.typography.titleMedium.fontSize,
+                                                fontWeight = FontWeight.Normal,
+                                                color = Color(0xFF1C1C1E)
+                                            ),
+                                            singleLine = false,
+                                            maxLines = 4,
+                                            keyboardOptions = KeyboardOptions(capitalization = KeyboardCapitalization.Sentences),
+                                            cursorBrush = SolidColor(if (isClosing) Color.Unspecified else ThingsBlue),
+                                            modifier = Modifier
+                                                .fillMaxWidth()
+                                                .focusRequester(titleFocusRequester)
+                                        )
+                                    }
                                 }
 
                                 Spacer(modifier = Modifier.height(MaterialTheme.dimens.taskExpandedTitleNotesGap))
@@ -336,18 +342,20 @@ fun QuickAddDialog(
                                             )
                                         )
                                     }
-                                    BasicTextField(
-                                        value = notes,
-                                        onValueChange = { notes = it },
-                                        minLines = 4,
-                                        textStyle = TextStyle(
-                                            fontSize = MaterialTheme.typography.taskEditorNotes.fontSize,
-                                            fontWeight = FontWeight.Normal,
-                                            color = ThingsTextNotesLight
-                                        ),
-                                        cursorBrush = SolidColor(ThingsBlue),
-                                        modifier = Modifier.fillMaxWidth()
-                                    )
+                                    HideTextSelectionHandles(hidden = isClosing) {
+                                        BasicTextField(
+                                            value = notes,
+                                            onValueChange = { notes = it },
+                                            minLines = 4,
+                                            textStyle = TextStyle(
+                                                fontSize = MaterialTheme.typography.taskEditorNotes.fontSize,
+                                                fontWeight = FontWeight.Normal,
+                                                color = ThingsTextNotesLight
+                                            ),
+                                            cursorBrush = SolidColor(if (isClosing) Color.Unspecified else ThingsBlue),
+                                            modifier = Modifier.fillMaxWidth()
+                                        )
+                                    }
                                 }
                             }
                         }
@@ -356,14 +364,16 @@ fun QuickAddDialog(
 
                         // 3. Чеклист (InlineChecklistPanel)
                         Box(modifier = Modifier.fillMaxWidth().padding(end = 40.dp)) {
-                            InlineChecklistPanel(
-                                itemId = "",
-                                checklist = checklist,
-                                onChecklistChange = { checklist = it },
-                                showChecklistHelper = showChecklistHelper,
-                                onShowChecklistHelperChange = { showChecklistHelper = it },
-                                expansionProgress = 1f
-                            )
+                            HideTextSelectionHandles(hidden = isClosing) {
+                                InlineChecklistPanel(
+                                    itemId = "",
+                                    checklist = checklist,
+                                    onChecklistChange = { checklist = it },
+                                    showChecklistHelper = showChecklistHelper,
+                                    onShowChecklistHelperChange = { showChecklistHelper = it },
+                                    expansionProgress = 1f
+                                )
+                            }
                         }
 
                         Spacer(modifier = Modifier.height(32.dp))

@@ -41,6 +41,10 @@ import com.example.ui.screens.home.ActiveScreen
 import com.example.ui.theme.AppIcons
 import com.example.ui.screens.home.subcomponents.TaskItemRow
 import com.example.ui.components.ProjectProgressArc
+import com.example.ui.components.HideTextSelectionHandles
+import com.example.ui.components.hideSoftKeyboardNow
+import androidx.compose.ui.graphics.SolidColor
+import androidx.compose.ui.platform.LocalView
 import com.example.ui.theme.*
 
 /**
@@ -69,7 +73,9 @@ fun ThingsSearchOverlay(
     // [ИЗМЕНЕНИЕ]: Список недавно искавшихся/выбранных в поиске объектов
     recentSearchItems: List<SearchResultItem> = emptyList(),
     onContinueSearchClick: () -> Unit = {},
-    onTaskToggle: (ItemWithChecklist) -> Unit = {}
+    onTaskToggle: (ItemWithChecklist) -> Unit = {},
+    // Оверлей уже закрывается (идёт exit-анимация), но поле поиска ещё в композиции
+    isClosing: Boolean = false
 ) {
     val isDark = isSystemInDarkTheme()
     
@@ -85,6 +91,12 @@ fun ThingsSearchOverlay(
     val focusRequester = remember { FocusRequester() }
     LaunchedEffect(Unit) {
         focusRequester.requestFocus()
+    }
+    // Клавиатуру прячем в момент закрытия, фокус не снимаем: поле уйдёт вместе с оверлеем, когда
+    // клавиатура уже скрыта полностью (см. hideSoftKeyboardNow и holdForSoftKeyboardHide)
+    val view = LocalView.current
+    LaunchedEffect(isClosing) {
+        if (isClosing) view.hideSoftKeyboardNow()
     }
 
     // [ИЗМЕНЕНИЕ]: Переменная состояния и пружинная анимация смещения по вертикали при появлении оверлея
@@ -241,21 +253,26 @@ fun ThingsSearchOverlay(
                                         fontWeight = FontWeight.Normal
                                     )
                                 }
-                                BasicTextField(
-                                    value = searchQuery,
-                                    onValueChange = onSearchQueryChange,
-                                    textStyle = TextStyle(
-                                        color = textPrimary,
-                                        fontSize = 16.sp,
-                                        fontWeight = FontWeight.Normal
-                                    ),
-                                    singleLine = true,
-                                    keyboardOptions = KeyboardOptions(imeAction = ImeAction.Search),
-                                    modifier = Modifier
-                                        .fillMaxWidth()
-                                        .focusRequester(focusRequester)
-                                        .testTag("overlay_search_input")
-                                )
+                                // Пока оверлей закрывается, курсор и его маркер не рисуем: фокус остаётся
+                                // до полного скрытия клавиатуры
+                                HideTextSelectionHandles(hidden = isClosing) {
+                                    BasicTextField(
+                                        value = searchQuery,
+                                        onValueChange = onSearchQueryChange,
+                                        textStyle = TextStyle(
+                                            color = textPrimary,
+                                            fontSize = 16.sp,
+                                            fontWeight = FontWeight.Normal
+                                        ),
+                                        singleLine = true,
+                                        keyboardOptions = KeyboardOptions(imeAction = ImeAction.Search),
+                                        cursorBrush = SolidColor(if (isClosing) Color.Unspecified else Color.Black),
+                                        modifier = Modifier
+                                            .fillMaxWidth()
+                                            .focusRequester(focusRequester)
+                                            .testTag("overlay_search_input")
+                                    )
+                                }
                             }
                             
                             // Кнопка очистки текста внутри инпута

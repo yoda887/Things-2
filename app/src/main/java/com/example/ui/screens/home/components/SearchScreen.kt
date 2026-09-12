@@ -32,6 +32,8 @@ import com.example.data.model.Item
 import com.example.data.model.ItemWithChecklist
 import com.example.data.model.ChecklistItem
 import com.example.ui.components.ThingsCheckbox
+import com.example.ui.components.hideSoftKeyboardNow
+import androidx.compose.ui.platform.LocalView
 import com.example.ui.theme.*
 
 /**
@@ -122,7 +124,13 @@ fun ThingsSearchScreen(
                 horizontalArrangement = Arrangement.SpaceBetween,
                 verticalAlignment = Alignment.CenterVertically
             ) {
-                IconButton(onClick = onBack) {
+                // Клавиатуру прячем до перехода: экран уезжает 300 мс, и поле поиска уйдёт уже после
+                // полного скрытия клавиатуры (см. hideSoftKeyboardNow)
+                val view = LocalView.current
+                IconButton(onClick = {
+                    view.hideSoftKeyboardNow()
+                    onBack()
+                }) {
                     Icon(
                         imageVector = Icons.AutoMirrored.Filled.KeyboardArrowLeft,
                         contentDescription = "Back",

@@ -53,6 +53,9 @@ import androidx.compose.ui.input.nestedscroll.NestedScrollConnection
 import androidx.compose.ui.input.nestedscroll.NestedScrollSource
 import androidx.compose.ui.input.nestedscroll.nestedScroll
 import androidx.compose.ui.platform.testTag
+import androidx.compose.ui.platform.LocalView
+import com.example.ui.components.hideSoftKeyboardNow
+import com.example.ui.components.hideSoftKeyboardThen
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
@@ -169,6 +172,8 @@ fun ThingsHomePanel(
 ) {
     var rawTokenInput by remember { mutableStateOf(googleToken) }
     var isSyncConfigExpanded by remember { mutableStateOf(false) }
+    var isTokenFieldFocused by remember { mutableStateOf(false) }
+    val view = LocalView.current
 
     val inboxCount = allTasks.count { it.item.isInbox && !it.item.isCompleted }
     val todayCount = allTasks.count { it.item.isToday }
@@ -626,6 +631,7 @@ fun ThingsHomePanel(
                             if (isAreaEditing) {
                                 var textState by remember { mutableStateOf(area.title) }
                                 var hasFocused by remember { mutableStateOf(false) }
+                                var isFinishing by remember { mutableStateOf(false) }
                                 val focusRequester = remember { FocusRequester() }
 
                                 BasicTextField(
@@ -634,7 +640,7 @@ fun ThingsHomePanel(
                                     textStyle = MaterialTheme.typography.displaySmall.copy(
                                         color = textPrimaryColor
                                     ),
-                                    cursorBrush = SolidColor(ThingsBlue),
+                                    cursorBrush = SolidColor(if (isFinishing) Color.Unspecified else ThingsBlue),
                                     modifier = Modifier
                                         .weight(1f)
                                         .focusRequester(focusRequester)
@@ -661,13 +667,19 @@ fun ThingsHomePanel(
                                         onDone = {
                                             if (hasFocused) {
                                                 hasFocused = false
-                                                val trimmed = textState.trim()
-                                                if (trimmed.isEmpty()) {
-                                                    onDeleteArea(area)
-                                                } else {
-                                                    onUpdateArea(area.copy(title = trimmed))
+                                                isFinishing = true
+                                                // Поле пропадает сразу, без анимации, — убираем его только после полного
+                                                // скрытия клавиатуры, иначе Compose переподключит ещё видимую клавиатуру
+                                                // (см. hideSoftKeyboardThen)
+                                                view.hideSoftKeyboardThen {
+                                                    val trimmed = textState.trim()
+                                                    if (trimmed.isEmpty()) {
+                                                        onDeleteArea(area)
+                                                    } else {
+                                                        onUpdateArea(area.copy(title = trimmed))
+                                                    }
+                                                    onEditingAreaIdChange(null)
                                                 }
-                                                onEditingAreaIdChange(null)
                                             }
                                         }
                                     ),
@@ -736,7 +748,12 @@ fun ThingsHomePanel(
                     Row(
                         modifier = Modifier
                             .fillMaxWidth()
-                            .clickable { isSyncConfigExpanded = !isSyncConfigExpanded },
+                            .clickable {
+                                // Блок с полем токена сворачивается анимацией (~400 мс) — если клавиатура
+                                // открыта для этого поля, прячем её сразу (см. hideSoftKeyboardNow)
+                                if (isSyncConfigExpanded && isTokenFieldFocused) view.hideSoftKeyboardNow()
+                                isSyncConfigExpanded = !isSyncConfigExpanded
+                            },
                         horizontalArrangement = Arrangement.SpaceBetween,
                         verticalAlignment = Alignment.CenterVertically
                     ) {
@@ -769,6 +786,7 @@ fun ThingsHomePanel(
                                 singleLine = true,
                                 modifier = Modifier
                                     .fillMaxWidth()
+                                    .onFocusChanged { isTokenFieldFocused = it.isFocused }
                                     .testTag("google_token_input"),
                                 shape = RoundedCornerShape(8.dp),
                                 textStyle = TextStyle(fontSize = 12.sp, color = textPrimaryColor),
@@ -937,7 +955,9 @@ private fun LazyItemScope.ProjectItemRow(
             if (isEditing) {
                 var textState by remember { mutableStateOf(project.title) }
                 var hasFocused by remember { mutableStateOf(false) }
+                var isFinishing by remember { mutableStateOf(false) }
                 val focusRequester = remember { FocusRequester() }
+                val view = LocalView.current
 
                 BasicTextField(
                     value = textState,
@@ -946,7 +966,7 @@ private fun LazyItemScope.ProjectItemRow(
                         color = textPrimaryColor,
                         fontWeight = FontWeight.Normal
                     ),
-                    cursorBrush = SolidColor(ThingsBlue),
+                    cursorBrush = SolidColor(if (isFinishing) Color.Unspecified else ThingsBlue),
                     modifier = Modifier
                         .weight(1f)
                         .focusRequester(focusRequester)
@@ -973,13 +993,19 @@ private fun LazyItemScope.ProjectItemRow(
                         onDone = {
                             if (hasFocused) {
                                 hasFocused = false
-                                val trimmed = textState.trim()
-                                if (trimmed.isEmpty()) {
-                                    onDeleteProject(project)
-                                } else {
-                                    onUpdateProject(project.copy(title = trimmed))
+                                isFinishing = true
+                                // Поле пропадает сразу, без анимации, — убираем его только после полного
+                                // скрытия клавиатуры, иначе Compose переподключит ещё видимую клавиатуру
+                                // (см. hideSoftKeyboardThen)
+                                view.hideSoftKeyboardThen {
+                                    val trimmed = textState.trim()
+                                    if (trimmed.isEmpty()) {
+                                        onDeleteProject(project)
+                                    } else {
+                                        onUpdateProject(project.copy(title = trimmed))
+                                    }
+                                    onEditingProjectIdChange(null)
                                 }
-                                onEditingProjectIdChange(null)
                             }
                         }
                     ),

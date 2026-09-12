@@ -25,6 +25,9 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.SolidColor
+import androidx.compose.ui.focus.onFocusChanged
+import androidx.compose.ui.platform.LocalView
+import com.example.ui.components.hideSoftKeyboardNow
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.style.TextDecoration
@@ -48,6 +51,8 @@ fun InlineChecklistPanel(
     val bodyFontSize = MaterialTheme.typography.bodyMedium.fontSize
 
     var newChecklistItemTitle by remember { mutableStateOf("") }
+    var isNewItemFieldFocused by remember { mutableStateOf(false) }
+    val view = LocalView.current
 
     val startPadding = 24.dp
 
@@ -151,7 +156,9 @@ fun InlineChecklistPanel(
                             newChecklistItemTitle = ""
                         }
                     }),
-                    modifier = Modifier.weight(1f),
+                    modifier = Modifier
+                        .weight(1f)
+                        .onFocusChanged { isNewItemFieldFocused = it.isFocused },
                     decorationBox = { innerTextField ->
                         if (newChecklistItemTitle.isEmpty()) {
                             Text(
@@ -170,6 +177,9 @@ fun InlineChecklistPanel(
                     modifier = Modifier
                         .size(14.dp)
                         .clickable {
+                            // Пустая панель уезжает вместе с полем анимацией (~400 мс) — если клавиатура
+                            // открыта для этого поля, прячем её сразу (см. hideSoftKeyboardNow)
+                            if (checklist.isEmpty() && isNewItemFieldFocused) view.hideSoftKeyboardNow()
                             onShowChecklistHelperChange(false)
                         }
                 )
