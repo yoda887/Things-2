@@ -342,7 +342,7 @@ fun ThingsTaskInlineEditor(
                     onShowChecklistHelperChange = { showChecklistHelper = it }
                 )
 
-            Spacer(modifier = Modifier.height(16.dp))
+            Spacer(modifier = Modifier.height(MaterialTheme.dimens.taskEditorChecklistToToolbarSpacer))
 
             // Bottom Actions & Toolbar matching the image closely
             val textPrimaryColor = Color(0xFF1C1C1E)

@@ -57,7 +57,9 @@ data class AppDimens(
     /** Правый отступ контента в полностью раскрытом inline-редакторе (обеспечивает константную ширину текста при росте карточки на 20dp) */
     val taskEditorExpandedEndPadding: Dp = 26.dp,
     /** Расстояние между иконками действий в тулбаре раскрытой задачи и окне быстрого добавления */
-    val taskEditorActionIconsSpacing: Dp = 16.dp
+    val taskEditorActionIconsSpacing: Dp = 16.dp,
+    /** Отступ между чек-листом и тулбаром действий в раскрытом редакторе задачи (Things 3 эталон) */
+    val taskEditorChecklistToToolbarSpacer: Dp = 30.dp
 )
 
 val LocalAppDimens = staticCompositionLocalOf { AppDimens() }
