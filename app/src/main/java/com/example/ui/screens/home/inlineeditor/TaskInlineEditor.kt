@@ -262,7 +262,7 @@ fun ThingsTaskInlineEditor(
         // при p=1 — дизайнерские отступы развёрнутого редактора
         val collapsedContentPadding = PaddingValues(
             start = MaterialTheme.dimens.taskRowStartPadding,
-            end = MaterialTheme.dimens.taskRowEndPadding,
+            end = MaterialTheme.dimens.taskEditorCollapsedEndPadding,
             top = MaterialTheme.dimens.taskCollapsedTopPadding,
             bottom = MaterialTheme.dimens.taskCollapsedBottomPadding
         )
