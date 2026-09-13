@@ -157,6 +157,24 @@ val Typography.taskEditorNotes: TextStyle
     }
 
 /**
+ * Стиль пунктов чек-листа в редакторе (17.2.sp с масштабированием). Пропорции к заголовку
+ * (titleMedium) и заметкам (taskEditorNotes) — как в Things 3: заглавная пункта ≈ 0,90 заглавной
+ * заголовка и ≈ 0,95 заглавной заметки.
+ */
+val Typography.taskEditorChecklist: TextStyle
+    @Composable
+    get() {
+        val configuration = LocalConfiguration.current
+        val isLargeScreen = configuration.screenWidthDp >= 600
+        val scaleFactor = if (isLargeScreen) 1.25f else 1.0f
+        return TextStyle(
+            fontFamily = FontFamily.Default,
+            fontWeight = FontWeight.Normal,
+            fontSize = (17.2f * scaleFactor).sp
+        )
+    }
+
+/**
  * Стиль для дат в панели редактора (18.sp с масштабированием).
  */
 val Typography.taskEditorDate: TextStyle
