@@ -95,6 +95,19 @@ private fun InlineMainInputRowContent(
     val subFontSize = MaterialTheme.typography.bodySmall.fontSize
 
     val titleSpacing = 8.dp
+    val configuration = androidx.compose.ui.platform.LocalConfiguration.current
+    val density = LocalDensity.current
+    val expandedStartPadding = MaterialTheme.dimens.taskEditorExpandedStartPadding
+    val expandedEndPadding = MaterialTheme.dimens.taskEditorExpandedEndPadding
+    val checkboxSize = MaterialTheme.dimens.mainCheckboxSize
+
+    // Целевая ширина текстовой области в полностью раскрытом редакторе (предотвращает перестроение строк текста при анимации)
+    val targetWidthPx = androidx.compose.runtime.remember(configuration.screenWidthDp, density, expandedStartPadding, expandedEndPadding, checkboxSize, titleSpacing) {
+        with(density) {
+            val windowWidth = configuration.screenWidthDp.dp
+            (windowWidth - expandedStartPadding - expandedEndPadding - checkboxSize - titleSpacing).roundToPx()
+        }
+    }
 
     Row(
         modifier = Modifier.fillMaxWidth(),
@@ -116,6 +129,7 @@ private fun InlineMainInputRowContent(
             TitleSubtitleLayout(
                 hasSubtitle = !subtitleText.isNullOrBlank(),
                 expansionProgress = expansionProgress,
+                targetWidthPx = targetWidthPx,
                 modifier = Modifier.fillMaxWidth()
             ) {
                 BasicTextField(
@@ -210,6 +224,13 @@ private fun InlineMainInputRowContent(
                     cursorBrush = cursorBrush,
                     modifier = Modifier
                         .fillMaxWidth()
+                        .layout { measurable, constraints ->
+                            val textWidth = maxOf(targetWidthPx, constraints.maxWidth)
+                            val p = measurable.measure(constraints.copy(minWidth = textWidth, maxWidth = textWidth))
+                            layout(constraints.maxWidth, p.height) {
+                                p.place(0, 0)
+                            }
+                        }
                         .heightIn(min = notesMinHeight)
                         .testTag("task_notes_input"),
                     decorationBox = { innerTextField ->
@@ -236,6 +257,7 @@ private fun InlineMainInputRowContent(
 fun TitleSubtitleLayout(
     hasSubtitle: Boolean,
     expansionProgress: () -> Float,
+    targetWidthPx: Int,
     modifier: Modifier = Modifier,
     content: @Composable () -> Unit
 ) {
@@ -243,14 +265,18 @@ fun TitleSubtitleLayout(
         content = content,
         modifier = modifier
     ) { measurables, constraints ->
-        val titlePlaceable = measurables[0].measure(constraints)
+        // Измеряем текст сразу по целевой ширине развёрнутого редактора, чтобы слова не перескакивали между строками при анимации
+        val textWidth = maxOf(targetWidthPx, constraints.maxWidth)
+        val textConstraints = constraints.copy(minWidth = textWidth, maxWidth = textWidth)
+
+        val titlePlaceable = measurables[0].measure(textConstraints)
         val subtitlePlaceable = if (hasSubtitle && measurables.size > 1) {
-            measurables[1].measure(constraints)
+            measurables[1].measure(textConstraints)
         } else null
         
         val dummyIndex = if (hasSubtitle) 2 else 1
         val dummyPlaceable = if (measurables.size > dummyIndex) {
-            measurables[dummyIndex].measure(constraints)
+            measurables[dummyIndex].measure(textConstraints)
         } else null
 
         val titleHeight = titlePlaceable.height
@@ -272,7 +298,7 @@ fun TitleSubtitleLayout(
         // Since Layout is at topPaddingPx, the offset relative to Layout is:
         val startOffset = targetAbsoluteY - topPaddingPx
         
-        val width = maxOf(titlePlaceable.width, subtitlePlaceable?.width ?: 0)
+        val width = constraints.maxWidth
 
         // Subtitle starts below title's first line, and as progress goes to 1, it moves UP (overlaps title)
         val subtitleStartY = startOffset + titleSingleHeight.toFloat()
