@@ -4,10 +4,11 @@ import android.view.HapticFeedbackConstants
 import androidx.compose.animation.*
 import androidx.compose.animation.core.Animatable
 import androidx.compose.animation.core.AnimationVector1D
+import androidx.compose.animation.core.FastOutSlowInEasing
 import androidx.compose.animation.core.LinearEasing
 import androidx.compose.animation.core.Spring
+import androidx.compose.animation.core.animate
 import androidx.compose.animation.core.animateFloatAsState
-import androidx.compose.animation.core.snap
 import androidx.compose.animation.core.spring
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.Canvas
@@ -17,7 +18,7 @@ import androidx.compose.foundation.gestures.awaitEachGesture
 import androidx.compose.foundation.gestures.awaitFirstDown
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.*
-import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.shape.GenericShape
 import androidx.compose.foundation.text.BasicTextField
 import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
@@ -32,21 +33,26 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.drawBehind
+import androidx.compose.ui.geometry.CornerRadius
 import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.geometry.RoundRect
+import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.Path
 import androidx.compose.ui.graphics.SolidColor
 import androidx.compose.ui.graphics.StrokeCap
 import androidx.compose.ui.graphics.StrokeJoin
+import androidx.compose.ui.graphics.TransformOrigin
 import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.graphics.drawscope.rotate
-import androidx.compose.ui.graphics.drawscope.translate
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.focus.onFocusChanged
 import androidx.compose.ui.input.pointer.PointerEventPass
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.input.pointer.positionChange
+import androidx.compose.ui.layout.findRootCoordinates
 import androidx.compose.ui.layout.layout
+import androidx.compose.ui.layout.onGloballyPositioned
 import androidx.compose.ui.layout.onSizeChanged
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.LocalView
@@ -60,8 +66,10 @@ import com.example.data.model.ChecklistItem
 import com.example.ui.theme.ThingsBlue
 import com.example.ui.theme.taskEditorChecklist
 import kotlinx.coroutines.CoroutineStart
+import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
+import kotlin.math.PI
 import kotlin.math.abs
 
 // Цвета, пропорции и тайминги сняты с видео Things 3 (пункты чек-листа в карточке задачи).
@@ -80,13 +88,21 @@ private const val CHECKLIST_HANDLE_WIDTH_TO_FONT = 0.71f
 private const val CHECKLIST_ROW_PADDING_TO_FONT = 0.406f
 private const val CHECKLIST_DIVIDER_TO_FONT = 0.09f
 private const val CHECKLIST_DELETE_COLLAPSE_MS = 250
-// Отметка пункта: строка сразу заливается серым, держится и гаснет
+// Отметка пункта: строка сразу заливается серым, держится и гаснет; сама строка на миг сжимается к центру
 private const val CHECKLIST_HIGHLIGHT_HOLD_MS = 170L
 private const val CHECKLIST_HIGHLIGHT_FADE_MS = 130
-// Смахивание влево: кнопка появляется, когда палец ушёл на это расстояние (в размерах шрифта),
-// и дальше едет за пальцем на эту долю его хода
-private const val CHECKLIST_DELETE_ARM_TO_FONT = 3.3f
+private const val CHECKLIST_PRESS_SCALE = 0.99f
+private const val CHECKLIST_PRESS_DOWN_MS = 50
+private const val CHECKLIST_PRESS_UP_MS = 250
+// Кнопка удаления: радиус (в размерах шрифта); при смахивании она выкатывается из-под правого края
+// строки и едет за пальцем на эту долю его хода, поворачиваясь, как катящееся колесо (доля от
+// поворота без проскальзывания — так в эталоне)
+private const val CHECKLIST_DELETE_RADIUS_TO_FONT = 0.51f
 private const val CHECKLIST_DELETE_FOLLOW = 0.29f
+private const val CHECKLIST_DELETE_ROLL = 0.92f
+// Правый край, из-под которого выкатывается кнопка, — дальше ручки ≡ на это расстояние (в размерах шрифта),
+// как край карточки в эталоне
+private const val CHECKLIST_CLIP_END_TO_FONT = 0.84f
 
 @Composable
 fun InlineChecklistPanel(
@@ -107,6 +123,16 @@ fun InlineChecklistPanel(
     val markSize = fontDp * CHECKLIST_MARK_TO_FONT
     // Подсветка строки выходит на это поле левее кружка и правее ручки ≡
     val highlightMargin = fontDp * 0.35f
+    // Справа строка шире: там, за ручкой ≡, прячется кнопка удаления до того, как выкатиться
+    val clipEnd = fontDp * CHECKLIST_CLIP_END_TO_FONT
+    val clipExtraPx = with(density) { (clipEnd - highlightMargin).toPx() }
+    // Подсветка, фон и тень поднятой строки — без этого запаса справа
+    val rowShape = remember(clipExtraPx, density) {
+        val corner = with(density) { 4.dp.toPx() }
+        GenericShape { size, _ ->
+            addRoundRect(RoundRect(0f, 0f, size.width - clipExtraPx, size.height, CornerRadius(corner)))
+        }
+    }
     // Разделитель начинается чуть левее кружка, а кончается ровно по правому краю ручки ≡
     val dividerLead = fontDp * 0.064f
     val dividerLeadModifier = Modifier.layout { measurable, constraints ->
@@ -121,15 +147,50 @@ fun InlineChecklistPanel(
     val view = LocalView.current
     val scope = rememberCoroutineScope()
 
-    // Пункт, у которого смахиванием влево открыта кнопка удаления, и держит ли его ещё палец
-    var deleteArmedId by remember { mutableStateOf<String?>(null) }
-    var deleteHeld by remember { mutableStateOf(false) }
+    // Кнопка удаления. deleteRowId — строка, у которой она видна; deleteOffset — смещение её центра от
+    // центра ручки ≡ (px, вправо — плюс; deleteHiddenOffset — кнопка целиком за правым краем строки).
+    // deleteArmed — кнопка стоит на месте ручки и нажимается; deleteSwiping — строку ведёт палец.
+    val deleteRadiusPx = fontPx * CHECKLIST_DELETE_RADIUS_TO_FONT
+    val deleteHiddenOffset = 2f * deleteRadiusPx
+    // Укатываясь, кнопка уходит целиком за край, из-под которого выкатывалась, и только потом пропадает
+    val deleteGoneOffset = fontPx * CHECKLIST_HANDLE_WIDTH_TO_FONT / 2f +
+        with(density) { clipEnd.toPx() } + deleteRadiusPx
+    var deleteRowId by remember { mutableStateOf<String?>(null) }
+    var deleteArmed by remember { mutableStateOf(false) }
+    var deleteSwiping by remember { mutableStateOf(false) }
+    val deleteOffset = remember { mutableFloatStateOf(0f) }
+    val deleteSwipeBase = remember { mutableFloatStateOf(0f) }
+    // Жест начался на строке без кнопки: ждём, поведёт ли палец строку влево
+    val deleteGesturePending = remember { mutableStateOf(false) }
+    // Кнопка выкатывается из-за края карточки: расстояние от центра ручки ≡ до правого края окна
+    // (карточка редактора — во всю ширину; где карточка уже, кнопку прячет её край). Меряется при раскладке.
+    val deleteEdgeDistance = remember { mutableFloatStateOf(0f) }
+    // Жест вывел кнопку из-за края (а не покатил уже стоящую на месте ручки)
+    val deleteFromEdge = remember { mutableStateOf(false) }
+    // От края до места ручки кнопка доходит за этот ход пальца, дальше едет на CHECKLIST_DELETE_FOLLOW хода
+    val deleteArmTravel = deleteHiddenOffset / CHECKLIST_DELETE_FOLLOW
+    fun deleteStartOffset(): Float =
+        (if (deleteEdgeDistance.floatValue > 0f) deleteEdgeDistance.floatValue else deleteGoneOffset - deleteRadiusPx) +
+            deleteRadiusPx
+    val deleteJob = remember { mutableStateOf<Job?>(null) }
     var swipedInGesture by remember { mutableStateOf(false) }
-    // Сдвиг кнопки «+» за пальцем, пока строку держат, и сдвиг в момент отпускания (от него кнопка докатывается)
-    val deleteFollowOffset = remember { mutableFloatStateOf(0f) }
-    val deleteReleaseOffset = remember { mutableFloatStateOf(0f) }
-    val armDistancePx = fontPx * CHECKLIST_DELETE_ARM_TO_FONT
-    val disarmDistancePx = with(density) { ARM_DISTANCE.toPx() }
+    // Кнопка докатывается до цели той же пружиной, что в эталоне (с небольшим перелётом)
+    fun rollDeleteTo(target: Float, onEnd: () -> Unit = {}) {
+        deleteJob.value?.cancel()
+        val from = deleteOffset.floatValue
+        deleteJob.value = scope.launch {
+            animate(from, target, animationSpec = spring(dampingRatio = 0.6f, stiffness = Spring.StiffnessMediumLow)) { v, _ ->
+                deleteOffset.floatValue = v
+            }
+            onEnd()
+        }
+    }
+    val rollOutDelete: () -> Unit = {
+        if (deleteRowId != null && !deleteSwiping) {
+            deleteArmed = false
+            rollDeleteTo(deleteStartOffset()) { if (!deleteArmed && !deleteSwiping) deleteRowId = null }
+        }
+    }
 
     // Удалённые пункты, пока их строка сворачивается: id -> (позиция в списке, пункт).
     // Из чек-листа пункт убирается сразу — сворачивание редактора посреди анимации его не вернёт.
@@ -151,7 +212,7 @@ fun InlineChecklistPanel(
         val index = latestChecklist.indexOfFirst { it.id == item.id }
         if (index >= 0) {
             exiting = exiting + (item.id to (index to item))
-            deleteArmedId = null
+            deleteArmed = false
             latestOnChecklistChange(latestChecklist.filterNot { it.id == item.id })
         }
     }
@@ -175,7 +236,9 @@ fun InlineChecklistPanel(
         }
     }
     val startReorder: (String) -> Unit = { id ->
-        deleteArmedId = null
+        deleteJob.value?.cancel()
+        deleteRowId = null
+        deleteArmed = false
         dragOrder = latestRows.filter { it.id !in exiting }.map { it.id }
         draggingId = id
         dragRawOffset.floatValue = 0f
@@ -247,10 +310,10 @@ fun InlineChecklistPanel(
 
     AnimatedVisibility(
         visible = showPanel,
-        // Подсветка строки выходит правее ручки ≡ на highlightMargin, а эта AnimatedVisibility обрезает
-        // содержимое по своим границам (expandVertically) — расширяем её вправо на это поле
+        // Строки выходят правее ручки ≡ на clipEnd (там прячется кнопка удаления), а эта AnimatedVisibility
+        // обрезает содержимое по своим границам (expandVertically) — расширяем её вправо на это поле
         modifier = Modifier.layout { measurable, constraints ->
-            val extra = if (constraints.hasBoundedWidth) highlightMargin.roundToPx() else 0
+            val extra = if (constraints.hasBoundedWidth) clipEnd.roundToPx() else 0
             val placeable = measurable.measure(
                 constraints.copy(minWidth = constraints.minWidth + extra, maxWidth = constraints.maxWidth + extra)
             )
@@ -263,24 +326,24 @@ fun InlineChecklistPanel(
             modifier = Modifier
                 .fillMaxWidth()
                 .padding(start = startPadding - highlightMargin, top = 8.dp)
-                // Любое касание панели, кроме смахивания и нажатия на саму кнопку, закрывает кнопку удаления
+                // Любое касание панели, кроме смахивания и нажатия на саму кнопку, укатывает кнопку удаления
                 .pointerInput(Unit) {
                     awaitEachGesture {
                         awaitFirstDown(requireUnconsumed = false, pass = PointerEventPass.Initial)
-                        val armedAtDown = deleteArmedId
+                        val armedAtDown = if (deleteArmed) deleteRowId else null
                         swipedInGesture = false
                         do {
                             val event = awaitPointerEvent(PointerEventPass.Final)
                         } while (event.changes.any { it.pressed })
-                        if (!swipedInGesture && armedAtDown != null && deleteArmedId == armedAtDown) {
-                            deleteArmedId = null
+                        if (!swipedInGesture && armedAtDown != null && deleteArmed && deleteRowId == armedAtDown) {
+                            rollOutDelete()
                         }
                     }
                 }
         ) {
             if (displayRows.isNotEmpty()) {
                 HorizontalDivider(
-                    modifier = Modifier.padding(horizontal = highlightMargin).then(dividerLeadModifier),
+                    modifier = Modifier.padding(start = highlightMargin, end = clipEnd).then(dividerLeadModifier),
                     color = ChecklistDividerColor,
                     thickness = fontDp * CHECKLIST_DIVIDER_TO_FONT
                 )
@@ -302,6 +365,7 @@ fun InlineChecklistPanel(
                         onDispose { rowOffsets.remove(item.id) }
                     }
                     val highlight = remember { Animatable(0f) }
+                    val press = remember { Animatable(1f) }
                     val isDragged = draggingId == item.id
                     val lift by animateFloatAsState(
                         targetValue = if (isDragged) 1f else 0f,
@@ -317,48 +381,92 @@ fun InlineChecklistPanel(
                                 translationY = if (draggingId == item.id) dragShownOffset.floatValue
                                 else placementOffset.value
                                 shadowElevation = 6.dp.toPx() * lift
-                                shape = RoundedCornerShape(4.dp)
+                                shape = rowShape
+                                // Сжатие при отметке — к середине строки (без запаса справа)
+                                scaleX = press.value
+                                scaleY = press.value
+                                transformOrigin = TransformOrigin(
+                                    pivotFractionX = if (size.width > 0f) (size.width - clipExtraPx) / 2f / size.width else 0.5f,
+                                    pivotFractionY = 0.5f
+                                )
                             }
-                            .background(Color.White)
+                            .background(Color.White, rowShape)
                             .drawBehind {
                                 val alpha = highlight.value
-                                if (alpha > 0f) drawRect(ChecklistHighlightColor.copy(alpha = alpha))
+                                if (alpha > 0f) {
+                                    drawRect(
+                                        ChecklistHighlightColor.copy(alpha = alpha),
+                                        size = Size(size.width - clipExtraPx, size.height)
+                                    )
+                                }
                             },
                         enter = EnterTransition.None,
                         exit = shrinkVertically(tween(CHECKLIST_DELETE_COLLAPSE_MS)) +
                             fadeOut(tween(CHECKLIST_DELETE_COLLAPSE_MS))
                     ) {
-                        Column(modifier = Modifier.padding(horizontal = highlightMargin)) {
+                        Column(modifier = Modifier.padding(start = highlightMargin, end = clipEnd)) {
                             Row(
                                 modifier = Modifier
                                     .fillMaxWidth()
                                     .swipeToRevealDelete(
                                         key = item.id,
                                         enabled = { draggingId == null },
-                                        onSwipeStart = { swipedInGesture = true },
+                                        onSwipeStart = {
+                                            swipedInGesture = true
+                                            if (deleteRowId == item.id && deleteArmed) {
+                                                // Кнопка стоит на месте ручки — катится от него за пальцем в любую сторону
+                                                deleteJob.value?.cancel()
+                                                deleteSwipeBase.floatValue = deleteOffset.floatValue
+                                                deleteArmed = false
+                                                deleteSwiping = true
+                                                deleteFromEdge.value = false
+                                                deleteGesturePending.value = false
+                                            } else {
+                                                // Кнопки у строки нет — она появится, только если палец поведёт строку влево
+                                                deleteGesturePending.value = true
+                                            }
+                                        },
                                         onSwipe = { dx ->
-                                            when {
-                                                dx <= -armDistancePx -> {
-                                                    if (deleteArmedId != item.id) {
-                                                        view.performHapticFeedback(HapticFeedbackConstants.CLOCK_TICK)
-                                                        deleteArmedId = item.id
-                                                    }
-                                                    deleteHeld = true
-                                                    deleteFollowOffset.floatValue =
-                                                        CHECKLIST_DELETE_FOLLOW * (dx + armDistancePx)
+                                            if (deleteGesturePending.value && dx < 0f) {
+                                                // Всегда выкатывается из-за края карточки, а не с того места, где её застал жест
+                                                deleteGesturePending.value = false
+                                                deleteJob.value?.cancel()
+                                                deleteRowId = item.id
+                                                deleteArmed = false
+                                                deleteFromEdge.value = true
+                                                deleteOffset.floatValue = deleteStartOffset()
+                                                deleteSwiping = true
+                                            }
+                                            if (deleteSwiping && deleteRowId == item.id) {
+                                                val offset = if (deleteFromEdge.value) {
+                                                    // От края до места ручки — за deleteArmTravel хода пальца, дальше — на долю хода
+                                                    val travel = -dx
+                                                    if (travel <= deleteArmTravel) deleteStartOffset() * (1f - travel / deleteArmTravel)
+                                                    else -CHECKLIST_DELETE_FOLLOW * (travel - deleteArmTravel)
+                                                } else {
+                                                    deleteSwipeBase.floatValue + CHECKLIST_DELETE_FOLLOW * dx
                                                 }
-                                                // Палец вернулся до отпускания — кнопка уходит вслед за ним
-                                                deleteHeld && deleteArmedId == item.id -> {
-                                                    deleteArmedId = null
-                                                    deleteHeld = false
+                                                if (offset <= 0f && deleteOffset.floatValue > 0f) {
+                                                    view.performHapticFeedback(HapticFeedbackConstants.CLOCK_TICK)
                                                 }
-                                                dx >= disarmDistancePx && deleteArmedId == item.id ->
-                                                    deleteArmedId = null
+                                                deleteOffset.floatValue = offset
                                             }
                                         },
                                         onRelease = {
-                                            if (deleteHeld) deleteReleaseOffset.floatValue = deleteFollowOffset.floatValue
-                                            deleteHeld = false
+                                            deleteGesturePending.value = false
+                                            if (deleteSwiping && deleteRowId == item.id) {
+                                                deleteSwiping = false
+                                                if (deleteOffset.floatValue <= 0f) {
+                                                    // Кнопка прошла место ручки — докатывается на него и встаёт «×»
+                                                    deleteArmed = true
+                                                    rollDeleteTo(0f)
+                                                } else {
+                                                    deleteArmed = false
+                                                    rollDeleteTo(deleteStartOffset()) {
+                                                        if (!deleteArmed && !deleteSwiping) deleteRowId = null
+                                                    }
+                                                }
+                                            }
                                         }
                                     )
                                     .padding(vertical = fontDp * CHECKLIST_ROW_PADDING_TO_FONT),
@@ -372,6 +480,10 @@ fun InlineChecklistPanel(
                                             highlight.snapTo(1f)
                                             delay(CHECKLIST_HIGHLIGHT_HOLD_MS)
                                             highlight.animateTo(0f, tween(CHECKLIST_HIGHLIGHT_FADE_MS, easing = LinearEasing))
+                                        }
+                                        scope.launch {
+                                            press.animateTo(CHECKLIST_PRESS_SCALE, tween(CHECKLIST_PRESS_DOWN_MS))
+                                            press.animateTo(1f, tween(CHECKLIST_PRESS_UP_MS))
                                         }
                                         onChecklistChange(checklist.map {
                                             if (it.id == item.id) it.copy(isCompleted = !it.isCompleted) else it
@@ -396,11 +508,11 @@ fun InlineChecklistPanel(
                                 )
 
                                 ChecklistRowAction(
-                                    showDelete = deleteArmedId == item.id || isExiting,
-                                    held = deleteHeld && deleteArmedId == item.id,
-                                    followOffset = { deleteFollowOffset.floatValue },
-                                    releaseOffset = { deleteReleaseOffset.floatValue },
+                                    showDelete = deleteRowId == item.id || isExiting,
+                                    deleteClickable = deleteArmed && deleteRowId == item.id && !isExiting,
+                                    deleteOffset = { if (isExiting) 0f else deleteOffset.floatValue },
                                     fontDp = fontDp,
+                                    onEdgeDistance = { deleteEdgeDistance.floatValue = it },
                                     onDelete = { deleteItem(item) },
                                     handleModifier = Modifier.reorderHandle(
                                         key = item.id,
@@ -424,7 +536,7 @@ fun InlineChecklistPanel(
             Row(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .padding(horizontal = highlightMargin)
+                    .padding(start = highlightMargin, end = clipEnd)
                     .padding(vertical = 6.dp),
                 verticalAlignment = Alignment.CenterVertically
             ) {
@@ -482,7 +594,7 @@ fun InlineChecklistPanel(
 
 /**
  * Отметка пункта чек-листа, как в Things 3: невыполненный — синий кружок, выполненный — серая
- * галочка без рамки. Меняется сразу, без анимации (в Things 3 анимирована только подсветка строки).
+ * галочка без рамки. Меняется сразу, без анимации (в Things 3 анимированы подсветка и сжатие строки).
  * Область нажатия шире кружка и включает отступ до текста.
  */
 @Composable
@@ -527,74 +639,88 @@ private fun ChecklistCheckMark(checked: Boolean, markSize: Dp, onToggle: () -> U
 }
 
 /**
- * Правый край строки: ручка ≡ (за неё строку перетаскивают, [handleModifier]) или красная кнопка
- * удаления. Ручка прижата к правому краю строки — там же кончается разделитель; кнопка стоит по
- * центру ручки. Пока палец держит смахнутую строку, на кнопке «+» и она едет за пальцем
- * ([followOffset]); после отпускания докатывается от [releaseOffset] на место ручки с небольшим
- * перелётом и поворачивается в «×».
+ * Правый край строки: ручка ≡ (за неё строку перетаскивают, [handleModifier]) и красная кнопка
+ * удаления. Ручка прижата к правому краю строки — там же кончается разделитель. Кнопка рисуется со
+ * смещением [deleteOffset] от центра ручки и катится, как колесо: угол поворота привязан к смещению,
+ * на месте ручки она стоит «×» (45°). Ручка пропадает, как только кнопка её накрывает. Нажимается
+ * кнопка, только когда стоит на месте ([deleteClickable]).
  */
 @Composable
 private fun ChecklistRowAction(
     showDelete: Boolean,
-    held: Boolean,
-    followOffset: () -> Float,
-    releaseOffset: () -> Float,
+    deleteClickable: Boolean,
+    deleteOffset: () -> Float,
     fontDp: Dp,
+    // Сообщает расстояние от центра ручки до правого края окна — из-за него выкатывается кнопка
+    onEdgeDistance: (Float) -> Unit,
     onDelete: () -> Unit,
     handleModifier: Modifier
 ) {
-    val reveal by animateFloatAsState(
-        targetValue = if (showDelete) 1f else 0f,
-        animationSpec = if (showDelete) snap() else tween(160),
-        label = "checklist_delete_reveal"
-    )
-    val settle by animateFloatAsState(
-        targetValue = if (showDelete && !held) 1f else 0f,
-        animationSpec = spring(dampingRatio = 0.6f, stiffness = Spring.StiffnessMediumLow),
-        label = "checklist_delete_settle"
-    )
     val interactionSource = remember { MutableInteractionSource() }
+    val density = LocalDensity.current
+    val radiusPx = with(density) { (fontDp * CHECKLIST_DELETE_RADIUS_TO_FONT).toPx() }
+    val halfWidthPx = with(density) { (fontDp * CHECKLIST_HANDLE_WIDTH_TO_FONT / 2f).toPx() }
+    // Кнопка накрывает ручку — ручка немного отъезжает влево и гаснет; укатывается кнопка — ручка возвращается.
+    // derivedStateOf: пересборка только в момент смены «накрыта / не накрыта», а не на каждом кадре качения
+    val handleCovered by remember(showDelete) {
+        derivedStateOf { showDelete && deleteOffset() - radiusPx < halfWidthPx }
+    }
+    val handleHide by animateFloatAsState(
+        targetValue = if (handleCovered) 1f else 0f,
+        animationSpec = tween(180, easing = FastOutSlowInEasing),
+        label = "checklist_handle_hide"
+    )
 
     Box(
         modifier = Modifier
             .size(fontDp * 1.6f)
+            .onGloballyPositioned { coords ->
+                val root = coords.findRootCoordinates()
+                val handleCenterX = coords.localToRoot(Offset(coords.size.width.toFloat(), 0f)).x - halfWidthPx
+                onEdgeDistance(root.size.width - handleCenterX)
+            }
             .then(
-                if (showDelete) Modifier.clickable(
-                    interactionSource = interactionSource,
-                    indication = null,
-                    onClick = onDelete
-                ) else handleModifier
+                when {
+                    deleteClickable -> Modifier.clickable(
+                        interactionSource = interactionSource,
+                        indication = null,
+                        onClick = onDelete
+                    )
+                    showDelete -> Modifier
+                    else -> handleModifier
+                }
             )
     ) {
         Canvas(modifier = Modifier.matchParentSize()) {
             val font = fontDp.toPx()
             val halfWidth = font * CHECKLIST_HANDLE_WIDTH_TO_FONT / 2f
-            val center = Offset(size.width - halfWidth, size.height / 2f)
-            if (reveal < 1f) {
+            val handleCenter = Offset(size.width - halfWidth, size.height / 2f)
+            val radius = font * CHECKLIST_DELETE_RADIUS_TO_FONT
+            val offset = if (showDelete) deleteOffset() else 0f
+            if (handleHide < 1f) {
                 val pitch = font * 0.167f
                 val stroke = font * 0.058f
+                val shift = -font * 0.5f * handleHide
                 for (i in -1..1) {
-                    val y = center.y + i * pitch
+                    val y = handleCenter.y + i * pitch
                     drawLine(
-                        color = ChecklistHandleColor.copy(alpha = 1f - reveal),
-                        start = Offset(center.x - halfWidth, y),
-                        end = Offset(center.x + halfWidth, y),
+                        color = ChecklistHandleColor.copy(alpha = 1f - handleHide),
+                        start = Offset(handleCenter.x - halfWidth + shift, y),
+                        end = Offset(handleCenter.x + halfWidth + shift, y),
                         strokeWidth = stroke
                     )
                 }
             }
-            if (reveal > 0f) {
-                val radius = font * 0.51f
-                val shift = (if (held) followOffset() else releaseOffset()) * (1f - settle)
-                translate(left = shift) {
-                    rotate(degrees = 45f * settle, pivot = center) {
-                        drawCircle(color = ChecklistDeleteColor.copy(alpha = reveal), radius = radius, center = center)
-                        val arm = radius * 0.5f
-                        val stroke = radius * 0.2f
-                        val white = Color.White.copy(alpha = reveal)
-                        drawLine(white, Offset(center.x - arm, center.y), Offset(center.x + arm, center.y), stroke, StrokeCap.Round)
-                        drawLine(white, Offset(center.x, center.y - arm), Offset(center.x, center.y + arm), stroke, StrokeCap.Round)
-                    }
+            if (showDelete) {
+                val center = Offset(handleCenter.x + offset, handleCenter.y)
+                val degrees = 45f + offset / radius * CHECKLIST_DELETE_ROLL * (180f / PI.toFloat())
+                // Не обрезается здесь: кнопку прячет край карточки редактора
+                rotate(degrees = degrees, pivot = center) {
+                    drawCircle(color = ChecklistDeleteColor, radius = radius, center = center)
+                    val arm = radius * 0.5f
+                    val stroke = radius * 0.2f
+                    drawLine(Color.White, Offset(center.x - arm, center.y), Offset(center.x + arm, center.y), stroke, StrokeCap.Round)
+                    drawLine(Color.White, Offset(center.x, center.y - arm), Offset(center.x, center.y + arm), stroke, StrokeCap.Round)
                 }
             }
         }
@@ -608,8 +734,6 @@ private fun ChecklistRowAction(
  * получает его как нажатие, а список — как прокрутку. Вертикальное движение жест отдаёт списку.
  * Пока [enabled] ложно (строку тащат за ≡), смахивание не начинается.
  */
-private val ARM_DISTANCE = 24.dp
-
 private fun Modifier.swipeToRevealDelete(
     key: Any,
     enabled: () -> Boolean,
