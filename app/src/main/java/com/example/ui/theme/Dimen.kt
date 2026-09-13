@@ -54,8 +54,8 @@ data class AppDimens(
     val taskEditorDateToDeadlineSpacer: Dp = 4.dp,
     /** Правый отступ контента внутри карточки задачи (end padding Row в TaskItemRow) */
     val taskRowEndPadding: Dp = 8.dp,
-    /** Правый отступ контента в полностью раскрытом inline-редакторе (обеспечивает константную ширину текста при росте карточки на 20dp) */
-    val taskEditorExpandedEndPadding: Dp = 26.dp,
+    /** Правый отступ контента в полностью раскрытом inline-редакторе (18.dp по эталону Things 3; в сумме с ростом карточки вправо на 10dp сохраняет фиксированное положение правой границы контента 18dp от края экрана) */
+    val taskEditorExpandedEndPadding: Dp = 18.dp,
     /** Расстояние между иконками действий в тулбаре раскрытой задачи и окне быстрого добавления */
     val taskEditorActionIconsSpacing: Dp = 16.dp,
     /** Отступ между чек-листом и тулбаром действий в раскрытом редакторе задачи (Things 3 эталон) */
