@@ -132,7 +132,7 @@ fun ThingsTaskInlineEditor(
     val currentStartDate by rememberUpdatedState(startDate)
     val currentDueDate by rememberUpdatedState(dueDate)
     val currentTagInput by rememberUpdatedState(tagInput)
-    val currentChecklist by rememberUpdatedState(checklist)
+    val currentChecklist by rememberUpdatedState(checklist.filter { it.title.isNotBlank() })
     val currentPriority by rememberUpdatedState(priority)
     val currentOnSave by rememberUpdatedState(onSave)
     val currentIsDeletedExternally by rememberUpdatedState(isDeletedExternally)
@@ -170,13 +170,15 @@ fun ThingsTaskInlineEditor(
     LaunchedEffect(isExpanded) {
         if (!isExpanded && !isDeleted && !isDeletedExternally() && !isSavedManually) {
             isSavedManually = true
-            if (title.isBlank() && notes.isBlank() && checklist.isEmpty()) {
+            // Пустые пункты чек-листа (новый пункт, в который так ничего и не ввели) не сохраняются
+            val savedChecklist = checklist.filter { it.title.isNotBlank() }
+            if (title.isBlank() && notes.isBlank() && savedChecklist.isEmpty()) {
                 onDelete?.invoke()
             } else {
                 val tagList = tagInput.split(",")
                     .map { it.trim() }
                     .filter { it.isNotEmpty() }
-                if (hasUnsavedChanges(task, title, notes, section, isTonight, startDate, dueDate, tagList, checklist, priority)) {
+                if (hasUnsavedChanges(task, title, notes, section, isTonight, startDate, dueDate, tagList, savedChecklist, priority)) {
                     onSave(
                         title,
                         notes,
@@ -186,7 +188,7 @@ fun ThingsTaskInlineEditor(
                         dueDate,
                         tagList,
                         task.item.projectId,
-                        checklist,
+                        savedChecklist,
                         priority
                     )
                 }
@@ -301,7 +303,8 @@ fun ThingsTaskInlineEditor(
                     checklistBelow = showChecklistHelper || checklist.isNotEmpty(),
                     onCheckboxClick = {
                         isSavedManually = true
-                        if (title.isBlank() && notes.isBlank() && checklist.isEmpty()) {
+                        val savedChecklist = checklist.filter { it.title.isNotBlank() }
+                        if (title.isBlank() && notes.isBlank() && savedChecklist.isEmpty()) {
                             onDelete?.invoke()
                         } else {
                             val tagList = tagInput.split(",").map { it.trim() }.filter { it.isNotEmpty() }
@@ -314,7 +317,7 @@ fun ThingsTaskInlineEditor(
                                 dueDate,
                                 tagList,
                                 task.item.projectId,
-                                checklist,
+                                savedChecklist,
                                 priority
                             )
                         }

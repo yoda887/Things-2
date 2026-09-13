@@ -228,7 +228,7 @@ fun QuickAddDialog(
                     dueDate,
                     tagList,
                     selectedProjectId,
-                    checklist,
+                    checklist.filter { it.title.isNotBlank() },
                     priority
                 )
                 onDismissRequest()

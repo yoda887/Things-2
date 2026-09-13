@@ -46,7 +46,18 @@ import androidx.compose.ui.graphics.TransformOrigin
 import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.graphics.drawscope.rotate
 import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.ui.focus.FocusRequester
+import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.focus.onFocusChanged
+import androidx.compose.ui.input.key.Key
+import androidx.compose.ui.input.key.KeyEventType
+import androidx.compose.ui.input.key.key
+import androidx.compose.ui.input.key.onPreviewKeyEvent
+import androidx.compose.ui.input.key.type
+import androidx.compose.ui.platform.LocalFocusManager
+import androidx.compose.ui.text.TextRange
+import androidx.compose.ui.text.input.KeyboardCapitalization
+import androidx.compose.ui.text.input.TextFieldValue
 import androidx.compose.ui.input.pointer.PointerEventPass
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.input.pointer.positionChange
@@ -82,6 +93,9 @@ private val ChecklistDividerColor = Color(0xFFEBEBEB)
 private val ChecklistHighlightColor = Color(0xFFF0F1F3)
 private val ChecklistTextColor = Color(0xFF000000)
 private val ChecklistCompletedTextColor = Color(0xFF777778)
+// Строка, которую правят (текст в фокусе), и строка, которую тащат за ≡ (видео 5-checklists-iphone)
+private val ChecklistFocusColor = Color(0xFFF7F7F7)
+private val ChecklistDragColor = Color(0xFFD7E6FD)
 private const val CHECKLIST_MARK_TO_FONT = 0.80f
 private const val CHECKLIST_HANDLE_WIDTH_TO_FONT = 0.71f
 // Отступ строки и толщина разделителя тоже в долях шрифта — шаг строк и линии держат пропорцию к буквам
@@ -142,8 +156,27 @@ fun InlineChecklistPanel(
         layout(constraints.maxWidth, placeable.height) { placeable.place(-lead, 0) }
     }
 
-    var newChecklistItemTitle by remember { mutableStateOf("") }
-    var isNewItemFieldFocused by remember { mutableStateOf(false) }
+    val focusManager = LocalFocusManager.current
+    // Правка пунктов, как в Things 3: строка с текстом в фокусе подсвечена серым; pendingFocus — пункт,
+    // в который перевести фокус после добавления или удаления соседнего, и где поставить курсор
+    var focusedId by remember { mutableStateOf<String?>(null) }
+    var pendingFocus by remember { mutableStateOf<Pair<String, Int>?>(null) }
+    // Клавиатура закрылась, а курсор в пункте — правка заканчивается, как в Things 3: фокус снимается,
+    // подсветка и разделители возвращаются, пустой пункт удаляется. Реагируем только на «была видна →
+    // скрылась» и с паузой: при переходе курсора между пунктами клавиатура не закрывается, а новый
+    // пункт получает фокус раньше, чем она успевает выехать.
+    val imeInsets = WindowInsets.ime
+    val imeVisible by remember(imeInsets, density) { derivedStateOf { imeInsets.getBottom(density) > 0 } }
+    var imeWasVisible by remember { mutableStateOf(false) }
+    LaunchedEffect(imeVisible) {
+        if (imeVisible) {
+            imeWasVisible = true
+        } else if (imeWasVisible) {
+            imeWasVisible = false
+            delay(120)
+            if (imeInsets.getBottom(density) == 0 && focusedId != null) focusManager.clearFocus()
+        }
+    }
     val view = LocalView.current
     val scope = rememberCoroutineScope()
 
@@ -216,12 +249,36 @@ fun InlineChecklistPanel(
             latestOnChecklistChange(latestChecklist.filterNot { it.id == item.id })
         }
     }
+    // Пустой пункт убирается сразу, без сворачивания; при необходимости курсор уходит в конец предыдущего
+    val removeEmptyItem: (String, Boolean) -> Unit = { id, focusPrevious ->
+        val current = latestChecklist
+        val index = current.indexOfFirst { it.id == id }
+        if (index >= 0) {
+            if (focusPrevious && index > 0) current[index - 1].let { pendingFocus = it.id to it.title.length }
+            latestOnChecklistChange(current.filterNot { it.id == id })
+        }
+    }
+    // Кнопка «Checklists» в тулбаре: как в Things 3 — сразу первый пустой пункт с курсором
+    LaunchedEffect(showChecklistHelper) {
+        if (showChecklistHelper) {
+            if (latestChecklist.isEmpty()) {
+                val first = ChecklistItem(itemId = itemId, title = "")
+                pendingFocus = first.id to 0
+                latestOnChecklistChange(listOf(first))
+            }
+            onShowChecklistHelperChange(false)
+        }
+    }
+    // Серая (правка) и голубая (перетаскивание) подсветка — по строке: чуть левее кружка и чуть правее ручки ≡
+    val cornerPx = with(density) { 4.dp.toPx() }
 
     // Перетаскивание за ≡. Пока палец держит строку, порядок строк живёт в dragOrder, а в чек-лист
     // уходит после отпускания. dragRawOffset — смещение пальца от места поднятой строки,
     // dragShownOffset — то же, но строка не заходит выше первого и ниже последнего места.
     var dragOrder by remember { mutableStateOf<List<String>?>(null) }
     var draggingId by remember { mutableStateOf<String?>(null) }
+    // Строка, которую только что отпустили: пока гаснет голубой, разделители у неё ещё скрыты
+    var settlingId by remember { mutableStateOf<String?>(null) }
     val dragRawOffset = remember { mutableFloatStateOf(0f) }
     val dragShownOffset = remember { mutableFloatStateOf(0f) }
     val rowHeights = remember { HashMap<String, Int>() }
@@ -300,10 +357,19 @@ fun InlineChecklistPanel(
             val reordered = order.mapNotNull { oid -> current.firstOrNull { it.id == oid } } +
                 current.filter { it.id !in order }
             if (reordered.map { it.id } != current.map { it.id }) latestOnChecklistChange(reordered)
+            settlingId = id
+            scope.launch {
+                delay(160)
+                if (settlingId == id) settlingId = null
+            }
         }
         draggingId = null
         dragOrder = null
     }
+    // У строки, которую правят или тащат за ≡, не видно разделителей ни сверху, ни снизу (как в Things 3);
+    // место под них остаётся — строки не сдвигаются
+    fun linesHiddenAround(id: String?): Boolean =
+        id != null && (id == focusedId || id == draggingId || id == settlingId)
     val displayRows = dragOrder?.mapNotNull { id -> rows.firstOrNull { it.id == id } } ?: rows
 
     val startPadding = 24.dp
@@ -342,15 +408,17 @@ fun InlineChecklistPanel(
                 }
         ) {
             if (displayRows.isNotEmpty()) {
+                // Над строкой, которую правят, разделителя не видно (как в Things 3); место под него остаётся
                 HorizontalDivider(
                     modifier = Modifier.padding(start = highlightMargin, end = clipEnd).then(dividerLeadModifier),
-                    color = ChecklistDividerColor,
+                    color = if (linesHiddenAround(displayRows.first().id)) Color.Transparent else ChecklistDividerColor,
                     thickness = fontDp * CHECKLIST_DIVIDER_TO_FONT
                 )
             }
-            displayRows.forEach { item ->
+            displayRows.forEachIndexed { rowIndex, item ->
                 key(item.id) {
                     val isExiting = item.id in exiting
+                    val nextId = displayRows.getOrNull(rowIndex + 1)?.id
                     // Без условного вызова: условная группа перед AnimatedVisibility пересоздала бы его
                     // уже скрытым — строка исчезала бы в одном кадре, без сворачивания
                     LaunchedEffect(isExiting) {
@@ -369,9 +437,24 @@ fun InlineChecklistPanel(
                     val isDragged = draggingId == item.id
                     val lift by animateFloatAsState(
                         targetValue = if (isDragged) 1f else 0f,
-                        animationSpec = tween(150),
+                        animationSpec = tween(130),
                         label = "checklist_row_lift"
                     )
+                    // Поле пункта: TextFieldValue — чтобы ставить курсор при переводе фокуса
+                    val focusRequester = remember { FocusRequester() }
+                    var fieldValue by remember { mutableStateOf(TextFieldValue(item.title, TextRange(item.title.length))) }
+                    var wasFocused by remember { mutableStateOf(false) }
+                    LaunchedEffect(item.title) {
+                        if (fieldValue.text != item.title) fieldValue = TextFieldValue(item.title, TextRange(item.title.length))
+                    }
+                    val focusTarget = pendingFocus
+                    LaunchedEffect(focusTarget) {
+                        if (focusTarget != null && focusTarget.first == item.id) {
+                            fieldValue = fieldValue.copy(selection = TextRange(focusTarget.second.coerceIn(0, fieldValue.text.length)))
+                            focusRequester.requestFocus()
+                            pendingFocus = null
+                        }
+                    }
                     AnimatedVisibility(
                         visible = !isExiting,
                         modifier = Modifier
@@ -390,8 +473,11 @@ fun InlineChecklistPanel(
                                     pivotFractionY = 0.5f
                                 )
                             }
-                            .background(Color.White, rowShape)
                             .drawBehind {
+                                drawRoundRect(Color.White, size = Size(size.width - clipExtraPx, size.height), cornerRadius = CornerRadius(cornerPx))
+                                val band = Size(size.width - clipExtraPx, size.height)
+                                if (focusedId == item.id) drawRect(ChecklistFocusColor, size = band)
+                                if (lift > 0f) drawRoundRect(ChecklistDragColor.copy(alpha = lift), size = band, cornerRadius = CornerRadius(cornerPx))
                                 val alpha = highlight.value
                                 if (alpha > 0f) {
                                     drawRect(
@@ -491,20 +577,79 @@ fun InlineChecklistPanel(
                                     }
                                 )
 
-                                // Editable checklist item title inline
+                                // Текст пункта правится прямо в строке. Return (перевод строки) делит пункт:
+                                // текст до курсора остаётся, после — уходит в новый пункт ниже, и курсор
+                                // переходит туда (как в Things 3). Return в пустом пункте убирает его и
+                                // заканчивает правку; Backspace в пустом — убирает и возвращает курсор в
+                                // конец предыдущего; пустой пункт, из которого ушёл фокус, удаляется.
                                 BasicTextField(
-                                    value = item.title,
-                                    onValueChange = { updatedTitle ->
-                                        onChecklistChange(checklist.map {
-                                            if (it.id == item.id) it.copy(title = updatedTitle) else it
-                                        })
+                                    value = fieldValue,
+                                    onValueChange = { value ->
+                                        val newline = value.text.indexOf('\n')
+                                        if (newline < 0) {
+                                            fieldValue = value
+                                            if (value.text != item.title) {
+                                                latestOnChecklistChange(latestChecklist.map {
+                                                    if (it.id == item.id) it.copy(title = value.text) else it
+                                                })
+                                            }
+                                        } else {
+                                            val before = value.text.substring(0, newline)
+                                            val after = value.text.substring(newline + 1).replace("\n", "")
+                                            val current = latestChecklist
+                                            val index = current.indexOfFirst { it.id == item.id }
+                                            when {
+                                                index < 0 -> Unit
+                                                before.isBlank() && after.isBlank() -> {
+                                                    removeEmptyItem(item.id, false)
+                                                    focusManager.clearFocus()
+                                                    view.hideSoftKeyboardNow()
+                                                }
+                                                before.isBlank() -> {
+                                                    // Return в начале пункта: над ним появляется пустой, курсор остаётся в этом
+                                                    fieldValue = TextFieldValue(after, TextRange(0))
+                                                    val list = current.map { if (it.id == item.id) it.copy(title = after) else it }
+                                                        .toMutableList().apply { add(index, ChecklistItem(itemId = itemId, title = "")) }
+                                                    latestOnChecklistChange(list)
+                                                }
+                                                else -> {
+                                                    fieldValue = TextFieldValue(before, TextRange(before.length))
+                                                    val next = ChecklistItem(itemId = itemId, title = after)
+                                                    val list = current.map { if (it.id == item.id) it.copy(title = before) else it }
+                                                        .toMutableList().apply { add(index + 1, next) }
+                                                    pendingFocus = next.id to 0
+                                                    latestOnChecklistChange(list)
+                                                }
+                                            }
+                                        }
                                     },
                                     textStyle = TextStyle(
                                         fontSize = bodyFontSize,
                                         color = if (item.isCompleted) ChecklistCompletedTextColor else ChecklistTextColor
                                     ),
+                                    keyboardOptions = KeyboardOptions(capitalization = KeyboardCapitalization.Sentences),
                                     cursorBrush = SolidColor(ThingsBlue),
-                                    modifier = Modifier.weight(1f)
+                                    modifier = Modifier
+                                        .weight(1f)
+                                        .focusRequester(focusRequester)
+                                        .onFocusChanged { state ->
+                                            if (state.isFocused) {
+                                                wasFocused = true
+                                                focusedId = item.id
+                                            } else if (wasFocused) {
+                                                wasFocused = false
+                                                if (focusedId == item.id) focusedId = null
+                                                if (latestChecklist.firstOrNull { it.id == item.id }?.title?.isBlank() == true) {
+                                                    removeEmptyItem(item.id, false)
+                                                }
+                                            }
+                                        }
+                                        .onPreviewKeyEvent { event ->
+                                            if (event.type == KeyEventType.KeyDown && event.key == Key.Backspace && fieldValue.text.isEmpty()) {
+                                                removeEmptyItem(item.id, true)
+                                                true
+                                            } else false
+                                        }
                                 )
 
                                 ChecklistRowAction(
@@ -522,9 +667,11 @@ fun InlineChecklistPanel(
                                     )
                                 )
                             }
+                            // Разделитель под строкой: не виден, если правят или тащат эту строку или следующую
                             HorizontalDivider(
                                 modifier = dividerLeadModifier,
-                                color = ChecklistDividerColor,
+                                color = if (linesHiddenAround(item.id) || linesHiddenAround(nextId)) Color.Transparent
+                                else ChecklistDividerColor,
                                 thickness = fontDp * CHECKLIST_DIVIDER_TO_FONT
                             )
                         }
@@ -532,62 +679,8 @@ fun InlineChecklistPanel(
                 }
             }
 
-            // Add inline checklist item
-            Row(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(start = highlightMargin, end = clipEnd)
-                    .padding(vertical = 6.dp),
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                Icon(
-                    imageVector = Icons.Default.Add,
-                    contentDescription = "Add Checklist",
-                    tint = ThingsBlue,
-                    modifier = Modifier.size(16.dp)
-                )
-                Spacer(modifier = Modifier.width(8.dp))
-                BasicTextField(
-                    value = newChecklistItemTitle,
-                    onValueChange = { newChecklistItemTitle = it },
-                    textStyle = TextStyle(fontSize = bodyFontSize, color = textPrimaryColor),
-                    cursorBrush = SolidColor(ThingsBlue),
-                    keyboardOptions = KeyboardOptions(imeAction = ImeAction.Done),
-                    keyboardActions = KeyboardActions(onDone = {
-                        if (newChecklistItemTitle.isNotBlank()) {
-                            val updated = checklist + ChecklistItem(itemId = itemId, title = newChecklistItemTitle.trim())
-                            onChecklistChange(updated)
-                            newChecklistItemTitle = ""
-                        }
-                    }),
-                    modifier = Modifier
-                        .weight(1f)
-                        .onFocusChanged { isNewItemFieldFocused = it.isFocused },
-                    decorationBox = { innerTextField ->
-                        if (newChecklistItemTitle.isEmpty()) {
-                            Text(
-                                "Add Checklist Item...",
-                                style = TextStyle(fontSize = bodyFontSize, color = textSecondaryColor.copy(alpha = 0.4f))
-                            )
-                        }
-                        innerTextField()
-                    }
-                )
-                Spacer(modifier = Modifier.width(6.dp))
-                Icon(
-                    imageVector = Icons.Default.Close,
-                    contentDescription = "Close Checklist Helper",
-                    tint = textSecondaryColor.copy(alpha = 0.6f),
-                    modifier = Modifier
-                        .size(14.dp)
-                        .clickable {
-                            // Пустая панель уезжает вместе с полем анимацией (~400 мс) — если клавиатура
-                            // открыта для этого поля, прячем её сразу (см. hideSoftKeyboardNow)
-                            if (checklist.isEmpty() && isNewItemFieldFocused) view.hideSoftKeyboardNow()
-                            onShowChecklistHelperChange(false)
-                        }
-                )
-            }
+            // Отдельной строки «добавить пункт» нет, как в Things 3: новый пункт — Return в пункте или кнопка
+            // «Checklists» в тулбаре
         }
     }
 }
