@@ -298,6 +298,7 @@ fun ThingsTaskInlineEditor(
                     expansionProgress = expansionProgress,
                     subtitleText = subtitleText,
                     showCursor = isExpanded && outsideTouch?.hideHandles != true,
+                    checklistBelow = showChecklistHelper || checklist.isNotEmpty(),
                     onCheckboxClick = {
                         isSavedManually = true
                         if (title.isBlank() && notes.isBlank() && checklist.isEmpty()) {
@@ -342,7 +343,8 @@ fun ThingsTaskInlineEditor(
 
             // Bottom Actions & Toolbar matching the image closely
             val textPrimaryColor = Color(0xFF1C1C1E)
-            val iconInactiveColor = Color(0xFFC7C7CC)
+            // Серые иконки нижней строки (теги, флажок и т. п.) — цвет как в Things 3
+            val iconInactiveColor = Color(0xFFA9A9A9)
             val bodyFontSize = MaterialTheme.typography.taskEditorDate.fontSize
 
             val hasActiveDate = startDate != null || section == TaskSection.TODAY || section == TaskSection.SOMEDAY

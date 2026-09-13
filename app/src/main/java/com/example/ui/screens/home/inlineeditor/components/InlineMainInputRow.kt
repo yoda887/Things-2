@@ -13,6 +13,11 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import com.example.ui.components.ThingsCheckbox
 import androidx.compose.runtime.Composable
+import androidx.compose.animation.core.Spring
+import androidx.compose.animation.core.animateDpAsState
+import androidx.compose.animation.core.spring
+import androidx.compose.runtime.getValue
+import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -48,7 +53,9 @@ fun InlineMainInputRow(
     // Читается только при размещении и в graphicsLayer — анимация раскрытия не пересобирает поля.
     expansionProgress: () -> Float = { 1f },
     subtitleText: String? = null,
-    showCursor: Boolean = true
+    showCursor: Boolean = true,
+    // Под заметкой показана панель чек-листа — поле заметки в одну строку с зазором до неё, как в Things 3
+    checklistBelow: Boolean = false
 ) {
     HideTextSelectionHandles(hidden = !showCursor) {
         InlineMainInputRowContent(
@@ -60,7 +67,8 @@ fun InlineMainInputRow(
             onCheckboxClick = onCheckboxClick,
             expansionProgress = expansionProgress,
             subtitleText = subtitleText,
-            cursorBrush = SolidColor(if (showCursor) ThingsBlue else Color.Unspecified)
+            cursorBrush = SolidColor(if (showCursor) ThingsBlue else Color.Unspecified),
+            checklistBelow = checklistBelow
         )
     }
 }
@@ -75,7 +83,8 @@ private fun InlineMainInputRowContent(
     onCheckboxClick: () -> Unit,
     expansionProgress: () -> Float,
     subtitleText: String?,
-    cursorBrush: Brush
+    cursorBrush: Brush,
+    checklistBelow: Boolean
 ) {
     val textPrimaryColor = Color(0xFF1C1C1E) // blackish font
     val textSecondaryColor = com.example.ui.theme.ThingsTextNotesLight
@@ -172,10 +181,27 @@ private fun InlineMainInputRowContent(
             ) {
                 Spacer(modifier = Modifier.height(MaterialTheme.dimens.taskExpandedTitleNotesGap))
 
+                // С чек-листом под заметкой поле, как в Things 3, в одну строку, а до первого разделителя
+                // чек-листа — постоянный зазор: от базовой линии заметки ≈ 2 высоты её заглавной (нижний
+                // вылет строки + этот зазор + верхний отступ панели 8 dp). Без чек-листа — прежние две
+                // строки не ниже 44 dp, нижняя строка редактора остаётся на месте. Переход — той же пружиной,
+                // что раскрытие панели чек-листа (expandVertically), чтобы строка под ними не дёргалась.
+                val notesFontDp = with(LocalDensity.current) { notesFontSize.toDp() }
+                val notesMinHeight by animateDpAsState(
+                    targetValue = if (checklistBelow) 0.dp else 44.dp,
+                    animationSpec = spring(stiffness = Spring.StiffnessMediumLow),
+                    label = "notes_min_height"
+                )
+                val notesGapBelow by animateDpAsState(
+                    targetValue = if (checklistBelow) notesFontDp * 0.725f else 0.dp,
+                    animationSpec = spring(stiffness = Spring.StiffnessMediumLow),
+                    label = "notes_gap_below"
+                )
+
                 BasicTextField(
                     value = notes,
                     onValueChange = onNotesChange,
-                    minLines = 2,
+                    minLines = if (checklistBelow) 1 else 2,
                     textStyle = TextStyle(
                         fontSize = notesFontSize,
                         fontWeight = FontWeight.Normal,
@@ -184,7 +210,7 @@ private fun InlineMainInputRowContent(
                     cursorBrush = cursorBrush,
                     modifier = Modifier
                         .fillMaxWidth()
-                        .heightIn(min = 44.dp)
+                        .heightIn(min = notesMinHeight)
                         .testTag("task_notes_input"),
                     decorationBox = { innerTextField ->
                         if (notes.isEmpty()) {
@@ -200,6 +226,7 @@ private fun InlineMainInputRowContent(
                         innerTextField()
                     }
                 )
+                Spacer(modifier = Modifier.height(notesGapBelow))
             }
         }
     }

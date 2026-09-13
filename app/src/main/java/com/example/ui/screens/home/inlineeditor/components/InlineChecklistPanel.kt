@@ -66,7 +66,7 @@ import kotlin.math.abs
 
 // Цвета, пропорции и тайминги сняты с видео Things 3 (пункты чек-листа в карточке задачи).
 // Размеры считаются от размера шрифта пункта (у Roboto высота заглавной ≈ 0,71 размера шрифта).
-private val ChecklistCircleColor = Color(0xFF244380)
+private val ChecklistCircleColor = Color(0xFF31539D)
 private val ChecklistCheckColor = Color(0xFF888888)
 private val ChecklistHandleColor = Color(0xFFB5B5B5)
 private val ChecklistDeleteColor = Color(0xFFEE004E)
@@ -503,7 +503,8 @@ private fun ChecklistCheckMark(checked: Boolean, markSize: Dp, onToggle: () -> U
         Canvas(modifier = Modifier.size(markSize)) {
             val d = size.minDimension
             if (!checked) {
-                val ring = d * 0.156f
+                // Толщина кольца — 13 % диаметра
+                val ring = d * 0.13f
                 drawCircle(
                     color = ChecklistCircleColor,
                     radius = (d - ring) / 2f,
