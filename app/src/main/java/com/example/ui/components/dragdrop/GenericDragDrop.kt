@@ -87,6 +87,16 @@ class GenericDragDropState(
     var dragAccumulatedX by mutableFloatStateOf(0f)
 
     /**
+     * Верхняя грань перетаскиваемой карточки в координатах списка — место под пальцем. Задаёт узел
+     * жеста, пока палец на экране; NaN — пальца на экране нет (в том числе во время анимации возврата,
+     * когда карточку ведёт [dragAccumulatedY]).
+     *
+     * Snapshot-состояние: [visualDragOffsetY] читает его в graphicsLayer вместе с раскладкой списка.
+     */
+    var dragCardTop by mutableFloatStateOf(Float.NaN)
+        internal set
+
+    /**
      * Экранное положение верхней грани перетаскиваемого элемента, каким оно обязано остаться
      * сразу после последней перестановки.
      *
@@ -111,21 +121,26 @@ class GenericDragDropState(
     internal var lastSwapMovingDown: Boolean? = null
 
     /**
-     * Смещение, с которым перетаскиваемый элемент [key] нужно РИСОВАТЬ: как [dragAccumulatedY], но верхняя
-     * грань элемента не поднимается выше начала контента списка.
+     * Смещение, с которым перетаскиваемый элемент [key] нужно РИСОВАТЬ относительно его слота.
      *
-     * Верхний contentPadding списка обычно закрыт панелью инструментов, а над ней строка состояния.
-     * Палец у самого верхнего края уводил карточку туда, и её не было видно, пока идёт автопрокрутка.
-     * Здесь карточка упирается в границу контента и остаётся на виду. Сам жест по-прежнему считается
-     * по [dragAccumulatedY] — положению под пальцем: глубина погружения в зону автопрокрутки, а с ней
-     * и скорость у края, не меняются.
+     * Пока палец на экране, смещение считается прямо при отрисовке — от фактического места слота в этом
+     * кадре до места под пальцем ([dragCardTop]). Раскладка списка к отрисовке уже готова, поэтому
+     * ни перестановка (слот прыгает на новое место), ни автопрокрутка не сдвигают карточку относительно
+     * пальца даже на один кадр — предсказывать прыжок и сверять его потом не нужно. Во время анимации
+     * возврата, а также пока слота нет среди видимых, карточку ведёт [dragAccumulatedY].
+     *
+     * Верхняя грань элемента при этом не поднимается выше начала контента списка: верхний contentPadding
+     * обычно закрыт панелью инструментов, а над ней строка состояния, и палец у самого верхнего края
+     * уводил карточку туда, где её не видно. Сам жест (зоны автопрокрутки, перестановки) считается по
+     * положению под пальцем — ограничение касается только отрисовки.
      *
      * Читать в лямбде graphicsLayer: значение зависит от раскладки списка и обновляет только слой.
      */
     fun visualDragOffsetY(key: Any): Float {
-        val offset = dragAccumulatedY
         val layoutInfo = lazyListState.layoutInfo
-        val itemInfo = layoutInfo.visibleItemsInfo.firstOrNull { it.key == key } ?: return offset
+        val itemInfo = layoutInfo.visibleItemsInfo.firstOrNull { it.key == key } ?: return dragAccumulatedY
+        val cardTop = dragCardTop
+        val offset = if (cardTop.isNaN()) dragAccumulatedY else cardTop - itemInfo.offset
         val contentTop = layoutInfo.viewportStartOffset + layoutInfo.beforeContentPadding
         return maxOf(offset, (contentTop - itemInfo.offset).toFloat())
     }
@@ -266,7 +281,9 @@ fun Modifier.universalDragAndDrop(
         val activeVisibleItems = activeItems(visibleItems, draggedKey)
         val draggedItem = activeVisibleItems.firstOrNull { it.key == draggedKey } ?: return null
 
-        val dragTop = draggedItem.offset + currentOffset
+        // Карточка там, где палец (dragCardTop); расчётное смещение — только если пальца на экране нет
+        val cardTopNow = state.dragCardTop
+        val dragTop = if (cardTopNow.isNaN()) draggedItem.offset + currentOffset else cardTopNow
         val dragBottom = dragTop + draggedItem.size
 
         // Фильтруем элементы согласно предикату canDropOver, исключая неподходящие цели для свапа
@@ -564,10 +581,13 @@ private class ReorderableItemNode(
     /**
      * Верхняя грань карточки в координатах списка — там, где она должна быть под пальцем.
      * В начале жеста совпадает со слотом, дальше меняется только от движения пальца: ни прокрутка,
-     * ни перестановки её не сдвигают. По ней считаются зоны автопрокрутки — в том числе когда слота
-     * элемента нет среди видимых — и с ней сверяется смещение карточки.
+     * ни перестановки её не сдвигают. По ней считаются зоны автопрокрутки и перестановки — в том числе
+     * когда слота элемента нет среди видимых — и по ней же рисуется карточка: значение живёт в общем
+     * состоянии ([GenericDragDropState.dragCardTop]), его читает отрисовка.
      */
-    private var cardTop = 0f
+    private var cardTop: Float
+        get() = state.dragCardTop
+        set(value) { state.dragCardTop = value }
 
     /** Высота перетаскиваемого элемента — для кадров, когда его слота нет среди видимых */
     private var cardSize = 0
@@ -769,14 +789,19 @@ private class ReorderableItemNode(
         // здесь корутина не выполнилась бы ни разу — карточка так и висела бы в режиме
         // перетаскивания. Без анимации возвращаем всё на место сразу.
         if (!isAttached) {
-            if (state.draggedItemKey == ownerKey) state.snapOffsetTo(0f)
+            if (state.draggedItemKey == ownerKey) {
+                state.snapOffsetTo(0f)
+                state.dragCardTop = Float.NaN
+            }
             finishSettle(ownerKey)
             return
         }
-        // Возврат начинается оттуда, где карточку видно: если палец ушёл выше края контента,
-        // рисовалась она прижатой к нему (см. visualDragOffsetY), а не под пальцем
+        // Возврат начинается ровно оттуда, где карточку видно (под пальцем или прижатой к краю
+        // контента, см. visualDragOffsetY): это смещение переходит в dragAccumulatedY, и дальше
+        // карточку ведёт анимация, а не палец
         if (state.draggedItemKey == ownerKey) {
             state.dragAccumulatedY = state.visualDragOffsetY(ownerKey)
+            state.dragCardTop = Float.NaN
         }
         coroutineScope.launch {
             try {
@@ -791,6 +816,7 @@ private class ReorderableItemNode(
         // За время анимации перетаскивание мог перехватить другой элемент
         if (state.draggedItemKey == ownerKey) {
             state.draggedItemKey = null
+            state.dragCardTop = Float.NaN
             state.stackedDragKeys = emptyList()
             state.lastSwappedTargetKey = null
             state.lastSwapMovingDown = null
