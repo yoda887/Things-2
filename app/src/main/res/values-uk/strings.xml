@@ -1,4 +1,8 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
     <string name="tomorrow">Завтра</string>
+    <string name="area_upcoming_heading">Плани</string>
+    <string name="area_someday_heading">Колись</string>
+    <string name="area_hide_later_items">Сховати пізніші об\'єкти</string>
+    <string name="area_show_later_items">Показати пізніші об\'єкти</string>
 </resources>

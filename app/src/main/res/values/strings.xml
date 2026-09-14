@@ -40,4 +40,8 @@
     <string name="batch_action_set_deadline">Set Deadline</string>
     <string name="batch_action_duplicate">Duplicate</string>
     <string name="batch_action_share">Share</string>
+    <string name="area_upcoming_heading">Upcoming</string>
+    <string name="area_someday_heading">Someday</string>
+    <string name="area_hide_later_items">Hide Later Items</string>
+    <string name="area_show_later_items">Show Later Items</string>
 </resources>

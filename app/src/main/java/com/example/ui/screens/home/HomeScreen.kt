@@ -258,9 +258,11 @@ fun ThingsHomeScreen(viewModel: ThingsViewModel = hiltViewModel()) {
                                 ActiveScreen.UPCOMING -> TaskSection.UPCOMING
                                 ActiveScreen.ANYTIME -> TaskSection.ANYTIME
                                 ActiveScreen.SOMEDAY -> TaskSection.SOMEDAY
+                                ActiveScreen.AREA_DETAIL -> TaskSection.ANYTIME
                                 else -> TaskSection.INBOX
                             }
                             val initialProjectId = if (targetScreen == ActiveScreen.PROJECT_DETAIL) selectedProject?.id else null
+                            val initialAreaId = if (targetScreen == ActiveScreen.AREA_DETAIL) selectedArea?.id else null
                             val newTaskId = java.util.UUID.randomUUID().toString()
 
                             val startValue = when (initialSection) {
@@ -295,6 +297,7 @@ fun ThingsHomeScreen(viewModel: ThingsViewModel = hiltViewModel()) {
                                 notes = "",
                                 start = startValue,
                                 projectId = initialProjectId,
+                                areaId = initialAreaId,
                                 startDate = computedStartDate,
                                 creationDate = System.currentTimeMillis()
                             )

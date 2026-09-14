@@ -427,7 +427,7 @@ fun MainCategoryHeader(
 }
 
 /**
- * Вспомогательный заголовок для подразделов ("This Evening", "TASKS", "PROJECTS").
+ * Вспомогательный заголовок для подразделов ("This Evening", "TASKS", "PROJECTS", "Планы", "Скрыть более поздние объекты").
  */
 @Composable
 fun SubCategoryHeader(
@@ -436,6 +436,8 @@ fun SubCategoryHeader(
     textSecondaryColor: Color,
     dividerColor: Color,
     dimAlpha: Float,
+    isLaterItemsHidden: Boolean = false,
+    onLaterToggleClick: () -> Unit = {},
     modifier: Modifier = Modifier
 ) {
     if (headerText == TaskListKeys.PROJECTS_HEADING) {
@@ -484,6 +486,101 @@ fun SubCategoryHeader(
                     .fillMaxWidth()
                     .height(1.dp)
                     .background(dividerColor)
+            )
+        }
+    } else if (headerText == TaskListKeys.AREA_UPCOMING_HEADING) {
+        Column(
+            modifier = modifier
+                .fillMaxWidth()
+                .graphicsLayer { alpha = dimAlpha }
+                .padding(top = 24.dp, bottom = 6.dp)
+        ) {
+            Row(
+                modifier = Modifier.padding(start = MaterialTheme.dimens.taskRowStartPadding),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Icon(
+                    imageVector = AppIcons.Upcoming,
+                    contentDescription = null,
+                    tint = Color.Unspecified,
+                    modifier = Modifier.size(18.dp)
+                )
+                Spacer(modifier = Modifier.width(8.dp))
+                Text(
+                    text = androidx.compose.ui.res.stringResource(com.example.R.string.area_upcoming_heading),
+                    style = TextStyle(
+                        fontSize = 18.sp,
+                        fontWeight = FontWeight.Bold,
+                        color = textPrimaryColor
+                    )
+                )
+            }
+            Spacer(modifier = Modifier.height(10.dp))
+            Box(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(0.6.dp)
+                    .background(dividerColor)
+            )
+        }
+    } else if (headerText == TaskListKeys.AREA_SOMEDAY_HEADING) {
+        Column(
+            modifier = modifier
+                .fillMaxWidth()
+                .graphicsLayer { alpha = dimAlpha }
+                .padding(top = 24.dp, bottom = 6.dp)
+        ) {
+            Row(
+                modifier = Modifier.padding(start = MaterialTheme.dimens.taskRowStartPadding),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Icon(
+                    imageVector = AppIcons.Someday,
+                    contentDescription = null,
+                    tint = Color.Unspecified,
+                    modifier = Modifier.size(18.dp)
+                )
+                Spacer(modifier = Modifier.width(8.dp))
+                Text(
+                    text = androidx.compose.ui.res.stringResource(com.example.R.string.area_someday_heading),
+                    style = TextStyle(
+                        fontSize = 18.sp,
+                        fontWeight = FontWeight.Bold,
+                        color = textPrimaryColor
+                    )
+                )
+            }
+            Spacer(modifier = Modifier.height(10.dp))
+            Box(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(0.6.dp)
+                    .background(dividerColor)
+            )
+        }
+    } else if (headerText == TaskListKeys.AREA_LATER_TOGGLE) {
+        Box(
+            modifier = modifier
+                .fillMaxWidth()
+                .graphicsLayer { alpha = dimAlpha }
+                .padding(start = MaterialTheme.dimens.taskRowStartPadding, top = 16.dp, bottom = 12.dp)
+        ) {
+            Text(
+                text = androidx.compose.ui.res.stringResource(
+                    if (isLaterItemsHidden) com.example.R.string.area_show_later_items else com.example.R.string.area_hide_later_items
+                ),
+                style = TextStyle(
+                    fontSize = 14.sp,
+                    fontWeight = FontWeight.Normal,
+                    color = textSecondaryColor.copy(alpha = 0.6f)
+                ),
+                modifier = Modifier
+                    .clickable(
+                        interactionSource = remember { MutableInteractionSource() },
+                        indication = null
+                    ) {
+                        onLaterToggleClick()
+                    }
             )
         }
     } else {

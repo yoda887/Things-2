@@ -155,9 +155,23 @@ fun TaskItemRow(
 
     val isCalendarTask = task.id.startsWith("cal_")
 
-    val dateIndicator = remember(task.startDate, task.isTonight) {
+    val dateIndicator = remember(task.startDate, task.isTonight, task.start, task.dueDate) {
         if (task.startDate != null) {
             getStartDateIndicator(task.startDate, task.isTonight)
+        } else if (task.isToday) {
+            if (task.isTonight) {
+                DateIndicatorResult.IconIndicator(
+                    icon = AppIcons.Evening,
+                    color = androidx.compose.ui.graphics.Color(0xFF2196F3),
+                    contentDescription = "Tonight"
+                )
+            } else {
+                DateIndicatorResult.IconIndicator(
+                    icon = AppIcons.Today,
+                    color = androidx.compose.ui.graphics.Color.Unspecified,
+                    contentDescription = "Today"
+                )
+            }
         } else {
             null
         }
@@ -284,7 +298,7 @@ fun TaskItemRow(
                                     .padding(horizontal = 6.dp, vertical = 2.dp)
                             )
                             Spacer(modifier = Modifier.width(6.dp))
-                        } else if (screen == ActiveScreen.PROJECT_DETAIL && dateIndicator != null) {
+                        } else if ((screen == ActiveScreen.PROJECT_DETAIL || screen == ActiveScreen.AREA_DETAIL) && dateIndicator != null) {
                             when (dateIndicator) {
                                 is DateIndicatorResult.IconIndicator -> {
                                     Icon(

@@ -91,6 +91,15 @@ object TaskListKeys {
     /** Заголовок секции задач на экране сферы */
     const val TASKS_HEADING = "tasks_heading"
 
+    /** Заголовок секции «Планы» на экране сферы */
+    const val AREA_UPCOMING_HEADING = "area_upcoming_heading"
+
+    /** Заголовок секции «Когда-нибудь» на экране сферы */
+    const val AREA_SOMEDAY_HEADING = "area_someday_heading"
+
+    /** Кнопка скрытия/показа более поздних объектов на экране сферы */
+    const val AREA_LATER_TOGGLE = "area_later_toggle"
+
     /** Префикс заголовка дня на экране «Предстоящие» */
     const val DAY_HEADER_PREFIX = "hdr_"
 
@@ -116,7 +125,7 @@ object TaskListKeys {
      * Заголовки, у которых есть осмысленная обработка сброса ([MAIN_HEADER], [EVENING_HEADER],
      * [DAY_HEADER_PREFIX], [MONTH_HEADER_PREFIX]), сюда не входят.
      */
-    val nonDroppable = setOf(CALENDAR_WIDGET, TAG_FILTER, EMPTY_STATE, PROJECTS_HEADING, TASKS_HEADING)
+    val nonDroppable = setOf(CALENDAR_WIDGET, TAG_FILTER, EMPTY_STATE, PROJECTS_HEADING, TASKS_HEADING, AREA_UPCOMING_HEADING, AREA_SOMEDAY_HEADING, AREA_LATER_TOGGLE)
 }
 
 /** Горизонт планирования экрана «Предстоящие» в днях */
@@ -344,9 +353,10 @@ fun rememberFlattenedList(
     upcomingMonths: List<UpcomingMonth> = emptyList(),
     projects: List<Item>,
     area: Area?,
-    displayTasks: List<ItemWithChecklist>
+    displayTasks: List<ItemWithChecklist>,
+    isLaterItemsHidden: Boolean = false
 ): List<Any> {
-    return remember(screen, standardToday, eveningToday, draggedItemKey, upcomingDays, upcomingMonths, projects, area, displayTasks) {
+    return remember(screen, standardToday, eveningToday, draggedItemKey, upcomingDays, upcomingMonths, projects, area, displayTasks, isLaterItemsHidden) {
         buildList<Any> {
             if (screen == ActiveScreen.TODAY) {
                 addAll(standardToday)
@@ -386,13 +396,29 @@ fun rememberFlattenedList(
             } else if (screen == ActiveScreen.AREA_DETAIL) {
                 val areaProjects = projects.filter { it.areaId == area?.id }
                 if (areaProjects.isNotEmpty()) {
-                    add(TaskListKeys.PROJECTS_HEADING)
                     addAll(areaProjects)
                 }
                 val areaDirectTasks = displayTasks.filter { it.item.areaId == area?.id && (it.item.projectId == null || it.item.projectId == "") }
-                if (areaDirectTasks.isNotEmpty()) {
-                    add(TaskListKeys.TASKS_HEADING)
-                    addAll(areaDirectTasks)
+                val bounds = DayBounds.now()
+                val currentTasks = areaDirectTasks.filter { !bounds.isUpcoming(it.item) && it.item.start != 3 }
+                val upcomingTasks = areaDirectTasks.filter { bounds.isUpcoming(it.item) && it.item.start != 3 }
+                val somedayTasks = areaDirectTasks.filter { it.item.start == 3 }
+
+                addAll(currentTasks)
+
+                val hasLaterItems = upcomingTasks.isNotEmpty() || somedayTasks.isNotEmpty()
+                if (hasLaterItems) {
+                    if (!isLaterItemsHidden) {
+                        if (upcomingTasks.isNotEmpty()) {
+                            add(TaskListKeys.AREA_UPCOMING_HEADING)
+                            addAll(upcomingTasks)
+                        }
+                        if (somedayTasks.isNotEmpty()) {
+                            add(TaskListKeys.AREA_SOMEDAY_HEADING)
+                            addAll(somedayTasks)
+                        }
+                    }
+                    add(TaskListKeys.AREA_LATER_TOGGLE)
                 }
             } else {
                 addAll(displayTasks)

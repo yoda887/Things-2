@@ -30,6 +30,7 @@ import androidx.compose.material.icons.filled.*
 import androidx.compose.material.icons.outlined.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -237,6 +238,8 @@ fun ThingsCategoryListPanel(
 
     val displayTasks = localTasksList
     
+    var isLaterItemsHidden by rememberSaveable { mutableStateOf(false) }
+
     // Извлечение выравнивания плоского списка для LazyColumn
     val flattened = rememberFlattenedList(
         screen = screen,
@@ -247,7 +250,8 @@ fun ThingsCategoryListPanel(
         upcomingMonths = upcomingMonths,
         projects = projects,
         area = area,
-        displayTasks = displayTasks
+        displayTasks = displayTasks,
+        isLaterItemsHidden = isLaterItemsHidden
     )
 
     val density = androidx.compose.ui.platform.LocalDensity.current
@@ -492,7 +496,7 @@ fun ThingsCategoryListPanel(
                 }
             }
 
-            if (allTags.isNotEmpty()) {
+            if (allTags.isNotEmpty() && screen != ActiveScreen.AREA_DETAIL) {
                 item(key = TaskListKeys.TAG_FILTER) {
                     // Извлеченный подкомпонент строки тегов
                     TagFilterRow(
@@ -685,6 +689,8 @@ fun ThingsCategoryListPanel(
                                 textSecondaryColor = textSecondaryColor,
                                 dividerColor = dividerColor,
                                 dimAlpha = dimAlpha,
+                                isLaterItemsHidden = isLaterItemsHidden,
+                                onLaterToggleClick = { isLaterItemsHidden = !isLaterItemsHidden },
                                 modifier = Modifier
                                     .padding(horizontal = 8.dp)
                                     .animateItem(
