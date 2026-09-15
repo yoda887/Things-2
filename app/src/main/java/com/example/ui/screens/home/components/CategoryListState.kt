@@ -100,6 +100,9 @@ object TaskListKeys {
     /** Кнопка скрытия/показа более поздних объектов на экране сферы */
     const val AREA_LATER_TOGGLE = "area_later_toggle"
 
+    /** Отступ между списком проектов и списком задач на экране сферы */
+    const val AREA_PROJECTS_SPACER = "area_projects_spacer"
+
     /** Префикс заголовка дня на экране «Предстоящие» */
     const val DAY_HEADER_PREFIX = "hdr_"
 
@@ -125,7 +128,7 @@ object TaskListKeys {
      * Заголовки, у которых есть осмысленная обработка сброса ([MAIN_HEADER], [EVENING_HEADER],
      * [DAY_HEADER_PREFIX], [MONTH_HEADER_PREFIX]), сюда не входят.
      */
-    val nonDroppable = setOf(CALENDAR_WIDGET, TAG_FILTER, EMPTY_STATE, PROJECTS_HEADING, TASKS_HEADING, AREA_UPCOMING_HEADING, AREA_SOMEDAY_HEADING, AREA_LATER_TOGGLE)
+    val nonDroppable = setOf(CALENDAR_WIDGET, TAG_FILTER, EMPTY_STATE, PROJECTS_HEADING, TASKS_HEADING, AREA_UPCOMING_HEADING, AREA_SOMEDAY_HEADING, AREA_LATER_TOGGLE, AREA_PROJECTS_SPACER)
 }
 
 /** Горизонт планирования экрана «Предстоящие» в днях */
@@ -154,7 +157,7 @@ fun computeUpcomingSchedule(
     val weekdayFormat = SimpleDateFormat("EEEE", locale)
     val monthFormat = SimpleDateFormat("MMMM", locale)
     val monthYearFormat = SimpleDateFormat("MMMM yyyy", locale)
-    val dayBadgeFormat = SimpleDateFormat("dd/MM", locale)
+    val dayBadgeFormat = SimpleDateFormat("d", locale)
     val dayNumFormat = SimpleDateFormat("d", locale)
 
     val currentYear = Calendar.getInstance().get(Calendar.YEAR)
@@ -403,6 +406,10 @@ fun rememberFlattenedList(
                 val currentTasks = areaDirectTasks.filter { !bounds.isUpcoming(it.item) && it.item.start != 3 }
                 val upcomingTasks = areaDirectTasks.filter { bounds.isUpcoming(it.item) && it.item.start != 3 }
                 val somedayTasks = areaDirectTasks.filter { it.item.start == 3 }
+
+                if (areaProjects.isNotEmpty() && (currentTasks.isNotEmpty() || upcomingTasks.isNotEmpty() || somedayTasks.isNotEmpty())) {
+                    add(TaskListKeys.AREA_PROJECTS_SPACER)
+                }
 
                 addAll(currentTasks)
 

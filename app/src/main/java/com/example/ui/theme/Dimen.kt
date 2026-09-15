@@ -13,6 +13,7 @@ import androidx.compose.ui.unit.dp
 data class AppDimens(
     val mainCheckboxSize: Dp = 16.dp,
     val taskLeftColumnWidthDefault: Dp = 16.dp,
+    val projectLeftColumnWidthDefault: Dp = 20.dp,
     val taskSpacingToTextDefault: Dp = 8.dp,
     val searchLeftColumnWidth: Dp = 24.dp,
     val searchSpacingToText: Dp = 12.dp,

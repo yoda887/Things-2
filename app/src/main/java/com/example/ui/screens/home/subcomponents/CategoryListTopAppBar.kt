@@ -141,7 +141,7 @@ fun CategoryListTopAppBar(
                                 )
                                 Spacer(modifier = Modifier.width(TOP_APP_BAR_SPACING))
                                 Text(
-                                    text = "Today",
+                                    text = androidx.compose.ui.res.stringResource(com.example.R.string.category_today),
                                     style = MaterialTheme.typography.topAppBarTitle,
                                     color = textPrimaryColor,
                                     fontWeight = FontWeight.SemiBold
@@ -156,7 +156,7 @@ fun CategoryListTopAppBar(
                                 )
                                 Spacer(modifier = Modifier.width(TOP_APP_BAR_SPACING))
                                 Text(
-                                    text = "Inbox",
+                                    text = androidx.compose.ui.res.stringResource(com.example.R.string.category_inbox),
                                     style = MaterialTheme.typography.topAppBarTitle,
                                     color = textPrimaryColor,
                                     fontWeight = FontWeight.SemiBold
@@ -171,7 +171,7 @@ fun CategoryListTopAppBar(
                                 )
                                 Spacer(modifier = Modifier.width(TOP_APP_BAR_SPACING))
                                 Text(
-                                    text = "Upcoming",
+                                    text = androidx.compose.ui.res.stringResource(com.example.R.string.category_upcoming),
                                     style = MaterialTheme.typography.topAppBarTitle,
                                     color = textPrimaryColor,
                                     fontWeight = FontWeight.SemiBold
@@ -186,7 +186,7 @@ fun CategoryListTopAppBar(
                                 )
                                 Spacer(modifier = Modifier.width(TOP_APP_BAR_SPACING))
                                 Text(
-                                    text = "Anytime",
+                                    text = androidx.compose.ui.res.stringResource(com.example.R.string.category_anytime),
                                     style = MaterialTheme.typography.topAppBarTitle,
                                     color = textPrimaryColor,
                                     fontWeight = FontWeight.SemiBold
@@ -201,7 +201,7 @@ fun CategoryListTopAppBar(
                                 )
                                 Spacer(modifier = Modifier.width(TOP_APP_BAR_SPACING))
                                 Text(
-                                    text = "Someday",
+                                    text = androidx.compose.ui.res.stringResource(com.example.R.string.category_someday),
                                     style = MaterialTheme.typography.topAppBarTitle,
                                     color = textPrimaryColor,
                                     fontWeight = FontWeight.SemiBold
@@ -216,7 +216,7 @@ fun CategoryListTopAppBar(
                                 )
                                 Spacer(modifier = Modifier.width(TOP_APP_BAR_SPACING))
                                 Text(
-                                    text = "Logbook",
+                                    text = androidx.compose.ui.res.stringResource(com.example.R.string.category_logbook),
                                     style = MaterialTheme.typography.topAppBarTitle,
                                     color = textPrimaryColor,
                                     fontWeight = FontWeight.SemiBold

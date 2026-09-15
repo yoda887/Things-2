@@ -124,17 +124,15 @@ fun QuickAddDialog(
         projects.firstOrNull { it.id == selectedProjectId }
     }
 
-    val destinationName = remember(currentProject, section) {
-        if (currentProject != null) {
-            currentProject.name
-        } else {
-            when (section) {
-                TaskSection.TODAY -> if (isTonight) "This Evening" else "Today"
-                TaskSection.UPCOMING -> "Upcoming"
-                TaskSection.ANYTIME -> "Anytime"
-                TaskSection.SOMEDAY -> "Someday"
-                else -> "Inbox"
-            }
+    val destinationName = if (currentProject != null) {
+        currentProject.name
+    } else {
+        when (section) {
+            TaskSection.TODAY -> if (isTonight) androidx.compose.ui.res.stringResource(com.example.R.string.category_this_evening) else androidx.compose.ui.res.stringResource(com.example.R.string.category_today)
+            TaskSection.UPCOMING -> androidx.compose.ui.res.stringResource(com.example.R.string.category_upcoming)
+            TaskSection.ANYTIME -> androidx.compose.ui.res.stringResource(com.example.R.string.category_anytime)
+            TaskSection.SOMEDAY -> androidx.compose.ui.res.stringResource(com.example.R.string.category_someday)
+            else -> androidx.compose.ui.res.stringResource(com.example.R.string.category_inbox)
         }
     }
 

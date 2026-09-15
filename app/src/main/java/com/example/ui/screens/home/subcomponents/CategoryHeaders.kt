@@ -138,7 +138,7 @@ fun MainCategoryHeader(
                 )
                 Spacer(modifier = Modifier.width((10 * scaleFactor).dp))
                 Text(
-                    text = "Today",
+                    text = androidx.compose.ui.res.stringResource(com.example.R.string.category_today),
                     style = TextStyle(
                         fontSize = headerTitleFontSize,
                         fontWeight = FontWeight.Bold,
@@ -156,7 +156,7 @@ fun MainCategoryHeader(
                 )
                 Spacer(modifier = Modifier.width((10 * scaleFactor).dp))
                 Text(
-                    text = "Inbox",
+                    text = androidx.compose.ui.res.stringResource(com.example.R.string.category_inbox),
                     style = TextStyle(
                         fontSize = headerTitleFontSize,
                         fontWeight = FontWeight.Bold,
@@ -174,7 +174,7 @@ fun MainCategoryHeader(
                 )
                 Spacer(modifier = Modifier.width((10 * scaleFactor).dp))
                 Text(
-                    text = "Upcoming",
+                    text = androidx.compose.ui.res.stringResource(com.example.R.string.category_upcoming),
                     style = TextStyle(
                         fontSize = headerTitleFontSize,
                         fontWeight = FontWeight.Bold,
@@ -192,7 +192,7 @@ fun MainCategoryHeader(
                 )
                 Spacer(modifier = Modifier.width((10 * scaleFactor).dp))
                 Text(
-                    text = "Anytime",
+                    text = androidx.compose.ui.res.stringResource(com.example.R.string.category_anytime),
                     style = TextStyle(
                         fontSize = headerTitleFontSize,
                         fontWeight = FontWeight.Bold,
@@ -210,7 +210,7 @@ fun MainCategoryHeader(
                 )
                 Spacer(modifier = Modifier.width((10 * scaleFactor).dp))
                 Text(
-                    text = "Someday",
+                    text = androidx.compose.ui.res.stringResource(com.example.R.string.category_someday),
                     style = TextStyle(
                         fontSize = headerTitleFontSize,
                         fontWeight = FontWeight.Bold,
@@ -228,7 +228,7 @@ fun MainCategoryHeader(
                 )
                 Spacer(modifier = Modifier.width((10 * scaleFactor).dp))
                 Text(
-                    text = "Logbook",
+                    text = androidx.compose.ui.res.stringResource(com.example.R.string.category_logbook),
                     style = TextStyle(
                         fontSize = headerTitleFontSize,
                         fontWeight = FontWeight.Bold,
@@ -454,9 +454,9 @@ fun SubCategoryHeader(
                     fontWeight = FontWeight.Bold,
                     color = textSecondaryColor.copy(alpha = 0.5f),
                     letterSpacing = 1.sp
-                )
+                ),
+                modifier = Modifier.padding(bottom = 6.dp)
             )
-            Spacer(modifier = Modifier.height(6.dp))
             Box(
                 modifier = Modifier
                     .fillMaxWidth()
@@ -478,9 +478,9 @@ fun SubCategoryHeader(
                     fontWeight = FontWeight.Bold,
                     color = textSecondaryColor.copy(alpha = 0.5f),
                     letterSpacing = 1.sp
-                )
+                ),
+                modifier = Modifier.padding(bottom = 6.dp)
             )
-            Spacer(modifier = Modifier.height(6.dp))
             Box(
                 modifier = Modifier
                     .fillMaxWidth()
@@ -493,32 +493,40 @@ fun SubCategoryHeader(
             modifier = modifier
                 .fillMaxWidth()
                 .graphicsLayer { alpha = dimAlpha }
-                .padding(top = 24.dp, bottom = 6.dp)
+                .padding(top = 48.dp, bottom = 6.dp)
         ) {
             Row(
-                modifier = Modifier.padding(start = MaterialTheme.dimens.taskRowStartPadding),
+                modifier = Modifier.padding(start = MaterialTheme.dimens.taskRowStartPadding, bottom = 6.dp),
                 verticalAlignment = Alignment.CenterVertically
             ) {
-                Icon(
-                    imageVector = AppIcons.Upcoming,
-                    contentDescription = null,
-                    tint = Color.Unspecified,
-                    modifier = Modifier.size(18.dp)
-                )
-                Spacer(modifier = Modifier.width(8.dp))
+                Box(
+                    modifier = Modifier.size(MaterialTheme.dimens.projectLeftColumnWidthDefault),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Icon(
+                        imageVector = AppIcons.Upcoming,
+                        contentDescription = null,
+                        tint = Color.Unspecified,
+                        modifier = Modifier.size(20.dp)
+                    )
+                }
+                Spacer(modifier = Modifier.width(MaterialTheme.dimens.taskSpacingToTextDefault))
                 Text(
                     text = androidx.compose.ui.res.stringResource(com.example.R.string.area_upcoming_heading),
                     style = TextStyle(
-                        fontSize = 18.sp,
-                        fontWeight = FontWeight.Bold,
+                        fontSize = 19.sp,
+                        fontWeight = FontWeight.Medium,
                         color = textPrimaryColor
                     )
                 )
             }
-            Spacer(modifier = Modifier.height(10.dp))
             Box(
                 modifier = Modifier
                     .fillMaxWidth()
+                    .padding(
+                        start = MaterialTheme.dimens.taskRowStartPadding,
+                        end = MaterialTheme.dimens.taskRowEndPadding
+                    )
                     .height(0.6.dp)
                     .background(dividerColor)
             )
@@ -528,32 +536,40 @@ fun SubCategoryHeader(
             modifier = modifier
                 .fillMaxWidth()
                 .graphicsLayer { alpha = dimAlpha }
-                .padding(top = 24.dp, bottom = 6.dp)
+                .padding(top = 48.dp, bottom = 6.dp)
         ) {
             Row(
-                modifier = Modifier.padding(start = MaterialTheme.dimens.taskRowStartPadding),
+                modifier = Modifier.padding(start = MaterialTheme.dimens.taskRowStartPadding, bottom = 6.dp),
                 verticalAlignment = Alignment.CenterVertically
             ) {
-                Icon(
-                    imageVector = AppIcons.Someday,
-                    contentDescription = null,
-                    tint = Color.Unspecified,
-                    modifier = Modifier.size(18.dp)
-                )
-                Spacer(modifier = Modifier.width(8.dp))
+                Box(
+                    modifier = Modifier.size(MaterialTheme.dimens.projectLeftColumnWidthDefault),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Icon(
+                        imageVector = AppIcons.Someday,
+                        contentDescription = null,
+                        tint = Color.Unspecified,
+                        modifier = Modifier.size(20.dp)
+                    )
+                }
+                Spacer(modifier = Modifier.width(MaterialTheme.dimens.taskSpacingToTextDefault))
                 Text(
                     text = androidx.compose.ui.res.stringResource(com.example.R.string.area_someday_heading),
                     style = TextStyle(
-                        fontSize = 18.sp,
-                        fontWeight = FontWeight.Bold,
+                        fontSize = 19.sp,
+                        fontWeight = FontWeight.Medium,
                         color = textPrimaryColor
                     )
                 )
             }
-            Spacer(modifier = Modifier.height(10.dp))
             Box(
                 modifier = Modifier
                     .fillMaxWidth()
+                    .padding(
+                        start = MaterialTheme.dimens.taskRowStartPadding,
+                        end = MaterialTheme.dimens.taskRowEndPadding
+                    )
                     .height(0.6.dp)
                     .background(dividerColor)
             )
@@ -563,7 +579,7 @@ fun SubCategoryHeader(
             modifier = modifier
                 .fillMaxWidth()
                 .graphicsLayer { alpha = dimAlpha }
-                .padding(start = MaterialTheme.dimens.taskRowStartPadding, top = 16.dp, bottom = 12.dp)
+                .padding(start = MaterialTheme.dimens.taskRowStartPadding, top = 20.dp, bottom = 12.dp)
         ) {
             Text(
                 text = androidx.compose.ui.res.stringResource(
@@ -605,12 +621,11 @@ fun SubCategoryHeader(
                         .padding(end = 8.dp)
                         .size(20.dp)
                 )
-                // Увеличенный размер шрифта для заголовка "This Evening" до 20.sp по запросу пользователя.
                 Text(
-                    "This Evening",
+                    text = androidx.compose.ui.res.stringResource(com.example.R.string.category_this_evening),
                     style = TextStyle(
-                        fontSize = 20.sp,
-                        fontWeight = FontWeight.Bold,
+                        fontSize = 19.sp,
+                        fontWeight = FontWeight.Medium,
                         color = textPrimaryColor
                     )
                 )
@@ -620,7 +635,6 @@ fun SubCategoryHeader(
                     .fillMaxWidth()
                     .height(1.dp)
                     .background(dividerColor)
-                    .padding(bottom = 6.dp)
             )
             // Свободное пространство в 8.dp снизу от разделительной линии по запросу пользователя.
             Spacer(modifier = Modifier.height(8.dp))

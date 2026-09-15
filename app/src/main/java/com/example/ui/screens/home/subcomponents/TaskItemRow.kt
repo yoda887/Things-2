@@ -261,6 +261,7 @@ fun TaskItemRow(
                             }
                         },
                         size = 16.dp,
+                        isDashed = task.start == 3 && !localCompleted,
                         modifier = Modifier
                             .testTag("task_checkbox")
                     )

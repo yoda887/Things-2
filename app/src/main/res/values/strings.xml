@@ -44,4 +44,11 @@
     <string name="area_someday_heading">Someday</string>
     <string name="area_hide_later_items">Hide Later Items</string>
     <string name="area_show_later_items">Show Later Items</string>
+    <string name="category_inbox">Inbox</string>
+    <string name="category_today">Today</string>
+    <string name="category_upcoming">Upcoming</string>
+    <string name="category_anytime">Anytime</string>
+    <string name="category_someday">Someday</string>
+    <string name="category_logbook">Logbook</string>
+    <string name="category_this_evening">This Evening</string>
 </resources>

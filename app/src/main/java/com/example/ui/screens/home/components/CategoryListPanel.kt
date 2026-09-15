@@ -496,7 +496,7 @@ fun ThingsCategoryListPanel(
                 }
             }
 
-            if (allTags.isNotEmpty() && screen != ActiveScreen.AREA_DETAIL) {
+            if (allTags.isNotEmpty()) {
                 item(key = TaskListKeys.TAG_FILTER) {
                     // Извлеченный подкомпонент строки тегов
                     TagFilterRow(
@@ -545,7 +545,7 @@ fun ThingsCategoryListPanel(
                         is ItemWithChecklist -> {
                             AnimatedTaskItem(
                                 taskWrapper = item,
-                                dateBadge = monthTaskBadges[item.item.id],
+                                dateBadge = if (screen == ActiveScreen.UPCOMING) monthTaskBadges[item.item.id] else null,
                                 dragDropState = dragDropState,
                                 inlineExpandedTaskId = inlineExpandedTaskId,
                                 editorOutsideTouch = editorOutsideTouch,
@@ -600,6 +600,7 @@ fun ThingsCategoryListPanel(
                                 ProjectItemRow(
                                     project = task,
                                     tasks = state.displayTasks,
+                                    projectProgressMap = state.projectProgressMap,
                                     textPrimaryColor = textPrimaryColor,
                                     inlineExpandedTaskId = inlineExpandedTaskId,
                                     onProjectClick = { onEvent(ThingsCategoryListEvent.ClickProject(it)) },
@@ -675,28 +676,39 @@ fun ThingsCategoryListPanel(
                                 )
                             }
                         }
-                        else -> { // заголовки секций: вечер, проекты сферы, задачи сферы
+                        else -> { // заголовки секций: вечер, проекты сферы, задачи сферы, спейсеры
                             val headerText = item as String
-                            val shouldDim = inlineExpandedTaskId != null
-                            val dimAlpha by animateFloatAsState(
-                                targetValue = if (shouldDim) 0.3f else 1f,
-                                label = "dimAlpha_$headerText"
-                            )
-                            // Извлеченные подзаголовки разделов в CategoryListPanel
-                            SubCategoryHeader(
-                                headerText = headerText,
-                                textPrimaryColor = textPrimaryColor,
-                                textSecondaryColor = textSecondaryColor,
-                                dividerColor = dividerColor,
-                                dimAlpha = dimAlpha,
-                                isLaterItemsHidden = isLaterItemsHidden,
-                                onLaterToggleClick = { isLaterItemsHidden = !isLaterItemsHidden },
-                                modifier = Modifier
-                                    .padding(horizontal = 8.dp)
-                                    .animateItem(
-                                        placementSpec = placementSpec
-                                    )
-                            )
+                            if (headerText == TaskListKeys.AREA_PROJECTS_SPACER) {
+                                Spacer(
+                                    modifier = Modifier
+                                        .height(16.dp)
+                                        .animateItem(placementSpec = placementSpec)
+                                )
+                            } else {
+                                val shouldDim = inlineExpandedTaskId != null
+                                val dimAlpha by animateFloatAsState(
+                                    targetValue = if (shouldDim) 0.3f else 1f,
+                                    label = "dimAlpha_$headerText"
+                                )
+                                val isAreaHeader = headerText.startsWith("area_")
+                                // Извлеченные подзаголовки разделов в CategoryListPanel
+                                SubCategoryHeader(
+                                    headerText = headerText,
+                                    textPrimaryColor = textPrimaryColor,
+                                    textSecondaryColor = textSecondaryColor,
+                                    dividerColor = dividerColor,
+                                    dimAlpha = dimAlpha,
+                                    isLaterItemsHidden = isLaterItemsHidden,
+                                    onLaterToggleClick = { isLaterItemsHidden = !isLaterItemsHidden },
+                                    modifier = if (isAreaHeader) {
+                                        Modifier.animateItem(placementSpec = placementSpec)
+                                    } else {
+                                        Modifier
+                                            .padding(horizontal = 8.dp)
+                                            .animateItem(placementSpec = placementSpec)
+                                    }
+                                )
+                            }
                         }
                     }
                 }

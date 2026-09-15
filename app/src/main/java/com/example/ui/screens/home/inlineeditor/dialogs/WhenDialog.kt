@@ -219,7 +219,7 @@ fun ThingsWhenDialog(
                         )
                     }
                     Text(
-                        text = "Today",
+                        text = androidx.compose.ui.res.stringResource(com.example.R.string.category_today),
                         style = TextStyle(
                             color = Color.White,
                             fontSize = 17.sp,
@@ -264,7 +264,7 @@ fun ThingsWhenDialog(
                         )
                     }
                     Text(
-                        text = "This Evening",
+                        text = androidx.compose.ui.res.stringResource(com.example.R.string.category_this_evening),
                         style = TextStyle(
                             color = Color.White,
                             fontSize = 17.sp,
@@ -529,7 +529,7 @@ fun ThingsWhenDialog(
                         )
                     }
                     Text(
-                        text = "Someday",
+                        text = androidx.compose.ui.res.stringResource(com.example.R.string.category_someday),
                         style = TextStyle(
                             color = Color.White,
                             fontSize = 17.sp,

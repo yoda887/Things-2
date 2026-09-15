@@ -14,6 +14,7 @@ import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.Path
+import androidx.compose.ui.graphics.PathEffect
 import androidx.compose.ui.graphics.PathMeasure
 import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.unit.Dp
@@ -33,7 +34,8 @@ fun ThingsCheckbox(
     modifier: Modifier = Modifier,
     size: Dp = 22.dp,
     checkedColor: Color = ThingsBlue,
-    uncheckedColor: Color = Color(0xFFC7C7CC)
+    uncheckedColor: Color = Color(0xFFC7C7CC),
+    isDashed: Boolean = false
 ) {
     // 1. Анимация ПРУЖИНЫ для всей карточки (нажатие/отжатие)
     // Использование Spring.DampingRatioHighBouncy дает легкий пружинящий отскок в конце
@@ -88,11 +90,19 @@ fun ThingsCheckbox(
         }
 
         // Рисуем пустую неактивную рамку (подложку)
+        val strokeStyle = if (isDashed) {
+            Stroke(
+                width = strokeWidth,
+                pathEffect = PathEffect.dashPathEffect(floatArrayOf(3.dp.toPx(), 2.5.dp.toPx()), 0f)
+            )
+        } else {
+            Stroke(width = strokeWidth)
+        }
         drawRoundRect(
             color = uncheckedColor,
             size = Size(width, height),
             cornerRadius = CornerRadius(cornerRadius),
-            style = Stroke(width = strokeWidth)
+            style = strokeStyle
         )
 
         // Рисуем ПЛАВНО КРАСЯЩИЙСЯ фон, который расширяется из центра

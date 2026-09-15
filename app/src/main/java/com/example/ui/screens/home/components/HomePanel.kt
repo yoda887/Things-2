@@ -417,6 +417,7 @@ fun ThingsHomePanel(
         }
 
         // Smart Lists Grid
+        // TODO: Сделать названия адаптивными под системный язык (локализация)
         item {
             Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
                 SmartListRow(

@@ -5,4 +5,11 @@
     <string name="area_someday_heading">Колись</string>
     <string name="area_hide_later_items">Сховати пізніші об\'єкти</string>
     <string name="area_show_later_items">Показати пізніші об\'єкти</string>
+    <string name="category_inbox">Вхідні</string>
+    <string name="category_today">Сьогодні</string>
+    <string name="category_upcoming">Плани</string>
+    <string name="category_anytime">У будь-який час</string>
+    <string name="category_someday">Колись</string>
+    <string name="category_logbook">Журнал</string>
+    <string name="category_this_evening">Сьогодні ввечері</string>
 </resources>
