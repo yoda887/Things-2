@@ -385,10 +385,16 @@ fun ThingsCategoryListPanel(
         isTransitionActive = false
     }
 
-    val placementSpec: androidx.compose.animation.core.FiniteAnimationSpec<androidx.compose.ui.unit.IntOffset>? = if (isTransitionActive) {
-        null
-    } else {
-        spring(
+    // Во время перетаскивания соседи должны успевать встать на место раньше, чем закончится
+    // приземление карточки (200 мс): мягкая пружина доезжает около 370 мс, и после резкого
+    // отпускания был виден хвост чужой анимации — соседняя строка доползала уже после посадки
+    val placementSpec: androidx.compose.animation.core.FiniteAnimationSpec<androidx.compose.ui.unit.IntOffset>? = when {
+        isTransitionActive -> null
+        dragDropState.draggedItemKey != null -> spring(
+            dampingRatio = Spring.DampingRatioNoBouncy,
+            stiffness = Spring.StiffnessMedium
+        )
+        else -> spring(
             dampingRatio = Spring.DampingRatioNoBouncy,
             stiffness = Spring.StiffnessMediumLow
         )
