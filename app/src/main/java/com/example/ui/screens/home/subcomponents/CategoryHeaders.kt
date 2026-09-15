@@ -500,14 +500,16 @@ fun SubCategoryHeader(
                 verticalAlignment = Alignment.CenterVertically
             ) {
                 Box(
-                    modifier = Modifier.size(MaterialTheme.dimens.projectLeftColumnWidthDefault),
+                    modifier = Modifier.size(MaterialTheme.dimens.taskLeftColumnWidthDefault),
                     contentAlignment = Alignment.Center
                 ) {
+                    // Иконка крупнее колонки чекбокса и выступает из неё поровну: центр — на оси
+                    // чекбоксов задач, заголовок — с того же края, что и названия задач
                     Icon(
                         imageVector = AppIcons.Upcoming,
                         contentDescription = null,
                         tint = Color.Unspecified,
-                        modifier = Modifier.size(20.dp)
+                        modifier = Modifier.requiredSize(20.dp)
                     )
                 }
                 Spacer(modifier = Modifier.width(MaterialTheme.dimens.taskSpacingToTextDefault))
@@ -543,14 +545,14 @@ fun SubCategoryHeader(
                 verticalAlignment = Alignment.CenterVertically
             ) {
                 Box(
-                    modifier = Modifier.size(MaterialTheme.dimens.projectLeftColumnWidthDefault),
+                    modifier = Modifier.size(MaterialTheme.dimens.taskLeftColumnWidthDefault),
                     contentAlignment = Alignment.Center
                 ) {
                     Icon(
                         imageVector = AppIcons.Someday,
                         contentDescription = null,
                         tint = Color.Unspecified,
-                        modifier = Modifier.size(20.dp)
+                        modifier = Modifier.requiredSize(20.dp)
                     )
                 }
                 Spacer(modifier = Modifier.width(MaterialTheme.dimens.taskSpacingToTextDefault))

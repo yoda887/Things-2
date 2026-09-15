@@ -63,15 +63,18 @@ fun ProjectItemRow(
             ),
         verticalAlignment = Alignment.CenterVertically
     ) {
+        // Колонка той же ширины, что под чекбоксом задачи: кольцо центрируется по оси чекбоксов,
+        // а название начинается с того же края, что и названия задач. Кольцо крупнее колонки
+        // и выступает из неё поровну с обеих сторон
         Box(
-            modifier = Modifier.size(MaterialTheme.dimens.projectLeftColumnWidthDefault),
+            modifier = Modifier.size(MaterialTheme.dimens.taskLeftColumnWidthDefault),
             contentAlignment = Alignment.Center
         ) {
             ProjectProgressArc(
                 completed = completedCount,
                 total = totalCount,
                 color = ThingsBlue,
-                modifier = Modifier.size(20.dp)
+                modifier = Modifier.requiredSize(20.dp)
             )
         }
         Spacer(modifier = Modifier.width(MaterialTheme.dimens.taskSpacingToTextDefault))
