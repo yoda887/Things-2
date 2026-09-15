@@ -215,7 +215,10 @@ private fun InlineMainInputRowContent(
                 BasicTextField(
                     value = notes,
                     onValueChange = onNotesChange,
-                    minLines = if (checklistBelow) 1 else 2,
+                    // Две строки заметки без чек-листа задаёт анимированный notesMinHeight, а не minLines:
+                    // minLines менял высоту мгновенно, и при удалении последнего пункта карточка сначала
+                    // подрастала на строку и лишь потом сжималась вместе с уходящей панелью чек-листа
+                    minLines = 1,
                     textStyle = TextStyle(
                         fontSize = notesFontSize,
                         fontWeight = FontWeight.Normal,
