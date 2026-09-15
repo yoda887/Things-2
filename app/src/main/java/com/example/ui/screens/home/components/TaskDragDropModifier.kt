@@ -1,6 +1,7 @@
 package com.example.ui.screens.home.components
 
 import androidx.compose.ui.Modifier
+import com.example.data.model.DayBounds
 import com.example.data.model.Item
 import com.example.data.model.ItemWithChecklist
 import com.example.ui.screens.home.ActiveScreen
@@ -92,9 +93,20 @@ fun Modifier.taskDragAndDrop(
 
                     moved = moved.copyWithTonight(!wasTonight)
 
-                    val insertAt = if (!wasTonight) {
-                        list.indexOfFirst { it.item.isTonight }.takeIf { it != -1 } ?: list.size
+                    // Секции экрана — это фильтры по isTonight поверх общего списка, а не его
+                    // непрерывные куски: дневные и вечерние задачи лежат в нём вперемешку.
+                    // Поэтому место вставки ищется по краю нужной секции, а не по первому
+                    // вечернему элементу: раньше задача, поднятая вверх через заголовок,
+                    // вставала не в конец дневной секции, а туда, где в списке лежала первая
+                    // вечерняя задача — то есть на несколько позиций выше заголовка.
+                    // Тот же приём для секций по дате — [findInsertionIndexForSection].
+                    val insertAt = if (wasTonight) {
+                        // Вверх через заголовок: задача становится дневной и встаёт последней
+                        // в дневной секции, прямо над заголовком
+                        list.indexOfLast { !it.item.isTonight } + 1
                     } else {
+                        // Вниз через заголовок: задача становится вечерней и встаёт первой
+                        // в вечерней секции, сразу под заголовком
                         list.indexOfFirst { it.item.isTonight }.takeIf { it != -1 } ?: list.size
                     }
 
@@ -146,16 +158,16 @@ fun Modifier.taskDragAndDrop(
                     // Расположение задачи внутри блока целевого дня:
                     // При движении вниз — в начало списка задач целевого дня
                     // При движении вверх — в конец списка задач целевого дня
-                    val insertAt = if (movingDown) {
-                        list.indexOfFirst { it.item.startDate != null && it.item.startDate!! >= targetDayStart }
-                            .takeIf { it != -1 } ?: list.size
-                    } else {
-                        val nextDayStart = Calendar.getInstance().apply {
-                            timeInMillis = targetDayStart
-                            add(Calendar.DAY_OF_YEAR, 1)
-                        }.timeInMillis
-                        val nextDayFirst = list.indexOfFirst { it.item.startDate != null && it.item.startDate!! >= nextDayStart }
-                        if (nextDayFirst != -1) nextDayFirst else list.size
+                    val nextDayStart = Calendar.getInstance().apply {
+                        timeInMillis = targetDayStart
+                        add(Calendar.DAY_OF_YEAR, 1)
+                    }.timeInMillis
+                    val insertAt = findInsertionIndexForSection(
+                        list = list,
+                        atStart = movingDown,
+                        sectionBoundaryMillis = targetDayStart
+                    ) { item ->
+                        item.startDate?.let { it >= targetDayStart && it < nextDayStart } == true
                     }
 
                     // Копируем точное время соседа, чтобы время не прыгало хаотично
@@ -233,8 +245,41 @@ fun Modifier.taskDragAndDrop(
                         maxOf(prevCal.timeInMillis, tomorrowStart)
                     }
 
-                    val insertAt = list.indexOfFirst { it.item.startDate != null && it.item.startDate!! >= monthTimestamp }
-                        .takeIf { it != -1 } ?: list.size
+                    // Раздел, в который задача попадает по новой дате. Вверх из первого месячного
+                    // раздела (остаток текущего месяца, его monthTimestamp — конец 14-дневного
+                    // горизонта) задача уходит внутрь горизонта, то есть в ДЕНЬ, а не в месяц,
+                    // и край надо искать по дневному блоку.
+                    val insertAt = if (!movingDown && targetDateMillis < horizonEndMillis) {
+                        val destDayStart = targetDateMillis.dayStart()
+                        val destNextDayStart = Calendar.getInstance().apply {
+                            timeInMillis = destDayStart
+                            add(Calendar.DAY_OF_YEAR, 1)
+                        }.timeInMillis
+                        findInsertionIndexForSection(
+                            list = list,
+                            atStart = false,
+                            sectionBoundaryMillis = destDayStart
+                        ) { item ->
+                            item.startDate?.let { it >= destDayStart && it < destNextDayStart } == true
+                        }
+                    } else {
+                        val destCal = Calendar.getInstance().apply { timeInMillis = targetDateMillis }
+                        val destYear = destCal.get(Calendar.YEAR)
+                        val destMonth = destCal.get(Calendar.MONTH)
+                        val monthCal = Calendar.getInstance()
+                        findInsertionIndexForSection(
+                            list = list,
+                            atStart = movingDown,
+                            sectionBoundaryMillis = monthTimestamp
+                        ) { item ->
+                            val start = item.startDate
+                            // Задачи того же месяца, но ещё внутри горизонта, принадлежат разделу «дни»
+                            start != null && start >= horizonEndMillis && run {
+                                monthCal.timeInMillis = start
+                                monthCal.get(Calendar.YEAR) == destYear && monthCal.get(Calendar.MONTH) == destMonth
+                            }
+                        }
+                    }
 
                     moved = moved.copyWithStartDate(targetDateMillis)
                     moved = moved.copy(item = moved.item.copy(sortOrder = if (movingDown) -1 else 99999))
@@ -253,6 +298,15 @@ fun Modifier.taskDragAndDrop(
                     var moved = list.removeAt(fromIndex)
 
                     val hoveredTask = localTasksList.firstOrNull { it.item.id == targetId }
+                    // На экране сферы секции задаются свойствами самой задачи, и обмен их не меняет:
+                    // перенос через заголовок только переставил бы задачу внутри её же секции в
+                    // произвольное место. Поэтому обмен с задачей из другой секции не принимается.
+                    if (screen == ActiveScreen.AREA_DETAIL && hoveredTask != null) {
+                        val bounds = DayBounds.now()
+                        if (hoveredTask.areaSection(bounds) != moved.areaSection(bounds)) {
+                            return@universalDragAndDrop false
+                        }
+                    }
                     if (hoveredTask != null) {
                         // Изменяем статус "Вечер" только на экране "Сегодня" (ActiveScreen.TODAY)
                         if (screen == ActiveScreen.TODAY && hoveredTask.item.isTonight != moved.item.isTonight)
@@ -351,6 +405,36 @@ fun Modifier.taskDragAndDrop(
 }
 
 // ─── Private helpers ──────────────────────────────────────────────────────────
+
+/**
+ * Индекс вставки на краю целевой секции общего списка задач.
+ *
+ * Секции экрана — это фильтры поверх общего списка, поэтому в самом списке их элементы лежат
+ * не подряд, а вперемешку с чужими. Край секции поэтому ищется по самой секции, а не по первому
+ * элементу с подходящей датой: иначе задача, переносимая через заголовок, встаёт в середину
+ * соседней секции. Тот же приём, что и [findInsertionIndexForArea] для проектов.
+ *
+ * @param atStart начало секции (перенос вниз) или место сразу за её последним элементом (вверх)
+ * @param sectionBoundaryMillis ориентир на случай, когда в целевой секции ещё нет задач
+ */
+private fun findInsertionIndexForSection(
+    list: List<ItemWithChecklist>,
+    atStart: Boolean,
+    sectionBoundaryMillis: Long,
+    inSection: (Item) -> Boolean,
+): Int {
+    val first = list.indexOfFirst { inSection(it.item) }
+    if (first != -1) return if (atStart) first else list.indexOfLast { inSection(it.item) } + 1
+    return list.indexOfFirst { wrapper -> wrapper.item.startDate?.let { it >= sectionBoundaryMillis } == true }
+        .takeIf { it != -1 } ?: list.size
+}
+
+/** Секция задачи на экране сферы — та же классификация, что и в rememberFlattenedList */
+private fun ItemWithChecklist.areaSection(bounds: DayBounds): Int = when {
+    item.start == 3 -> 2
+    bounds.isUpcoming(item) -> 1
+    else -> 0
+}
 
 private fun Long.dayStart(): Long = Calendar.getInstance().run {
     timeInMillis = this@dayStart
