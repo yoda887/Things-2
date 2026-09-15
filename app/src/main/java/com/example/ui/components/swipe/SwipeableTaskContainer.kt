@@ -54,6 +54,7 @@ private enum class SwipeDirection {
  * @param onSwipeLeft Callback при успешном свайпе влево (мультиселекция)
  * @param onSwipeRight Callback при успешном свайпе вправо (When/Календарь)
  * @param enabled Включён ли свайп (блокируется при inline editor, drag-and-drop, cal_ задачах)
+ * @param swipeRightEnabled Разрешён ли свайп вправо (выключен в режиме мультивыбора)
  * @param content Содержимое контейнера
  */
 @Composable
@@ -62,6 +63,7 @@ fun SwipeableTaskContainer(
     onSwipeLeft: () -> Unit,
     onSwipeRight: () -> Unit,
     enabled: Boolean = true,
+    swipeRightEnabled: Boolean = true,
     content: @Composable () -> Unit
 ) {
     // Текущее смещение элемента по горизонтали (в пикселях)
@@ -190,6 +192,8 @@ fun SwipeableTaskContainer(
                                     var rawOffsetY = 0f
                                     var isHorizontalSwipe = false
                                     var isCancelled = false
+                                    // Смещение пальца в момент распознавания свайпа — от него карточка едет от 0
+                                    var swipeOriginX = 0f
 
                                     // Фаза 1: Проверка порога активации свайпа
                                     while (!isHorizontalSwipe && !isCancelled) {
@@ -208,9 +212,11 @@ fun SwipeableTaskContainer(
                                         val absDy = abs(rawOffsetY)
 
                                         if (absDx > touchSlopPx || absDy > touchSlopPx) {
-                                            if (absDx > absDy * 1.5f && absDx > touchSlopPx) {
+                                            val toLeft = rawOffsetX < 0f
+                                            if (absDx > absDy * 1.5f && absDx > touchSlopPx && (toLeft || swipeRightEnabled)) {
                                                 isHorizontalSwipe = true
-                                                lockedDirection = if (rawOffsetX < 0f) SwipeDirection.LEFT else SwipeDirection.RIGHT
+                                                swipeOriginX = rawOffsetX
+                                                lockedDirection = if (toLeft) SwipeDirection.LEFT else SwipeDirection.RIGHT
                                                 change.consume()
                                             } else {
                                                 isCancelled = true
@@ -249,9 +255,11 @@ fun SwipeableTaskContainer(
                                             change.consume()
                                             rawOffsetX += dragAmount.x
 
-                                            // Вычитаем touchSlop, чтобы старт движения карточки был строго с 0px без резкого прыжка
-                                            val directionSign = if (rawOffsetX >= 0f) 1f else -1f
-                                            val adjustedRawOffset = (abs(rawOffsetX) - touchSlopPx).coerceAtLeast(0f) * directionSign
+                                            // Отсчёт от места распознавания жеста: карточка трогается с 0px без прыжка
+                                            // и идёт за пальцем один в один, в том числе когда свайп разворачивают.
+                                            // При выключенном свайпе вправо карточка упирается в исходное положение
+                                            val adjustedRawOffset = (rawOffsetX - swipeOriginX)
+                                                .let { if (swipeRightEnabled) it else it.coerceAtMost(0f) }
 
                                             val dampedOffset = applyRubberBandDamping(
                                                 rawOffset = adjustedRawOffset,
@@ -260,6 +268,15 @@ fun SwipeableTaskContainer(
                                             )
                                             scope.launch {
                                                 offsetX.snapTo(dampedOffset)
+                                            }
+
+                                            // Подложка следует за фактическим смещением карточки: если палец,
+                                            // не отрываясь, уводит карточку в другую сторону, меняются и цвет,
+                                            // и сторона иконки, и действие, которое сработает при отпускании
+                                            if (dampedOffset < 0f) {
+                                                lockedDirection = SwipeDirection.LEFT
+                                            } else if (dampedOffset > 0f) {
+                                                lockedDirection = SwipeDirection.RIGHT
                                             }
 
                                             // Тактильная обратная связь при пересечении порога активации

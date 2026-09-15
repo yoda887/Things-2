@@ -463,7 +463,9 @@ fun AnimatedTaskItem(
                         onSwipeRight = { onEvent(ThingsCategoryListEvent.SwipeTaskRight(taskWrapper)) },
                         enabled = inlineExpandedTaskId == null
                                 && dragDropState.draggedItemKey == null
-                                && !task.id.startsWith("cal_")
+                                && !task.id.startsWith("cal_"),
+                        // В режиме мультивыбора свайп вправо не вызывает диалог When
+                        swipeRightEnabled = !isSelectionMode
                     ) {
                         TaskItemRow(
                             modifier = Modifier,
