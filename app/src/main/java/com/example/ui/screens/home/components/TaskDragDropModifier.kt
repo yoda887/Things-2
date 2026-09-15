@@ -1,15 +1,12 @@
 package com.example.ui.screens.home.components
 
 import androidx.compose.ui.Modifier
-import com.example.data.model.DayBounds
 import com.example.data.model.Item
 import com.example.data.model.ItemWithChecklist
 import com.example.ui.screens.home.ActiveScreen
 import com.example.ui.components.dragdrop.GenericDragDropState
 import com.example.ui.components.dragdrop.universalDragAndDrop
-import java.util.Calendar
 
-private const val MS_PER_DAY = 24 * 3600 * 1000L
 private const val TASK_SCROLL_TOP_ZONE_FRACTION = 0.22f
 private const val TASK_SCROLL_BOTTOM_ZONE_FRACTION = 0.18f
 
@@ -74,252 +71,26 @@ fun Modifier.taskDragAndDrop(
             val draggedId = draggedKey as? String ?: return@universalDragAndDrop false
             val targetId = targetKey as? String ?: return@universalDragAndDrop false
 
-            val fromIndex = localTasksList.indexOfFirst { it.item.id == draggedId }
-            if (fromIndex == -1) return@universalDragAndDrop false
-
-            // Определение направления движения на основании видимых элементов списка LazyColumn
+            // Направление жеста знает только геометрия списка LazyColumn; куда именно встанет
+            // задача, решает чистая функция planTaskDrop — её правила закреплены тестами
             val visibleItems = lazyListState.layoutInfo.visibleItemsInfo
             val draggedItemInfo = visibleItems.firstOrNull { it.key == draggedId }
+                ?: return@universalDragAndDrop false
             val targetItemInfo = visibleItems.firstOrNull { it.key == targetId }
-            if (draggedItemInfo == null || targetItemInfo == null) return@universalDragAndDrop false
+                ?: return@universalDragAndDrop false
             val movingDown = targetItemInfo.index > draggedItemInfo.index
 
-            when {
-                // ПЕРЕТАСКИВАНИЕ НА ЗАГОЛОВОК "ВЕЧЕР"
-                targetId == TaskListKeys.EVENING_HEADER -> {
-                    val list = localTasksList.toMutableList()
-                    var moved = list.removeAt(fromIndex)
-                    val wasTonight = moved.item.isTonight
+            val reordered = planTaskDrop(
+                list = localTasksList,
+                draggedId = draggedId,
+                targetId = targetId,
+                screen = screen,
+                movingDown = movingDown,
+                upcomingDayStarts = upcomingDays.map { it.dateMillis },
+            ) ?: return@universalDragAndDrop false
 
-                    moved = moved.copyWithTonight(!wasTonight)
-
-                    // Секции экрана — это фильтры по isTonight поверх общего списка, а не его
-                    // непрерывные куски: дневные и вечерние задачи лежат в нём вперемешку.
-                    // Поэтому место вставки ищется по краю нужной секции, а не по первому
-                    // вечернему элементу: раньше задача, поднятая вверх через заголовок,
-                    // вставала не в конец дневной секции, а туда, где в списке лежала первая
-                    // вечерняя задача — то есть на несколько позиций выше заголовка.
-                    // Тот же приём для секций по дате — [findInsertionIndexForSection].
-                    val insertAt = if (wasTonight) {
-                        // Вверх через заголовок: задача становится дневной и встаёт последней
-                        // в дневной секции, прямо над заголовком
-                        list.indexOfLast { !it.item.isTonight } + 1
-                    } else {
-                        // Вниз через заголовок: задача становится вечерней и встаёт первой
-                        // в вечерней секции, сразу под заголовком
-                        list.indexOfFirst { it.item.isTonight }.takeIf { it != -1 } ?: list.size
-                    }
-
-                    list.add(insertAt, moved)
-                    onLocalTasksListChange(list)
-                    true
-                }
-
-                // ПЕРЕТАСКИВАНИЕ НА ЗАГОЛОВОК "MAIN" (Основной список дня)
-                targetId == TaskListKeys.MAIN_HEADER -> {
-                    val list = localTasksList.toMutableList()
-                    var moved = list.removeAt(fromIndex)
-                    if (!moved.item.isTonight) return@universalDragAndDrop false
-
-                    moved = moved.copyWithTonight(false)
-                    list.add(0, moved)
-                    onLocalTasksListChange(list)
-                    true
-                }
-
-                // ПЕРЕТАСКИВАНИЕ НА ЗАГОЛОВОК ПРЕДСТОЯЩЕГО ДНЯ (Upcoming screen)
-                screen == ActiveScreen.UPCOMING && targetId.startsWith(TaskListKeys.DAY_HEADER_PREFIX) -> {
-                    val timestampStr = targetId.substringAfter(TaskListKeys.DAY_HEADER_PREFIX)
-                    val timestamp = timestampStr.toLongOrNull() ?: return@universalDragAndDrop false
-
-                    val list = localTasksList.toMutableList()
-                    var moved = list.removeAt(fromIndex)
-
-                    val tomorrowStart = upcomingDays.firstOrNull()?.dateMillis ?: 0L
-                    val oldDayStart = moved.item.startDate?.dayStart() ?: tomorrowStart
-
-                    // Определение целевого дня в зависимости от направления перетаскивания (вверх/вниз)
-                    val targetTimestamp = if (movingDown) {
-                        timestamp
-                    } else {
-                        val currentDayIdx = upcomingDays.indexOfFirst { it.dateMillis.dayStart() == timestamp.dayStart() }
-                        if (currentDayIdx > 0) {
-                            upcomingDays[currentDayIdx - 1].dateMillis
-                        } else {
-                            timestamp - MS_PER_DAY
-                        }
-                    }
-
-                    val clipped = maxOf(targetTimestamp, tomorrowStart)
-                    val targetDayStart = clipped.dayStart()
-
-                    if (oldDayStart == targetDayStart) return@universalDragAndDrop false
-
-                    // Расположение задачи внутри блока целевого дня:
-                    // При движении вниз — в начало списка задач целевого дня
-                    // При движении вверх — в конец списка задач целевого дня
-                    val nextDayStart = Calendar.getInstance().apply {
-                        timeInMillis = targetDayStart
-                        add(Calendar.DAY_OF_YEAR, 1)
-                    }.timeInMillis
-                    val insertAt = findInsertionIndexForSection(
-                        list = list,
-                        atStart = movingDown,
-                        sectionBoundaryMillis = targetDayStart
-                    ) { item ->
-                        item.startDate?.let { it >= targetDayStart && it < nextDayStart } == true
-                    }
-
-                    // Копируем точное время соседа, чтобы время не прыгало хаотично
-                    val referenceTask = if (movingDown) list.getOrNull(insertAt) else list.getOrNull(insertAt - 1)
-                    val finalStartDate = if (referenceTask != null && referenceTask.item.startDate?.dayStart() == targetDayStart) {
-                        referenceTask.item.startDate
-                    } else {
-                        Calendar.getInstance().apply {
-                            timeInMillis = clipped
-                            set(Calendar.HOUR_OF_DAY, 12)
-                            set(Calendar.MINUTE, 0)
-                            set(Calendar.SECOND, 0)
-                            set(Calendar.MILLISECOND, 0)
-                        }.timeInMillis
-                    }
-
-                    // Устанавливаем временный sortOrder, чтобы список не дергался при равном startDate
-                    moved = moved.copyWithStartDate(finalStartDate)
-                    moved = moved.copy(item = moved.item.copy(sortOrder = if (movingDown) -1 else 99999))
-
-                    list.add(insertAt, moved)
-                    onLocalTasksListChange(list)
-                    true
-                }
-
-                // ПЕРЕТАСКИВАНИЕ НА ЗАГОЛОВОК МЕСЯЦА (Upcoming screen)
-                screen == ActiveScreen.UPCOMING && targetId.startsWith(TaskListKeys.MONTH_HEADER_PREFIX) -> {
-                    val timestampStr = targetId.substringAfter(TaskListKeys.MONTH_HEADER_PREFIX)
-                    val monthTimestamp = timestampStr.toLongOrNull() ?: return@universalDragAndDrop false
-
-                    val list = localTasksList.toMutableList()
-                    var moved = list.removeAt(fromIndex)
-
-                    // Защита от no-op: если задача уже физически лежит в разделе этого заголовка,
-                    // обмен принимать не нужно (аналог oldDayStart == targetDayStart в ветке дней).
-                    // Сравнение по (год, месяц) само по себе неверно для первого раздела после
-                    // 14-дневного горизонта — это не целый месяц, а его остаток, и monthTimestamp
-                    // для него не 1-е число, а конец горизонта. Задача из тех же календарных суток,
-                    // но ещё внутри 14 дней, принадлежит разделу «дни», а не этому заголовку —
-                    // поэтому условие "уже в этом разделе" дополнительно требует oldStart >= horizonEnd.
-                    // Только при движении вниз: вверх через заголовок своего раздела задача как раз
-                    // уходит в предыдущий раздел. Раньше проверка срабатывала в обе стороны, и задачу
-                    // нельзя было поднять из месяца выше его заголовка — слот оставался внизу,
-                    // уезжал за экран, и автопрокрутка вставала.
-                    val horizonEndMillis = upcomingDays.lastOrNull()?.let { it.dateMillis + MS_PER_DAY } ?: 0L
-                    val oldStart = moved.item.startDate
-                    if (movingDown && oldStart != null && oldStart >= horizonEndMillis) {
-                        val oldCal = Calendar.getInstance().apply { timeInMillis = oldStart }
-                        val targetCal = Calendar.getInstance().apply { timeInMillis = monthTimestamp }
-                        val alreadyInThisSection = oldCal.get(Calendar.YEAR) == targetCal.get(Calendar.YEAR)
-                            && oldCal.get(Calendar.MONTH) == targetCal.get(Calendar.MONTH)
-                        if (alreadyInThisSection) return@universalDragAndDrop false
-                    }
-
-                    val targetDateMillis = if (movingDown) {
-                        // При движении вниз — задача помещается в начало месяца или периода (после событий календаря)
-                        Calendar.getInstance().apply {
-                            timeInMillis = monthTimestamp
-                            set(Calendar.HOUR_OF_DAY, 12)
-                            set(Calendar.MINUTE, 0)
-                            set(Calendar.SECOND, 0)
-                            set(Calendar.MILLISECOND, 0)
-                        }.timeInMillis
-                    } else {
-                        // При движении вверх через заголовок месяца — задача переходит в предшествующий раздел
-                        val prevCal = Calendar.getInstance().apply {
-                            timeInMillis = monthTimestamp
-                            add(Calendar.DAY_OF_MONTH, -1)
-                            set(Calendar.HOUR_OF_DAY, 12)
-                            set(Calendar.MINUTE, 0)
-                            set(Calendar.SECOND, 0)
-                            set(Calendar.MILLISECOND, 0)
-                        }
-                        val tomorrowStart = upcomingDays.firstOrNull()?.dateMillis ?: 0L
-                        maxOf(prevCal.timeInMillis, tomorrowStart)
-                    }
-
-                    // Раздел, в который задача попадает по новой дате. Вверх из первого месячного
-                    // раздела (остаток текущего месяца, его monthTimestamp — конец 14-дневного
-                    // горизонта) задача уходит внутрь горизонта, то есть в ДЕНЬ, а не в месяц,
-                    // и край надо искать по дневному блоку.
-                    val insertAt = if (!movingDown && targetDateMillis < horizonEndMillis) {
-                        val destDayStart = targetDateMillis.dayStart()
-                        val destNextDayStart = Calendar.getInstance().apply {
-                            timeInMillis = destDayStart
-                            add(Calendar.DAY_OF_YEAR, 1)
-                        }.timeInMillis
-                        findInsertionIndexForSection(
-                            list = list,
-                            atStart = false,
-                            sectionBoundaryMillis = destDayStart
-                        ) { item ->
-                            item.startDate?.let { it >= destDayStart && it < destNextDayStart } == true
-                        }
-                    } else {
-                        val destCal = Calendar.getInstance().apply { timeInMillis = targetDateMillis }
-                        val destYear = destCal.get(Calendar.YEAR)
-                        val destMonth = destCal.get(Calendar.MONTH)
-                        val monthCal = Calendar.getInstance()
-                        findInsertionIndexForSection(
-                            list = list,
-                            atStart = movingDown,
-                            sectionBoundaryMillis = monthTimestamp
-                        ) { item ->
-                            val start = item.startDate
-                            // Задачи того же месяца, но ещё внутри горизонта, принадлежат разделу «дни»
-                            start != null && start >= horizonEndMillis && run {
-                                monthCal.timeInMillis = start
-                                monthCal.get(Calendar.YEAR) == destYear && monthCal.get(Calendar.MONTH) == destMonth
-                            }
-                        }
-                    }
-
-                    moved = moved.copyWithStartDate(targetDateMillis)
-                    moved = moved.copy(item = moved.item.copy(sortOrder = if (movingDown) -1 else 99999))
-
-                    list.add(insertAt, moved)
-                    onLocalTasksListChange(list)
-                    true
-                }
-
-                // КЛАССИЧЕСКИЙ ОБМЕН ДВУХ ЗАДАЧ (Swap)
-                else -> {
-                    val toIndex = localTasksList.indexOfFirst { it.item.id == targetId }
-                    if (toIndex == -1 || toIndex == fromIndex) return@universalDragAndDrop false
-
-                    val list = localTasksList.toMutableList()
-                    var moved = list.removeAt(fromIndex)
-
-                    val hoveredTask = localTasksList.firstOrNull { it.item.id == targetId }
-                    // На экране сферы секции задаются свойствами самой задачи, и обмен их не меняет:
-                    // перенос через заголовок только переставил бы задачу внутри её же секции в
-                    // произвольное место. Поэтому обмен с задачей из другой секции не принимается.
-                    if (screen == ActiveScreen.AREA_DETAIL && hoveredTask != null) {
-                        val bounds = DayBounds.now()
-                        if (hoveredTask.areaSection(bounds) != moved.areaSection(bounds)) {
-                            return@universalDragAndDrop false
-                        }
-                    }
-                    if (hoveredTask != null) {
-                        // Изменяем статус "Вечер" только на экране "Сегодня" (ActiveScreen.TODAY)
-                        if (screen == ActiveScreen.TODAY && hoveredTask.item.isTonight != moved.item.isTonight)
-                            moved = moved.copyWithTonight(hoveredTask.item.isTonight)
-                        if (screen == ActiveScreen.UPCOMING && hoveredTask.item.startDate != moved.item.startDate)
-                            moved = moved.copyWithStartDate(hoveredTask.item.startDate)
-                    }
-
-                    list.add(toIndex, moved)
-                    onLocalTasksListChange(list)
-                    true
-                }
-            }
+            onLocalTasksListChange(reordered)
+            true
         },
         onDragStarted = {
             // Если перетаскиваемая задача входит в число выбранных задач:
@@ -403,54 +174,3 @@ fun Modifier.taskDragAndDrop(
         }
     )
 }
-
-// ─── Private helpers ──────────────────────────────────────────────────────────
-
-/**
- * Индекс вставки на краю целевой секции общего списка задач.
- *
- * Секции экрана — это фильтры поверх общего списка, поэтому в самом списке их элементы лежат
- * не подряд, а вперемешку с чужими. Край секции поэтому ищется по самой секции, а не по первому
- * элементу с подходящей датой: иначе задача, переносимая через заголовок, встаёт в середину
- * соседней секции. Тот же приём, что и [findInsertionIndexForArea] для проектов.
- *
- * @param atStart начало секции (перенос вниз) или место сразу за её последним элементом (вверх)
- * @param sectionBoundaryMillis ориентир на случай, когда в целевой секции ещё нет задач
- */
-private fun findInsertionIndexForSection(
-    list: List<ItemWithChecklist>,
-    atStart: Boolean,
-    sectionBoundaryMillis: Long,
-    inSection: (Item) -> Boolean,
-): Int {
-    val first = list.indexOfFirst { inSection(it.item) }
-    if (first != -1) return if (atStart) first else list.indexOfLast { inSection(it.item) } + 1
-    return list.indexOfFirst { wrapper -> wrapper.item.startDate?.let { it >= sectionBoundaryMillis } == true }
-        .takeIf { it != -1 } ?: list.size
-}
-
-/** Секция задачи на экране сферы — та же классификация, что и в rememberFlattenedList */
-private fun ItemWithChecklist.areaSection(bounds: DayBounds): Int = when {
-    item.start == 3 -> 2
-    bounds.isUpcoming(item) -> 1
-    else -> 0
-}
-
-private fun Long.dayStart(): Long = Calendar.getInstance().run {
-    timeInMillis = this@dayStart
-    set(Calendar.HOUR_OF_DAY, 0)
-    set(Calendar.MINUTE, 0)
-    set(Calendar.SECOND, 0)
-    set(Calendar.MILLISECOND, 0)
-    timeInMillis
-}
-
-private fun ItemWithChecklist.copyWithTonight(isTonight: Boolean) = ItemWithChecklist(
-    item = item.copy(isTonight = isTonight),
-    checklist = checklist,
-)
-
-private fun ItemWithChecklist.copyWithStartDate(startDate: Long?) = ItemWithChecklist(
-    item = item.copy(startDate = startDate),
-    checklist = checklist,
-)
