@@ -131,13 +131,17 @@ object TaskListKeys {
     val nonDroppable = setOf(CALENDAR_WIDGET, TAG_FILTER, EMPTY_STATE, PROJECTS_HEADING, TASKS_HEADING, AREA_UPCOMING_HEADING, AREA_SOMEDAY_HEADING, AREA_LATER_TOGGLE, AREA_PROJECTS_SPACER)
 }
 
-/** Горизонт планирования экрана «Предстоящие» в днях */
-private const val UPCOMING_DAYS_HORIZON = 14
+/** Горизонт планирования экрана «Предстоящие» в днях: неделя вперёд, начиная с завтра */
+private const val UPCOMING_DAYS_HORIZON = 7
+
+/** Сколько целых месяцев показывать после остатка месяца, в котором закончился горизонт */
+private const val UPCOMING_MONTHS_HORIZON = 4
 
 /**
  * Вычисляет полное расписание экрана «Предстоящие»:
- * 1. Первые 14 дней подряд (включая пустые).
- * 2. Месяцы позже 14 дней (только месяцы с делами, в стиле Things 3).
+ * 1. Неделя подряд начиная с завтра (включая пустые дни).
+ * 2. Остаток месяца, в котором закончилась неделя, и следующие [UPCOMING_MONTHS_HORIZON]
+ *    месяцев — только те, где есть дела. Дальше этого горизонта экран ничего не показывает.
  */
 fun computeUpcomingSchedule(
     localTasksList: List<ItemWithChecklist>,
@@ -157,7 +161,8 @@ fun computeUpcomingSchedule(
     val weekdayFormat = SimpleDateFormat("EEEE", locale)
     val monthFormat = SimpleDateFormat("MMMM", locale)
     val monthYearFormat = SimpleDateFormat("MMMM yyyy", locale)
-    val dayBadgeFormat = SimpleDateFormat("d", locale)
+    // Плашка задачи в месячных разделах — число и месяц, как на экране проекта
+    val dayBadgeFormat = SimpleDateFormat("d MMM", locale)
     val dayNumFormat = SimpleDateFormat("d", locale)
 
     val currentYear = Calendar.getInstance().get(Calendar.YEAR)
@@ -196,18 +201,30 @@ fun computeUpcomingSchedule(
         )
     }
 
-    // Горизонт 14 дней закончился в cursor.timeInMillis
+    // Недельный горизонт закончился в cursor.timeInMillis
     val horizonEndMillis = cursor.timeInMillis
 
-    // Задачи и события ПОЗЖЕ 14 дней
+    // Дальняя граница экрана: остаток месяца, в котором закончилась неделя, плюс следующие
+    // UPCOMING_MONTHS_HORIZON месяцев. Всё, что позже, на этом экране не показывается
+    val laterLimitMillis = Calendar.getInstance().apply {
+        timeInMillis = horizonEndMillis
+        set(Calendar.DAY_OF_MONTH, 1)
+        set(Calendar.HOUR_OF_DAY, 0)
+        set(Calendar.MINUTE, 0)
+        set(Calendar.SECOND, 0)
+        set(Calendar.MILLISECOND, 0)
+        add(Calendar.MONTH, UPCOMING_MONTHS_HORIZON + 1)
+    }.timeInMillis
+
+    // Задачи и события позже недели, но в пределах месячного горизонта
     val laterTasks = localTasksList.filter { wrapper ->
         val taskStart = wrapper.item.startDate
-        taskStart != null && taskStart >= horizonEndMillis
+        taskStart != null && taskStart >= horizonEndMillis && taskStart < laterLimitMillis
     }
 
     val laterEvents = calendarEvents.filter { event ->
         val eventStart = event.eventStartMillis
-        eventStart != null && eventStart >= horizonEndMillis
+        eventStart != null && eventStart >= horizonEndMillis && eventStart < laterLimitMillis
     }
 
     val monthTaskBadges = mutableMapOf<String, String>()

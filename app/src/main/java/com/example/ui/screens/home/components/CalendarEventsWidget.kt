@@ -218,7 +218,8 @@ fun UpcomingCalendarEventRow(
         }
     }
     
-    // В секциях месяцев отображается только число месяца в цвете календаря и название события в этом же цвете
+    // В месячных разделах цвет календаря несёт только число, само событие — обычного цвета,
+    // как и в разделах дней
     if (datePrefix != null) {
         Row(
             modifier = Modifier
@@ -240,7 +241,7 @@ fun UpcomingCalendarEventRow(
                 style = TextStyle(
                     fontSize = 15.sp,
                     fontWeight = FontWeight.Normal,
-                    color = baseColor
+                    color = textPrimaryColor
                 ),
                 maxLines = 1,
                 overflow = TextOverflow.Ellipsis,

@@ -270,230 +270,202 @@ fun TaskItemRow(
 
             Spacer(modifier = Modifier.width(spacingToText))
 
-            Column(modifier = Modifier.weight(1f)) {
-                Row(
-                    verticalAlignment = Alignment.CenterVertically,
-                    modifier = Modifier.fillMaxWidth()
-                ) {
-                    Row(
-                        modifier = Modifier.weight(1f),
-                        verticalAlignment = Alignment.CenterVertically
-                    ) {
-                        if (dateBadge != null) {
-                            val isSystemDark = androidx.compose.foundation.isSystemInDarkTheme()
-                            val badgeTextColor = if (isSystemDark) Color(0xFFE0E0E0) else Color(0xFF5F6368)
-                            val badgeBgColor = if (isSystemDark) Color(0xFF2C2C2E) else Color(0xFFECECEC)
-
-                            Text(
-                                text = dateBadge,
-                                style = TextStyle(
-                                    fontSize = 11.sp,
-                                    fontWeight = FontWeight.Medium,
-                                    color = badgeTextColor
-                                ),
-                                modifier = Modifier
-                                    .background(
-                                        color = badgeBgColor,
-                                        shape = RoundedCornerShape(4.dp)
-                                    )
-                                    .padding(horizontal = 6.dp, vertical = 2.dp)
-                            )
-                            Spacer(modifier = Modifier.width(6.dp))
-                        } else if ((screen == ActiveScreen.PROJECT_DETAIL || screen == ActiveScreen.AREA_DETAIL) && dateIndicator != null) {
-                            when (dateIndicator) {
-                                is DateIndicatorResult.IconIndicator -> {
-                                    Icon(
-                                        imageVector = dateIndicator.icon,
-                                        contentDescription = dateIndicator.contentDescription,
-                                        tint = dateIndicator.color,
-                                        modifier = Modifier.size(16.dp)
-                                    )
-                                }
-                                is DateIndicatorResult.TextIndicator -> {
-                                    val displayText = if (dateIndicator.text == "TOMORROW_PLACEHOLDER") {
-                                        androidx.compose.ui.res.stringResource(com.example.R.string.tomorrow)
-                                    } else {
-                                        dateIndicator.text
-                                    }
-                                    
-                                    val isSystemDark = androidx.compose.foundation.isSystemInDarkTheme()
-                                    val badgeTextColor = if (isSystemDark) Color(0xFFE0E0E0) else Color(0xFF5F6368)
-                                    val badgeBgColor = if (isSystemDark) Color(0xFF2C2C2E) else Color(0xFFECECEC)
-
-                                    Text(
-                                        text = displayText,
-                                        style = TextStyle(
-                                            fontSize = 11.sp,
-                                            fontWeight = FontWeight.Medium,
-                                            color = badgeTextColor
-                                        ),
-                                        modifier = Modifier
-                                            .background(
-                                                color = badgeBgColor,
-                                                shape = RoundedCornerShape(4.dp)
-                                            )
-                                            .padding(horizontal = 6.dp, vertical = 2.dp)
-                                    )
-                                }
-                            }
-                            Spacer(modifier = Modifier.width(6.dp))
-                        }
-
-                        Text(
-                            text = task.title,
-                            style = TextStyle(
-                                fontSize = titleFontSize,
-                                fontWeight = FontWeight.Normal,
-                                color = animatedTitleColor
-                            ),
-                            maxLines = 1,
-                            overflow = TextOverflow.Ellipsis,
-                            modifier = Modifier
-                                .weight(1f, fill = false)
-                                .graphicsLayer {
-                                    scaleX = animatedTitleScaleX
-                                    transformOrigin = androidx.compose.ui.graphics.TransformOrigin(0f, 0.5f)
-                                }
-                        )
-
-                    // Inline note/subtask icons representation
-                    if (task.notes.isNotBlank() || task.checklistItemsCount > 0 || task.cachedTags.isNotBlank()) {
-                        Spacer(modifier = Modifier.width(6.dp))
-                        Row(
-                            horizontalArrangement = Arrangement.spacedBy(4.dp),
-                            verticalAlignment = Alignment.CenterVertically
-                        ) {
-                            if (task.notes.isNotBlank()) {
-                                Icon(
-                                    imageVector = Icons.Outlined.Description,
-                                    contentDescription = "Has notes",
-                                    tint = textSecondaryColor.copy(alpha = 0.4f),
-                                    modifier = Modifier.size(13.dp)
-                                )
-                            }
-                            if (task.checklistItemsCount > 0) {
-                                Icon(
-                                    imageVector = AppIcons.BulletList,
-                                    contentDescription = "Has checklist",
-                                    tint = textSecondaryColor.copy(alpha = 0.4f),
-                                    modifier = Modifier.size(13.dp)
-                                )
-                            }
-                            if (task.cachedTags.isNotBlank()) {
-                                Icon(
-                                    imageVector = Icons.Outlined.LocalOffer,
-                                    contentDescription = "Has tags",
-                                    tint = textSecondaryColor.copy(alpha = 0.4f),
-                                    modifier = Modifier.size(13.dp)
-                                )
-                            }
-                        }
-                    }
-                }
-
-                if (task.dueDate != null) {
-                    val delta = remember(task.dueDate) {
-                        val today = java.util.Calendar.getInstance().apply {
-                            set(java.util.Calendar.HOUR_OF_DAY, 0)
-                            set(java.util.Calendar.MINUTE, 0)
-                            set(java.util.Calendar.SECOND, 0)
-                            set(java.util.Calendar.MILLISECOND, 0)
-                        }
-                        val due = java.util.Calendar.getInstance().apply {
-                            timeInMillis = task.dueDate
-                            set(java.util.Calendar.HOUR_OF_DAY, 0)
-                            set(java.util.Calendar.MINUTE, 0)
-                            set(java.util.Calendar.SECOND, 0)
-                            set(java.util.Calendar.MILLISECOND, 0)
-                        }
-                        val diffMillis = due.timeInMillis - today.timeInMillis
-                        if (diffMillis >= 0) {
-                            (diffMillis / (24 * 60 * 60 * 1000L)).toInt()
-                        } else {
-                            ((diffMillis - (24 * 60 * 60 * 1000L - 1)) / (24 * 60 * 60 * 1000L)).toInt()
-                        }
-                    }
-
-                    val lang = remember { java.util.Locale.getDefault().language }
-                    val relativeText = when (lang) {
-                        "uk" -> when {
-                            delta < 0 -> "протерміновано"
-                            delta == 0 -> "сьогодні"
-                            delta == 1 -> "завтра"
-                            else -> "через $delta дн."
-                        }
-                        "ru" -> when {
-                            delta < 0 -> "просрочено"
-                            delta == 0 -> "сегодня"
-                            delta == 1 -> "завтра"
-                            else -> "через $delta дн."
-                        }
-                        else -> when {
-                            delta < 0 -> "overdue"
-                            delta == 0 -> "today"
-                            delta == 1 -> "tomorrow"
-                            else -> "in $delta d."
-                        }
-                    }
-
-                    val isOverdueOrToday = delta <= 0
-                    val color = if (isOverdueOrToday) ThingsUpcomingRed else textSecondaryColor.copy(alpha = 0.85f)
-
-                    Spacer(modifier = Modifier.width(8.dp))
-                    Row(
-                        verticalAlignment = Alignment.CenterVertically,
-                        modifier = Modifier.padding(end = 4.dp)
-                    ) {
-                        Icon(
-                            imageVector = AppIcons.Deadline,
-                            contentDescription = "Deadline Flag",
-                            tint = color,
-                            modifier = Modifier.size(15.dp)
-                        )
-                        Spacer(modifier = Modifier.width(4.dp))
-                        Text(
-                            text = relativeText,
-                            style = TextStyle(
-                                fontSize = subFontSize,
-                                color = color,
-                                fontWeight = FontWeight.Normal
-                            )
-                        )
-                    }
-                }
-            }
-
-            // Project link displayed underneath title, matching screenshot
+            // Название проекта или области идёт второй строкой под заголовком
             val project = remember(task.projectId, projects) {
                 projects.firstOrNull { it.id == task.projectId }
             }
             val area = remember(task.areaId, areas) {
                 areas.firstOrNull { it.id == task.areaId }
             }
-            if (project != null && screen != ActiveScreen.PROJECT_DETAIL) {
-                // Расстояние уменьшено до 0.dp по запросу пользователя.
-                Spacer(modifier = Modifier.height(0.dp))
-                Text(
-                    text = project.name,
-                    style = TextStyle(
-                        fontSize = subFontSize,
-                        color = Color(0xFF8E8E93),
-                        fontWeight = FontWeight.Normal
-                    )
-                )
-            } else if (project == null && area != null && screen != ActiveScreen.AREA_DETAIL) {
-                // Расстояние уменьшено до 0.dp по запросу пользователя.
-                Spacer(modifier = Modifier.height(0.dp))
-                Text(
-                    text = area.title,
-                    style = TextStyle(
-                        fontSize = subFontSize,
-                        color = Color(0xFF8E8E93),
-                        fontWeight = FontWeight.Normal
-                    )
-                )
+            val subtitle = when {
+                project != null && screen != ActiveScreen.PROJECT_DETAIL -> project.name
+                project == null && area != null && screen != ActiveScreen.AREA_DETAIL -> area.title
+                else -> null
             }
-        }
+            // Когда под заголовком есть вторая строка, плашка с датой встаёт слева от обеих строк
+            // и центрируется по вертикали, а заголовок с подписью идут после неё
+            val badgeBesideBothLines = dateBadge != null && subtitle != null
+
+            Row(
+                modifier = Modifier.weight(1f),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                if (badgeBesideBothLines) {
+                    DateBadge(text = dateBadge!!)
+                    Spacer(modifier = Modifier.width(6.dp))
+                }
+
+                Column(modifier = Modifier.weight(1f)) {
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        modifier = Modifier.fillMaxWidth()
+                    ) {
+                        Row(
+                            modifier = Modifier.weight(1f),
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            if (dateBadge != null && !badgeBesideBothLines) {
+                                DateBadge(text = dateBadge)
+                                Spacer(modifier = Modifier.width(6.dp))
+                            } else if ((screen == ActiveScreen.PROJECT_DETAIL || screen == ActiveScreen.AREA_DETAIL) && dateIndicator != null) {
+                                when (dateIndicator) {
+                                    is DateIndicatorResult.IconIndicator -> {
+                                        Icon(
+                                            imageVector = dateIndicator.icon,
+                                            contentDescription = dateIndicator.contentDescription,
+                                            tint = dateIndicator.color,
+                                            modifier = Modifier.size(16.dp)
+                                        )
+                                    }
+                                    is DateIndicatorResult.TextIndicator -> {
+                                        val displayText = if (dateIndicator.text == "TOMORROW_PLACEHOLDER") {
+                                            androidx.compose.ui.res.stringResource(com.example.R.string.tomorrow)
+                                        } else {
+                                            dateIndicator.text
+                                        }
+                                    
+                                        DateBadge(text = displayText)
+                                    }
+                                }
+                                Spacer(modifier = Modifier.width(6.dp))
+                            }
+
+                            Text(
+                                text = task.title,
+                                style = TextStyle(
+                                    fontSize = titleFontSize,
+                                    fontWeight = FontWeight.Normal,
+                                    color = animatedTitleColor
+                                ),
+                                maxLines = 1,
+                                overflow = TextOverflow.Ellipsis,
+                                modifier = Modifier
+                                    .weight(1f, fill = false)
+                                    .graphicsLayer {
+                                        scaleX = animatedTitleScaleX
+                                        transformOrigin = androidx.compose.ui.graphics.TransformOrigin(0f, 0.5f)
+                                    }
+                            )
+
+                        // Inline note/subtask icons representation
+                        if (task.notes.isNotBlank() || task.checklistItemsCount > 0 || task.cachedTags.isNotBlank()) {
+                            Spacer(modifier = Modifier.width(6.dp))
+                            Row(
+                                horizontalArrangement = Arrangement.spacedBy(4.dp),
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+                                if (task.notes.isNotBlank()) {
+                                    Icon(
+                                        imageVector = Icons.Outlined.Description,
+                                        contentDescription = "Has notes",
+                                        tint = textSecondaryColor.copy(alpha = 0.4f),
+                                        modifier = Modifier.size(13.dp)
+                                    )
+                                }
+                                if (task.checklistItemsCount > 0) {
+                                    Icon(
+                                        imageVector = AppIcons.BulletList,
+                                        contentDescription = "Has checklist",
+                                        tint = textSecondaryColor.copy(alpha = 0.4f),
+                                        modifier = Modifier.size(13.dp)
+                                    )
+                                }
+                                if (task.cachedTags.isNotBlank()) {
+                                    Icon(
+                                        imageVector = Icons.Outlined.LocalOffer,
+                                        contentDescription = "Has tags",
+                                        tint = textSecondaryColor.copy(alpha = 0.4f),
+                                        modifier = Modifier.size(13.dp)
+                                    )
+                                }
+                            }
+                        }
+                    }
+
+                    if (task.dueDate != null) {
+                        val delta = remember(task.dueDate) {
+                            val today = java.util.Calendar.getInstance().apply {
+                                set(java.util.Calendar.HOUR_OF_DAY, 0)
+                                set(java.util.Calendar.MINUTE, 0)
+                                set(java.util.Calendar.SECOND, 0)
+                                set(java.util.Calendar.MILLISECOND, 0)
+                            }
+                            val due = java.util.Calendar.getInstance().apply {
+                                timeInMillis = task.dueDate
+                                set(java.util.Calendar.HOUR_OF_DAY, 0)
+                                set(java.util.Calendar.MINUTE, 0)
+                                set(java.util.Calendar.SECOND, 0)
+                                set(java.util.Calendar.MILLISECOND, 0)
+                            }
+                            val diffMillis = due.timeInMillis - today.timeInMillis
+                            if (diffMillis >= 0) {
+                                (diffMillis / (24 * 60 * 60 * 1000L)).toInt()
+                            } else {
+                                ((diffMillis - (24 * 60 * 60 * 1000L - 1)) / (24 * 60 * 60 * 1000L)).toInt()
+                            }
+                        }
+
+                        val lang = remember { java.util.Locale.getDefault().language }
+                        val relativeText = when (lang) {
+                            "uk" -> when {
+                                delta < 0 -> "протерміновано"
+                                delta == 0 -> "сьогодні"
+                                delta == 1 -> "завтра"
+                                else -> "через $delta дн."
+                            }
+                            "ru" -> when {
+                                delta < 0 -> "просрочено"
+                                delta == 0 -> "сегодня"
+                                delta == 1 -> "завтра"
+                                else -> "через $delta дн."
+                            }
+                            else -> when {
+                                delta < 0 -> "overdue"
+                                delta == 0 -> "today"
+                                delta == 1 -> "tomorrow"
+                                else -> "in $delta d."
+                            }
+                        }
+
+                        val isOverdueOrToday = delta <= 0
+                        val color = if (isOverdueOrToday) ThingsUpcomingRed else textSecondaryColor.copy(alpha = 0.85f)
+
+                        Spacer(modifier = Modifier.width(8.dp))
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically,
+                            modifier = Modifier.padding(end = 4.dp)
+                        ) {
+                            Icon(
+                                imageVector = AppIcons.Deadline,
+                                contentDescription = "Deadline Flag",
+                                tint = color,
+                                modifier = Modifier.size(15.dp)
+                            )
+                            Spacer(modifier = Modifier.width(4.dp))
+                            Text(
+                                text = relativeText,
+                                style = TextStyle(
+                                    fontSize = subFontSize,
+                                    color = color,
+                                    fontWeight = FontWeight.Normal
+                                )
+                            )
+                        }
+                    }
+                }
+
+                if (subtitle != null) {
+                    Text(
+                        text = subtitle,
+                        style = TextStyle(
+                            fontSize = subFontSize,
+                            color = Color(0xFF8E8E93),
+                            fontWeight = FontWeight.Normal
+                        )
+                    )
+                }
+                }
+            }
 
         androidx.compose.animation.AnimatedVisibility(
             visible = isSelectionMode,
@@ -615,6 +587,29 @@ sealed class DateIndicatorResult {
     data class TextIndicator(
         val text: String
     ) : DateIndicatorResult()
+}
+
+/** Серая плашка с датой у строки задачи: число и месяц в месячных разделах, дата — на экранах проекта и сферы */
+@Composable
+private fun DateBadge(text: String) {
+    val isSystemDark = androidx.compose.foundation.isSystemInDarkTheme()
+    val badgeTextColor = if (isSystemDark) Color(0xFFE0E0E0) else Color(0xFF5F6368)
+    val badgeBgColor = if (isSystemDark) Color(0xFF2C2C2E) else Color(0xFFECECEC)
+
+    Text(
+        text = text,
+        style = TextStyle(
+            fontSize = 11.sp,
+            fontWeight = FontWeight.Medium,
+            color = badgeTextColor
+        ),
+        modifier = Modifier
+            .background(
+                color = badgeBgColor,
+                shape = RoundedCornerShape(4.dp)
+            )
+            .padding(horizontal = 6.dp, vertical = 2.dp)
+    )
 }
 
 private fun getStartDateIndicator(startDate: Long, isTonight: Boolean): DateIndicatorResult {
