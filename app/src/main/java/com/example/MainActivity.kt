@@ -8,6 +8,7 @@ import androidx.activity.viewModels
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.material3.Scaffold
 import androidx.compose.ui.Modifier
+import com.example.ui.components.ClearFocusOnImeHidden
 import com.example.ui.screens.home.ThingsHomeScreen
 import com.example.ui.theme.MyApplicationTheme
 import dagger.hilt.android.AndroidEntryPoint
@@ -24,6 +25,8 @@ class MainActivity : ComponentActivity() {
     enableEdgeToEdge()
     setContent {
       MyApplicationTheme {
+        // Свернули клавиатуру — курсор уходит из поля, в котором стоял
+        ClearFocusOnImeHidden()
         Scaffold(modifier = Modifier.fillMaxSize()) { innerPadding ->
           // Оставляем исходный вызов экрана HomeScreen без изменений
           ThingsHomeScreen()

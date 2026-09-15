@@ -161,22 +161,8 @@ fun InlineChecklistPanel(
     // в который перевести фокус после добавления или удаления соседнего, и где поставить курсор
     var focusedId by remember { mutableStateOf<String?>(null) }
     var pendingFocus by remember { mutableStateOf<Pair<String, Int>?>(null) }
-    // Клавиатура закрылась, а курсор в пункте — правка заканчивается, как в Things 3: фокус снимается,
-    // подсветка и разделители возвращаются, пустой пункт удаляется. Реагируем только на «была видна →
-    // скрылась» и с паузой: при переходе курсора между пунктами клавиатура не закрывается, а новый
-    // пункт получает фокус раньше, чем она успевает выехать.
-    val imeInsets = WindowInsets.ime
-    val imeVisible by remember(imeInsets, density) { derivedStateOf { imeInsets.getBottom(density) > 0 } }
-    var imeWasVisible by remember { mutableStateOf(false) }
-    LaunchedEffect(imeVisible) {
-        if (imeVisible) {
-            imeWasVisible = true
-        } else if (imeWasVisible) {
-            imeWasVisible = false
-            delay(120)
-            if (imeInsets.getBottom(density) == 0 && focusedId != null) focusManager.clearFocus()
-        }
-    }
+    // Клавиатура закрылась — курсор с пункта снимает общий ClearFocusOnImeHidden в корне приложения,
+    // а дальше срабатывает onFocusChanged: возвращаются подсветка и разделители, пустой пункт удаляется
     val view = LocalView.current
     val scope = rememberCoroutineScope()
 

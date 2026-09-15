@@ -47,6 +47,7 @@ import androidx.compose.ui.unit.sp
 import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
 import androidx.compose.ui.platform.LocalView
+import com.example.ui.components.ClearFocusOnImeHidden
 import com.example.ui.components.hideSoftKeyboardNow
 import com.example.ui.components.hideSoftKeyboardThen
 
@@ -393,6 +394,9 @@ fun ThingsTagDialog(
         onDismissRequest = onDismissRequest,
         properties = DialogProperties(usePlatformDefaultWidth = false)
     ) {
+        // У диалога своё окно — со своими отступами клавиатуры и своим фокусом,
+        // поэтому снятие курсора при сворачивании клавиатуры подключается здесь отдельно
+        ClearFocusOnImeHidden()
         // У диалога своё окно, и клавиатура сейчас принадлежит ему — прячем её через его View
         val dialogView = LocalView.current
         // Экран ввода тега уезжает 300 мс — клавиатуру прячем в момент ухода с него (см. hideSoftKeyboardNow)
