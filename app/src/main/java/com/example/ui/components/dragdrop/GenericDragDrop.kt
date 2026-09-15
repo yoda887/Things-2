@@ -255,120 +255,50 @@ fun Modifier.universalDragAndDrop(
     val lazyListState = state.lazyListState
 
     /**
-     * Видимые элементы списка без тех, что свёрнуты в стопку под пальцем.
+     * Видимые строки без свёрнутых в стопку под пальцем, в виде прямоугольников для расчётов.
      *
      * Свёрнутых элементов фактически нет в потоке списка, поэтому они не могут быть ни целями
      * обмена, ни частью составного блока, ни ориентиром для границ видимой области.
      * Ведущий элемент стопки остаётся — именно его геометрию движок и отслеживает.
      */
-    fun activeItems(visibleItems: List<LazyListItemInfo>, draggedKey: Any): List<LazyListItemInfo> {
-        if (state.stackedDragKeys.isEmpty()) return visibleItems
-        return visibleItems.filter { it.key == draggedKey || !state.stackedDragKeys.contains(it.key) }
+    fun activeSlots(visibleItems: List<LazyListItemInfo>, draggedKey: Any): List<DragSlot> {
+        val stacked = state.stackedDragKeys
+        return visibleItems
+            .filter { stacked.isEmpty() || it.key == draggedKey || !stacked.contains(it.key) }
+            .map { DragSlot(key = it.key, index = it.index, offset = it.offset, size = it.size) }
     }
 
     /**
-     * Поиск элемента списка, с которым необходимо произвести обмен на основании геометрии и вектора движения (Direction Lock).
-     * Исключает взаимный дребезг при любых порогах thresholdFraction (0.1f .. 0.9f).
-     */
-    fun checkSwap(
-        draggedKey: Any,
-        visibleItems: List<LazyListItemInfo>,
-        currentOffset: Float,
-        deltaY: Float
-    ): LazyListItemInfo? {
-        if (deltaY == 0f) return null
-
-        val activeVisibleItems = activeItems(visibleItems, draggedKey)
-        val draggedItem = activeVisibleItems.firstOrNull { it.key == draggedKey } ?: return null
-
-        // Карточка там, где палец (dragCardTop); расчётное смещение — только если пальца на экране нет
-        val cardTopNow = state.dragCardTop
-        val dragTop = if (cardTopNow.isNaN()) draggedItem.offset + currentOffset else cardTopNow
-        val dragBottom = dragTop + draggedItem.size
-
-        // Фильтруем элементы согласно предикату canDropOver, исключая неподходящие цели для свапа
-        val candidates = activeVisibleItems.filter {
-            it.key != draggedKey && canDropOver(it.key)
-        }
-
-        val threshold = thresholdFraction.coerceIn(0.1f, 0.9f)
-
-        if (deltaY > 0f) {
-            // Движение строго ВНИЗ: ведущий край — нижний (dragBottom)
-            val nextItem = candidates
-                .filter { it.index > draggedItem.index }
-                .minByOrNull { it.index }
-
-            if (nextItem != null) {
-                // Находим последний элемент целевого составного блока вместе с его продолжениями
-                var lastTarget = nextItem
-                val nextIdx = activeVisibleItems.indexOfFirst { it.key == nextItem.key }
-                var isBlockFullyVisible = true
-                if (nextIdx != -1) {
-                    for (i in (nextIdx + 1)..activeVisibleItems.lastIndex) {
-                        val item = activeVisibleItems[i]
-                        if (isBlockContinuation(item.key)) {
-                            lastTarget = item
-                        } else {
-                            break
-                        }
-                    }
-                    // Если дочерние элементы блока упираются в нижний край видимых элементов списка
-                    // и в общем списке ещё есть элементы, значит часть составного блока находится за пределами экрана
-                    val totalItemsCount = lazyListState.layoutInfo.totalItemsCount
-                    val isLastVisibleItem = lastTarget.index == activeVisibleItems.last().index
-                    val hasMoreItemsInList = lastTarget.index < totalItemsCount - 1
-                    if (isLastVisibleItem && hasMoreItemsInList && isBlockContinuation(lastTarget.key)) {
-                        isBlockFullyVisible = false
-                    }
-                }
-
-                // Место, куда встанет элемент, должно остаться в видимой области. Иначе у нижнего
-                // края (особенно при автопрокрутке) слот уезжает за экран, LazyColumn выгружает
-                // строку, жест отменяется и карточка пропадает из-под пальца. Пока цель видна
-                // не целиком, ждём: автопрокрутка сама вытянет её на экран.
-                val targetInViewport =
-                    lastTarget.offset + lastTarget.size <= lazyListState.layoutInfo.viewportEndOffset
-
-                if (isBlockFullyVisible && targetInViewport) {
-                    val downThreshold = lastTarget.offset + lastTarget.size * threshold
-                    if (dragBottom > downThreshold) {
-                        return nextItem
-                    }
-                }
-            }
-        } else if (deltaY < 0f) {
-            // Движение строго ВВЕРХ: ведущий край — верхний (dragTop)
-            val prevItem = candidates
-                .filter { it.index < draggedItem.index }
-                .maxByOrNull { it.index }
-
-            // То же у верхнего края: слот займёт место цели, и оно должно быть в видимой области
-            if (prevItem != null && prevItem.offset >= lazyListState.layoutInfo.viewportStartOffset) {
-                val upThreshold = prevItem.offset + prevItem.size * (1f - threshold)
-                if (dragTop < upThreshold) {
-                    return prevItem
-                }
-            }
-        }
-
-        return null
-    }
-
-    /**
-     * Выполняет геометрическую проверку пересечения элементов и обращение к внешнему обработчику перемещения.
-     * Компенсирует скачок смещения перетаскиваемого элемента на величину шага целевого слота.
+     * Выполняет геометрическую проверку пересечения элементов и обращение к внешнему обработчику
+     * перемещения. Компенсирует скачок смещения перетаскиваемого элемента на величину шага
+     * целевого слота.
      *
-     * @return true, если внешний обработчик подтвердил перемещение — движок воспроизведёт тактильный отклик.
+     * Сами правила — [findSwapTarget] и [jumpCompensation] — обычные функции над данными,
+     * их поведение закреплено тестами DragGeometryTest.
+     *
+     * @return true, если внешний обработчик подтвердил перемещение — движок воспроизведёт отклик.
      */
     fun performIntersectionCheck(deltaY: Float): Boolean {
-        val rawVisibleItems = lazyListState.layoutInfo.visibleItemsInfo
-        val targetItem = checkSwap(key, rawVisibleItems, state.dragAccumulatedY, deltaY) ?: return false
+        val layoutInfo = lazyListState.layoutInfo
+        val slots = activeSlots(layoutInfo.visibleItemsInfo, key)
+        val draggedItem = slots.firstOrNull { it.key == key } ?: return false
 
-        // Тот же список, с которым работает checkSwap: свёрнутые в стопку элементы
-        // не должны попадать в обход составного блока и раздувать компенсацию
-        val visibleItems = activeItems(rawVisibleItems, key)
-        val draggedItem = visibleItems.firstOrNull { it.key == key } ?: return false
+        // Карточка там, где палец (dragCardTop); расчётное смещение — только если пальца нет
+        val cardTopNow = state.dragCardTop
+        val dragTop = if (cardTopNow.isNaN()) draggedItem.offset + state.dragAccumulatedY else cardTopNow
+
+        val targetItem = findSwapTarget(
+            slots = slots,
+            draggedKey = key,
+            dragTop = dragTop,
+            deltaY = deltaY,
+            thresholdFraction = thresholdFraction,
+            viewportStart = layoutInfo.viewportStartOffset,
+            viewportEnd = layoutInfo.viewportEndOffset,
+            totalItemsCount = layoutInfo.totalItemsCount,
+            canDropOver = canDropOver,
+            isBlockContinuation = isBlockContinuation,
+        ) ?: return false
 
         val isMovingDown = targetItem.index > draggedItem.index
 
@@ -378,26 +308,8 @@ fun Modifier.universalDragAndDrop(
             return false
         }
 
-        val distanceToShift = if (isMovingDown) {
-            // Движение вниз: находим последний элемент целевого блока вместе с его продолжениями
-            var lastTarget = targetItem
-            val targetIdx = visibleItems.indexOfFirst { it.key == targetItem.key }
-            if (targetIdx != -1) {
-                for (i in (targetIdx + 1)..visibleItems.lastIndex) {
-                    val item = visibleItems[i]
-                    if (isBlockContinuation(item.key)) {
-                        lastTarget = item
-                    } else {
-                        break
-                    }
-                }
-            }
-            val targetBottom = lastTarget.offset + lastTarget.size
-            (draggedItem.offset - (targetBottom - draggedItem.size)).toFloat()
-        } else {
-            // Движение вверх: целевой слот начинается на отступе targetItem
-            (draggedItem.offset - targetItem.offset).toFloat()
-        }
+        val distanceToShift = jumpCompensation(slots, key, targetItem.key, isBlockContinuation)
+            ?: return false
 
         // Экранное положение карточки до перестановки — оно обязано остаться прежним
         val dragTopBeforeMove = draggedItem.offset + state.dragAccumulatedY
@@ -962,3 +874,4 @@ private class ReorderableItemNode(
         currentValueOf(LocalView).performHapticFeedback(feedbackConstant)
     }
 }
+
