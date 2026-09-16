@@ -96,6 +96,13 @@ import androidx.activity.compose.BackHandler
 import androidx.compose.ui.platform.LocalContext
 
 private val TOP_APP_BAR_HEIGHT = 56.dp
+
+/**
+ * Заголовок экрана держится непрозрачным, пока он ниже тулбара, и тает, уже заезжая под него:
+ * доли собственной высоты заголовка, на которых начинается и заканчивается растворение.
+ */
+private const val HEADER_FADE_START_FRACTION = 0.55f
+private const val HEADER_FADE_END_FRACTION = 0.92f
 private const val DELETE_ANIMATION_DELAY_MS = 300L
 
 /**
@@ -424,6 +431,27 @@ fun ThingsCategoryListPanel(
         }
     }
 
+    // Заголовок экрана остаётся непрозрачным, пока он ниже тулбара, и тает, уже заезжая под него:
+    // растворение отсчитывается от его собственной высоты, поэтому к моменту, когда заголовок почти
+    // целиком скрыт тулбаром, он прозрачен — и подмена заголовком тулбара проходит незаметно
+    val headerScrollAlpha by remember {
+        derivedStateOf {
+            if (lazyListState.firstVisibleItemIndex > 0) {
+                0f
+            } else {
+                val headerHeight = lazyListState.layoutInfo.visibleItemsInfo.firstOrNull()?.size?.toFloat() ?: 0f
+                if (headerHeight <= 0f) {
+                    1f
+                } else {
+                    val fadeStart = headerHeight * HEADER_FADE_START_FRACTION
+                    val fadeEnd = headerHeight * HEADER_FADE_END_FRACTION
+                    val scrolled = lazyListState.firstVisibleItemScrollOffset.toFloat()
+                    (1f - (scrolled - fadeStart) / (fadeEnd - fadeStart)).coerceIn(0f, 1f)
+                }
+            }
+        }
+    }
+
     val isDark = textPrimaryColor == ThingsTextPrimaryDark
     val topPaddingTotal = TOP_APP_BAR_HEIGHT
 
@@ -473,7 +501,11 @@ fun ThingsCategoryListPanel(
         ) {
             item(key = TaskListKeys.MAIN_HEADER) {
                 // Извлеченный подкомпонент заголовка
-                Box(modifier = Modifier.padding(horizontal = 8.dp)) {
+                Box(
+                    modifier = Modifier
+                        .padding(horizontal = 8.dp)
+                        .graphicsLayer { alpha = headerScrollAlpha }
+                ) {
                     MainCategoryHeader(
                         screen = screen,
                         project = project,
