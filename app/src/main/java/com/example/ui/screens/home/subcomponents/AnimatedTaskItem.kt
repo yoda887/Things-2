@@ -34,7 +34,6 @@ import androidx.compose.ui.layout.findRootCoordinates
 import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.navigationBars
 import androidx.compose.foundation.layout.statusBars
-import com.example.ui.screens.home.inlineeditor.EDITOR_COLLAPSED_HEIGHT
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.zIndex
 import com.example.data.model.Item
@@ -169,6 +168,9 @@ fun AnimatedTaskItem(
     val extraTopPaddingPx = with(density) {
         (MaterialTheme.dimens.taskExpandedTopPadding - MaterialTheme.dimens.taskCollapsedTopPadding).toPx()
     }
+    val extraBottomPaddingPx = with(density) {
+        (MaterialTheme.dimens.taskExpandedBottomPadding - MaterialTheme.dimens.taskCollapsedBottomPadding).toPx()
+    }
     val totalCompensationPx = verticalGapLimitPx + extraTopPaddingPx
     var prevPaddingPx by remember(task.id) { mutableStateOf(0f) }
 
@@ -176,7 +178,6 @@ fun AnimatedTaskItem(
     // Геометрию пишет раскладка карточки, читает только цикл ниже — без рекомпозиций.
     val cardGeometry = remember(task.id) { ExpandedCardGeometry() }
     val currentIsExpanded by rememberUpdatedState(isExpanded)
-    val collapsedEditorHeightPx = with(density) { EDITOR_COLLAPSED_HEIGHT.toPx() }
     val topLimitPx = WindowInsets.statusBars.getTop(density) + with(density) { EXPANDED_TOP_LIMIT.toPx() }
     val bottomReservePx = WindowInsets.navigationBars.getBottom(density) + with(density) {
         (MaterialTheme.dimens.floatingToolbarBottomPadding + MaterialTheme.dimens.floatingToolbarHeight +
@@ -184,10 +185,11 @@ fun AnimatedTaskItem(
     }
 
     LaunchedEffect(lazyListState, verticalGapLimitPx) {
-        var prevProgress = 0f
         // Сколько список уже подтянут ради этой задачи, и сколько было к началу сворачивания
         var liftPx = 0f
         var liftAtCollapseStart = 0f
+        // Прогресс предыдущего кадра: по нему считается, какую часть остатка проехать сейчас
+        var prevProgress = 0f
         snapshotFlow { expansionProgressState.value }.collect { progress ->
             val currentPaddingPx = verticalGapLimitPx * progress
             val delta = currentPaddingPx - prevPaddingPx
@@ -197,18 +199,26 @@ fun AnimatedTaskItem(
             prevPaddingPx = currentPaddingPx
 
             if (currentIsExpanded) {
-                // Раскрытие: редактор растёт вниз, пока его низ не упрётся в границу над плашкой действий,
-                // дальше список подтягивается ровно на выход за неё — задача, которая помещается, не сдвигается.
-                // Высота берётся из замера этого кадра, предсказанная на текущий прогресс; верх карточки
-                // при этом не поднимается выше тулбара.
+                // Раскрытие: список едет вместе с ростом карточки, а не после того, как она упрётся
+                // в плашку действий. На каждом кадре считается, сколько ещё надо подтянуть, и этот
+                // остаток раскладывается на остаток анимации — получается одно движение, которое
+                // заканчивается вместе с раскрытием. Задача, которая помещается целиком, не сдвигается
+                // вовсе; верх карточки не поднимается выше тулбара, даже если ради этого низ не влезет.
                 val g = cardGeometry
                 if (g.measured && g.editorFullHeight > 0 && g.rootHeight > 0) {
-                    val predictedTop = g.top - extraTopPaddingPx * (progress - prevProgress)
-                    val predictedBottom = predictedTop + collapsedEditorHeightPx +
-                        (g.editorFullHeight - collapsedEditorHeightPx) * progress
-                    val overflow = predictedBottom - (g.rootHeight - bottomReservePx)
-                    val room = predictedTop - topLimitPx
-                    val step = minOf(overflow, room)
+                    // Замеренная высота редактора — с отступами этого кадра: они тоже едут по прогрессу
+                    // (progressPadding), поэтому к концу раскрытия карточка станет выше на их остаток
+                    val finalHeight = g.editorFullHeight +
+                        (extraTopPaddingPx + extraBottomPaddingPx) * (1f - progress)
+                    // Где окажется верх карточки к концу раскрытия, если больше не подтягивать список:
+                    // компенсация верхнего отступа сдвинет его вниз на остаток своего хода
+                    val finalTop = g.top - extraTopPaddingPx * (1f - progress)
+                    val overflow = finalTop + finalHeight - (g.rootHeight - bottomReservePx)
+                    val room = finalTop - topLimitPx
+                    val remaining = minOf(overflow, room).coerceAtLeast(0f)
+                    val span = 1f - prevProgress
+                    val step = if (span <= 0f) remaining
+                    else remaining * ((progress - prevProgress) / span).coerceIn(0f, 1f)
                     if (step > 0f) {
                         lazyListState.dispatchRawDelta(step)
                         liftPx += step
