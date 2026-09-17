@@ -235,12 +235,16 @@ fun InlineChecklistPanel(
             latestOnChecklistChange(latestChecklist.filterNot { it.id == item.id })
         }
     }
-    // Пустой пункт убирается сразу, без сворачивания; при необходимости курсор уходит в конец предыдущего
+    // Пустой пункт (Backspace, Return в пустом пункте, потеря фокуса) сворачивается так же, как удалённый
+    // смахиванием. Раньше он пропадал в одном кадре: карточка резко уменьшалась на высоту строки, а затем,
+    // если пункт был последним, подрастала вместе с заметкой, возвращающей себе высоту без чек-листа.
+    // При необходимости курсор уходит в конец предыдущего пункта.
     val removeEmptyItem: (String, Boolean) -> Unit = { id, focusPrevious ->
         val current = latestChecklist
         val index = current.indexOfFirst { it.id == id }
         if (index >= 0) {
             if (focusPrevious && index > 0) current[index - 1].let { pendingFocus = it.id to it.title.length }
+            exiting = exiting + (id to (index to current[index]))
             latestOnChecklistChange(current.filterNot { it.id == id })
         }
     }
