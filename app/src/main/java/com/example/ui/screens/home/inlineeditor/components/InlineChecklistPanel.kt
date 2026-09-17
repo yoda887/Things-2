@@ -214,6 +214,8 @@ fun InlineChecklistPanel(
     // Удалённые пункты, пока их строка сворачивается: id -> (позиция в списке, пункт).
     // Из чек-листа пункт убирается сразу — сворачивание редактора посреди анимации его не вернёт.
     var exiting by remember { mutableStateOf(emptyMap<String, Pair<Int, ChecklistItem>>()) }
+    // Из исчезающих — удалённые кнопкой удаления: только у них при сворачивании остаётся видна кнопка
+    var exitingViaDelete by remember { mutableStateOf(emptySet<String>()) }
     val rows = remember(checklist, exiting) {
         if (exiting.isEmpty()) checklist
         else {
@@ -231,6 +233,7 @@ fun InlineChecklistPanel(
         val index = latestChecklist.indexOfFirst { it.id == item.id }
         if (index >= 0) {
             exiting = exiting + (item.id to (index to item))
+            exitingViaDelete = exitingViaDelete + item.id
             deleteArmed = false
             latestOnChecklistChange(latestChecklist.filterNot { it.id == item.id })
         }
@@ -408,6 +411,7 @@ fun InlineChecklistPanel(
             displayRows.forEachIndexed { rowIndex, item ->
                 key(item.id) {
                     val isExiting = item.id in exiting
+                    val isExitingViaDelete = item.id in exitingViaDelete
                     val nextId = displayRows.getOrNull(rowIndex + 1)?.id
                     // Без условного вызова: условная группа перед AnimatedVisibility пересоздала бы его
                     // уже скрытым — строка исчезала бы в одном кадре, без сворачивания
@@ -415,6 +419,7 @@ fun InlineChecklistPanel(
                         if (isExiting) {
                             delay(CHECKLIST_DELETE_COLLAPSE_MS + 50L)
                             exiting = exiting - item.id
+                            exitingViaDelete = exitingViaDelete - item.id
                         }
                     }
                     val placementOffset = remember { Animatable(0f) }
@@ -643,9 +648,9 @@ fun InlineChecklistPanel(
                                 )
 
                                 ChecklistRowAction(
-                                    showDelete = deleteRowId == item.id || isExiting,
+                                    showDelete = (deleteRowId == item.id && !isExiting) || isExitingViaDelete,
                                     deleteClickable = deleteArmed && deleteRowId == item.id && !isExiting,
-                                    deleteOffset = { if (isExiting) 0f else deleteOffset.floatValue },
+                                    deleteOffset = { if (isExitingViaDelete) 0f else deleteOffset.floatValue },
                                     fontDp = fontDp,
                                     onEdgeDistance = { deleteEdgeDistance.floatValue = it },
                                     onDelete = { deleteItem(item) },
