@@ -60,6 +60,9 @@ import androidx.compose.ui.platform.LocalView
 import com.example.ui.components.hideSoftKeyboardNow
 import com.example.ui.components.progressPadding
 
+/** Высота редактора в начале раскрытия — совпадает с высотой свёрнутой строки задачи */
+internal val EDITOR_COLLAPSED_HEIGHT = 46.dp
+
 @OptIn(ExperimentalMaterial3Api::class, ExperimentalLayoutApi::class)
 
 @Composable
@@ -93,6 +96,9 @@ fun ThingsTaskInlineEditor(
     // Прогресс раскрытия (0..1) — функцией, а не числом: его читают только лямбды раскладки
     // и graphicsLayer, поэтому анимация не пересобирает редактор на каждом кадре.
     expansionProgress: () -> Float = { 1f },
+    // Полная высота содержимого редактора, измеренная в раскладке этого кадра (видимая часть — её доля
+    // по прогрессу раскрытия). Нужна, чтобы подтянуть список, если редактор не помещается над нижним краем
+    onFullHeightMeasured: (Int) -> Unit = {},
     onWhenDialogVisibilityChange: (Boolean) -> Unit = {},
     areas: List<com.example.data.model.Area> = emptyList(),
     onNavigateToProject: ((Item) -> Unit)? = null,
@@ -248,7 +254,8 @@ fun ThingsTaskInlineEditor(
             .layout { measurable, constraints ->
                 val placeable = measurable.measure(constraints)
                 val fullHeight = placeable.height
-                val collapsedHeight = 46.dp.roundToPx()
+                onFullHeightMeasured(fullHeight)
+                val collapsedHeight = EDITOR_COLLAPSED_HEIGHT.roundToPx()
                 val targetHeight = (collapsedHeight + (fullHeight - collapsedHeight) * expansionProgress()).toInt()
                 layout(placeable.width, targetHeight) {
                     placeable.place(0, 0)

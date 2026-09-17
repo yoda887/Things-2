@@ -28,6 +28,13 @@ import androidx.compose.foundation.layout.PaddingValues
 import com.example.ui.components.progressPadding
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.layout.layout
+import androidx.compose.ui.layout.onGloballyPositioned
+import androidx.compose.ui.layout.positionInRoot
+import androidx.compose.ui.layout.findRootCoordinates
+import androidx.compose.foundation.layout.WindowInsets
+import androidx.compose.foundation.layout.navigationBars
+import androidx.compose.foundation.layout.statusBars
+import com.example.ui.screens.home.inlineeditor.EDITOR_COLLAPSED_HEIGHT
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.zIndex
 import com.example.data.model.Item
@@ -165,7 +172,22 @@ fun AnimatedTaskItem(
     val totalCompensationPx = verticalGapLimitPx + extraTopPaddingPx
     var prevPaddingPx by remember(task.id) { mutableStateOf(0f) }
 
+    // Раскрытая задача должна помещаться между тулбаром и плашкой действий внизу экрана.
+    // Геометрию пишет раскладка карточки, читает только цикл ниже — без рекомпозиций.
+    val cardGeometry = remember(task.id) { ExpandedCardGeometry() }
+    val currentIsExpanded by rememberUpdatedState(isExpanded)
+    val collapsedEditorHeightPx = with(density) { EDITOR_COLLAPSED_HEIGHT.toPx() }
+    val topLimitPx = WindowInsets.statusBars.getTop(density) + with(density) { EXPANDED_TOP_LIMIT.toPx() }
+    val bottomReservePx = WindowInsets.navigationBars.getBottom(density) + with(density) {
+        (MaterialTheme.dimens.floatingToolbarBottomPadding + MaterialTheme.dimens.floatingToolbarHeight +
+            EXPANDED_BOTTOM_GAP).toPx()
+    }
+
     LaunchedEffect(lazyListState, verticalGapLimitPx) {
+        var prevProgress = 0f
+        // Сколько список уже подтянут ради этой задачи, и сколько было к началу сворачивания
+        var liftPx = 0f
+        var liftAtCollapseStart = 0f
         snapshotFlow { expansionProgressState.value }.collect { progress ->
             val currentPaddingPx = verticalGapLimitPx * progress
             val delta = currentPaddingPx - prevPaddingPx
@@ -173,6 +195,40 @@ fun AnimatedTaskItem(
                 lazyListState.dispatchRawDelta(delta)
             }
             prevPaddingPx = currentPaddingPx
+
+            if (currentIsExpanded) {
+                // Раскрытие: редактор растёт вниз, пока его низ не упрётся в границу над плашкой действий,
+                // дальше список подтягивается ровно на выход за неё — задача, которая помещается, не сдвигается.
+                // Высота берётся из замера этого кадра, предсказанная на текущий прогресс; верх карточки
+                // при этом не поднимается выше тулбара.
+                val g = cardGeometry
+                if (g.measured && g.editorFullHeight > 0 && g.rootHeight > 0) {
+                    val predictedTop = g.top - extraTopPaddingPx * (progress - prevProgress)
+                    val predictedBottom = predictedTop + collapsedEditorHeightPx +
+                        (g.editorFullHeight - collapsedEditorHeightPx) * progress
+                    val overflow = predictedBottom - (g.rootHeight - bottomReservePx)
+                    val room = predictedTop - topLimitPx
+                    val step = minOf(overflow, room)
+                    if (step > 0f) {
+                        lazyListState.dispatchRawDelta(step)
+                        liftPx += step
+                    }
+                }
+                liftAtCollapseStart = liftPx
+            } else if (liftPx > 0f) {
+                // Сворачивание: подтяжка возвращается вместе с прогрессом, задача встаёт на прежнее место
+                val target = liftAtCollapseStart * progress
+                val back = liftPx - target
+                if (back > 0f) {
+                    lazyListState.dispatchRawDelta(-back)
+                    liftPx = target
+                }
+            }
+            if (progress == 0f) {
+                liftPx = 0f
+                liftAtCollapseStart = 0f
+            }
+            prevProgress = progress
         }
     }
 
@@ -324,6 +380,16 @@ fun AnimatedTaskItem(
                         // По мере того как dispatchRawDelta догоняет, graphicsLayer плавно уменьшает компенсацию.
                         translationY = -(totalCompensationPx * expansionProgress() - prevPaddingPx)
                     }
+                    .onGloballyPositioned { coordinates ->
+                        // Видимый верх карточки (с учётом сдвига слоя выше) и высота окна — для подтяжки списка
+                        if (showEditor) {
+                            cardGeometry.top = coordinates.positionInRoot().y
+                            cardGeometry.rootHeight = coordinates.findRootCoordinates().size.height
+                            cardGeometry.measured = true
+                        } else {
+                            cardGeometry.measured = false
+                        }
+                    }
                     .layout { measurable, constraints ->
                         val extraPaddingPx = (10.dp * expansionProgress()).roundToPx()
                         val extendedConstraints = constraints.copy(
@@ -365,6 +431,7 @@ fun AnimatedTaskItem(
                         isExpanded = isExpanded,
                         outsideTouch = editorOutsideTouch,
                         expansionProgress = expansionProgress,
+                        onFullHeightMeasured = { cardGeometry.editorFullHeight = it },
                         screen = screen,
                         onSave = { title, notes, section, isTonight, startDate, dueDate, tags, projectId, checklist, priority ->
                             val hasPositionChange = (projectId != task.projectId) ||
@@ -592,4 +659,21 @@ fun AnimatedTaskItem(
     }
 }
 }
+}
+
+/** Раскрытая задача не поднимается выше этой границы: высота тулбара и небольшой зазор под ним */
+private val EXPANDED_TOP_LIMIT = 64.dp
+
+/** Зазор между низом раскрытой задачи и плашкой действий внизу экрана */
+private val EXPANDED_BOTTOM_GAP = 12.dp
+
+/**
+ * Геометрия карточки раскрываемой задачи. Её пишут раскладка карточки и редактора,
+ * а читает только цикл подтяжки списка, поэтому это не snapshot-состояние: запись не вызывает рекомпозиций.
+ */
+private class ExpandedCardGeometry {
+    var top = 0f
+    var rootHeight = 0
+    var editorFullHeight = 0
+    var measured = false
 }
