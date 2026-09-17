@@ -1,8 +1,5 @@
 package com.example.ui.screens.home.subcomponents
 
-import androidx.compose.animation.*
-import androidx.compose.animation.core.animateFloatAsState
-import androidx.compose.animation.core.tween
 import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.CircleShape
@@ -15,6 +12,7 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.draw.clipToBounds
 import androidx.compose.ui.draw.drawWithContent
@@ -43,7 +41,6 @@ private const val OPTIONS_CONTENT_DESC = "Options"
 // [ИЗМЕНЕНИЕ]: Константы анимации, размеров и отступов для исключения хардкода во всем компоненте
 private val SCROLLED_ELEVATION = 4.dp
 private val UNSCROLLED_ELEVATION = 0.dp
-private const val ANIMATION_DURATION_MS = 100
 private val TOP_APP_BAR_ICON_SIZE = 22.dp
 private val PROJECT_PROGRESS_ARC_SIZE = 20.dp
 private val AREA_ICON_SIZE = 20.dp
@@ -61,7 +58,9 @@ private val TOP_APP_BAR_SPACING = 8.dp
  * @param project Объект проекта (для экрана PROJECT_DETAIL).
  * @param area Объект области ответственности (для экрана AREA_DETAIL).
  * @param tasks Список задач проекта (для вычисления прогресса проекта).
- * @param isScrolled Флаг, указывающий на скролл списка дальше порогового значения.
+ * @param backgroundProgress Проявленность фона и разделителя тулбара, 0..1.
+ * @param titleProgress Проявленность компактного заголовка тулбара, 0..1. Он проступает, когда
+ *   заголовок экрана уже почти растворился, чтобы они не накладывались друг на друга.
  * @param isSelectionMode Флаг активного режима множественного выбора.
  * @param selectedCount Количество выбранных задач.
  * @param isAllSelected Флаг того, что выбраны все задачи в текущем списке.
@@ -82,7 +81,8 @@ fun CategoryListTopAppBar(
     project: Item?,
     area: Area?,
     tasks: List<ItemWithChecklist>,
-    isScrolled: Boolean,
+    backgroundProgress: Float,
+    titleProgress: Float,
     isSelectionMode: Boolean = false,
     selectedCount: Int = 0,
     isAllSelected: Boolean = false,
@@ -92,15 +92,11 @@ fun CategoryListTopAppBar(
     onEnterSelectionMode: () -> Unit = {},
     modifier: Modifier = Modifier
 ) {
-    // [ИЗМЕНЕНИЕ]: Анимация прогресса прокрутки (плавный переход за ANIMATION_DURATION_MS / 10 для сверхбыстрого переключения прозрачности)
-    val scrollProgress by animateFloatAsState(
-        targetValue = if (isScrolled) 1f else 0f,
-        animationSpec = tween(durationMillis = ANIMATION_DURATION_MS / 10),
-        label = "scrollProgress"
-    )
-    val dividerAlpha = scrollProgress * 0.2f
+    // Фон и разделитель проявляются вместе с прокруткой, синхронно с растворением заголовка экрана,
+    // а не включаются скачком по порогу
+    val dividerAlpha = backgroundProgress * 0.2f
     val baseColor = if (isDark) ThingsBackgroundDark else ThingsBackgroundLight
-    val containerColor = baseColor.copy(alpha = scrollProgress)
+    val containerColor = baseColor.copy(alpha = backgroundProgress)
     var isOptionsMenuExpanded by remember { mutableStateOf(false) }
 
     CenterAlignedTopAppBar(
@@ -116,18 +112,14 @@ fun CategoryListTopAppBar(
                 )
             }
             */
-            // [ИЗМЕНЕНИЕ]: Анимированное появление заголовка и иконки при скрытии основного заголовка (выполняется slide в направлении снизу вверх)
-            AnimatedVisibility(
-                    visible = isScrolled,
-                    enter = slideInVertically(
-                        initialOffsetY = { it },
-                        animationSpec = tween(durationMillis = ANIMATION_DURATION_MS)
-                    ) + fadeIn(animationSpec = tween(durationMillis = ANIMATION_DURATION_MS)),
-                    exit = slideOutVertically(
-                        targetOffsetY = { it },
-                        animationSpec = tween(durationMillis = ANIMATION_DURATION_MS)
-                    ) + fadeOut(animationSpec = tween(durationMillis = ANIMATION_DURATION_MS))
-                ) {
+            // Компактный заголовок проступает и выезжает снизу вместе с прокруткой, подхватывая заголовок
+            // экрана в тот момент, когда тот уже почти растворился
+            Box(
+                modifier = Modifier.graphicsLayer {
+                    alpha = titleProgress
+                    translationY = (1f - titleProgress) * size.height
+                }
+            ) {
                     Row(
                         verticalAlignment = Alignment.CenterVertically
                     ) {

@@ -98,11 +98,16 @@ import androidx.compose.ui.platform.LocalContext
 private val TOP_APP_BAR_HEIGHT = 56.dp
 
 /**
- * Заголовок экрана держится непрозрачным, пока он ниже тулбара, и тает, уже заезжая под него:
- * доли собственной высоты заголовка, на которых начинается и заканчивается растворение.
+ * Передача заголовка тулбару при прокрутке — в долях собственной высоты заголовка экрана.
+ * Заголовок экрана тает на [HEADER_FADE_START_FRACTION]..[HEADER_FADE_END_FRACTION], компактный
+ * заголовок тулбара проявляется на [TOOLBAR_TITLE_START_FRACTION]..[TOOLBAR_TITLE_END_FRACTION].
+ * Отрезки перекрываются чуть-чуть: там оба заголовка почти прозрачны — так нет ни момента, когда
+ * не видно ни одного, ни заметного наложения одного на другой. Фон тулбара проявляется на всём пути.
  */
-private const val HEADER_FADE_START_FRACTION = 0.55f
-private const val HEADER_FADE_END_FRACTION = 0.92f
+private const val HEADER_FADE_START_FRACTION = 0.40f
+private const val HEADER_FADE_END_FRACTION = 0.68f
+private const val TOOLBAR_TITLE_START_FRACTION = 0.62f
+private const val TOOLBAR_TITLE_END_FRACTION = 0.92f
 private const val DELETE_ANIMATION_DELAY_MS = 300L
 
 /**
@@ -422,34 +427,27 @@ fun ThingsCategoryListPanel(
         onSearchClick = { onEvent(ThingsCategoryListEvent.ClickSearch) }
     )
 
-    // [ИЗМЕНЕНИЕ]: Вычисляем порог прокрутки списка (56.dp) для активации анимации заголовков и elevation на AppBar
-    val scrollThresholdPx = with(density) { TOP_APP_BAR_HEIGHT.toPx() }
-    val isScrolledPastHeader by remember {
-        derivedStateOf {
-            lazyListState.firstVisibleItemIndex > 0 ||
-            lazyListState.firstVisibleItemScrollOffset > scrollThresholdPx
-        }
-    }
-
-    // Заголовок экрана остаётся непрозрачным, пока он ниже тулбара, и тает, уже заезжая под него:
-    // растворение отсчитывается от его собственной высоты, поэтому к моменту, когда заголовок почти
-    // целиком скрыт тулбаром, он прозрачен — и подмена заголовком тулбара проходит незаметно
-    val headerScrollAlpha by remember {
+    // Насколько заголовок экрана уехал под тулбар, в долях его собственной высоты
+    val headerScrollFraction by remember {
         derivedStateOf {
             if (lazyListState.firstVisibleItemIndex > 0) {
-                0f
+                1f
             } else {
                 val headerHeight = lazyListState.layoutInfo.visibleItemsInfo.firstOrNull()?.size?.toFloat() ?: 0f
-                if (headerHeight <= 0f) {
-                    1f
-                } else {
-                    val fadeStart = headerHeight * HEADER_FADE_START_FRACTION
-                    val fadeEnd = headerHeight * HEADER_FADE_END_FRACTION
-                    val scrolled = lazyListState.firstVisibleItemScrollOffset.toFloat()
-                    (1f - (scrolled - fadeStart) / (fadeEnd - fadeStart)).coerceIn(0f, 1f)
-                }
+                if (headerHeight <= 0f) 0f
+                else lazyListState.firstVisibleItemScrollOffset / headerHeight
             }
         }
+    }
+    fun ramp(from: Float, to: Float) = ((headerScrollFraction - from) / (to - from)).coerceIn(0f, 1f)
+    val headerScrollAlpha by remember {
+        derivedStateOf { 1f - ramp(HEADER_FADE_START_FRACTION, HEADER_FADE_END_FRACTION) }
+    }
+    val toolbarTitleProgress by remember {
+        derivedStateOf { ramp(TOOLBAR_TITLE_START_FRACTION, TOOLBAR_TITLE_END_FRACTION) }
+    }
+    val toolbarBackgroundProgress by remember {
+        derivedStateOf { ramp(HEADER_FADE_START_FRACTION, TOOLBAR_TITLE_END_FRACTION) }
     }
 
     val isDark = textPrimaryColor == ThingsTextPrimaryDark
@@ -768,7 +766,8 @@ fun ThingsCategoryListPanel(
             project = project,
             area = area,
             tasks = state.allTasks,
-            isScrolled = isScrolledPastHeader,
+            backgroundProgress = toolbarBackgroundProgress,
+            titleProgress = toolbarTitleProgress,
             isSelectionMode = state.isSelectionMode,
             selectedCount = state.selectedTaskIds.size,
             isAllSelected = state.selectedTaskIds.isNotEmpty() && state.selectedTaskIds.size == state.displayTasks.size,
