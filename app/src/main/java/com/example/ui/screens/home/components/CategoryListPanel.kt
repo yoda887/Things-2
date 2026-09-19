@@ -884,22 +884,41 @@ fun ThingsCategoryListPanel(
 
     // Диалоги для пакетных операций
     if (showBatchWhenDialog) {
-        var batchStartDate by remember { mutableStateOf<Long?>(null) }
-        var batchSection by remember { mutableStateOf(TaskSection.TODAY) }
-        var batchIsTonight by remember { mutableStateOf(false) }
+        // Начальное состояние — общее для выбранных задач: если все они уже в одной секции и с одной
+        // датой, диалог показывает её отмеченной (и даёт кнопку «Clear»); если задачи разные —
+        // не отмечено ничего. Пока пользователь ничего не выбрал, закрытие крестиком ничего не меняет.
+        val batchSelected = remember(state.selectedTaskIds, state.allTasks) {
+            state.allTasks.filter { state.selectedTaskIds.contains(it.item.id) }
+        }
+        var batchStartDate by remember {
+            mutableStateOf(batchSelected.map { it.item.startDate }.distinct().singleOrNull())
+        }
+        var batchSection by remember {
+            mutableStateOf(batchSelected.map { it.item.section }.distinct().singleOrNull() ?: TaskSection.ANYTIME)
+        }
+        var batchIsTonight by remember {
+            mutableStateOf(batchSelected.isNotEmpty() && batchSelected.all { it.item.isTonight })
+        }
+        var batchPicked by remember { mutableStateOf(false) }
 
         ThingsWhenDialog(
             startDate = batchStartDate,
-            onStartDateChange = { batchStartDate = it },
+            onStartDateChange = { batchStartDate = it; batchPicked = true },
             section = batchSection,
-            onSectionChange = { batchSection = it },
+            onSectionChange = { batchSection = it; batchPicked = true },
             isTonight = batchIsTonight,
-            onIsTonightChange = { batchIsTonight = it },
+            onIsTonightChange = { batchIsTonight = it; batchPicked = true },
             onShowCalendarHelperChange = { },
             onDismissRequest = {
-                onEvent(
-                    ThingsCategoryListEvent.BatchScheduleTasks(batchStartDate, batchIsTonight, batchSection)
-                )
+                if (batchPicked) {
+                    onEvent(
+                        ThingsCategoryListEvent.BatchScheduleTasks(
+                            batchStartDate,
+                            batchIsTonight,
+                            batchSection
+                        )
+                    )
+                }
                 showBatchWhenDialog = false
             }
         )
