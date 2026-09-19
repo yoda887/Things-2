@@ -601,7 +601,7 @@ sealed interface ThingsCategoryListEvent {
     data class BatchCompleteTasks(val completed: Boolean) : ThingsCategoryListEvent
     object BatchDeleteTasks : ThingsCategoryListEvent
     object BatchDuplicateTasks : ThingsCategoryListEvent
-    data class BatchScheduleTasks(val startDate: Long?, val isTonight: Boolean) : ThingsCategoryListEvent
+    data class BatchScheduleTasks(val startDate: Long?, val isTonight: Boolean, val section: TaskSection) : ThingsCategoryListEvent
     data class BatchMoveTasks(val projectId: String?, val areaId: String?, val moveToInbox: Boolean) : ThingsCategoryListEvent
     data class BatchSetTags(val tags: List<String>) : ThingsCategoryListEvent
     data class BatchSetDeadline(val deadline: Long?) : ThingsCategoryListEvent

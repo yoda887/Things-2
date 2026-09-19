@@ -897,7 +897,9 @@ fun ThingsCategoryListPanel(
             onIsTonightChange = { batchIsTonight = it },
             onShowCalendarHelperChange = { },
             onDismissRequest = {
-                onEvent(ThingsCategoryListEvent.BatchScheduleTasks(batchStartDate, batchIsTonight))
+                onEvent(
+                    ThingsCategoryListEvent.BatchScheduleTasks(batchStartDate, batchIsTonight, batchSection)
+                )
                 showBatchWhenDialog = false
             }
         )

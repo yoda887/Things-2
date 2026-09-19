@@ -641,7 +641,7 @@ fun ThingsHomeScreen(viewModel: ThingsViewModel = hiltViewModel()) {
                                 }
                                 is ThingsCategoryListEvent.BatchScheduleTasks -> {
                                     val selectedTasks = screenState.allTasks.filter { selectedTaskIds.contains(it.item.id) }
-                                    viewModel.batchScheduleTasks(selectedTasks, event.startDate, event.isTonight)
+                                    viewModel.batchScheduleTasks(selectedTasks, event.startDate, event.isTonight, event.section)
                                     isSelectionMode = false
                                     selectedTaskIds = emptySet()
                                 }

@@ -504,14 +504,32 @@ class ThingsViewModel @Inject constructor(
     }
 
     /**
-     * Пакетно планирует дату и режим "сегодня вечером" для списка задач.
+     * Пакетно назначает дату старта выбранным задачам.
+     *
+     * Меняется не только дата, но и сама секция: списки отбирают задачи по [Item.start]
+     * ([DayBounds.isSomeday] — по `start == 3` и т. д.), поэтому без него задача с новой датой
+     * осталась бы в своём прежнем списке.
      */
-    fun batchScheduleTasks(taskWrappers: List<ItemWithChecklist>, startDate: Long?, isTonight: Boolean) {
+    fun batchScheduleTasks(
+        taskWrappers: List<ItemWithChecklist>,
+        startDate: Long?,
+        isTonight: Boolean,
+        section: TaskSection
+    ) {
         viewModelScope.launch {
+            val now = System.currentTimeMillis()
             val updated = taskWrappers.map { wrapper ->
+                // Задача в проекте не может оказаться во «Входящих» — как и в одиночном редакторе
+                val startVal = if (wrapper.item.projectId != null && section == TaskSection.INBOX) {
+                    TaskSection.ANYTIME.toStartVal()
+                } else {
+                    section.toStartVal()
+                }
                 wrapper.item.copy(
+                    start = startVal,
                     startDate = startDate,
-                    isTonight = isTonight
+                    isTonight = isTonight,
+                    modificationDate = now
                 )
             }
             taskUseCases.updateTask(updated)
