@@ -33,6 +33,8 @@ import androidx.compose.animation.core.spring
 import androidx.compose.animation.core.tween
 import androidx.compose.animation.core.Spring
 import androidx.compose.ui.geometry.Offset
+import androidx.compose.foundation.layout.offset
+import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogWindowProvider
 import androidx.compose.ui.window.DialogProperties
@@ -199,6 +201,18 @@ fun ThingsWhenDialog(
         }
         // Окно диалога подгоняется под содержимое, поэтому карточка сидит в развёрнутом на весь
         // экран боксе: иначе её сдвиг к строке выходил за окно и обрезался
+        // Содержимое окна диалога сдвинуто вниз на высоту полосы состояния, из-за чего карточка
+        // оказывалась ниже середины экрана. Компенсируем сдвиг, чтобы центр совпал с центром
+        // экрана, как в эталоне.
+        val hostView = LocalView.current
+        val centerFixPx = remember(hostView) {
+            // Внутри окна диалога отступ уже «съеден», поэтому высоту полосы берём у окна экрана
+            val activityView = generateSequence(hostView.context) {
+                (it as? android.content.ContextWrapper)?.baseContext
+            }.filterIsInstance<android.app.Activity>().firstOrNull()?.window?.decorView
+            androidx.core.view.ViewCompat.getRootWindowInsets(activityView ?: hostView)
+                ?.getInsets(androidx.core.view.WindowInsetsCompat.Type.statusBars())?.top ?: 0
+        }
         Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
         Card(
             shape = RoundedCornerShape(26.dp),
@@ -206,6 +220,7 @@ fun ThingsWhenDialog(
                 containerColor = Color(0xFF22242C)
             ),
             modifier = Modifier
+                .offset { IntOffset(0, -centerFixPx) }
                 .graphicsLayer {
                     scaleX = scale
                     scaleY = scale
