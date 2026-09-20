@@ -105,10 +105,10 @@ private val ROW_VERTICAL_PADDING = 6.dp
 
 private val GAP_AFTER_TITLE = 18.dp
 private val GAP_AFTER_WEEKDAYS = 3.dp
-private val GAP_AFTER_TODAY = 8.dp
-private val GAP_AFTER_EVENING = 23.dp
+private val GAP_AFTER_TODAY = 0.dp
+private val GAP_AFTER_EVENING = 18.dp
 private val GAP_AFTER_CALENDAR = 7.dp
-private val GAP_AFTER_SOMEDAY = 10.dp
+private val GAP_AFTER_SOMEDAY = 0.dp
 private val GAP_BEFORE_CLEAR = 37.dp
 
 /** Кнопка Clear: высота как в эталоне, по бокам — те же поля, что у остального содержимого */
@@ -364,7 +364,7 @@ fun ThingsWhenDialog(
                             onShowCalendarHelperChange(true)
                             requestClose()
                         }
-                        .padding(vertical = ROW_VERTICAL_PADDING),
+                        .height(46.dp),
                     verticalAlignment = Alignment.CenterVertically
                 ) {
                     Box(
@@ -384,7 +384,7 @@ fun ThingsWhenDialog(
                         text = androidx.compose.ui.res.stringResource(com.example.R.string.category_today),
                         style = TextStyle(
                             color = Color.White,
-                            fontSize = 18.sp,
+                            fontSize = 19.sp,
                             fontWeight = FontWeight.Normal
                         ),
                         modifier = Modifier.weight(5f)
@@ -416,7 +416,7 @@ fun ThingsWhenDialog(
                             onShowCalendarHelperChange(true)
                             requestClose()
                         }
-                        .padding(vertical = ROW_VERTICAL_PADDING),
+                        .height(46.dp),
                     verticalAlignment = Alignment.CenterVertically
                 ) {
                     Box(
@@ -436,7 +436,7 @@ fun ThingsWhenDialog(
                         text = androidx.compose.ui.res.stringResource(com.example.R.string.category_this_evening),
                         style = TextStyle(
                             color = Color.White,
-                            fontSize = 18.sp,
+                            fontSize = 19.sp,
                             fontWeight = FontWeight.Normal
                         ),
                         modifier = Modifier.weight(5f)
@@ -662,7 +662,7 @@ fun ThingsWhenDialog(
                                                         text = cell.day.toString(),
                                                         style = TextStyle(
                                                             color = Color.White,
-                                                            fontSize = 18.sp,
+                                                            fontSize = 19.sp,
                                                             fontWeight = FontWeight.Normal
                                                         )
                                                     )
@@ -692,7 +692,7 @@ fun ThingsWhenDialog(
                             onShowCalendarHelperChange(true)
                             requestClose()
                         }
-                        .padding(vertical = ROW_VERTICAL_PADDING),
+                        .height(46.dp),
                     verticalAlignment = Alignment.CenterVertically
                 ) {
                     Box(
@@ -712,7 +712,7 @@ fun ThingsWhenDialog(
                         text = androidx.compose.ui.res.stringResource(com.example.R.string.category_someday),
                         style = TextStyle(
                             color = Color.White,
-                            fontSize = 18.sp,
+                            fontSize = 19.sp,
                             fontWeight = FontWeight.Normal
                         ),
                         modifier = Modifier.weight(5f)
@@ -735,7 +735,7 @@ fun ThingsWhenDialog(
                 Row(
                     modifier = Modifier
                         .fillMaxWidth()
-                        .padding(vertical = ROW_VERTICAL_PADDING),
+                        .height(46.dp),
                     verticalAlignment = Alignment.CenterVertically
                 ) {
                     Box(
@@ -755,7 +755,7 @@ fun ThingsWhenDialog(
                         text = "Add Reminder",
                         style = TextStyle(
                             color = Color(0xFF6C6F7D),
-                            fontSize = 18.sp,
+                            fontSize = 19.sp,
                             fontWeight = FontWeight.Normal
                         ),
                         modifier = Modifier.weight(5f)
@@ -787,7 +787,7 @@ fun ThingsWhenDialog(
                     ) {
                         Text(
                             text = "Clear",
-                            fontSize = 18.sp,
+                            fontSize = 19.sp,
                             fontWeight = FontWeight.Normal
                         )
                     }
