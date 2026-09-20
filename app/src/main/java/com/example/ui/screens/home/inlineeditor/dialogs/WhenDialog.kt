@@ -34,9 +34,6 @@ import androidx.compose.animation.core.tween
 import androidx.compose.animation.core.Spring
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.window.Dialog
-import android.view.WindowManager
-import androidx.compose.ui.draw.drawBehind
-import androidx.compose.runtime.withFrameNanos
 import androidx.compose.ui.window.DialogWindowProvider
 import androidx.compose.ui.window.DialogProperties
 import com.example.data.model.TaskSection
@@ -74,9 +71,6 @@ private const val GROW_DURATION_MS = 180
 
 /** Проявление карточки: заметно быстрее роста, чтобы рост было видно с самого начала */
 private const val GROW_FADE_MS = 60
-
-/** Затемнение выходит на полную чуть раньше, чем карточка дорастает */
-private const val DIM_DURATION_MS = 140
 
 /** Гашение диалога при закрытии — размер при этом не меняется */
 private const val CLOSE_DURATION_MS = 130
@@ -191,59 +185,21 @@ fun ThingsWhenDialog(
 
     Dialog(
         onDismissRequest = requestClose,
-        properties = DialogProperties(
-            usePlatformDefaultWidth = false,
-            // Содержимое диалога не должно отступать от системных панелей: своё затемнение
-            // обязано накрывать и полосу состояния
-            decorFitsSystemWindows = false
-        )
+        properties = DialogProperties(usePlatformDefaultWidth = false)
     ) {
         val dialogWindow = (LocalView.current.parent as? DialogWindowProvider)?.window
         if (grows) {
-            // Своя анимация окна накладывалась на рост карточки — выключаем.
-            // Системное затемнение не используем: система из-за него переключает значки в полосе
-            // состояния на белые, хотя фон остаётся светлым. Затемняем сами, а окно растягиваем
-            // на весь экран без ограничений, чтобы затемнение накрыло и полосу состояния.
-            dialogWindow?.apply {
-                setWindowAnimations(0)
-                setDimAmount(0f)
-                clearFlags(WindowManager.LayoutParams.FLAG_DIM_BEHIND)
-                statusBarColor = android.graphics.Color.TRANSPARENT
-                navigationBarColor = android.graphics.Color.TRANSPARENT
-            }
-            // Размеры окна Compose выставляет сам после композиции, поэтому растягиваем его на
-            // весь экран уже на следующем кадре — иначе настройка не доживает до показа
-            LaunchedEffect(dialogWindow) {
-                withFrameNanos { }
-                dialogWindow?.apply {
-                    addFlags(WindowManager.LayoutParams.FLAG_LAYOUT_NO_LIMITS)
-                    setLayout(
-                        WindowManager.LayoutParams.MATCH_PARENT,
-                        WindowManager.LayoutParams.MATCH_PARENT
-                    )
-                }
-            }
+            // Своя анимация окна накладывалась на рост карточки и давала рывок — выключаем.
+            // Затемнение оставляем системное: только оно накрывает весь экран вместе с полосой
+            // состояния. Глубину берём как в эталоне — там фон гаснет примерно до 0.8 яркости.
+            dialogWindow?.setWindowAnimations(0)
+            // Глубину ставим сразу при создании окна: если менять её потом, система применяет
+            // изменение с опозданием — затемнение то мигает, то не появляется вовсе
+            dialogWindow?.setDimAmount(DIM_ALPHA)
         }
-        val dimAmount by animateFloatAsState(
-            targetValue = if (isVisible) DIM_ALPHA else 0f,
-            animationSpec = tween(
-                durationMillis = if (closing) CLOSE_DURATION_MS else DIM_DURATION_MS,
-                easing = FastOutSlowInEasing
-            ),
-            label = "dim"
-        )
-
         // Окно диалога подгоняется под содержимое, поэтому карточка сидит в развёрнутом на весь
         // экран боксе: иначе её сдвиг к строке выходил за окно и обрезался
-        Box(
-            modifier = Modifier
-                .fillMaxSize()
-                .then(
-                    if (grows) Modifier.drawBehind { drawRect(Color.Black, alpha = dimAmount) }
-                    else Modifier
-                ),
-            contentAlignment = Alignment.Center
-        ) {
+        Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
         Card(
             shape = RoundedCornerShape(26.dp),
             colors = CardDefaults.cardColors(
