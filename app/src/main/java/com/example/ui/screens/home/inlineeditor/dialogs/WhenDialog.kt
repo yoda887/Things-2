@@ -471,7 +471,7 @@ fun ThingsWhenDialog(
                             text = dayName,
                             style = TextStyle(
                                 color = Color(0xFF6C6F7D),
-                                fontSize = 14.sp,
+                                fontSize = 15.sp,
                                 fontWeight = FontWeight.Normal
                             ),
                             modifier = Modifier.weight(1f),
@@ -613,8 +613,8 @@ fun ThingsWhenDialog(
                                                     Text(
                                                         text = monthLabel,
                                                         style = TextStyle(
-                                                            color = ThingsBlue,
-                                                            fontSize = 12.sp,
+                                                            color = Color.White,
+                                                            fontSize = 13.sp,
                                                             fontWeight = FontWeight.Normal
                                                         )
                                                     )
@@ -622,7 +622,7 @@ fun ThingsWhenDialog(
                                                         text = cell.day.toString(),
                                                         style = TextStyle(
                                                             color = Color.White,
-                                                            fontSize = 12.sp,
+                                                            fontSize = 13.sp,
                                                             fontWeight = FontWeight.Normal
                                                         )
                                                     )
@@ -643,8 +643,8 @@ fun ThingsWhenDialog(
                                                         Text(
                                                             text = cell.monthLabel,
                                                             style = TextStyle(
-                                                                color = Color(0xFF9E9EA6),
-                                                                fontSize = 12.sp,
+                                                                color = Color.White,
+                                                                fontSize = 13.sp,
                                                                 fontWeight = FontWeight.Normal
                                                             )
                                                         )
@@ -652,7 +652,7 @@ fun ThingsWhenDialog(
                                                             text = cell.day.toString(),
                                                             style = TextStyle(
                                                                 color = Color.White,
-                                                                fontSize = 12.sp,
+                                                                fontSize = 13.sp,
                                                                 fontWeight = FontWeight.Normal
                                                             )
                                                         )
