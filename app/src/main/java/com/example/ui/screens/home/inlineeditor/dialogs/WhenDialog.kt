@@ -97,6 +97,9 @@ private object DialogRippleTheme : RippleTheme {
     )
 }
 
+/** Фон кружка с крестиком: в эталоне он темнее карточки, а не светлее */
+private val CLOSE_BUTTON_BACKGROUND = Color(0xFF181A1D)
+
 /** Отступ внутри строк: попадает в область нажатия, поэтому по пальцу строки стали крупнее */
 private val ROW_VERTICAL_PADDING = 6.dp
 
@@ -332,7 +335,7 @@ fun ThingsWhenDialog(
                             modifier = Modifier
                                 .size(36.dp)
                                 .clip(CircleShape)
-                                .background(Color(0xFF33353E))
+                                .background(CLOSE_BUTTON_BACKGROUND)
                                 .clickable { requestClose() },
                             contentAlignment = Alignment.Center
                         ) {
