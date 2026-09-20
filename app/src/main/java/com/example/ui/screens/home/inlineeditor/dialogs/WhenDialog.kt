@@ -70,12 +70,21 @@ sealed class CalendarCell {
  * общему шагу добавлены поправки на собственные поля блоков: у ячеек календаря число сидит в
  * квадратной ячейке с большим запасом снизу, у строк с текстом запас меньше.
  */
-private val GAP_AFTER_TITLE = 16.dp
-private val GAP_AFTER_WEEKDAYS = 0.dp
-private val GAP_AFTER_TODAY = 14.dp
-private val GAP_AFTER_EVENING = 24.dp
-private val GAP_AFTER_CALENDAR = 11.dp
-private val GAP_AFTER_SOMEDAY = 15.dp
+/**
+ * Высота ячейки календаря. Квадратная ячейка давала эталонный шаг рядов, но числа у нас мельче
+ * эталонных, поэтому шаг уменьшен в той же пропорции — иначе ряды выглядят разреженными.
+ */
+private val CALENDAR_CELL_HEIGHT = 45.dp
+
+/** Отступ внутри строк: попадает в область нажатия, поэтому по пальцу строки стали крупнее */
+private val ROW_VERTICAL_PADDING = 6.dp
+
+private val GAP_AFTER_TITLE = 18.dp
+private val GAP_AFTER_WEEKDAYS = 3.dp
+private val GAP_AFTER_TODAY = 8.dp
+private val GAP_AFTER_EVENING = 23.dp
+private val GAP_AFTER_CALENDAR = 7.dp
+private val GAP_AFTER_SOMEDAY = 10.dp
 private val GAP_BEFORE_CLEAR = 37.dp
 
 /** Кнопка Clear: высота как в эталоне, по бокам — те же поля, что у остального содержимого */
@@ -330,7 +339,7 @@ fun ThingsWhenDialog(
                             onShowCalendarHelperChange(true)
                             requestClose()
                         }
-                        .padding(vertical = 2.dp),
+                        .padding(vertical = ROW_VERTICAL_PADDING),
                     verticalAlignment = Alignment.CenterVertically
                 ) {
                     Box(
@@ -382,7 +391,7 @@ fun ThingsWhenDialog(
                             onShowCalendarHelperChange(true)
                             requestClose()
                         }
-                        .padding(vertical = 2.dp),
+                        .padding(vertical = ROW_VERTICAL_PADDING),
                     verticalAlignment = Alignment.CenterVertically
                 ) {
                     Box(
@@ -516,7 +525,7 @@ fun ThingsWhenDialog(
                             Box(
                                 modifier = Modifier
                                     .weight(1f)
-                                    .aspectRatio(1f),
+                                    .height(CALENDAR_CELL_HEIGHT),
                                 contentAlignment = Alignment.Center
                             ) {
                                 when (cell) {
@@ -658,7 +667,7 @@ fun ThingsWhenDialog(
                             onShowCalendarHelperChange(true)
                             requestClose()
                         }
-                        .padding(vertical = 2.dp),
+                        .padding(vertical = ROW_VERTICAL_PADDING),
                     verticalAlignment = Alignment.CenterVertically
                 ) {
                     Box(
@@ -701,7 +710,7 @@ fun ThingsWhenDialog(
                 Row(
                     modifier = Modifier
                         .fillMaxWidth()
-                        .padding(vertical = 2.dp),
+                        .padding(vertical = ROW_VERTICAL_PADDING),
                     verticalAlignment = Alignment.CenterVertically
                 ) {
                     Box(
