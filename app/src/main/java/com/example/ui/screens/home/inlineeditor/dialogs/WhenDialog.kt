@@ -65,6 +65,32 @@ sealed class CalendarCell {
     ) : CalendarCell()
 }
 
+/**
+ * Вертикальные промежутки между блоками диалога. Цель — одинаковые зазоры на глаз, поэтому к
+ * общему шагу добавлены поправки на собственные поля блоков: у ячеек календаря число сидит в
+ * квадратной ячейке с большим запасом снизу, у строк с текстом запас меньше.
+ */
+private val GAP_AFTER_TITLE = 16.dp
+private val GAP_AFTER_WEEKDAYS = 0.dp
+private val GAP_AFTER_TODAY = 14.dp
+private val GAP_AFTER_EVENING = 24.dp
+private val GAP_AFTER_CALENDAR = 11.dp
+private val GAP_AFTER_SOMEDAY = 15.dp
+private val GAP_BEFORE_CLEAR = 37.dp
+
+/** Кнопка Clear: высота как в эталоне, по бокам — те же поля, что у остального содержимого */
+private val CLEAR_BUTTON_HEIGHT = 40.dp
+
+/** Колонка иконок в строках: левое поле 28 dp и зазор до текста 8 dp — как в эталоне */
+private val ROW_ICON_COLUMN_WIDTH = 35.dp
+
+/** Отступ иконки от края содержимого: иконка у нас мельче эталонной, поэтому не центрируем её
+ *  в колонке, а ставим на то же место, что в эталоне, — иначе не сходится зазор до текста */
+private val ROW_ICON_START_INSET = 11.dp
+
+/** Иконки «Сегодня» и «Сегодня вечером» — как в эталоне */
+private val ROW_LEADING_ICON_SIZE = 18.dp
+
 /** Масштаб, с которого диалог вырастает из строки */
 private const val GROW_START_SCALE = 0.45f
 
@@ -215,7 +241,7 @@ fun ThingsWhenDialog(
         }
         Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
         Card(
-            shape = RoundedCornerShape(26.dp),
+            shape = RoundedCornerShape(32.dp),
             colors = CardDefaults.cardColors(
                 containerColor = Color(0xFF22242C)
             ),
@@ -243,8 +269,10 @@ fun ThingsWhenDialog(
             Column(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .padding(horizontal = 20.dp, vertical = 18.dp),
-                verticalArrangement = Arrangement.spacedBy(18.dp)
+                    .padding(horizontal = 16.dp, vertical = 18.dp),
+                // Промежутки между блоками задаются поштучно: у ячеек календаря и у текстов свои
+                // внутренние поля, поэтому при одинаковом spacedBy расстояния выглядели разными
+                verticalArrangement = Arrangement.spacedBy(0.dp)
             ) {
                 // Top bar: "When?" and Close "✕" Button
                 Row(
@@ -287,6 +315,8 @@ fun ThingsWhenDialog(
                     }
                 }
 
+                Spacer(modifier = Modifier.height(GAP_AFTER_TITLE))
+
                 // 1. Today Option
                 Row(
                     modifier = Modifier
@@ -303,19 +333,24 @@ fun ThingsWhenDialog(
                         .padding(vertical = 2.dp),
                     verticalAlignment = Alignment.CenterVertically
                 ) {
-                    Box(modifier = Modifier.weight(1f), contentAlignment = Alignment.Center) {
+                    Box(
+                        modifier = Modifier
+                            .width(ROW_ICON_COLUMN_WIDTH)
+                            .padding(start = ROW_ICON_START_INSET),
+                        contentAlignment = Alignment.CenterStart
+                    ) {
                         Icon(
                             imageVector = AppIcons.Today,
                             contentDescription = "Today",
                             tint = Color.Unspecified,
-                            modifier = Modifier.size(18.dp)
+                            modifier = Modifier.size(ROW_LEADING_ICON_SIZE)
                         )
                     }
                     Text(
                         text = androidx.compose.ui.res.stringResource(com.example.R.string.category_today),
                         style = TextStyle(
                             color = Color.White,
-                            fontSize = 17.sp,
+                            fontSize = 18.sp,
                             fontWeight = FontWeight.Medium
                         ),
                         modifier = Modifier.weight(5f)
@@ -331,6 +366,8 @@ fun ThingsWhenDialog(
                         }
                     }
                 }
+
+                Spacer(modifier = Modifier.height(GAP_AFTER_TODAY))
 
                 // 2. This Evening Option
                 Row(
@@ -348,19 +385,24 @@ fun ThingsWhenDialog(
                         .padding(vertical = 2.dp),
                     verticalAlignment = Alignment.CenterVertically
                 ) {
-                    Box(modifier = Modifier.weight(1f), contentAlignment = Alignment.Center) {
+                    Box(
+                        modifier = Modifier
+                            .width(ROW_ICON_COLUMN_WIDTH)
+                            .padding(start = ROW_ICON_START_INSET),
+                        contentAlignment = Alignment.CenterStart
+                    ) {
                         Icon(
                             imageVector = AppIcons.Evening,
                             contentDescription = "This Evening",
                             tint = Color.Unspecified,
-                            modifier = Modifier.size(18.dp)
+                            modifier = Modifier.size(ROW_LEADING_ICON_SIZE)
                         )
                     }
                     Text(
                         text = androidx.compose.ui.res.stringResource(com.example.R.string.category_this_evening),
                         style = TextStyle(
                             color = Color.White,
-                            fontSize = 17.sp,
+                            fontSize = 18.sp,
                             fontWeight = FontWeight.Medium
                         ),
                         modifier = Modifier.weight(5f)
@@ -376,6 +418,8 @@ fun ThingsWhenDialog(
                         }
                     }
                 }
+
+                Spacer(modifier = Modifier.height(GAP_AFTER_EVENING))
 
                 // Calendar section (Weekdays + 4 rows of dates) with tight vertical spacing
                 Column(
@@ -393,7 +437,7 @@ fun ThingsWhenDialog(
                             text = dayName,
                             style = TextStyle(
                                 color = Color(0xFF6C6F7D),
-                                fontSize = 12.sp,
+                                fontSize = 14.sp,
                                 fontWeight = FontWeight.SemiBold
                             ),
                             modifier = Modifier.weight(1f),
@@ -401,6 +445,8 @@ fun ThingsWhenDialog(
                         )
                     }
                 }
+
+                Spacer(modifier = Modifier.height(GAP_AFTER_WEEKDAYS))
 
                 // Calendar cells
                 val todayCal = Calendar.getInstance()
@@ -597,6 +643,8 @@ fun ThingsWhenDialog(
                 }
             }
 
+                Spacer(modifier = Modifier.height(GAP_AFTER_CALENDAR))
+
             // 3. Someday Option
                 Row(
                     modifier = Modifier
@@ -613,7 +661,12 @@ fun ThingsWhenDialog(
                         .padding(vertical = 2.dp),
                     verticalAlignment = Alignment.CenterVertically
                 ) {
-                    Box(modifier = Modifier.weight(1f), contentAlignment = Alignment.Center) {
+                    Box(
+                        modifier = Modifier
+                            .width(ROW_ICON_COLUMN_WIDTH)
+                            .padding(start = ROW_ICON_START_INSET),
+                        contentAlignment = Alignment.CenterStart
+                    ) {
                         Icon(
                             imageVector = AppIcons.Someday,
                             contentDescription = "Someday",
@@ -625,7 +678,7 @@ fun ThingsWhenDialog(
                         text = androidx.compose.ui.res.stringResource(com.example.R.string.category_someday),
                         style = TextStyle(
                             color = Color.White,
-                            fontSize = 17.sp,
+                            fontSize = 18.sp,
                             fontWeight = FontWeight.Medium
                         ),
                         modifier = Modifier.weight(5f)
@@ -642,6 +695,8 @@ fun ThingsWhenDialog(
                     }
                 }
 
+                Spacer(modifier = Modifier.height(GAP_AFTER_SOMEDAY))
+
                 // 4. Add Reminder
                 Row(
                     modifier = Modifier
@@ -649,7 +704,12 @@ fun ThingsWhenDialog(
                         .padding(vertical = 2.dp),
                     verticalAlignment = Alignment.CenterVertically
                 ) {
-                    Box(modifier = Modifier.weight(1f), contentAlignment = Alignment.Center) {
+                    Box(
+                        modifier = Modifier
+                            .width(ROW_ICON_COLUMN_WIDTH)
+                            .padding(start = ROW_ICON_START_INSET),
+                        contentAlignment = Alignment.CenterStart
+                    ) {
                         Icon(
                             imageVector = Icons.Default.Add,
                             contentDescription = null,
@@ -661,7 +721,7 @@ fun ThingsWhenDialog(
                         text = "Add Reminder",
                         style = TextStyle(
                             color = Color(0xFF6C6F7D),
-                            fontSize = 17.sp,
+                            fontSize = 18.sp,
                             fontWeight = FontWeight.Normal
                         ),
                         modifier = Modifier.weight(5f)
@@ -672,7 +732,7 @@ fun ThingsWhenDialog(
                 // Кнопка "Clear" для сброса даты в "Anytime" (форма полной пилюли, малиново-красный цвет)
                 val hasTimeAssignment = startDate != null || section != TaskSection.ANYTIME
                 if (hasTimeAssignment) {
-                    Spacer(modifier = Modifier.height(8.dp))
+                    Spacer(modifier = Modifier.height(GAP_BEFORE_CLEAR))
                     Button(
                         onClick = {
                             view.performHapticFeedback(HapticFeedbackConstants.CLOCK_TICK)
@@ -689,8 +749,7 @@ fun ThingsWhenDialog(
                         shape = RoundedCornerShape(percent = 50),
                         modifier = Modifier
                             .fillMaxWidth()
-                            .padding(horizontal = 4.dp)
-                            .height(44.dp)
+                            .height(CLEAR_BUTTON_HEIGHT)
                     ) {
                         Text(
                             text = "Clear",
