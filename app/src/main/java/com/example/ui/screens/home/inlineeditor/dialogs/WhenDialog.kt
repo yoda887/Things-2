@@ -762,7 +762,7 @@ fun ThingsWhenDialog(
                     ) {
                         Text(
                             text = "Clear",
-                            fontSize = 16.sp,
+                            fontSize = 18.sp,
                             fontWeight = FontWeight.Normal
                         )
                     }
