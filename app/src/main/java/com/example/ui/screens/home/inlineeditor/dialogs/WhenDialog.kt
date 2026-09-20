@@ -45,6 +45,8 @@ import com.example.ui.screens.home.inlineeditor.utils.isPastDate
 import com.example.ui.screens.home.inlineeditor.utils.isTodayDate
 import com.example.ui.screens.home.inlineeditor.utils.isTodayDateOrPast
 import com.example.ui.screens.home.inlineeditor.utils.isSameDay
+import kotlinx.coroutines.delay
+import kotlinx.coroutines.launch
 import java.text.SimpleDateFormat
 import java.util.*
 import android.view.HapticFeedbackConstants
@@ -74,6 +76,8 @@ private const val GROW_FADE_MS = 60
 /** Затемнение выходит на полную чуть раньше, чем карточка дорастает */
 private const val DIM_DURATION_MS = 140
 
+/** Сворачивание обратно в строку при закрытии */
+private const val CLOSE_DURATION_MS = 150
 
 /** Затемнение фона под диалогом: как в эталоне — фон гаснет примерно до 0,8 исходной яркости */
 private const val DIM_ALPHA = 0.20f
@@ -136,6 +140,25 @@ fun ThingsWhenDialog(
 
     var isVisible by remember { mutableStateOf(false) }
     LaunchedEffect(Unit) { isVisible = true }
+    // Закрытие — обратный ход: диалог сворачивается в свою строку и только потом снимается.
+    // Данные при выборе меняются сразу, так что строка успевает обновиться за диалогом.
+    val closeScope = rememberCoroutineScope()
+    var closing by remember { mutableStateOf(false) }
+    val requestClose: () -> Unit = requestClose@{
+        if (growFromOffset == null) {
+            onDismissRequest()
+            return@requestClose
+        }
+        if (!closing) {
+            closing = true
+            isVisible = false
+            closeScope.launch {
+                delay(CLOSE_DURATION_MS.toLong())
+                onDismissRequest()
+            }
+        }
+    }
+
     // Открытие из строки: диалог начинается уменьшенной копией на месте строки и вырастает, доезжая
     // до центра экрана. Без точки старта — прежнее появление по центру.
     val grows = growFromOffset != null
@@ -143,7 +166,10 @@ fun ThingsWhenDialog(
     val scale by animateFloatAsState(
         targetValue = if (isVisible) 1f else startScale,
         animationSpec = if (grows) {
-            tween(durationMillis = GROW_DURATION_MS, easing = FastOutSlowInEasing)
+            tween(
+                durationMillis = if (closing) CLOSE_DURATION_MS else GROW_DURATION_MS,
+                easing = FastOutSlowInEasing
+            )
         } else {
             spring(dampingRatio = Spring.DampingRatioMediumBouncy, stiffness = Spring.StiffnessLow)
         },
@@ -152,7 +178,10 @@ fun ThingsWhenDialog(
     val alpha by animateFloatAsState(
         targetValue = if (isVisible) 1f else 0f,
         animationSpec = if (grows) {
-            tween(durationMillis = GROW_FADE_MS, easing = LinearEasing)
+            tween(
+                durationMillis = if (closing) CLOSE_DURATION_MS else GROW_FADE_MS,
+                easing = LinearEasing
+            )
         } else {
             spring(stiffness = Spring.StiffnessLow)
         },
@@ -161,7 +190,7 @@ fun ThingsWhenDialog(
     val view = LocalView.current
 
     Dialog(
-        onDismissRequest = onDismissRequest,
+        onDismissRequest = requestClose,
         properties = DialogProperties(usePlatformDefaultWidth = false)
     ) {
         // У окна диалога своя анимация появления и своё затемнение, которое включается скачком:
@@ -175,7 +204,10 @@ fun ThingsWhenDialog(
         }
         val dimAlpha by animateFloatAsState(
             targetValue = if (isVisible) DIM_ALPHA else 0f,
-            animationSpec = tween(durationMillis = DIM_DURATION_MS, easing = FastOutSlowInEasing),
+            animationSpec = tween(
+                durationMillis = if (closing) CLOSE_DURATION_MS else DIM_DURATION_MS,
+                easing = FastOutSlowInEasing
+            ),
             label = "dim"
         )
 
@@ -249,7 +281,7 @@ fun ThingsWhenDialog(
                                 .size(36.dp)
                                 .clip(CircleShape)
                                 .background(Color(0xFF33353E))
-                                .clickable { onDismissRequest() },
+                                .clickable { requestClose() },
                             contentAlignment = Alignment.Center
                         ) {
                             Icon(
@@ -273,7 +305,7 @@ fun ThingsWhenDialog(
                             onSectionChange(TaskSection.TODAY)
                             onIsTonightChange(false)
                             onShowCalendarHelperChange(true)
-                            onDismissRequest()
+                            requestClose()
                         }
                         .padding(vertical = 2.dp),
                     verticalAlignment = Alignment.CenterVertically
@@ -318,7 +350,7 @@ fun ThingsWhenDialog(
                             onSectionChange(TaskSection.TODAY)
                             onIsTonightChange(true)
                             onShowCalendarHelperChange(true)
-                            onDismissRequest()
+                            requestClose()
                         }
                         .padding(vertical = 2.dp),
                     verticalAlignment = Alignment.CenterVertically
@@ -495,7 +527,7 @@ fun ThingsWhenDialog(
                                                     onSectionChange(if (isTodayDate(cell.timestamp)) TaskSection.TODAY else TaskSection.UPCOMING)
                                                     onIsTonightChange(false)
                                                     onShowCalendarHelperChange(true)
-                                                    onDismissRequest()
+                                                    requestClose()
                                                 },
                                             contentAlignment = Alignment.Center
                                         ) {
@@ -583,7 +615,7 @@ fun ThingsWhenDialog(
                             onSectionChange(TaskSection.SOMEDAY)
                             onIsTonightChange(false)
                             onShowCalendarHelperChange(true)
-                            onDismissRequest()
+                            requestClose()
                         }
                         .padding(vertical = 2.dp),
                     verticalAlignment = Alignment.CenterVertically
@@ -655,7 +687,7 @@ fun ThingsWhenDialog(
                             onSectionChange(TaskSection.ANYTIME)
                             onIsTonightChange(false)
                             onShowCalendarHelperChange(false)
-                            onDismissRequest()
+                            requestClose()
                         },
                         colors = ButtonDefaults.buttonColors(
                             containerColor = Color(0xFFE22D5A),
