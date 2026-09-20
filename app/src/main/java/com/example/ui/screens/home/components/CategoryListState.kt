@@ -589,7 +589,11 @@ sealed interface ThingsCategoryListEvent {
 
     // Свайп-события (для вызова мультиселекции и When/календаря)
     data class SwipeTaskLeft(val task: ItemWithChecklist) : ThingsCategoryListEvent
-    data class SwipeTaskRight(val task: ItemWithChecklist) : ThingsCategoryListEvent
+    /** growFromOffset — смещение строки от центра экрана: из него вырастает диалог When */
+    data class SwipeTaskRight(
+        val task: ItemWithChecklist,
+        val growFromOffset: androidx.compose.ui.geometry.Offset? = null
+    ) : ThingsCategoryListEvent
 
     // Мультивыбор и пакетные операции
     data class EnterSelectionMode(val initialTaskId: String?) : ThingsCategoryListEvent

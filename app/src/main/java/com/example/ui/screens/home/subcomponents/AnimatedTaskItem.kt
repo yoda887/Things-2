@@ -20,6 +20,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.draw.drawBehind
 import androidx.compose.ui.geometry.CornerRadius
+import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.RectangleShape
 import androidx.compose.ui.unit.Dp
@@ -28,6 +29,7 @@ import androidx.compose.foundation.layout.PaddingValues
 import com.example.ui.components.progressPadding
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.layout.layout
+import androidx.compose.ui.layout.boundsInRoot
 import androidx.compose.ui.layout.onGloballyPositioned
 import androidx.compose.ui.layout.positionInRoot
 import androidx.compose.ui.layout.findRootCoordinates
@@ -177,6 +179,9 @@ fun AnimatedTaskItem(
     // Раскрытая задача должна помещаться между тулбаром и плашкой действий внизу экрана.
     // Геометрию пишет раскладка карточки, читает только цикл ниже — без рекомпозиций.
     val cardGeometry = remember(task.id) { ExpandedCardGeometry() }
+    // Центр строки на экране — точка, из которой вырастает диалог When при свайпе вправо.
+    // Держатель, а не состояние: его пишет раскладка и читает обработчик жеста, рекомпозиция не нужна.
+    val rowCenter = remember(task.id) { RowCenter() }
     val currentIsExpanded by rememberUpdatedState(isExpanded)
     val topLimitPx = WindowInsets.statusBars.getTop(density) + with(density) { EXPANDED_TOP_LIMIT.toPx() }
     val bottomReservePx = WindowInsets.navigationBars.getBottom(density) + with(density) {
@@ -522,7 +527,14 @@ fun AnimatedTaskItem(
                     )
                 } else {
                     SwipeableTaskContainer(
-                        modifier = Modifier.taskDragAndDrop(
+                        modifier = Modifier
+                            .onGloballyPositioned { coordinates ->
+                                // Смещение центра строки от центра экрана: из него диалог When вырастает
+                                val root = coordinates.findRootCoordinates()
+                                rowCenter.value = coordinates.boundsInRoot().center -
+                                    Offset(root.size.width / 2f, root.size.height / 2f)
+                            }
+                            .taskDragAndDrop(
                             state = dragDropState,
                             taskWrapper = taskWrapper,
                             screen = screen,
@@ -537,7 +549,9 @@ fun AnimatedTaskItem(
                             onExitSelectionMode = onExitSelectionMode
                         ),
                         onSwipeLeft = { onEvent(ThingsCategoryListEvent.SwipeTaskLeft(taskWrapper)) },
-                        onSwipeRight = { onEvent(ThingsCategoryListEvent.SwipeTaskRight(taskWrapper)) },
+                        onSwipeRight = {
+                            onEvent(ThingsCategoryListEvent.SwipeTaskRight(taskWrapper, rowCenter.value))
+                        },
                         enabled = inlineExpandedTaskId == null
                                 && dragDropState.draggedItemKey == null
                                 && !task.id.startsWith("cal_"),
@@ -681,6 +695,11 @@ private val EXPANDED_BOTTOM_GAP = 12.dp
  * Геометрия карточки раскрываемой задачи. Её пишут раскладка карточки и редактора,
  * а читает только цикл подтяжки списка, поэтому это не snapshot-состояние: запись не вызывает рекомпозиций.
  */
+/** Смещение центра строки от центра экрана — точка, из которой вырастает диалог When */
+private class RowCenter {
+    var value: Offset? = null
+}
+
 private class ExpandedCardGeometry {
     var top = 0f
     var rootHeight = 0

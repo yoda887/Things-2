@@ -196,6 +196,8 @@ fun ThingsCategoryListPanel(
     var showDeleteConfirm by remember { mutableStateOf(false) }
     var isWhenDialogOpen by remember { mutableStateOf(false) }
     var swipeWhenTask by remember { mutableStateOf<ItemWithChecklist?>(null) }
+    // Смещение строки, по которой сделали свайп, от центра экрана: из неё вырастает диалог When
+    var swipeWhenOrigin by remember { mutableStateOf<androidx.compose.ui.geometry.Offset?>(null) }
     val deletedTaskIds = remember { mutableStateListOf<String>() }
 
     // Состояния диалогов для пакетных операций
@@ -598,6 +600,7 @@ fun ThingsCategoryListPanel(
                                 onEvent = { event ->
                                     if (event is ThingsCategoryListEvent.SwipeTaskRight) {
                                         swipeWhenTask = event.task
+                                        swipeWhenOrigin = event.growFromOffset
                                     } else {
                                         onEvent(event)
                                     }
@@ -844,6 +847,7 @@ fun ThingsCategoryListPanel(
             isTonight = pendingIsTonight,
             onIsTonightChange = { pendingIsTonight = it },
             onShowCalendarHelperChange = { },
+            growFromOffset = swipeWhenOrigin,
             onDismissRequest = {
                 val tagsList = targetTask.item.cachedTags
                     .split(",")
@@ -866,6 +870,7 @@ fun ThingsCategoryListPanel(
                     )
                 )
                 swipeWhenTask = null
+                swipeWhenOrigin = null
             }
         )
     }

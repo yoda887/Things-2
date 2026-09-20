@@ -24,11 +24,17 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.compose.ui.graphics.TransformOrigin
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.animation.core.animateFloatAsState
+import androidx.compose.animation.core.FastOutSlowInEasing
+import androidx.compose.animation.core.LinearEasing
 import androidx.compose.animation.core.spring
+import androidx.compose.animation.core.tween
 import androidx.compose.animation.core.Spring
+import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.window.Dialog
+import androidx.compose.ui.window.DialogWindowProvider
 import androidx.compose.ui.window.DialogProperties
 import com.example.data.model.TaskSection
 import com.example.ui.theme.ThingsBlue
@@ -55,6 +61,18 @@ sealed class CalendarCell {
     ) : CalendarCell()
 }
 
+/** Масштаб, с которого диалог вырастает из строки */
+private const val GROW_START_SCALE = 0.45f
+
+/** Длительность роста диалога из строки */
+private const val GROW_DURATION_MS = 180
+
+/** Проявление карточки: заметно быстрее роста, чтобы рост было видно с самого начала */
+private const val GROW_FADE_MS = 60
+
+
+
+
 @Composable
 fun ThingsWhenDialog(
     startDate: Long?,
@@ -64,7 +82,12 @@ fun ThingsWhenDialog(
     isTonight: Boolean,
     onIsTonightChange: (Boolean) -> Unit,
     onShowCalendarHelperChange: (Boolean) -> Unit,
-    onDismissRequest: () -> Unit
+    onDismissRequest: () -> Unit,
+    /**
+     * Смещение строки, по которой сделали свайп, от центра экрана. Из этой точки диалог вырастает.
+     * Не передано — диалог просто проявляется по центру, как раньше.
+     */
+    growFromOffset: Offset? = null
 ) {
     var calendarWeekOffset by remember { mutableStateOf(0) }
 
@@ -107,43 +130,66 @@ fun ThingsWhenDialog(
     val isSomedayActive = startDate == null && section == TaskSection.SOMEDAY
 
     var isVisible by remember { mutableStateOf(false) }
-    LaunchedEffect(Unit) {
-        isVisible = true
-    }
-
+    LaunchedEffect(Unit) { isVisible = true }
+    // Открытие из строки: диалог начинается уменьшенной копией на месте строки и вырастает, доезжая
+    // до центра экрана. Без точки старта — прежнее появление по центру.
+    val grows = growFromOffset != null
+    val startScale = if (grows) GROW_START_SCALE else 0.85f
     val scale by animateFloatAsState(
-        targetValue = if (isVisible) 1f else 0.85f,
-        animationSpec = spring(
-            dampingRatio = Spring.DampingRatioMediumBouncy,
-            stiffness = Spring.StiffnessLow
-        ),
+        targetValue = if (isVisible) 1f else startScale,
+        animationSpec = if (grows) {
+            tween(durationMillis = GROW_DURATION_MS, easing = FastOutSlowInEasing)
+        } else {
+            spring(dampingRatio = Spring.DampingRatioMediumBouncy, stiffness = Spring.StiffnessLow)
+        },
         label = "scale"
     )
     val alpha by animateFloatAsState(
         targetValue = if (isVisible) 1f else 0f,
-        animationSpec = spring(
-            stiffness = Spring.StiffnessLow
-        ),
+        animationSpec = if (grows) {
+            tween(durationMillis = GROW_FADE_MS, easing = LinearEasing)
+        } else {
+            spring(stiffness = Spring.StiffnessLow)
+        },
         label = "alpha"
     )
-
     val view = LocalView.current
 
     Dialog(
         onDismissRequest = onDismissRequest,
         properties = DialogProperties(usePlatformDefaultWidth = false)
     ) {
+        // У окна диалога своя анимация появления: вместе с ростом карточки она давала рывок
+        val dialogWindow = (LocalView.current.parent as? DialogWindowProvider)?.window
+        if (grows) {
+            dialogWindow?.setWindowAnimations(0)
+        }
+
+        // Окно диалога подгоняется под содержимое, поэтому карточка сидит в развёрнутом на весь
+        // экран боксе: иначе её сдвиг к строке выходил за окно и обрезался
+        Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
         Card(
             shape = RoundedCornerShape(26.dp),
             colors = CardDefaults.cardColors(
                 containerColor = Color(0xFF22242C)
             ),
             modifier = Modifier
-                .graphicsLayer(
-                    scaleX = scale,
-                    scaleY = scale,
-                    alpha = alpha
-                )
+                .graphicsLayer {
+                    scaleX = scale
+                    scaleY = scale
+                    this.alpha = alpha
+                    // Диалог не переезжает, а разворачивается вокруг точки строки: она остаётся на
+                    // месте, поэтому уменьшенная копия стоит у строки и растёт от неё. Строку
+                    // переводим в доли размера карточки; если она за её пределами — берём край.
+                    growFromOffset?.let { from ->
+                        // По горизонтали диалог раскрывается от левого края — оттуда же, где под
+                        // строкой выезжает плашка с календарём. По вертикали — от самой строки.
+                        transformOrigin = TransformOrigin(
+                            pivotFractionX = 0f,
+                            pivotFractionY = (0.5f + from.y / size.height).coerceIn(0f, 1f)
+                        )
+                    }
+                }
                 .width(336.dp)
                 .wrapContentHeight()
         ) {
@@ -607,6 +653,7 @@ fun ThingsWhenDialog(
                     }
                 }
             }
+        }
         }
     }
 }
