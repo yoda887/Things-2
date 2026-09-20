@@ -24,7 +24,6 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import androidx.compose.ui.draw.drawBehind
 import androidx.compose.ui.graphics.TransformOrigin
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.animation.core.animateFloatAsState
@@ -72,9 +71,6 @@ private const val GROW_DURATION_MS = 180
 
 /** Проявление карточки: заметно быстрее роста, чтобы рост было видно с самого начала */
 private const val GROW_FADE_MS = 60
-
-/** Затемнение выходит на полную чуть раньше, чем карточка дорастает */
-private const val DIM_DURATION_MS = 140
 
 /** Сворачивание обратно в строку при закрытии */
 private const val CLOSE_DURATION_MS = 150
@@ -193,35 +189,19 @@ fun ThingsWhenDialog(
         onDismissRequest = requestClose,
         properties = DialogProperties(usePlatformDefaultWidth = false)
     ) {
-        // У окна диалога своя анимация появления и своё затемнение, которое включается скачком:
-        // и то и другое перебивало рост карточки. Выключаем сразу при создании окна — если делать
-        // это отложенно, успевает мелькнуть системное затемнение, и вид получается разным от раза
-        // к разу. Фон затемняем сами, ровно и одинаково.
         val dialogWindow = (LocalView.current.parent as? DialogWindowProvider)?.window
         if (grows) {
+            // Своя анимация окна накладывалась на рост карточки и давала рывок — выключаем.
+            // Затемнение оставляем системное: только оно накрывает весь экран вместе с полосой
+            // состояния. Глубину берём как в эталоне — там фон гаснет примерно до 0.8 яркости.
             dialogWindow?.setWindowAnimations(0)
-            dialogWindow?.setDimAmount(0f)
+            // Глубину ставим сразу при создании окна: если менять её потом, система применяет
+            // изменение с опозданием — затемнение то мигает, то не появляется вовсе
+            dialogWindow?.setDimAmount(DIM_ALPHA)
         }
-        val dimAlpha by animateFloatAsState(
-            targetValue = if (isVisible) DIM_ALPHA else 0f,
-            animationSpec = tween(
-                durationMillis = if (closing) CLOSE_DURATION_MS else DIM_DURATION_MS,
-                easing = FastOutSlowInEasing
-            ),
-            label = "dim"
-        )
-
         // Окно диалога подгоняется под содержимое, поэтому карточка сидит в развёрнутом на весь
         // экран боксе: иначе её сдвиг к строке выходил за окно и обрезался
-        Box(
-            modifier = Modifier
-                .fillMaxSize()
-                .then(
-                    if (grows) Modifier.drawBehind { drawRect(Color.Black, alpha = dimAlpha) }
-                    else Modifier
-                ),
-            contentAlignment = Alignment.Center
-        ) {
+        Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
         Card(
             shape = RoundedCornerShape(26.dp),
             colors = CardDefaults.cardColors(
