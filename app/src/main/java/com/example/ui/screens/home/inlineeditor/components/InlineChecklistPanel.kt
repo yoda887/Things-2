@@ -85,7 +85,7 @@ import kotlin.math.abs
 
 // Цвета, пропорции и тайминги сняты с видео Things 3 (пункты чек-листа в карточке задачи).
 // Размеры считаются от размера шрифта пункта (у Roboto высота заглавной ≈ 0,71 размера шрифта).
-private val ChecklistCircleColor = Color(0xFF31539D)
+private val ChecklistCircleColor = Color(0xFF4A7DF2)
 private val ChecklistCheckColor = Color(0xFF888888)
 private val ChecklistHandleColor = Color(0xFFB5B5B5)
 private val ChecklistDeleteColor = Color(0xFFEE004E)
@@ -96,10 +96,12 @@ private val ChecklistCompletedTextColor = Color(0xFF777778)
 // Строка, которую правят (текст в фокусе), и строка, которую тащат за ≡ (видео 5-checklists-iphone)
 private val ChecklistFocusColor = Color(0xFFF7F7F7)
 private val ChecklistDragColor = Color(0xFFD7E6FD)
-private const val CHECKLIST_MARK_TO_FONT = 0.80f
+private const val CHECKLIST_MARK_TO_FONT = 0.88f
+/** Высота строки текста пункта в долях шрифта (естественная высота строки Roboto) */
+private const val CHECKLIST_LINE_HEIGHT_TO_FONT = 1.17f
 private const val CHECKLIST_HANDLE_WIDTH_TO_FONT = 0.71f
 // Отступ строки и толщина разделителя тоже в долях шрифта — шаг строк и линии держат пропорцию к буквам
-private const val CHECKLIST_ROW_PADDING_TO_FONT = 0.406f
+private const val CHECKLIST_ROW_PADDING_TO_FONT = 0.48f
 private const val CHECKLIST_DIVIDER_TO_FONT = 0.09f
 private const val CHECKLIST_DELETE_COLLAPSE_MS = 250
 // Отметка пункта: строка сразу заливается серым, держится и гаснет; сама строка на миг сжимается к центру
@@ -135,6 +137,8 @@ fun InlineChecklistPanel(
     val fontDp = with(density) { bodyFontSize.toDp() }
     val fontPx = with(density) { bodyFontSize.toPx() }
     val markSize = fontDp * CHECKLIST_MARK_TO_FONT
+    // Высота одной строки текста пункта — по ней выравнивается кружок у многострочных пунктов
+    val textLineHeight = fontDp * CHECKLIST_LINE_HEIGHT_TO_FONT
     // Подсветка строки выходит на это поле левее кружка и правее ручки ≡
     val highlightMargin = fontDp * 0.35f
     // Справа строка шире: там, за ручкой ≡, прячется кнопка удаления до того, как выкатиться
@@ -277,11 +281,27 @@ fun InlineChecklistPanel(
     val rowHeights = remember { HashMap<String, Int>() }
     // Смещение строки от её места: соседи поднятой строки доезжают на новое место из старого
     val rowOffsets = remember { HashMap<String, Animatable<Float, AnimationVector1D>>() }
+    // Строки, которые сейчас едут на новое место под перетаскиваемой: у них тоже прячем разделители,
+    // иначе линии плывут вместе со строкой и мелькают поверх соседних
+    var movingIds by remember { mutableStateOf(emptySet<String>()) }
     val shiftRow: (String, Float) -> Unit = { id, delta ->
         rowOffsets[id]?.let { anim ->
             scope.launch(start = CoroutineStart.UNDISPATCHED) {
-                anim.snapTo(anim.value + delta)
-                anim.animateTo(0f, spring(stiffness = Spring.StiffnessMediumLow))
+                movingIds = movingIds + id
+                try {
+                    anim.snapTo(anim.value + delta)
+                    anim.animateTo(
+                        targetValue = 0f,
+                        animationSpec = spring(stiffness = Spring.StiffnessMediumLow, visibilityThreshold = 0.5f)
+                    ) {
+                        if (abs(value) <= 1f && id in movingIds) {
+                            movingIds = movingIds - id
+                        }
+                    }
+                } finally {
+                    // Если строку успели толкнуть ещё раз, анимация уже новая — линии прячем дальше
+                    if (!anim.isRunning) movingIds = movingIds - id
+                }
             }
         }
     }
@@ -362,7 +382,7 @@ fun InlineChecklistPanel(
     // У строки, которую правят или тащат за ≡, не видно разделителей ни сверху, ни снизу (как в Things 3);
     // место под них остаётся — строки не сдвигаются
     fun linesHiddenAround(id: String?): Boolean =
-        id != null && (id == focusedId || id == draggingId || id == settlingId)
+        id != null && (id == focusedId || id == draggingId || id == settlingId || id in movingIds)
     val displayRows = dragOrder?.mapNotNull { id -> rows.firstOrNull { it.id == id } } ?: rows
 
     val startPadding = 24.dp
@@ -439,6 +459,7 @@ fun InlineChecklistPanel(
                     val focusRequester = remember { FocusRequester() }
                     var fieldValue by remember { mutableStateOf(TextFieldValue(item.title, TextRange(item.title.length))) }
                     var wasFocused by remember { mutableStateOf(false) }
+                    var isMultiLine by remember { mutableStateOf(false) }
                     LaunchedEffect(item.title) {
                         if (fieldValue.text != item.title) fieldValue = TextFieldValue(item.title, TextRange(item.title.length))
                     }
@@ -556,6 +577,8 @@ fun InlineChecklistPanel(
                                 ChecklistCheckMark(
                                     checked = item.isCompleted,
                                     markSize = markSize,
+                                    lineHeight = textLineHeight,
+                                    modifier = if (isMultiLine) Modifier.align(Alignment.Top) else Modifier.align(Alignment.CenterVertically),
                                     onToggle = {
                                         scope.launch {
                                             highlight.snapTo(1f)
@@ -624,6 +647,11 @@ fun InlineChecklistPanel(
                                     ),
                                     keyboardOptions = KeyboardOptions(capitalization = KeyboardCapitalization.Sentences),
                                     cursorBrush = SolidColor(ThingsBlue),
+                                    onTextLayout = { textLayoutResult ->
+                                        if (isMultiLine != (textLayoutResult.lineCount > 1)) {
+                                            isMultiLine = textLayoutResult.lineCount > 1
+                                        }
+                                    },
                                     modifier = Modifier
                                         .weight(1f)
                                         .focusRequester(focusRequester)
@@ -686,14 +714,21 @@ fun InlineChecklistPanel(
  * Область нажатия шире кружка и включает отступ до текста.
  */
 @Composable
-private fun ChecklistCheckMark(checked: Boolean, markSize: Dp, onToggle: () -> Unit) {
+private fun ChecklistCheckMark(
+    checked: Boolean,
+    markSize: Dp,
+    lineHeight: Dp,
+    modifier: Modifier = Modifier,
+    onToggle: () -> Unit
+) {
     val interactionSource = remember { MutableInteractionSource() }
     val view = LocalView.current
 
     Box(
-        modifier = Modifier
-            // Ширина включает зазор до текста; обе величины в долях кружка, чтобы следовать за шрифтом
-            .size(width = markSize * 1.6f, height = markSize * 1.52f)
+        modifier = modifier
+            // Ширина включает зазор до текста; высота — ровно первая строка текста, поэтому у
+            // многострочного пункта кружок стоит по её середине, а не по середине всей строки
+            .size(width = markSize * 1.6f, height = lineHeight)
             .clickable(interactionSource = interactionSource, indication = null) {
                 view.performHapticFeedback(HapticFeedbackConstants.CLOCK_TICK)
                 onToggle()
@@ -703,8 +738,8 @@ private fun ChecklistCheckMark(checked: Boolean, markSize: Dp, onToggle: () -> U
         Canvas(modifier = Modifier.size(markSize)) {
             val d = size.minDimension
             if (!checked) {
-                // Толщина кольца — 13 % диаметра
-                val ring = d * 0.13f
+                // Толщина кольца — 15 % диаметра
+                val ring = d * 0.15f
                 drawCircle(
                     color = ChecklistCircleColor,
                     radius = (d - ring) / 2f,
