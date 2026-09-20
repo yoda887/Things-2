@@ -24,6 +24,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.compose.ui.draw.drawBehind
 import androidx.compose.ui.graphics.TransformOrigin
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.animation.core.animateFloatAsState
@@ -70,8 +71,12 @@ private const val GROW_DURATION_MS = 180
 /** Проявление карточки: заметно быстрее роста, чтобы рост было видно с самого начала */
 private const val GROW_FADE_MS = 60
 
+/** Затемнение выходит на полную чуть раньше, чем карточка дорастает */
+private const val DIM_DURATION_MS = 140
 
 
+/** Затемнение фона под диалогом: как в эталоне — фон гаснет примерно до 0,8 исходной яркости */
+private const val DIM_ALPHA = 0.20f
 
 @Composable
 fun ThingsWhenDialog(
@@ -159,15 +164,32 @@ fun ThingsWhenDialog(
         onDismissRequest = onDismissRequest,
         properties = DialogProperties(usePlatformDefaultWidth = false)
     ) {
-        // У окна диалога своя анимация появления: вместе с ростом карточки она давала рывок
+        // У окна диалога своя анимация появления и своё затемнение, которое включается скачком:
+        // и то и другое перебивало рост карточки. Выключаем сразу при создании окна — если делать
+        // это отложенно, успевает мелькнуть системное затемнение, и вид получается разным от раза
+        // к разу. Фон затемняем сами, ровно и одинаково.
         val dialogWindow = (LocalView.current.parent as? DialogWindowProvider)?.window
         if (grows) {
             dialogWindow?.setWindowAnimations(0)
+            dialogWindow?.setDimAmount(0f)
         }
+        val dimAlpha by animateFloatAsState(
+            targetValue = if (isVisible) DIM_ALPHA else 0f,
+            animationSpec = tween(durationMillis = DIM_DURATION_MS, easing = FastOutSlowInEasing),
+            label = "dim"
+        )
 
         // Окно диалога подгоняется под содержимое, поэтому карточка сидит в развёрнутом на весь
         // экран боксе: иначе её сдвиг к строке выходил за окно и обрезался
-        Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+        Box(
+            modifier = Modifier
+                .fillMaxSize()
+                .then(
+                    if (grows) Modifier.drawBehind { drawRect(Color.Black, alpha = dimAlpha) }
+                    else Modifier
+                ),
+            contentAlignment = Alignment.Center
+        ) {
         Card(
             shape = RoundedCornerShape(26.dp),
             colors = CardDefaults.cardColors(
