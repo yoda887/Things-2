@@ -360,7 +360,7 @@ fun ThingsWhenDialog(
                         style = TextStyle(
                             color = Color.White,
                             fontSize = 18.sp,
-                            fontWeight = FontWeight.Medium
+                            fontWeight = FontWeight.Normal
                         ),
                         modifier = Modifier.weight(5f)
                     )
@@ -412,7 +412,7 @@ fun ThingsWhenDialog(
                         style = TextStyle(
                             color = Color.White,
                             fontSize = 18.sp,
-                            fontWeight = FontWeight.Medium
+                            fontWeight = FontWeight.Normal
                         ),
                         modifier = Modifier.weight(5f)
                     )
@@ -447,7 +447,7 @@ fun ThingsWhenDialog(
                             style = TextStyle(
                                 color = Color(0xFF6C6F7D),
                                 fontSize = 14.sp,
-                                fontWeight = FontWeight.SemiBold
+                                fontWeight = FontWeight.Normal
                             ),
                             modifier = Modifier.weight(1f),
                             textAlign = TextAlign.Center
@@ -590,7 +590,7 @@ fun ThingsWhenDialog(
                                                         style = TextStyle(
                                                             color = ThingsBlue,
                                                             fontSize = 12.sp,
-                                                            fontWeight = FontWeight.Bold
+                                                            fontWeight = FontWeight.Normal
                                                         )
                                                     )
                                                     Text(
@@ -598,7 +598,7 @@ fun ThingsWhenDialog(
                                                         style = TextStyle(
                                                             color = Color.White,
                                                             fontSize = 12.sp,
-                                                            fontWeight = FontWeight.Medium
+                                                            fontWeight = FontWeight.Normal
                                                         )
                                                     )
                                                 }
@@ -620,7 +620,7 @@ fun ThingsWhenDialog(
                                                             style = TextStyle(
                                                                 color = Color(0xFF9E9EA6),
                                                                 fontSize = 12.sp,
-                                                                fontWeight = FontWeight.Medium
+                                                                fontWeight = FontWeight.Normal
                                                             )
                                                         )
                                                         Text(
@@ -688,7 +688,7 @@ fun ThingsWhenDialog(
                         style = TextStyle(
                             color = Color.White,
                             fontSize = 18.sp,
-                            fontWeight = FontWeight.Medium
+                            fontWeight = FontWeight.Normal
                         ),
                         modifier = Modifier.weight(5f)
                     )
@@ -763,7 +763,7 @@ fun ThingsWhenDialog(
                         Text(
                             text = "Clear",
                             fontSize = 16.sp,
-                            fontWeight = FontWeight.SemiBold
+                            fontWeight = FontWeight.Normal
                         )
                     }
                 }
