@@ -72,8 +72,8 @@ private const val GROW_DURATION_MS = 180
 /** Проявление карточки: заметно быстрее роста, чтобы рост было видно с самого начала */
 private const val GROW_FADE_MS = 60
 
-/** Сворачивание обратно в строку при закрытии */
-private const val CLOSE_DURATION_MS = 150
+/** Гашение диалога при закрытии — размер при этом не меняется */
+private const val CLOSE_DURATION_MS = 130
 
 /** Затемнение фона под диалогом: как в эталоне — фон гаснет примерно до 0,8 исходной яркости */
 private const val DIM_ALPHA = 0.20f
@@ -136,7 +136,7 @@ fun ThingsWhenDialog(
 
     var isVisible by remember { mutableStateOf(false) }
     LaunchedEffect(Unit) { isVisible = true }
-    // Закрытие — обратный ход: диалог сворачивается в свою строку и только потом снимается.
+    // Закрытие: диалог гаснет на месте и только потом снимается — как в эталоне, без сжатия.
     // Данные при выборе меняются сразу, так что строка успевает обновиться за диалогом.
     val closeScope = rememberCoroutineScope()
     var closing by remember { mutableStateOf(false) }
@@ -160,12 +160,10 @@ fun ThingsWhenDialog(
     val grows = growFromOffset != null
     val startScale = if (grows) GROW_START_SCALE else 0.85f
     val scale by animateFloatAsState(
-        targetValue = if (isVisible) 1f else startScale,
+        // При закрытии карточка не сжимается: в эталоне она просто гаснет, оставаясь на месте
+        targetValue = if (isVisible || closing) 1f else startScale,
         animationSpec = if (grows) {
-            tween(
-                durationMillis = if (closing) CLOSE_DURATION_MS else GROW_DURATION_MS,
-                easing = FastOutSlowInEasing
-            )
+            tween(durationMillis = GROW_DURATION_MS, easing = FastOutSlowInEasing)
         } else {
             spring(dampingRatio = Spring.DampingRatioMediumBouncy, stiffness = Spring.StiffnessLow)
         },
