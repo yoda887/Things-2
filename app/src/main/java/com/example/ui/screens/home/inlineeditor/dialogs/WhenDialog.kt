@@ -35,6 +35,10 @@ import androidx.compose.animation.core.Spring
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.foundation.layout.offset
 import androidx.compose.ui.unit.IntOffset
+import androidx.compose.material.ripple.LocalRippleTheme
+import androidx.compose.material.ripple.RippleAlpha
+import androidx.compose.material.ripple.RippleTheme
+import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogWindowProvider
 import androidx.compose.ui.window.DialogProperties
@@ -75,6 +79,23 @@ sealed class CalendarCell {
  * эталонных, поэтому шаг уменьшен в той же пропорции — иначе ряды выглядят разреженными.
  */
 private val CALENDAR_CELL_HEIGHT = 45.dp
+
+/**
+ * Рябь при нажатии внутри диалога: стандартная на тёмной карточке почти не видна —
+ * поднимаем её заметность.
+ */
+private object DialogRippleTheme : RippleTheme {
+    @Composable
+    override fun defaultColor(): Color = Color.White
+
+    @Composable
+    override fun rippleAlpha(): RippleAlpha = RippleAlpha(
+        pressedAlpha = 0.20f,
+        focusedAlpha = 0.16f,
+        draggedAlpha = 0.14f,
+        hoveredAlpha = 0.08f
+    )
+}
 
 /** Отступ внутри строк: попадает в область нажатия, поэтому по пальцу строки стали крупнее */
 private val ROW_VERTICAL_PADDING = 6.dp
@@ -248,6 +269,7 @@ fun ThingsWhenDialog(
             androidx.core.view.ViewCompat.getRootWindowInsets(activityView ?: hostView)
                 ?.getInsets(androidx.core.view.WindowInsetsCompat.Type.statusBars())?.top ?: 0
         }
+        CompositionLocalProvider(LocalRippleTheme provides DialogRippleTheme) {
         Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
         Card(
             shape = RoundedCornerShape(32.dp),
@@ -768,6 +790,7 @@ fun ThingsWhenDialog(
                     }
                 }
             }
+        }
         }
         }
     }
