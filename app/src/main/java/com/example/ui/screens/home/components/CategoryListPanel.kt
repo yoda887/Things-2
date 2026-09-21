@@ -88,6 +88,7 @@ import com.example.ui.screens.home.subcomponents.TagFilterRow
 import com.example.ui.screens.home.subcomponents.ProjectItemRow
 import com.example.ui.screens.home.subcomponents.EmptyStateView
 import com.example.ui.screens.home.subcomponents.CategoryListTopAppBar
+import com.example.ui.screens.home.subcomponents.TopAppBarSelectionState
 import com.example.ui.screens.home.subcomponents.AnimatedTaskItem
 import com.example.ui.screens.home.subcomponents.BatchActionToolbar
 import com.example.ui.screens.home.inlineeditor.DeadlineDatePickerDialog
@@ -761,24 +762,26 @@ fun ThingsCategoryListPanel(
         // TopAppBar
         // [ИЗМЕНЕНИЕ]: Передаем в AppBar дополнительные параметры (состояние скролла, экран, проект, область ответственности и список задач) для вывода иконки и полужирного заголовка
         CategoryListTopAppBar(
+            screen = screen,
+            onBackClick = { onEvent(ThingsCategoryListEvent.ClickBack) },
             modifier = Modifier.graphicsLayer { translationY = toolbarOffsetY },
             isDark = isDark,
             textPrimaryColor = textPrimaryColor,
             textSecondaryColor = textSecondaryColor,
-            onBackClick = { onEvent(ThingsCategoryListEvent.ClickBack) },
-            screen = screen,
             project = project,
             area = area,
             tasks = state.allTasks,
             backgroundProgress = toolbarBackgroundProgress,
             titleProgress = toolbarTitleProgress,
-            isSelectionMode = state.isSelectionMode,
-            selectedCount = state.selectedTaskIds.size,
-            isAllSelected = state.selectedTaskIds.isNotEmpty() && state.selectedTaskIds.size == state.displayTasks.size,
-            onCancelSelection = { onEvent(ThingsCategoryListEvent.ExitSelectionMode) },
-            onSelectAllClick = { onEvent(ThingsCategoryListEvent.SelectAllTasks) },
-            onDeselectAllClick = { onEvent(ThingsCategoryListEvent.DeselectAllTasks) },
-            onEnterSelectionMode = { onEvent(ThingsCategoryListEvent.EnterSelectionMode(null)) },
+            selectionState = TopAppBarSelectionState(
+                isSelectionMode = state.isSelectionMode,
+                selectedCount = state.selectedTaskIds.size,
+                isAllSelected = state.selectedTaskIds.isNotEmpty() && state.selectedTaskIds.size == state.displayTasks.size,
+                onCancelSelection = { onEvent(ThingsCategoryListEvent.ExitSelectionMode) },
+                onSelectAllClick = { onEvent(ThingsCategoryListEvent.SelectAllTasks) },
+                onDeselectAllClick = { onEvent(ThingsCategoryListEvent.DeselectAllTasks) },
+                onEnterSelectionMode = { onEvent(ThingsCategoryListEvent.EnterSelectionMode(null)) }
+            ),
             hasTags = allTags.isNotEmpty(),
             isTagsFilterVisible = isTagsFilterVisible,
             onToggleTagsFilter = {

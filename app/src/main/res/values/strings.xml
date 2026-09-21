@@ -53,4 +53,7 @@
     <string name="category_this_evening">This Evening</string>
     <string name="show_tags">Show Tags</string>
     <string name="hide_tags">Hide Tags</string>
+    <string name="cd_back">Back</string>
+    <string name="cd_options">Options</string>
+    <string name="cd_close">Close</string>
 </resources>

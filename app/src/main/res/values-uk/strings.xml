@@ -14,4 +14,7 @@
     <string name="category_this_evening">Сьогодні ввечері</string>
     <string name="show_tags">Показати теги</string>
     <string name="hide_tags">Сховати теги</string>
+    <string name="cd_back">Назад</string>
+    <string name="cd_options">Опції</string>
+    <string name="cd_close">Закрити</string>
 </resources>
