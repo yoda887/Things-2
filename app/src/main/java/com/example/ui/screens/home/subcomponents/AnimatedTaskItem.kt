@@ -42,6 +42,7 @@ import com.example.data.model.Item
 import com.example.data.model.ItemWithChecklist
 import com.example.data.model.Tag
 import com.example.data.model.TaskSection
+import com.example.data.model.toStartVal
 import com.example.data.model.ChecklistItem
 import com.example.ui.screens.home.ActiveScreen
 import com.example.ui.screens.home.components.ThingsCategoryListEvent
@@ -448,6 +449,24 @@ fun AnimatedTaskItem(
                         expansionProgress = expansionProgress,
                         onFullHeightMeasured = { cardGeometry.editorFullHeight = it },
                         screen = screen,
+                        onToggle = { currentTitle, currentNotes, currentSection, currentIsTonight, currentStartDate, currentDueDate, currentTags, currentProjectId, currentChecklist, currentPriority ->
+                            val updatedItem = taskWrapper.item.copy(
+                                title = currentTitle,
+                                notes = currentNotes,
+                                start = currentSection.toStartVal(),
+                                isTonight = currentIsTonight,
+                                startDate = currentStartDate,
+                                dueDate = currentDueDate,
+                                cachedTags = currentTags.joinToString(","),
+                                projectId = currentProjectId,
+                                priority = currentPriority
+                            )
+                            val updatedWrapper = taskWrapper.copy(
+                                item = updatedItem,
+                                checklist = currentChecklist
+                            )
+                            onEvent(ThingsCategoryListEvent.ToggleTask(updatedWrapper))
+                        },
                         onSave = { title, notes, section, isTonight, startDate, dueDate, tags, projectId, checklist, priority ->
                             val hasPositionChange = (projectId != task.projectId) ||
                                     (isTonight != task.isTonight) ||

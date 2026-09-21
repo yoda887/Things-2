@@ -56,6 +56,9 @@ import java.util.Date
 import java.text.SimpleDateFormat
 import androidx.compose.foundation.background
 import android.view.HapticFeedbackConstants
+import androidx.compose.foundation.gestures.detectTapGestures
+import androidx.compose.ui.input.pointer.pointerInput
+import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.platform.LocalView
 import com.example.ui.components.hideSoftKeyboardNow
 import com.example.ui.components.progressPadding
@@ -83,6 +86,18 @@ fun ThingsTaskInlineEditor(
     ) -> Unit,
     onDelete: (() -> Unit)? = null,
     onDone: () -> Unit = {},
+    onToggle: (
+        title: String,
+        notes: String,
+        section: TaskSection,
+        isTonight: Boolean,
+        startDate: Long?,
+        dueDate: Long?,
+        tags: List<String>,
+        projectId: String?,
+        checklist: List<ChecklistItem>,
+        priority: Int
+    ) -> Unit = { _, _, _, _, _, _, _, _, _, _ -> },
     allSavedTags: List<String> = emptyList(),
     allSavedTagObjects: List<Tag> = emptyList(),
     onNewTagCreated: (String, String?) -> Unit = { _, _ -> },
@@ -114,6 +129,11 @@ fun ThingsTaskInlineEditor(
     var tagInput by remember(task.item.id) { mutableStateOf<String>(task.item.tags.joinToString(", ")) }
     var checklist by remember(task.item.id, task.checklist) { mutableStateOf<List<ChecklistItem>>(task.checklist) }
     var priority by remember(task.item.id) { mutableStateOf<Int>(task.item.priority) }
+    var isCompleted by remember(task.item.id) { mutableStateOf<Boolean>(task.item.isCompleted) }
+
+    LaunchedEffect(task.item.isCompleted) {
+        isCompleted = task.item.isCompleted
+    }
 
     // Helpers visibility states
     var showCalendarHelper by remember(task.item.id) { mutableStateOf(false) }
@@ -244,12 +264,21 @@ fun ThingsTaskInlineEditor(
     // Force strict light theme for the expanded inline editor (white background & black fonts)
     val editorBackground = Color.White
     val buttonFontSize = MaterialTheme.typography.labelLarge.fontSize
+    val focusManager = LocalFocusManager.current
 
     Card(
         modifier = Modifier
             .fillMaxWidth()
             .testTag("task_inline_editor")
             .then(if (outsideTouch != null) Modifier.markTouchesInsideEditor(outsideTouch) else Modifier)
+            .pointerInput(Unit) {
+                detectTapGestures(
+                    onTap = {
+                        view.hideSoftKeyboardNow()
+                        focusManager.clearFocus()
+                    }
+                )
+            }
             .clip(RoundedCornerShape(8.dp))
             .layout { measurable, constraints ->
                 val placeable = measurable.measure(constraints)
@@ -303,32 +332,28 @@ fun ThingsTaskInlineEditor(
                     onTitleChange = { title = it },
                     notes = notes,
                     onNotesChange = { notes = it },
-                    isCompleted = task.item.isCompleted,
+                    isCompleted = isCompleted,
                     expansionProgress = expansionProgress,
                     subtitleText = subtitleText,
                     showCursor = isExpanded && outsideTouch?.hideHandles != true,
                     checklistBelow = showChecklistHelper || checklist.isNotEmpty(),
                     onCheckboxClick = {
-                        isSavedManually = true
+                        val newCompleted = !isCompleted
+                        isCompleted = newCompleted
                         val savedChecklist = checklist.filter { it.title.isNotBlank() }
-                        if (title.isBlank() && notes.isBlank() && savedChecklist.isEmpty()) {
-                            onDelete?.invoke()
-                        } else {
-                            val tagList = tagInput.split(",").map { it.trim() }.filter { it.isNotEmpty() }
-                            onSave(
-                                title,
-                                notes,
-                                section,
-                                isTonight,
-                                startDate,
-                                dueDate,
-                                tagList,
-                                task.item.projectId,
-                                savedChecklist,
-                                priority
-                            )
-                        }
-                        onDone()
+                        val tagList = tagInput.split(",").map { it.trim() }.filter { it.isNotEmpty() }
+                        onToggle(
+                            title,
+                            notes,
+                            section,
+                            isTonight,
+                            startDate,
+                            dueDate,
+                            tagList,
+                            task.item.projectId,
+                            savedChecklist,
+                            priority
+                        )
                     }
                 )
 
