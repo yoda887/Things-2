@@ -51,4 +51,6 @@
     <string name="category_someday">Someday</string>
     <string name="category_logbook">Logbook</string>
     <string name="category_this_evening">This Evening</string>
+    <string name="show_tags">Show Tags</string>
+    <string name="hide_tags">Hide Tags</string>
 </resources>

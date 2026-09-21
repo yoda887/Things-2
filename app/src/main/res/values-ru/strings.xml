@@ -12,4 +12,6 @@
     <string name="category_someday">Когда-нибудь</string>
     <string name="category_logbook">Журнал</string>
     <string name="category_this_evening">Сегодня вечером</string>
+    <string name="show_tags">Показать теги</string>
+    <string name="hide_tags">Скрыть теги</string>
 </resources>

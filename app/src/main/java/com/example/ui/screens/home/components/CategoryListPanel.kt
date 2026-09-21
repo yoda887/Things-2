@@ -253,6 +253,7 @@ fun ThingsCategoryListPanel(
     val displayTasks = localTasksList
     
     var isLaterItemsHidden by rememberSaveable { mutableStateOf(false) }
+    var isTagsFilterVisible by remember(screen, project?.id, area?.id) { mutableStateOf(false) }
 
     // Извлечение выравнивания плоского списка для LazyColumn
     val flattened = rememberFlattenedList(
@@ -287,7 +288,7 @@ fun ThingsCategoryListPanel(
                     if (screen == ActiveScreen.TODAY && todayCalendarEvents.isNotEmpty()) {
                         count += 1
                     }
-                    if (allTags.isNotEmpty()) {
+                    if (allTags.isNotEmpty() && isTagsFilterVisible) {
                         count += 1
                     }
                     count
@@ -534,7 +535,7 @@ fun ThingsCategoryListPanel(
                 }
             }
 
-            if (allTags.isNotEmpty()) {
+            if (allTags.isNotEmpty() && isTagsFilterVisible) {
                 item(key = TaskListKeys.TAG_FILTER) {
                     // Извлеченный подкомпонент строки тегов
                     TagFilterRow(
@@ -777,7 +778,16 @@ fun ThingsCategoryListPanel(
             onCancelSelection = { onEvent(ThingsCategoryListEvent.ExitSelectionMode) },
             onSelectAllClick = { onEvent(ThingsCategoryListEvent.SelectAllTasks) },
             onDeselectAllClick = { onEvent(ThingsCategoryListEvent.DeselectAllTasks) },
-            onEnterSelectionMode = { onEvent(ThingsCategoryListEvent.EnterSelectionMode(null)) }
+            onEnterSelectionMode = { onEvent(ThingsCategoryListEvent.EnterSelectionMode(null)) },
+            hasTags = allTags.isNotEmpty(),
+            isTagsFilterVisible = isTagsFilterVisible,
+            onToggleTagsFilter = {
+                val newVisible = !isTagsFilterVisible
+                isTagsFilterVisible = newVisible
+                if (!newVisible && selectedTag != null) {
+                    onEvent(ThingsCategoryListEvent.SelectTag(null))
+                }
+            }
         )
 
     // PullToSearchIndicator

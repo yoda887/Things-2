@@ -90,6 +90,9 @@ fun CategoryListTopAppBar(
     onSelectAllClick: () -> Unit = {},
     onDeselectAllClick: () -> Unit = {},
     onEnterSelectionMode: () -> Unit = {},
+    hasTags: Boolean = false,
+    isTagsFilterVisible: Boolean = false,
+    onToggleTagsFilter: () -> Unit = {},
     modifier: Modifier = Modifier
 ) {
     // Фон и разделитель проявляются вместе с прокруткой, синхронно с растворением заголовка экрана,
@@ -329,6 +332,21 @@ fun CategoryListTopAppBar(
                                 onEnterSelectionMode()
                             }
                         )
+                        if (hasTags) {
+                            DropdownMenuItem(
+                                text = {
+                                    Text(
+                                        stringResource(
+                                            if (isTagsFilterVisible) R.string.hide_tags else R.string.show_tags
+                                        )
+                                    )
+                                },
+                                onClick = {
+                                    isOptionsMenuExpanded = false
+                                    onToggleTagsFilter()
+                                }
+                            )
+                        }
                     }
                 }
             }
