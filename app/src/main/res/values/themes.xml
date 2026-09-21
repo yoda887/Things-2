@@ -2,4 +2,10 @@
 <resources>
 
     <style name="Theme.MyApplication" parent="android:Theme.DeviceDefault.NoActionBar" />
+
+    <!-- Стиль окна для диалога When: без входной анимации (рост делает Compose),
+         но с нативной системной анимацией закрытия (уменьшение к центру + плавное угасание затемнения) -->
+    <style name="DialogWindowAnimationGrowOpen" parent="@android:style/Animation.Dialog">
+        <item name="android:windowEnterAnimation">@null</item>
+    </style>
 </resources>

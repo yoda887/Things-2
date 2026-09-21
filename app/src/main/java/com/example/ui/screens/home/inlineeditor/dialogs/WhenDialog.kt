@@ -197,23 +197,10 @@ fun ThingsWhenDialog(
 
     var isVisible by remember { mutableStateOf(false) }
     LaunchedEffect(Unit) { isVisible = true }
-    // Закрытие: диалог гаснет на месте и только потом снимается — как в эталоне, без сжатия.
-    // Данные при выборе меняются сразу, так что строка успевает обновиться за диалогом.
-    val closeScope = rememberCoroutineScope()
-    var closing by remember { mutableStateOf(false) }
-    val requestClose: () -> Unit = requestClose@{
-        if (growFromOffset == null) {
-            onDismissRequest()
-            return@requestClose
-        }
-        if (!closing) {
-            closing = true
-            isVisible = false
-            closeScope.launch {
-                delay(CLOSE_DURATION_MS.toLong())
-                onDismissRequest()
-            }
-        }
+    // Закрытие диалога: вызов onDismissRequest() сразу отдаёт закрытие системному
+    // WindowManager (нативное уменьшение к центру, растворение и плавное снятие затемнения).
+    val requestClose: () -> Unit = {
+        onDismissRequest()
     }
 
     // Открытие из строки: диалог начинается уменьшенной копией на месте строки и вырастает, доезжая
@@ -221,8 +208,7 @@ fun ThingsWhenDialog(
     val grows = growFromOffset != null
     val startScale = if (grows) GROW_START_SCALE else 0.85f
     val scale by animateFloatAsState(
-        // При закрытии карточка не сжимается: в эталоне она просто гаснет, оставаясь на месте
-        targetValue = if (isVisible || closing) 1f else startScale,
+        targetValue = if (isVisible) 1f else startScale,
         animationSpec = if (grows) {
             tween(durationMillis = GROW_DURATION_MS, easing = FastOutSlowInEasing)
         } else {
@@ -234,7 +220,7 @@ fun ThingsWhenDialog(
         targetValue = if (isVisible) 1f else 0f,
         animationSpec = if (grows) {
             tween(
-                durationMillis = if (closing) CLOSE_DURATION_MS else GROW_FADE_MS,
+                durationMillis = GROW_FADE_MS,
                 easing = LinearEasing
             )
         } else {
@@ -250,12 +236,9 @@ fun ThingsWhenDialog(
     ) {
         val dialogWindow = (LocalView.current.parent as? DialogWindowProvider)?.window
         if (grows) {
-            // Своя анимация окна накладывалась на рост карточки и давала рывок — выключаем.
-            // Затемнение оставляем системное: только оно накрывает весь экран вместе с полосой
-            // состояния. Глубину берём как в эталоне — там фон гаснет примерно до 0.8 яркости.
-            dialogWindow?.setWindowAnimations(0)
-            // Глубину ставим сразу при создании окна: если менять её потом, система применяет
-            // изменение с опозданием — затемнение то мигает, то не появляется вовсе
+            // Входная анимация окна отключена в стиле (рост делает Compose).
+            // При закрытии системный WindowManager плавно уменьшает окно к центру и гасит затемнение.
+            dialogWindow?.setWindowAnimations(com.example.R.style.DialogWindowAnimationGrowOpen)
             dialogWindow?.setDimAmount(DIM_ALPHA)
         }
         // Окно диалога подгоняется под содержимое, поэтому карточка сидит в развёрнутом на весь
