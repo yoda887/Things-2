@@ -8,6 +8,10 @@ import androidx.compose.animation.shrinkVertically
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.gestures.Orientation
+import androidx.compose.foundation.gestures.draggable
+import androidx.compose.foundation.gestures.rememberDraggableState
+import androidx.compose.foundation.gestures.scrollBy
 import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.foundation.border
 import androidx.compose.foundation.background
@@ -309,22 +313,7 @@ fun ThingsHomePanel(
     val isDarkTheme = isSystemInDarkTheme()
     val bkgColor = if (isDarkTheme) ThingsBackgroundDark else ThingsBackgroundLight
 
-    Box(modifier = Modifier.fillMaxSize().background(bkgColor)) {
-        // [ИЗМЕНЕНИЕ]: Отображение динамического индикатора поиска в свободном пространстве свайпа
-        if (pullOffset.value > 0f) {
-            Box(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .height(with(density) { pullOffset.value.toDp() } + 96.dp)
-                    .offset(y = (-96).dp),
-                contentAlignment = Alignment.TopCenter
-            ) {
-                com.example.ui.components.PullToSearchIndicator(
-                    pullOffset = pullOffset.value,
-                    thresholdPx = thresholdPx
-                )
-            }
-        }
+    Box(modifier = Modifier.fillMaxSize().background(bkgColor).clipToBounds()) {
 
         // Two-level Areas & Projects tree (flattened to maintain gesture detector lifecycle across areas)
         val flattenedTree = remember(localProjects, localAreas, expandedStates.toMap(), dragDropState.draggedItemKey) {
@@ -372,48 +361,9 @@ fun ThingsHomePanel(
                 .padding(horizontal = 14.dp),
             verticalArrangement = Arrangement.spacedBy(0.dp)
         ) {
-        // Search Filter row
+        // Search Filter placeholder spacer to reserve space for the top search capsule
         item {
-            // [ИЗМЕНЕНИЕ]: Изменен размер замещающего Spacer до 52.dp в замену новой высоте капсулы 44.dp для бесшовного перехода
-            if (isSearchOverlayActive) {
-                Spacer(modifier = Modifier.fillMaxWidth().height(52.dp))
-            } else {
-                val isDark = isSystemInDarkTheme()
-                val inputBackground = if (isDark) Color(0xFF2C2C2E) else Color(0xFFF2F2F7)
-
-                // [ИЗМЕНЕНИЕ]: Поле поиска на стартовом окне визуально стилизовано под капсулу ввода в поисковом оверлее (без обводки, с фоном оверлея и высотой 44.dp)
-                Box(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(horizontal = 6.dp, vertical = 4.dp)
-                        .height(44.dp)
-                        .clip(RoundedCornerShape(22.dp))
-                        .background(inputBackground)
-                        .clickable { onSearchClick() }
-                        .padding(horizontal = 14.dp)
-                        .testTag("home_search_input"),
-                    contentAlignment = Alignment.CenterStart
-                ) {
-                    Row(
-                        verticalAlignment = Alignment.CenterVertically
-                    ) {
-                        Icon(
-                            imageVector = Icons.Default.Search,
-                            contentDescription = "Search",
-                            tint = textSecondaryColor,
-                            modifier = Modifier.size(20.dp)
-                        )
-                        Spacer(modifier = Modifier.width(8.dp))
-                        Text(
-                            text = "Quick Find",
-                            color = textSecondaryColor.copy(alpha = 0.6f),
-                            fontSize = 16.sp,
-                            fontWeight = FontWeight.Normal
-                        )
-                    }
-                }
-            }
-            Spacer(modifier = Modifier.height(16.dp))
+            Spacer(modifier = Modifier.fillMaxWidth().height(68.dp))
         }
 
         // Smart Lists Grid
@@ -830,7 +780,89 @@ fun ThingsHomePanel(
             }
         }
     }
+
+    // Поле поиска ("Quick Find"), вынесенное на уровень корневого Box для исключения
+    // обрезания (clipping) контейнером LazyColumn при оттяжке списка вниз
+    if (!isSearchOverlayActive) {
+        val isDark = isSystemInDarkTheme()
+        val inputNormalBackground = if (isDark) Color(0xFF2C2C2E) else Color(0xFFF2F2F7)
+
+        // Прогресс оттяжки до порога активации (100dp)
+        val pullProgress = if (thresholdPx > 0f) (pullOffset.value / thresholdPx).coerceIn(0f, 1f) else 0f
+        // Движение поля поиска с сопротивлением (до ~32dp при максимальной оттяжке)
+        val searchResistanceOffset = if (pullOffset.value <= 0f) 0f else {
+            (pullOffset.value * 0.32f).coerceAtMost(with(density) { 32.dp.toPx() })
+        }
+
+        // Плавное посинение фона и переход текста/иконки в белый цвет
+        val inputBackground = androidx.compose.ui.graphics.lerp(inputNormalBackground, ThingsBlue, pullProgress)
+        val iconTint = androidx.compose.ui.graphics.lerp(textSecondaryColor, Color.White, pullProgress)
+        val textTint = androidx.compose.ui.graphics.lerp(textSecondaryColor.copy(alpha = 0.6f), Color.White.copy(alpha = 0.9f), pullProgress)
+
+        val searchHeightPx = with(density) { 68.dp.toPx() }
+        val scrollOffset = if (lazyListState.firstVisibleItemIndex > 0) {
+            searchHeightPx
+        } else {
+            lazyListState.firstVisibleItemScrollOffset.toFloat().coerceAtMost(searchHeightPx)
+        }
+
+        Box(
+            modifier = Modifier
+                .padding(horizontal = 14.dp)
+                .graphicsLayer {
+                    translationY = searchResistanceOffset - scrollOffset
+                }
+                .fillMaxWidth()
+                .padding(horizontal = 6.dp, vertical = 4.dp)
+                .height(44.dp)
+                .clip(RoundedCornerShape(22.dp))
+                .background(inputBackground)
+                .draggable(
+                    orientation = Orientation.Vertical,
+                    state = rememberDraggableState { delta ->
+                        if (pullOffset.value > 0f || (delta > 0f && lazyListState.firstVisibleItemIndex == 0 && lazyListState.firstVisibleItemScrollOffset == 0)) {
+                            val newOffset = (pullOffset.value + delta * 0.5f).coerceIn(0f, maxOffsetPx)
+                            coroutineScope.launch { pullOffset.snapTo(newOffset) }
+                        } else {
+                            coroutineScope.launch { lazyListState.scrollBy(-delta) }
+                        }
+                    },
+                    onDragStopped = {
+                        val currentOffset = pullOffset.value
+                        if (currentOffset > 0f) {
+                            val triggered = currentOffset >= thresholdPx
+                            if (triggered) {
+                                onSearchClick()
+                            }
+                            coroutineScope.launch { pullOffset.animateTo(0f, spring()) }
+                        }
+                    }
+                )
+                .clickable { onSearchClick() }
+                .padding(horizontal = 14.dp)
+                .testTag("home_search_input"),
+            contentAlignment = Alignment.CenterStart
+        ) {
+            Row(
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Icon(
+                    imageVector = Icons.Default.Search,
+                    contentDescription = "Search",
+                    tint = iconTint,
+                    modifier = Modifier.size(20.dp)
+                )
+                Spacer(modifier = Modifier.width(8.dp))
+                Text(
+                    text = "Quick Find",
+                    color = textTint,
+                    fontSize = 16.sp,
+                    fontWeight = FontWeight.Normal
+                )
+            }
+        }
     }
+}
 }
 
 /**
