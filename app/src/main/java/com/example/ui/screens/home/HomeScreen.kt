@@ -160,6 +160,8 @@ fun ThingsHomeScreen(viewModel: ThingsViewModel = hiltViewModel()) {
     var editingAreaId by remember { mutableStateOf<String?>(null) }
     var showFabMenu by remember { mutableStateOf(false) }
     var isSearchOverlayActive by remember { mutableStateOf(false) }
+    var searchInitialOffsetDp by remember { mutableStateOf(4.dp) }
+    var searchWasPulled by remember { mutableStateOf(false) }
     var newTaskTitlePrefill by remember { mutableStateOf("") }
     var isListDialogActive by remember { mutableStateOf(false) }
     var isSelectionMode by remember { mutableStateOf(false) }
@@ -399,7 +401,11 @@ fun ThingsHomeScreen(viewModel: ThingsViewModel = hiltViewModel()) {
                                 viewModel.setAccessToken(token)
                                 viewModel.syncWithGoogle()
                             },
-                            onSearchClick = { isSearchOverlayActive = true },
+                            onSearchClick = { offsetDp, wasPulled ->
+                                searchInitialOffsetDp = offsetDp.dp
+                                searchWasPulled = wasPulled
+                                isSearchOverlayActive = true
+                            },
                             isSearchOverlayActive = isSearchOverlayActive,
                             editingProjectId = editingProjectId,
                             onEditingProjectIdChange = { editingProjectId = it },
@@ -677,61 +683,11 @@ fun ThingsHomeScreen(viewModel: ThingsViewModel = hiltViewModel()) {
                 }
             }
 
-            // [ИЗМЕНЕНИЕ]: Отдельное затемняющее поле для заднего плана оверлея поиска, которое только меняет прозрачность независимо от масштаба карточки поиска
-            AnimatedVisibility(
-                visible = isSearchOverlayActive,
-                enter = fadeIn(
-                    animationSpec = spring(stiffness = androidx.compose.animation.core.Spring.StiffnessMedium)
-                ),
-                exit = fadeOut(
-                    animationSpec = spring(stiffness = androidx.compose.animation.core.Spring.StiffnessMedium)
-                )
-            ) {
-                Box(
-                    modifier = Modifier
-                        .fillMaxSize()
-                        .background(Color.Black.copy(alpha = 0.45f))
-                        .clickable(
-                            interactionSource = remember { androidx.compose.foundation.interaction.MutableInteractionSource() },
-                            indication = null
-                        ) {
-                            isSearchOverlayActive = false
-                            viewModel.setSearchQuery("")
-                        }
-                )
-            }
-
-            // [ИЗМЕНЕНИЕ]: Полноэкранный оверлей поиска отображается с пружинной анимацией входа (масштаб + прозрачность), раскрываясь из области поля поиска (сверху по центру)
-            AnimatedVisibility(
-                visible = isSearchOverlayActive,
-                enter = fadeIn(
-                    animationSpec = spring(
-                        dampingRatio = androidx.compose.animation.core.Spring.DampingRatioMediumBouncy,
-                        stiffness = androidx.compose.animation.core.Spring.StiffnessMedium
-                    )
-                ) + scaleIn(
-                    animationSpec = spring(
-                        dampingRatio = androidx.compose.animation.core.Spring.DampingRatioMediumBouncy,
-                        stiffness = androidx.compose.animation.core.Spring.StiffnessMedium
-                    ),
-                    initialScale = 0.6f,
-                    transformOrigin = TransformOrigin(0.5f, 0.05f)
-                ),
-                exit = fadeOut(
-                    animationSpec = spring(
-                        stiffness = androidx.compose.animation.core.Spring.StiffnessMedium
-                    )
-                ) + scaleOut(
-                    animationSpec = spring(
-                        stiffness = androidx.compose.animation.core.Spring.StiffnessMedium
-                    ),
-                    targetScale = 0.6f,
-                    transformOrigin = TransformOrigin(0.5f, 0.05f)
-                    // Видимая часть гаснет за ~170 мс, а поле поиска должно уйти после полного скрытия клавиатуры
-                ) + holdForSoftKeyboardHide()
-            ) {
+            // [ИЗМЕНЕНИЕ]: Полноэкранный оверлей поиска с бесшовным пространственным морфингом (Spatial UI)
+            if (isSearchOverlayActive) {
                 ThingsSearchOverlay(
-                    isClosing = !isSearchOverlayActive,
+                    initialTopOffset = searchInitialOffsetDp,
+                    wasPulled = searchWasPulled,
                     searchQuery = searchQuery,
                     onSearchQueryChange = { viewModel.setSearchQuery(it) },
                     allTasks = allTasksRaw,

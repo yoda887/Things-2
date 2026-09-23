@@ -162,7 +162,7 @@ fun ThingsHomePanel(
     onDeleteArea: (Area) -> Unit = {},
     onDeleteProject: (Item) -> Unit = {},
     onAreaClick: (Area) -> Unit = {},
-    onSearchClick: () -> Unit = {},
+    onSearchClick: (offsetDp: Float, wasPulled: Boolean) -> Unit = { _, _ -> },
     // [ИЗМЕНЕНИЕ]: Добавлено состояние активности поискового оверлея
     isSearchOverlayActive: Boolean = false,
     editingProjectId: String? = null,
@@ -300,7 +300,14 @@ fun ThingsHomePanel(
                     // наряду с запуском возвращающей анимации
                     val triggered = currentOffset >= thresholdPx
                     if (triggered) {
-                        onSearchClick()
+                        val searchResistance = (currentOffset * 0.32f).coerceAtMost(with(density) { 32.dp.toPx() })
+                        val sOffset = if (lazyListState.firstVisibleItemIndex > 0) {
+                            with(density) { 68.dp.toPx() }
+                        } else {
+                            lazyListState.firstVisibleItemScrollOffset.toFloat().coerceAtMost(with(density) { 68.dp.toPx() })
+                        }
+                        val currentOffsetDp = with(density) { (searchResistance - sOffset).toDp().value } + 4f
+                        onSearchClick(currentOffsetDp, true)
                     }
                     pullOffset.animateTo(0f, spring())
                     return available
@@ -832,13 +839,14 @@ fun ThingsHomePanel(
                         if (currentOffset > 0f) {
                             val triggered = currentOffset >= thresholdPx
                             if (triggered) {
-                                onSearchClick()
+                                val currentOffsetDp = with(density) { (searchResistanceOffset - scrollOffset).toDp().value } + 4f
+                                onSearchClick(currentOffsetDp, true)
                             }
                             coroutineScope.launch { pullOffset.animateTo(0f, spring()) }
                         }
                     }
                 )
-                .clickable { onSearchClick() }
+                .clickable { onSearchClick(4f, false) }
                 .padding(horizontal = 14.dp)
                 .testTag("home_search_input"),
             contentAlignment = Alignment.CenterStart

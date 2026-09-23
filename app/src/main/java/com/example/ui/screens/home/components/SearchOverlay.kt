@@ -1,9 +1,17 @@
 package com.example.ui.screens.home.components
 
+import androidx.activity.compose.BackHandler
+import kotlinx.coroutines.launch
 import androidx.compose.animation.*
+import androidx.compose.animation.core.Animatable
+import androidx.compose.animation.core.FastOutSlowInEasing
+import androidx.compose.animation.core.Spring
+import androidx.compose.animation.core.spring
+import androidx.compose.animation.core.tween
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
@@ -24,7 +32,11 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.SolidColor
 import androidx.compose.ui.graphics.drawscope.Stroke
+import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.ui.layout.layout
+import androidx.compose.ui.platform.LocalView
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontStyle
@@ -32,6 +44,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.example.data.model.Area
@@ -43,8 +56,6 @@ import com.example.ui.screens.home.subcomponents.TaskItemRow
 import com.example.ui.components.ProjectProgressArc
 import com.example.ui.components.HideTextSelectionHandles
 import com.example.ui.components.hideSoftKeyboardNow
-import androidx.compose.ui.graphics.SolidColor
-import androidx.compose.ui.platform.LocalView
 import com.example.ui.theme.*
 
 /**
@@ -75,42 +86,62 @@ fun ThingsSearchOverlay(
     onContinueSearchClick: () -> Unit = {},
     onTaskToggle: (ItemWithChecklist) -> Unit = {},
     // Оверлей уже закрывается (идёт exit-анимация), но поле поиска ещё в композиции
-    isClosing: Boolean = false
+    isClosing: Boolean = false,
+    initialTopOffset: Dp = 4.dp,
+    wasPulled: Boolean = false
 ) {
     val isDark = isSystemInDarkTheme()
-    
-    // [ИЗМЕНЕНИЕ]: Фон самого оверлея теперь прозрачный, так как затемняющая подложка вынесена на отдельный независимый слой
-    val overlayBackground = Color.Transparent
-    val cardBackground = if (isDark) Color(0xFF1C1C1E) else Color.White
-    val textPrimary = if (isDark) Color.White else Color(0xFF1C1C1E)
-    val textSecondary = if (isDark) Color(0xFF8E8E93) else Color(0xFF8E8E93)
-    val inputBackground = if (isDark) Color(0xFF2C2C2E) else Color(0xFFF2F2F7)
-    val closeButtonBackground = if (isDark) Color(0xFF2C2C2E) else Color(0xFFE5E5EA)
+    val coroutineScope = rememberCoroutineScope()
+    val expansionAnim = remember { Animatable(0f) }
+    val exitAlphaAnim = remember { Animatable(1f) }
+    var isMorphClosing by remember { mutableStateOf(false) }
+
+    LaunchedEffect(Unit) {
+        expansionAnim.animateTo(
+            targetValue = 1f,
+            animationSpec = spring(
+                dampingRatio = Spring.DampingRatioLowBouncy,
+                stiffness = Spring.StiffnessMediumLow
+            )
+        )
+    }
+
+    val view = LocalView.current
+
+    val handleClose: () -> Unit = remember(isMorphClosing) {
+        {
+            if (!isMorphClosing) {
+                isMorphClosing = true
+                view.hideSoftKeyboardNow()
+                coroutineScope.launch {
+                    exitAlphaAnim.animateTo(
+                        targetValue = 0f,
+                        animationSpec = tween(
+                            durationMillis = 180,
+                            easing = FastOutSlowInEasing
+                        )
+                    )
+                    onClose()
+                }
+            }
+        }
+    }
+
+    BackHandler(enabled = !isMorphClosing) {
+        handleClose()
+    }
+
+    LaunchedEffect(isClosing) {
+        if (isClosing && !isMorphClosing) {
+            handleClose()
+        }
+    }
 
     // Фокус и клавиатура
     val focusRequester = remember { FocusRequester() }
     LaunchedEffect(Unit) {
         focusRequester.requestFocus()
     }
-    // Клавиатуру прячем в момент закрытия, фокус не снимаем: поле уйдёт вместе с оверлеем, когда
-    // клавиатура уже скрыта полностью (см. hideSoftKeyboardNow и holdForSoftKeyboardHide)
-    val view = LocalView.current
-    LaunchedEffect(isClosing) {
-        if (isClosing) view.hideSoftKeyboardNow()
-    }
-
-    // [ИЗМЕНЕНИЕ]: Переменная состояния и пружинная анимация смещения по вертикали при появлении оверлея
-    var animateOffset by remember { mutableStateOf(false) }
-    LaunchedEffect(Unit) {
-        animateOffset = true
-    }
-    val topPaddingOffset by androidx.compose.animation.core.animateDpAsState(
-        targetValue = if (animateOffset) 20.dp else 4.dp,
-        animationSpec = androidx.compose.animation.core.spring(
-            dampingRatio = androidx.compose.animation.core.Spring.DampingRatioMediumBouncy,
-            stiffness = androidx.compose.animation.core.Spring.StiffnessMedium
-        )
-    )
 
     // Алгоритм умного поиска (Quick Find)
     val searchResults = remember(searchQuery, allTasks, projects, areas) {
@@ -191,37 +222,86 @@ fun ThingsSearchOverlay(
         projects.firstOrNull { it.type == 1 }
     }
 
+    val progress = expansionAnim.value
+
+    val cardBackground = if (isDark) Color(0xFF1C1C1E) else Color.White
+    val textPrimary = if (isDark) Color.White else Color(0xFF1C1C1E)
+    val textSecondary = if (isDark) Color(0xFF8E8E93) else Color(0xFF8E8E93)
+    val inputNormalBackground = if (isDark) Color(0xFF2C2C2E) else Color(0xFFF2F2F7)
+    val startCardBg = if (wasPulled) ThingsBlue else inputNormalBackground
+    val currentCardBg = androidx.compose.ui.graphics.lerp(startCardBg, cardBackground, progress)
+    val currentInputBg = androidx.compose.ui.graphics.lerp(Color.Transparent, inputNormalBackground, progress)
+    val closeButtonBackground = if (isDark) Color(0xFF2C2C2E) else Color(0xFFE5E5EA)
+
+    val currentHorizontalMargin = androidx.compose.ui.unit.lerp(20.dp, 14.dp, progress)
+    val currentTopPadding = androidx.compose.ui.unit.lerp(initialTopOffset, 20.dp, progress)
+    val currentCornerRadius = androidx.compose.ui.unit.lerp(22.dp, 24.dp, progress)
+    val currentElevation = androidx.compose.ui.unit.lerp(0.dp, 12.dp, progress)
+
+    val innerHorizontalPadding = androidx.compose.ui.unit.lerp(0.dp, 14.dp, progress)
+    val innerTopPadding = androidx.compose.ui.unit.lerp(0.dp, 20.dp, progress)
+
+    val exitAlpha = exitAlphaAnim.value
+    val backdropAlpha = (progress * 0.45f * exitAlpha).coerceIn(0f, 0.45f)
+    val closeButtonAlpha = ((progress - 0.35f) / 0.65f).coerceIn(0f, 1f)
+    val closeButtonWidth = androidx.compose.ui.unit.lerp(0.dp, 44.dp, closeButtonAlpha)
+    val closeButtonSpacer = androidx.compose.ui.unit.lerp(0.dp, 12.dp, closeButtonAlpha)
+
+    val contentAlpha = ((progress - 0.4f) / 0.6f).coerceIn(0f, 1f)
+    val contentTranslationY = (-16).dp * (1f - progress)
+
     Box(
         modifier = modifier
             .fillMaxSize()
-            .background(overlayBackground)
-            .clickable(onClick = onClose), // Закрыть оверлей при клике мимо
+            .background(Color.Black.copy(alpha = backdropAlpha))
+            .clickable(
+                interactionSource = remember { MutableInteractionSource() },
+                indication = null,
+                onClick = handleClose
+            ),
         contentAlignment = Alignment.TopCenter
     ) {
-        // [ИЗМЕНЕНИЕ]: Контейнер диалога поиска с анимированным пружинным верхним отступом
+        // [ИЗМЕНЕНИЕ]: Контейнер диалога поиска с бесшовным морфингом при открытии и чистым fade-out при закрытии
         Card(
-            colors = CardDefaults.cardColors(containerColor = cardBackground),
-            shape = RoundedCornerShape(24.dp),
-            elevation = CardDefaults.cardElevation(defaultElevation = 12.dp),
+            colors = CardDefaults.cardColors(containerColor = currentCardBg),
+            shape = RoundedCornerShape(currentCornerRadius),
+            elevation = CardDefaults.cardElevation(defaultElevation = currentElevation),
             modifier = Modifier
+                .graphicsLayer { alpha = exitAlpha }
                 .fillMaxWidth()
-                // [ИЗМЕНЕНИЕ]: Уменьшено расстояние от левой и правой стороны экрана до краев поиска с 20.dp до 14.dp
-                .padding(start = 14.dp, end = 14.dp, top = topPaddingOffset, bottom = 20.dp)
+                .padding(start = currentHorizontalMargin, end = currentHorizontalMargin, top = currentTopPadding, bottom = 20.dp)
                 .widthIn(max = 480.dp)
-                .clickable(enabled = false, onClick = {}) // Игнорировать клики внутри карты
+                .clip(RoundedCornerShape(currentCornerRadius))
+                .clickable(
+                    interactionSource = remember { MutableInteractionSource() },
+                    indication = null,
+                    onClick = {} // Игнорировать клики внутри карты
+                )
+                .layout { measurable, constraints ->
+                    val placeable = measurable.measure(constraints.copy(minHeight = 0))
+                    val minHeightPx = 44.dp.roundToPx()
+                    val fullHeight = placeable.height
+                    val currentHeight = if (fullHeight > minHeightPx) {
+                        (minHeightPx + (fullHeight - minHeightPx) * progress).toInt()
+                    } else {
+                        minHeightPx
+                    }
+                    layout(placeable.width, currentHeight) {
+                        placeable.place(0, 0)
+                    }
+                }
         ) {
             Column(
                 modifier = Modifier
                     .fillMaxWidth()
                     .wrapContentHeight()
             ) {
-                // Top header with input field and close button (padding horizontal 14.dp, top 20.dp)
+                // Верхний заголовок со строкой поиска и кнопкой закрытия
                 Column(
                     modifier = Modifier
                         .fillMaxWidth()
-                        // [ИЗМЕНЕНИЕ]: Уменьшено расстояние от левой и правой стороны до элементов поиска с 20.dp до 14.dp
-                        .padding(horizontal = 14.dp)
-                        .padding(top = 20.dp)
+                        .padding(horizontal = innerHorizontalPadding)
+                        .padding(top = innerTopPadding)
                 ) {
                     Row(
                         verticalAlignment = Alignment.CenterVertically,
@@ -234,28 +314,32 @@ fun ThingsSearchOverlay(
                                 .weight(1f)
                                 .height(44.dp)
                                 .clip(RoundedCornerShape(22.dp))
-                                .background(inputBackground)
+                                .background(currentInputBg)
                                 .padding(horizontal = 14.dp)
                         ) {
+                            val startIconTint = if (wasPulled) Color.White else textSecondary
+                            val currentIconTint = androidx.compose.ui.graphics.lerp(startIconTint, textSecondary, progress)
                             Icon(
                                 imageVector = Icons.Default.Search,
                                 contentDescription = "Search",
-                                tint = textSecondary,
+                                tint = currentIconTint,
                                 modifier = Modifier.size(20.dp)
                             )
                             Spacer(modifier = Modifier.width(8.dp))
                             Box(modifier = Modifier.weight(1f)) {
                                 if (searchQuery.isEmpty()) {
+                                    val startTextTint = if (wasPulled) Color.White.copy(alpha = 0.9f) else textSecondary.copy(alpha = 0.6f)
+                                    val currentTextTint = androidx.compose.ui.graphics.lerp(startTextTint, textSecondary.copy(alpha = 0.6f), progress)
                                     Text(
                                         text = "Quick Find",
-                                        color = textSecondary.copy(alpha = 0.6f),
+                                        color = currentTextTint,
                                         fontSize = 16.sp,
                                         fontWeight = FontWeight.Normal
                                     )
                                 }
                                 // Пока оверлей закрывается, курсор и его маркер не рисуем: фокус остаётся
                                 // до полного скрытия клавиатуры
-                                HideTextSelectionHandles(hidden = isClosing) {
+                                HideTextSelectionHandles(hidden = isMorphClosing || isClosing) {
                                     BasicTextField(
                                         value = searchQuery,
                                         onValueChange = onSearchQueryChange,
@@ -266,7 +350,7 @@ fun ThingsSearchOverlay(
                                         ),
                                         singleLine = true,
                                         keyboardOptions = KeyboardOptions(imeAction = ImeAction.Search),
-                                        cursorBrush = SolidColor(if (isClosing) Color.Unspecified else Color.Black),
+                                        cursorBrush = SolidColor(if (isMorphClosing || isClosing) Color.Unspecified else Color.Black),
                                         modifier = Modifier
                                             .fillMaxWidth()
                                             .focusRequester(focusRequester)
@@ -291,34 +375,41 @@ fun ThingsSearchOverlay(
                             }
                         }
 
-                        Spacer(modifier = Modifier.width(12.dp))
-
-                        // Standalone круглая кнопка "X" закрытия
-                        Box(
-                            contentAlignment = Alignment.Center,
-                            modifier = Modifier
-                                .size(44.dp)
-                                .clip(CircleShape)
-                                .background(closeButtonBackground)
-                                .clickable(onClick = onClose)
-                        ) {
-                            Icon(
-                                imageVector = Icons.Default.Close,
-                                contentDescription = "Close",
-                                tint = textPrimary,
-                                modifier = Modifier.size(20.dp)
-                            )
+                        // Standalone круглая кнопка "X" закрытия с плавным Fade-in
+                        if (closeButtonAlpha > 0f) {
+                            Spacer(modifier = Modifier.width(closeButtonSpacer))
+                            Box(
+                                contentAlignment = Alignment.Center,
+                                modifier = Modifier
+                                    .size(closeButtonWidth, 44.dp)
+                                    .graphicsLayer {
+                                        alpha = closeButtonAlpha
+                                    }
+                                    .clip(CircleShape)
+                                    .background(closeButtonBackground)
+                                    .clickable(onClick = handleClose)
+                            ) {
+                                Icon(
+                                    imageVector = Icons.Default.Close,
+                                    contentDescription = "Close",
+                                    tint = textPrimary,
+                                    modifier = Modifier.size(20.dp)
+                                )
+                            }
                         }
                     }
                 }
 
                 Spacer(modifier = Modifier.height(16.dp))
 
-                // Контент: Либо "Recent", либо "Результаты поиска" (с горизонтальным паддингом 14.dp)
+                // Контент: Либо "Recent", либо "Результаты поиска" (с плавным проявлением и микросдвигом)
                 Column(
                     modifier = Modifier
                         .fillMaxWidth()
-                        // [ИЗМЕНЕНИЕ]: Уменьшено расстояние от левой и правой стороны до элементов поиска с 20.dp до 14.dp
+                        .graphicsLayer {
+                            alpha = contentAlpha
+                            translationY = contentTranslationY.toPx()
+                        }
                         .padding(horizontal = 14.dp)
                 ) {
                     if (searchQuery.isBlank()) {
