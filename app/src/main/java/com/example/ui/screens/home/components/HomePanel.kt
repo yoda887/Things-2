@@ -58,6 +58,7 @@ import androidx.compose.ui.input.nestedscroll.NestedScrollSource
 import androidx.compose.ui.input.nestedscroll.nestedScroll
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.platform.LocalView
+import android.view.HapticFeedbackConstants
 import com.example.ui.components.hideSoftKeyboardNow
 import com.example.ui.components.hideSoftKeyboardThen
 import androidx.compose.ui.text.TextStyle
@@ -260,6 +261,18 @@ fun ThingsHomePanel(
     val pullOffset = remember { Animatable(0f) }
     val thresholdPx = with(density) { 100.dp.toPx() }
     val maxOffsetPx = with(density) { 150.dp.toPx() }
+
+    // Тактильный отклик при пересечении порога активации поиска (100.dp)
+    val isPastThreshold = pullOffset.value >= thresholdPx
+    var hasTriggeredThresholdHaptic by remember { mutableStateOf(false) }
+    LaunchedEffect(isPastThreshold) {
+        if (isPastThreshold && !hasTriggeredThresholdHaptic) {
+            hasTriggeredThresholdHaptic = true
+            view.performHapticFeedback(HapticFeedbackConstants.CLOCK_TICK)
+        } else if (!isPastThreshold) {
+            hasTriggeredThresholdHaptic = false
+        }
+    }
 
     val nestedScrollConnection = remember {
         object : NestedScrollConnection {
@@ -796,6 +809,15 @@ fun ThingsHomePanel(
 
         // Прогресс оттяжки до порога активации (100dp)
         val pullProgress = if (thresholdPx > 0f) (pullOffset.value / thresholdPx).coerceIn(0f, 1f) else 0f
+        val overPullProgress = if (maxOffsetPx > thresholdPx && pullOffset.value > thresholdPx) {
+            ((pullOffset.value - thresholdPx) / (maxOffsetPx - thresholdPx)).coerceIn(0f, 1f)
+        } else {
+            0f
+        }
+        // Микро-анимация лупы: увеличение от 1.0f до 1.18f и упругий доворот ручки на -12°..-15°
+        val iconScale = 1.0f + 0.18f * pullProgress + 0.04f * overPullProgress
+        val iconRotation = -12f * pullProgress - 3f * overPullProgress
+
         // Движение поля поиска с сопротивлением (до ~32dp при максимальной оттяжке)
         val searchResistanceOffset = if (pullOffset.value <= 0f) 0f else {
             (pullOffset.value * 0.32f).coerceAtMost(with(density) { 32.dp.toPx() })
@@ -858,7 +880,13 @@ fun ThingsHomePanel(
                     imageVector = Icons.Default.Search,
                     contentDescription = "Search",
                     tint = iconTint,
-                    modifier = Modifier.size(20.dp)
+                    modifier = Modifier
+                        .size(20.dp)
+                        .graphicsLayer {
+                            scaleX = iconScale
+                            scaleY = iconScale
+                            rotationZ = iconRotation
+                        }
                 )
                 Spacer(modifier = Modifier.width(8.dp))
                 Text(

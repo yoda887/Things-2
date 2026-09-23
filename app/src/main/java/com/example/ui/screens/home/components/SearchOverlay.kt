@@ -319,11 +319,19 @@ fun ThingsSearchOverlay(
                         ) {
                             val startIconTint = if (wasPulled) Color.White else textSecondary
                             val currentIconTint = androidx.compose.ui.graphics.lerp(startIconTint, textSecondary, progress)
+                            val overlayIconScale = if (wasPulled) (1.18f - 0.18f * progress) else 1f
+                            val overlayIconRotation = if (wasPulled) (-12f * (1f - progress)) else 0f
                             Icon(
                                 imageVector = Icons.Default.Search,
                                 contentDescription = "Search",
                                 tint = currentIconTint,
-                                modifier = Modifier.size(20.dp)
+                                modifier = Modifier
+                                    .size(20.dp)
+                                    .graphicsLayer {
+                                        scaleX = overlayIconScale
+                                        scaleY = overlayIconScale
+                                        rotationZ = overlayIconRotation
+                                    }
                             )
                             Spacer(modifier = Modifier.width(8.dp))
                             Box(modifier = Modifier.weight(1f)) {
