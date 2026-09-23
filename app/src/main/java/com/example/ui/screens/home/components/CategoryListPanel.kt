@@ -39,6 +39,13 @@ import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.graphics.Color
 import androidx.compose.animation.core.Animatable
 import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.geometry.Rect
+import androidx.compose.ui.layout.onGloballyPositioned
+import androidx.compose.ui.layout.positionInRoot
+import androidx.compose.ui.unit.toSize
+import com.example.ui.components.PULL_TO_SEARCH_CIRCLE_CENTER_Y
+import com.example.ui.components.PULL_TO_SEARCH_CIRCLE_RADIUS
+import com.example.ui.components.pullToSearchIndicatorTranslationY
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.input.nestedscroll.NestedScrollConnection
 import androidx.compose.ui.input.nestedscroll.NestedScrollSource
@@ -419,6 +426,8 @@ fun ThingsCategoryListPanel(
     val coroutineScope = rememberCoroutineScope()
     val pullOffset = remember { Animatable(0f) }
     val thresholdPx = with(density) { 100.dp.toPx() }
+    // Контейнер индикатора оттяжки в координатах корня: из его круга вырастает Quick Find
+    var pullIndicatorBoxBounds by remember { mutableStateOf<Rect?>(null) }
     val maxOffsetPx = with(density) { 150.dp.toPx() }
 
     // Извлечение nestedScrollConnection "PullToSearch" в CategoryListState
@@ -428,7 +437,15 @@ fun ThingsCategoryListPanel(
         lazyListState = lazyListState,
         thresholdPx = thresholdPx,
         maxOffsetPx = maxOffsetPx,
-        onSearchClick = { onEvent(ThingsCategoryListEvent.ClickSearch) }
+        onSearchClick = {
+            val circleBounds = pullIndicatorBoxBounds?.let { box ->
+                val radius = with(density) { PULL_TO_SEARCH_CIRCLE_RADIUS.toPx() }
+                val centerY = box.top + pullToSearchIndicatorTranslationY(pullOffset.value, density) +
+                    with(density) { PULL_TO_SEARCH_CIRCLE_CENTER_Y.toPx() }
+                Rect(center = Offset(box.center.x, centerY), radius = radius)
+            }
+            onEvent(ThingsCategoryListEvent.ClickSearch(circleBounds))
+        }
     )
 
     // Насколько заголовок экрана уехал под тулбар, в долях его собственной высоты
@@ -799,7 +816,10 @@ fun ThingsCategoryListPanel(
             modifier = Modifier
                 .fillMaxWidth()
                 .height(with(density) { pullOffset.value.toDp() } + 96.dp)
-                .offset(y = (-96).dp),
+                .offset(y = (-96).dp)
+                .onGloballyPositioned { coords ->
+                    pullIndicatorBoxBounds = Rect(coords.positionInRoot(), coords.size.toSize())
+                },
             contentAlignment = Alignment.TopCenter
         ) {
             com.example.ui.components.PullToSearchIndicator(

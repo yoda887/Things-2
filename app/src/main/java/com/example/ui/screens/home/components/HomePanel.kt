@@ -51,6 +51,10 @@ import androidx.compose.animation.core.FastOutSlowInEasing
 import com.example.ui.components.dragdrop.GenericDragDropState
 import com.example.ui.components.dragdrop.rememberGenericDragDropState
 import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.geometry.Rect
+import androidx.compose.ui.layout.onGloballyPositioned
+import androidx.compose.ui.layout.positionInRoot
+import androidx.compose.ui.unit.toSize
 import androidx.compose.ui.graphics.TransformOrigin
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.input.nestedscroll.NestedScrollConnection
@@ -163,7 +167,8 @@ fun ThingsHomePanel(
     onDeleteArea: (Area) -> Unit = {},
     onDeleteProject: (Item) -> Unit = {},
     onAreaClick: (Area) -> Unit = {},
-    onSearchClick: (offsetDp: Float, wasPulled: Boolean) -> Unit = { _, _ -> },
+    // sourceBounds — прямоугольник поля поиска в координатах корня, из него разворачивается Quick Find
+    onSearchClick: (sourceBounds: Rect?, wasPulled: Boolean) -> Unit = { _, _ -> },
     // [ИЗМЕНЕНИЕ]: Добавлено состояние активности поискового оверлея
     isSearchOverlayActive: Boolean = false,
     editingProjectId: String? = null,
@@ -259,6 +264,9 @@ fun ThingsHomePanel(
     val density = androidx.compose.ui.platform.LocalDensity.current
     val coroutineScope = rememberCoroutineScope()
     val pullOffset = remember { Animatable(0f) }
+    // Поле поиска в покое (без сдвига оттяжки/прокрутки), координаты корня
+    var searchFieldRestBounds by remember { mutableStateOf<Rect?>(null) }
+    fun searchFieldBoundsAt(translationY: Float): Rect? = searchFieldRestBounds?.translate(0f, translationY)
     val thresholdPx = with(density) { 100.dp.toPx() }
     val maxOffsetPx = with(density) { 150.dp.toPx() }
 
@@ -319,8 +327,7 @@ fun ThingsHomePanel(
                         } else {
                             lazyListState.firstVisibleItemScrollOffset.toFloat().coerceAtMost(with(density) { 68.dp.toPx() })
                         }
-                        val currentOffsetDp = with(density) { (searchResistance - sOffset).toDp().value } + 4f
-                        onSearchClick(currentOffsetDp, true)
+                        onSearchClick(searchFieldBoundsAt(searchResistance - sOffset), true)
                     }
                     pullOffset.animateTo(0f, spring())
                     return available
@@ -838,6 +845,15 @@ fun ThingsHomePanel(
         Box(
             modifier = Modifier
                 .padding(horizontal = 14.dp)
+                // До слоя: положение поля без сдвига; сама капсула — за вычетом внутренних отступов 6/4 dp
+                .onGloballyPositioned { coords ->
+                    val outer = Rect(coords.positionInRoot(), coords.size.toSize())
+                    val insetX = with(density) { 6.dp.toPx() }
+                    val insetY = with(density) { 4.dp.toPx() }
+                    searchFieldRestBounds = Rect(
+                        outer.left + insetX, outer.top + insetY, outer.right - insetX, outer.bottom - insetY
+                    )
+                }
                 .graphicsLayer {
                     translationY = searchResistanceOffset - scrollOffset
                 }
@@ -861,14 +877,13 @@ fun ThingsHomePanel(
                         if (currentOffset > 0f) {
                             val triggered = currentOffset >= thresholdPx
                             if (triggered) {
-                                val currentOffsetDp = with(density) { (searchResistanceOffset - scrollOffset).toDp().value } + 4f
-                                onSearchClick(currentOffsetDp, true)
+                                onSearchClick(searchFieldBoundsAt(searchResistanceOffset - scrollOffset), true)
                             }
                             coroutineScope.launch { pullOffset.animateTo(0f, spring()) }
                         }
                     }
                 )
-                .clickable { onSearchClick(4f, false) }
+                .clickable { onSearchClick(searchFieldBoundsAt(searchResistanceOffset - scrollOffset), false) }
                 .padding(horizontal = 14.dp)
                 .testTag("home_search_input"),
             contentAlignment = Alignment.CenterStart

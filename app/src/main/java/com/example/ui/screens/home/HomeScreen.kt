@@ -13,6 +13,7 @@ import androidx.compose.animation.core.animateFloat
 import androidx.compose.ui.draw.drawBehind
 import androidx.compose.ui.draw.drawWithContent
 import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.geometry.Rect
 import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.animation.core.FastOutSlowInEasing
@@ -160,8 +161,11 @@ fun ThingsHomeScreen(viewModel: ThingsViewModel = hiltViewModel()) {
     var editingAreaId by remember { mutableStateOf<String?>(null) }
     var showFabMenu by remember { mutableStateOf(false) }
     var isSearchOverlayActive by remember { mutableStateOf(false) }
-    var searchInitialOffsetDp by remember { mutableStateOf(4.dp) }
+    // Прямоугольник, из которого разворачивается Quick Find (поле поиска или круг оттяжки)
+    var searchMorphSource by remember { mutableStateOf<Rect?>(null) }
     var searchWasPulled by remember { mutableStateOf(false) }
+    // Источник морфинга: широкое поле поиска стартового экрана или круглая иконка оттяжки на списках
+    var searchFromWideField by remember { mutableStateOf(true) }
     var newTaskTitlePrefill by remember { mutableStateOf("") }
     var isListDialogActive by remember { mutableStateOf(false) }
     var isSelectionMode by remember { mutableStateOf(false) }
@@ -401,9 +405,10 @@ fun ThingsHomeScreen(viewModel: ThingsViewModel = hiltViewModel()) {
                                 viewModel.setAccessToken(token)
                                 viewModel.syncWithGoogle()
                             },
-                            onSearchClick = { offsetDp, wasPulled ->
-                                searchInitialOffsetDp = offsetDp.dp
+                            onSearchClick = { sourceBounds, wasPulled ->
+                                searchMorphSource = sourceBounds
                                 searchWasPulled = wasPulled
+                                searchFromWideField = true
                                 isSearchOverlayActive = true
                             },
                             isSearchOverlayActive = isSearchOverlayActive,
@@ -499,7 +504,11 @@ fun ThingsHomeScreen(viewModel: ThingsViewModel = hiltViewModel()) {
                                 is ThingsCategoryListEvent.ChangeInlineExpandedTaskId -> {
                                     viewModel.setInlineExpandedTaskId(event.taskId)
                                 }
-                                ThingsCategoryListEvent.ClickSearch -> {
+                                is ThingsCategoryListEvent.ClickSearch -> {
+                                    // На экранах списков окно вырастает из синего круга оттяжки
+                                    searchMorphSource = event.sourceBounds
+                                    searchWasPulled = true
+                                    searchFromWideField = false
                                     isSearchOverlayActive = true
                                 }
                                 ThingsCategoryListEvent.ClickBack -> {
@@ -686,8 +695,9 @@ fun ThingsHomeScreen(viewModel: ThingsViewModel = hiltViewModel()) {
             // [ИЗМЕНЕНИЕ]: Полноэкранный оверлей поиска с бесшовным пространственным морфингом (Spatial UI)
             if (isSearchOverlayActive) {
                 ThingsSearchOverlay(
-                    initialTopOffset = searchInitialOffsetDp,
+                    morphSource = searchMorphSource,
                     wasPulled = searchWasPulled,
+                    morphFromWideField = searchFromWideField,
                     searchQuery = searchQuery,
                     onSearchQueryChange = { viewModel.setSearchQuery(it) },
                     allTasks = allTasksRaw,

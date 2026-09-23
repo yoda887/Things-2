@@ -14,8 +14,30 @@ import androidx.compose.ui.graphics.StrokeJoin
 import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.graphics.drawscope.withTransform
 import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.ui.unit.Density
 import androidx.compose.ui.unit.dp
 import com.example.ui.theme.*
+
+// Круг индикатора: центр внутри холста и радиус. Нужны и для отрисовки,
+// и чтобы Quick Find вырастал ровно из этого круга
+val PULL_TO_SEARCH_CIRCLE_CENTER_Y = 32.dp
+val PULL_TO_SEARCH_CIRCLE_RADIUS = 22.dp
+
+/**
+ * Вертикальное смещение холста индикатора при оттяжке [pullOffset].
+ * Индикатор сразу выезжает 1:1, а вытянувшись, плавно смещается к центру зоны растяжения.
+ */
+fun pullToSearchIndicatorTranslationY(pullOffset: Float, density: Density): Float = with(density) {
+    val maxOffsetPx = 150.dp.toPx()
+    val indicatorHeightPx = 36.dp.toPx()
+    if (pullOffset <= indicatorHeightPx) {
+        pullOffset
+    } else {
+        val centeredY = pullOffset / 2f + indicatorHeightPx / 2f + 20.dp.toPx()
+        val excessProgress = ((pullOffset - indicatorHeightPx) / (maxOffsetPx - indicatorHeightPx)).coerceIn(0f, 1f)
+        pullOffset + (centeredY - pullOffset) * excessProgress
+    }
+}
 
 /**
  * Полностью Canvas-ориентированный индикатор pull-to-search с разделенной анимацией.
@@ -60,31 +82,20 @@ fun PullToSearchIndicator(
                     scaleX = 1f
                     scaleY = 1f
 
-                    // stretchProgress — позиция контейнера на экране относительно списка.
-                    val indicatorHeightPx = 36.dp.toPx()//72.dp.toPx()
-
-                    // Индикатор сразу вытягивается (выезжает 1:1) пока pullOffset <= 72dp.
-                    // Когда вытянется полностью, он плавно перемещается к центру зоны растяжения.
-                    translationY = if (pullOffset <= indicatorHeightPx) {
-                        pullOffset
-                    } else {
-                        val centeredY = pullOffset / 2f + indicatorHeightPx / 2f + 20.dp.toPx()
-                        val excessProgress = ((pullOffset - indicatorHeightPx) / (maxOffsetPx - indicatorHeightPx)).coerceIn(0f, 1f)
-                        pullOffset + (centeredY - pullOffset) * excessProgress
-                    }
+                    translationY = pullToSearchIndicatorTranslationY(pullOffset, density)
 
                     alpha = progress
                 }
         ) {
             val strokeWidth = 3.dp.toPx()
-            val circleRadius = 22.dp.toPx()
+            val circleRadius = PULL_TO_SEARCH_CIRCLE_RADIUS.toPx()
             val circleCenterX = size.width / 2f
 
             // --- ПОЗИЦИИ ---
 
             // Лупа центрируется внутри Canvas на высоте 32dp и рисуется без смещения,
             // чтобы индикатор сразу отображался при вытягивании.
-            val circleCenterY = 32.dp.toPx()
+            val circleCenterY = PULL_TO_SEARCH_CIRCLE_CENTER_Y.toPx()
 
             // Стрелка привязана к текущему нижнему краю круга — всегда строго под лупой.
             // arrowProgress плавно "выдвигает" её вниз от края круга до финального отступа.

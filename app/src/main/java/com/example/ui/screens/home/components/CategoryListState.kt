@@ -5,6 +5,7 @@ import androidx.compose.animation.core.spring
 import androidx.compose.foundation.lazy.LazyListState
 import androidx.compose.runtime.*
 import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.geometry.Rect
 import androidx.compose.ui.input.nestedscroll.NestedScrollConnection
 import androidx.compose.ui.input.nestedscroll.NestedScrollSource
 import androidx.compose.ui.unit.Velocity
@@ -554,7 +555,8 @@ sealed interface ThingsCategoryListEvent {
     data class ClickProject(val project: Item) : ThingsCategoryListEvent
     data class ClickArea(val area: Area) : ThingsCategoryListEvent
     data class ChangeInlineExpandedTaskId(val taskId: String?) : ThingsCategoryListEvent
-    object ClickSearch : ThingsCategoryListEvent
+    // sourceBounds — круг индикатора оттяжки в координатах корня, из него вырастает Quick Find
+    data class ClickSearch(val sourceBounds: Rect? = null) : ThingsCategoryListEvent
     object ClickBack : ThingsCategoryListEvent
     
     // События изменения/сохранения задачи из инлайн-редактора

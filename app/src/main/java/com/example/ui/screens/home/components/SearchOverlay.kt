@@ -4,9 +4,10 @@ import androidx.activity.compose.BackHandler
 import kotlinx.coroutines.launch
 import androidx.compose.animation.*
 import androidx.compose.animation.core.Animatable
+import androidx.compose.animation.core.CubicBezierEasing
 import androidx.compose.animation.core.FastOutSlowInEasing
-import androidx.compose.animation.core.Spring
-import androidx.compose.animation.core.spring
+import androidx.compose.animation.core.LinearEasing
+import androidx.compose.ui.graphics.TransformOrigin
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
@@ -36,6 +37,18 @@ import androidx.compose.ui.graphics.SolidColor
 import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.layout.layout
+import androidx.compose.ui.layout.onGloballyPositioned
+import androidx.compose.ui.layout.positionInRoot
+import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.geometry.CornerRadius
+import androidx.compose.ui.geometry.Rect
+import androidx.compose.ui.geometry.RoundRect
+import androidx.compose.ui.geometry.Size
+import androidx.compose.ui.graphics.Outline
+import androidx.compose.ui.graphics.Shape
+import androidx.compose.ui.unit.Density
+import androidx.compose.ui.unit.LayoutDirection
+import androidx.compose.ui.unit.toSize
 import androidx.compose.ui.platform.LocalView
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.text.TextStyle
@@ -57,6 +70,35 @@ import com.example.ui.components.ProjectProgressArc
 import com.example.ui.components.HideTextSelectionHandles
 import com.example.ui.components.hideSoftKeyboardNow
 import com.example.ui.theme.*
+
+// Длительность геометрического морфинга карточки Quick Find
+private const val MORPH_DURATION_MS = 250
+// Запасной источник, если прямоугольник поля/иконки неизвестен: доля карточки у её верхнего края
+private const val MORPH_FALLBACK_SCALE = 0.55f
+// Карточка стартует полупрозрачной и становится непрозрачной с самого начала роста
+private const val MORPH_START_ALPHA = 0.55f
+private const val MORPH_FADE_IN_FRACTION = 0.6f
+private val MORPH_FINAL_CORNER_RADIUS = 24.dp
+private val CARD_INNER_TOP_PADDING = 20.dp
+// Один короткий отскок как в эталоне: рост перелетает финальный размер примерно на 2%
+// и мягко возвращается назад
+private val MorphOvershootEasing = CubicBezierEasing(0.2f, 1.25f, 0.45f, 1f)
+
+/**
+ * Форма карточки во время морфинга: скруглённый прямоугольник [rect] в локальных координатах
+ * карточки. Радиусы по осям задаются раздельно — при неравномерном масштабе слоя это
+ * сохраняет углы круглыми на экране.
+ */
+private class MorphCardShape(
+    private val rect: Rect,
+    private val radiusX: Float,
+    private val radiusY: Float
+) : Shape {
+    override fun createOutline(size: Size, layoutDirection: LayoutDirection, density: Density): Outline =
+        Outline.Rounded(RoundRect(rect, CornerRadius(radiusX, radiusY)))
+}
+
+private fun lerpF(start: Float, stop: Float, fraction: Float) = start + (stop - start) * fraction
 
 /**
  * Оверлей полноэкранного поиска, точно стилизованный под Things 3 Quick Find.
@@ -87,8 +129,13 @@ fun ThingsSearchOverlay(
     onTaskToggle: (ItemWithChecklist) -> Unit = {},
     // Оверлей уже закрывается (идёт exit-анимация), но поле поиска ещё в композиции
     isClosing: Boolean = false,
-    initialTopOffset: Dp = 4.dp,
-    wasPulled: Boolean = false
+    wasPulled: Boolean = false,
+    // Прямоугольник источника морфинга в координатах корня: поле поиска или круглая иконка оттяжки
+    morphSource: Rect? = null,
+    // true — источник широкое поле поиска (стартовый экран): окно разворачивается из поля вниз,
+    // содержимое не масштабируется. false — круглая иконка (экраны списков): карточка растягивается
+    // из круга вниз и в стороны вместе с содержимым
+    morphFromWideField: Boolean = false
 ) {
     val isDark = isSystemInDarkTheme()
     val coroutineScope = rememberCoroutineScope()
@@ -96,12 +143,19 @@ fun ThingsSearchOverlay(
     val exitAlphaAnim = remember { Animatable(1f) }
     var isMorphClosing by remember { mutableStateOf(false) }
 
-    LaunchedEffect(Unit) {
+    // Итоговый прямоугольник карточки нужен до старта роста: морфинг идёт от источника к нему
+    var cardBoundsInRoot by remember { mutableStateOf<Rect?>(null) }
+    val isMorphMeasured = cardBoundsInRoot != null
+
+    // [ИЗМЕНЕНИЕ]: Геометрический морфинг как в эталоне — карточка вырастает
+    // из пилюли/кружка за ~140 мс с одним коротким отскоком
+    LaunchedEffect(isMorphMeasured) {
+        if (!isMorphMeasured) return@LaunchedEffect
         expansionAnim.animateTo(
             targetValue = 1f,
-            animationSpec = spring(
-                dampingRatio = Spring.DampingRatioLowBouncy,
-                stiffness = Spring.StiffnessMediumLow
+            animationSpec = tween(
+                durationMillis = MORPH_DURATION_MS,
+                easing = LinearEasing
             )
         )
     }
@@ -222,7 +276,9 @@ fun ThingsSearchOverlay(
         projects.firstOrNull { it.type == 1 }
     }
 
-    val progress = expansionAnim.value
+    // Ход анимации линейный: масштаб берёт свою кривую с отскоком, остальное — обычное замедление
+    val morphRaw = expansionAnim.value
+    val progress = FastOutSlowInEasing.transform(morphRaw)
 
     val cardBackground = if (isDark) Color(0xFF1C1C1E) else Color.White
     val textPrimary = if (isDark) Color.White else Color(0xFF1C1C1E)
@@ -233,22 +289,76 @@ fun ThingsSearchOverlay(
     val currentInputBg = androidx.compose.ui.graphics.lerp(Color.Transparent, inputNormalBackground, progress)
     val closeButtonBackground = if (isDark) Color(0xFF2C2C2E) else Color(0xFFE5E5EA)
 
-    val currentHorizontalMargin = androidx.compose.ui.unit.lerp(20.dp, 14.dp, progress)
-    val currentTopPadding = androidx.compose.ui.unit.lerp(initialTopOffset, 20.dp, progress)
-    val currentCornerRadius = androidx.compose.ui.unit.lerp(22.dp, 24.dp, progress)
+    // Карточка всегда раскладывается в своём итоговом месте, путь от источника к нему
+    // целиком задаётся преобразованием слоя
+    val currentHorizontalMargin = 14.dp
+    val density = LocalDensity.current
+    val innerTopPaddingPx = with(density) { CARD_INNER_TOP_PADDING.toPx() }
+    val finalRadiusPx = with(density) { MORPH_FINAL_CORNER_RADIUS.toPx() }
+    val morphEased = MorphOvershootEasing.transform(morphRaw)
+
+    var layerTranslationX = 0f
+    var layerTranslationY = 0f
+    var layerScaleX = 1f
+    var layerScaleY = 1f
+    var cardShape: Shape = RoundedCornerShape(MORPH_FINAL_CORNER_RADIUS)
+    val dst = cardBoundsInRoot
+    if (dst != null && dst.width > 0f && dst.height > 0f) {
+        val src = morphSource ?: Rect(
+            left = dst.center.x - dst.width * MORPH_FALLBACK_SCALE / 2f,
+            top = dst.top,
+            right = dst.center.x + dst.width * MORPH_FALLBACK_SCALE / 2f,
+            bottom = dst.top + dst.height * MORPH_FALLBACK_SCALE
+        )
+        // Текущий прямоугольник на экране: от источника к карточке, с одним коротким отскоком
+        val cur = Rect(
+            left = lerpF(src.left, dst.left, morphEased),
+            top = lerpF(src.top, dst.top, morphEased),
+            right = lerpF(src.right, dst.right, morphEased),
+            bottom = lerpF(src.bottom, dst.bottom, morphEased)
+        )
+        val sourceRadius = minOf(src.width, src.height) / 2f
+        val radius = lerpF(sourceRadius, finalRadiusPx, progress)
+            .coerceAtMost(minOf(cur.width, cur.height) / 2f)
+        if (morphFromWideField) {
+            // Из поля ввода: окно разворачивается вниз, содержимое не сжимается.
+            // Внутреннее поле карточки стартует ровно на месте поля стартового экрана
+            layerTranslationY = lerpF(src.top - dst.top - innerTopPaddingPx, 0f, morphEased)
+            val originY = dst.top + layerTranslationY
+            cardShape = MorphCardShape(
+                rect = Rect(cur.left - dst.left, cur.top - originY, cur.right - dst.left, cur.bottom - originY),
+                radiusX = radius,
+                radiusY = radius
+            )
+        } else {
+            // Из круглой иконки: карточка растягивается вниз и в стороны вместе с содержимым
+            layerScaleX = (cur.width / dst.width).coerceAtLeast(0.01f)
+            layerScaleY = (cur.height / dst.height).coerceAtLeast(0.01f)
+            layerTranslationX = cur.left - dst.left
+            layerTranslationY = cur.top - dst.top
+            cardShape = MorphCardShape(
+                rect = Rect(0f, 0f, dst.width, dst.height),
+                radiusX = radius / layerScaleX,
+                radiusY = radius / layerScaleY
+            )
+        }
+    }
+    val cardAppearAlpha = if (!isMorphMeasured) 0f
+        else lerpF(MORPH_START_ALPHA, 1f, (progress / MORPH_FADE_IN_FRACTION).coerceIn(0f, 1f))
     val currentElevation = androidx.compose.ui.unit.lerp(0.dp, 12.dp, progress)
 
-    val innerHorizontalPadding = androidx.compose.ui.unit.lerp(0.dp, 14.dp, progress)
-    val innerTopPadding = androidx.compose.ui.unit.lerp(0.dp, 20.dp, progress)
+    val innerHorizontalPadding = 14.dp
+    val innerTopPadding = CARD_INNER_TOP_PADDING
 
     val exitAlpha = exitAlphaAnim.value
     val backdropAlpha = (progress * 0.45f * exitAlpha).coerceIn(0f, 0.45f)
-    val closeButtonAlpha = ((progress - 0.35f) / 0.65f).coerceIn(0f, 1f)
-    val closeButtonWidth = androidx.compose.ui.unit.lerp(0.dp, 44.dp, closeButtonAlpha)
-    val closeButtonSpacer = androidx.compose.ui.unit.lerp(0.dp, 12.dp, closeButtonAlpha)
+    // Внутренняя раскладка при морфинге не пересчитывается — меняется только прозрачность,
+    // поэтому рост карточки остаётся чистым преобразованием слоя
+    val closeButtonAlpha = (progress / 0.5f).coerceIn(0f, 1f)
+    val closeButtonWidth = 44.dp
+    val closeButtonSpacer = 12.dp
 
-    val contentAlpha = ((progress - 0.4f) / 0.6f).coerceIn(0f, 1f)
-    val contentTranslationY = (-16).dp * (1f - progress)
+    val contentAlpha = (progress / 0.45f).coerceIn(0f, 1f)
 
     Box(
         modifier = modifier
@@ -264,32 +374,28 @@ fun ThingsSearchOverlay(
         // [ИЗМЕНЕНИЕ]: Контейнер диалога поиска с бесшовным морфингом при открытии и чистым fade-out при закрытии
         Card(
             colors = CardDefaults.cardColors(containerColor = currentCardBg),
-            shape = RoundedCornerShape(currentCornerRadius),
+            shape = cardShape,
             elevation = CardDefaults.cardElevation(defaultElevation = currentElevation),
             modifier = Modifier
-                .graphicsLayer { alpha = exitAlpha }
                 .fillMaxWidth()
-                .padding(start = currentHorizontalMargin, end = currentHorizontalMargin, top = currentTopPadding, bottom = 20.dp)
+                .padding(start = currentHorizontalMargin, end = currentHorizontalMargin, top = 20.dp, bottom = 20.dp)
                 .widthIn(max = 480.dp)
-                .clip(RoundedCornerShape(currentCornerRadius))
+                // Координаты до слоя — итоговое место карточки без учёта морфинга
+                .onGloballyPositioned { cardBoundsInRoot = Rect(it.positionInRoot(), it.size.toSize()) }
+                .graphicsLayer {
+                    alpha = exitAlpha * cardAppearAlpha
+                    translationX = layerTranslationX
+                    translationY = layerTranslationY
+                    scaleX = layerScaleX
+                    scaleY = layerScaleY
+                    transformOrigin = TransformOrigin(pivotFractionX = 0f, pivotFractionY = 0f)
+                }
+                .clip(cardShape)
                 .clickable(
                     interactionSource = remember { MutableInteractionSource() },
                     indication = null,
                     onClick = {} // Игнорировать клики внутри карты
                 )
-                .layout { measurable, constraints ->
-                    val placeable = measurable.measure(constraints.copy(minHeight = 0))
-                    val minHeightPx = 44.dp.roundToPx()
-                    val fullHeight = placeable.height
-                    val currentHeight = if (fullHeight > minHeightPx) {
-                        (minHeightPx + (fullHeight - minHeightPx) * progress).toInt()
-                    } else {
-                        minHeightPx
-                    }
-                    layout(placeable.width, currentHeight) {
-                        placeable.place(0, 0)
-                    }
-                }
         ) {
             Column(
                 modifier = Modifier
@@ -416,7 +522,6 @@ fun ThingsSearchOverlay(
                         .fillMaxWidth()
                         .graphicsLayer {
                             alpha = contentAlpha
-                            translationY = contentTranslationY.toPx()
                         }
                         .padding(horizontal = 14.dp)
                 ) {
