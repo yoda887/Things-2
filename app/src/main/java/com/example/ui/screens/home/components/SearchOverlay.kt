@@ -8,6 +8,8 @@ import androidx.compose.animation.core.CubicBezierEasing
 import androidx.compose.animation.core.FastOutSlowInEasing
 import androidx.compose.animation.core.LinearEasing
 import androidx.compose.ui.graphics.TransformOrigin
+import androidx.compose.animation.core.Spring
+import androidx.compose.animation.core.spring
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
@@ -73,6 +75,9 @@ import com.example.ui.theme.*
 
 // Длительность геометрического морфинга карточки Quick Find
 private const val MORPH_DURATION_MS = 250
+// Жёсткость пружины разворота из поля стартового экрана: при затухании LowBouncy весь ход
+// (рост, перелёт ~3% и возврат) укладывается в те же ~250 мс, что и рост из круга на списках
+private const val MORPH_WIDE_SPRING_STIFFNESS = 700f
 // Запасной источник, если прямоугольник поля/иконки неизвестен: доля карточки у её верхнего края
 private const val MORPH_FALLBACK_SCALE = 0.55f
 // Карточка стартует полупрозрачной и становится непрозрачной с самого начала роста
@@ -153,10 +158,19 @@ fun ThingsSearchOverlay(
         if (!isMorphMeasured) return@LaunchedEffect
         expansionAnim.animateTo(
             targetValue = 1f,
-            animationSpec = tween(
-                durationMillis = MORPH_DURATION_MS,
-                easing = LinearEasing
-            )
+            animationSpec = if (morphFromWideField) {
+                // Стартовый экран: мягкое «физическое» разворачивание капсулы пружиной,
+                // перелёт и возврат даёт сама пружина
+                spring(
+                    dampingRatio = Spring.DampingRatioLowBouncy,
+                    stiffness = MORPH_WIDE_SPRING_STIFFNESS
+                )
+            } else {
+                tween(
+                    durationMillis = MORPH_DURATION_MS,
+                    easing = LinearEasing
+                )
+            }
         )
     }
 
@@ -276,9 +290,12 @@ fun ThingsSearchOverlay(
         projects.firstOrNull { it.type == 1 }
     }
 
-    // Ход анимации линейный: масштаб берёт свою кривую с отскоком, остальное — обычное замедление
+    // Из круга ход линейный: масштаб берёт свою кривую с отскоком, остальное — обычное замедление.
+    // Из поля ход задаёт пружина: геометрия следует ей напрямую, с перелётом,
+    // а цвета, прозрачность и отступы — без перелёта
     val morphRaw = expansionAnim.value
-    val progress = FastOutSlowInEasing.transform(morphRaw)
+    val progress = if (morphFromWideField) morphRaw.coerceIn(0f, 1f)
+        else FastOutSlowInEasing.transform(morphRaw)
 
     val cardBackground = if (isDark) Color(0xFF1C1C1E) else Color.White
     val textPrimary = if (isDark) Color.White else Color(0xFF1C1C1E)
@@ -294,8 +311,10 @@ fun ThingsSearchOverlay(
     val currentHorizontalMargin = 14.dp
     val density = LocalDensity.current
     val innerTopPaddingPx = with(density) { CARD_INNER_TOP_PADDING.toPx() }
+    // Отступ поля ввода от края карточки в первом кадре: поле окна совпадает с капсулой стартового экрана
+    var wideFieldStartInsetPx = 0f
     val finalRadiusPx = with(density) { MORPH_FINAL_CORNER_RADIUS.toPx() }
-    val morphEased = MorphOvershootEasing.transform(morphRaw)
+    val morphEased = if (morphFromWideField) morphRaw else MorphOvershootEasing.transform(morphRaw)
 
     var layerTranslationX = 0f
     var layerTranslationY = 0f
@@ -322,7 +341,9 @@ fun ThingsSearchOverlay(
             .coerceAtMost(minOf(cur.width, cur.height) / 2f)
         if (morphFromWideField) {
             // Из поля ввода: окно разворачивается вниз, содержимое не сжимается.
-            // Внутреннее поле карточки стартует ровно на месте поля стартового экрана
+            // Внутреннее поле карточки стартует ровно на месте поля стартового экрана:
+            // по вертикали — сдвигом слоя, по горизонтали — стартовым внутренним отступом
+            wideFieldStartInsetPx = (src.left - dst.left).coerceAtLeast(0f)
             layerTranslationY = lerpF(src.top - dst.top - innerTopPaddingPx, 0f, morphEased)
             val originY = dst.top + layerTranslationY
             cardShape = MorphCardShape(
@@ -343,20 +364,31 @@ fun ThingsSearchOverlay(
             )
         }
     }
-    val cardAppearAlpha = if (!isMorphMeasured) 0f
-        else lerpF(MORPH_START_ALPHA, 1f, (progress / MORPH_FADE_IN_FRACTION).coerceIn(0f, 1f))
+    // Капсула стартового экрана непрозрачна — окно из неё стартует тоже непрозрачным,
+    // иначе в момент подмены капсула на кадр «выцветает»
+    val cardAppearAlpha = when {
+        !isMorphMeasured -> 0f
+        morphFromWideField -> 1f
+        else -> lerpF(MORPH_START_ALPHA, 1f, (progress / MORPH_FADE_IN_FRACTION).coerceIn(0f, 1f))
+    }
     val currentElevation = androidx.compose.ui.unit.lerp(0.dp, 12.dp, progress)
 
-    val innerHorizontalPadding = 14.dp
+    // Из поля: капсула сама становится полем окна — рамка карточки нарастает вокруг неё,
+    // а кнопка закрытия раздвигается и отодвигает правый край поля
+    val innerHorizontalPadding = if (morphFromWideField) {
+        androidx.compose.ui.unit.lerp(with(density) { wideFieldStartInsetPx.toDp() }, 14.dp, progress)
+    } else {
+        14.dp
+    }
     val innerTopPadding = CARD_INNER_TOP_PADDING
 
     val exitAlpha = exitAlphaAnim.value
     val backdropAlpha = (progress * 0.45f * exitAlpha).coerceIn(0f, 0.45f)
-    // Внутренняя раскладка при морфинге не пересчитывается — меняется только прозрачность,
+    // Из круга внутренняя раскладка при морфинге не пересчитывается — меняется только прозрачность,
     // поэтому рост карточки остаётся чистым преобразованием слоя
     val closeButtonAlpha = (progress / 0.5f).coerceIn(0f, 1f)
-    val closeButtonWidth = 44.dp
-    val closeButtonSpacer = 12.dp
+    val closeButtonWidth = if (morphFromWideField) androidx.compose.ui.unit.lerp(0.dp, 44.dp, closeButtonAlpha) else 44.dp
+    val closeButtonSpacer = if (morphFromWideField) androidx.compose.ui.unit.lerp(0.dp, 12.dp, closeButtonAlpha) else 12.dp
 
     val contentAlpha = (progress / 0.45f).coerceIn(0f, 1f)
 
