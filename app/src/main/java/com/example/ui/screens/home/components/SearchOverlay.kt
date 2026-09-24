@@ -78,6 +78,13 @@ private const val MORPH_DURATION_MS = 250
 // Жёсткость пружины разворота из поля стартового экрана: при затухании LowBouncy весь ход
 // (рост, перелёт ~3% и возврат) укладывается в те же ~250 мс, что и рост из круга на списках
 private const val MORPH_WIDE_SPRING_STIFFNESS = 700f
+// Пружинистость окна при развороте из поля — отдельный толчок, стартующий вместе с разворотом вниз.
+// Окно вместе с содержимым раздаётся в стороны и вниз от верхнего края (пик ~3%, ~5 dp на сторону),
+// затем заметно отыгрывает назад уже итогового и успокаивается. Значение анимации — лишний размер
+// в процентах; начальная скорость подобрана по замеру на телефоне
+private const val MORPH_WIDE_BULGE_KICK_PERCENT_PER_SEC = 120f
+private const val MORPH_WIDE_BULGE_DAMPING = 0.35f
+private const val MORPH_WIDE_BULGE_STIFFNESS = 400f
 // Запасной источник, если прямоугольник поля/иконки неизвестен: доля карточки у её верхнего края
 private const val MORPH_FALLBACK_SCALE = 0.55f
 // Карточка стартует полупрозрачной и становится непрозрачной с самого начала роста
@@ -148,6 +155,8 @@ fun ThingsSearchOverlay(
     val isDark = isSystemInDarkTheme()
     val coroutineScope = rememberCoroutineScope()
     val expansionAnim = remember { Animatable(0f) }
+    // Пружинистое растяжение окна при развороте из поля, в процентах
+    val bulgeAnim = remember { Animatable(0f) }
     val exitAlphaAnim = remember { Animatable(1f) }
     var isMorphClosing by remember { mutableStateOf(false) }
 
@@ -159,6 +168,19 @@ fun ThingsSearchOverlay(
     // из пилюли/кружка за ~140 мс с одним коротким отскоком
     LaunchedEffect(isMorphMeasured) {
         if (!isMorphMeasured) return@LaunchedEffect
+        if (morphFromWideField) {
+            // Толчок стартует в тот же кадр, что и разворот вниз: одно общее движение
+            launch {
+                bulgeAnim.animateTo(
+                    targetValue = 0f,
+                    animationSpec = spring(
+                        dampingRatio = MORPH_WIDE_BULGE_DAMPING,
+                        stiffness = MORPH_WIDE_BULGE_STIFFNESS
+                    ),
+                    initialVelocity = MORPH_WIDE_BULGE_KICK_PERCENT_PER_SEC
+                )
+            }
+        }
         expansionAnim.animateTo(
             targetValue = 1f,
             animationSpec = if (morphFromWideField) {
@@ -323,6 +345,7 @@ fun ThingsSearchOverlay(
     var layerTranslationY = 0f
     var layerScaleX = 1f
     var layerScaleY = 1f
+    var layerTransformOrigin = TransformOrigin(pivotFractionX = 0f, pivotFractionY = 0f)
     var cardShape: Shape = RoundedCornerShape(MORPH_FINAL_CORNER_RADIUS)
     val dst = cardBoundsInRoot
     if (dst != null && dst.width > 0f && dst.height > 0f) {
@@ -343,16 +366,22 @@ fun ThingsSearchOverlay(
         val radius = lerpF(sourceRadius, finalRadiusPx, progress)
             .coerceAtMost(minOf(cur.width, cur.height) / 2f)
         if (morphFromWideField) {
-            // Из поля ввода: окно разворачивается вниз, содержимое не сжимается.
-            // Внутреннее поле карточки стартует ровно на месте поля стартового экрана:
-            // по вертикали — сдвигом слоя, по горизонтали — стартовым внутренним отступом
+            // Из поля ввода: окно разворачивается вниз раскрытием, вместе с перелётом пружины,
+            // содержимое по вертикали не сжимается. Внутреннее поле карточки стартует ровно на месте
+            // поля стартового экрана: по вертикали — сдвигом слоя, по горизонтали — стартовым внутренним отступом
             wideFieldStartInsetPx = (src.left - dst.left).coerceAtLeast(0f)
             layerTranslationY = lerpF(src.top - dst.top - innerTopPaddingPx, 0f, morphEased)
             val originY = dst.top + layerTranslationY
+            // Одновременно окно вместе с содержимым пружинит толчком bulgeAnim: раздаётся в стороны
+            // от центра и вниз от верхнего края, отдаёт назад и успокаивается
+            val bulge = 1f + bulgeAnim.value / 100f
+            layerScaleX = bulge
+            layerScaleY = bulge
+            layerTransformOrigin = TransformOrigin(pivotFractionX = 0.5f, pivotFractionY = 0f)
             cardShape = MorphCardShape(
                 rect = Rect(cur.left - dst.left, cur.top - originY, cur.right - dst.left, cur.bottom - originY),
-                radiusX = radius,
-                radiusY = radius
+                radiusX = radius / layerScaleX,
+                radiusY = radius / layerScaleY
             )
         } else {
             // Из круглой иконки: карточка растягивается вниз и в стороны вместе с содержимым
@@ -427,7 +456,7 @@ fun ThingsSearchOverlay(
                     translationY = layerTranslationY
                     scaleX = layerScaleX
                     scaleY = layerScaleY
-                    transformOrigin = TransformOrigin(pivotFractionX = 0f, pivotFractionY = 0f)
+                    transformOrigin = layerTransformOrigin
                 }
                 .clip(cardShape)
                 .clickable(
