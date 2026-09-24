@@ -140,7 +140,10 @@ fun ThingsSearchOverlay(
     // true — источник широкое поле поиска (стартовый экран): окно разворачивается из поля вниз,
     // содержимое не масштабируется. false — круглая иконка (экраны списков): карточка растягивается
     // из круга вниз и в стороны вместе с содержимым
-    morphFromWideField: Boolean = false
+    morphFromWideField: Boolean = false,
+    // Карточка измерена и со следующего кадра рисуется на месте источника: только теперь
+    // можно прятать поле стартового экрана, иначе между ними остаётся пустой кадр
+    onMorphReady: () -> Unit = {}
 ) {
     val isDark = isSystemInDarkTheme()
     val coroutineScope = rememberCoroutineScope()
@@ -413,7 +416,11 @@ fun ThingsSearchOverlay(
                 .padding(start = currentHorizontalMargin, end = currentHorizontalMargin, top = 20.dp, bottom = 20.dp)
                 .widthIn(max = 480.dp)
                 // Координаты до слоя — итоговое место карточки без учёта морфинга
-                .onGloballyPositioned { cardBoundsInRoot = Rect(it.positionInRoot(), it.size.toSize()) }
+                .onGloballyPositioned {
+                    val wasMeasured = cardBoundsInRoot != null
+                    cardBoundsInRoot = Rect(it.positionInRoot(), it.size.toSize())
+                    if (!wasMeasured) onMorphReady()
+                }
                 .graphicsLayer {
                     alpha = exitAlpha * cardAppearAlpha
                     translationX = layerTranslationX

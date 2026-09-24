@@ -161,6 +161,8 @@ fun ThingsHomeScreen(viewModel: ThingsViewModel = hiltViewModel()) {
     var editingAreaId by remember { mutableStateOf<String?>(null) }
     var showFabMenu by remember { mutableStateOf(false) }
     var isSearchOverlayActive by remember { mutableStateOf(false) }
+    // Окно поиска готово рисоваться на месте поля: поле стартового экрана прячется только после этого
+    var isSearchMorphReady by remember { mutableStateOf(false) }
     // Прямоугольник, из которого разворачивается Quick Find (поле поиска или круг оттяжки)
     var searchMorphSource by remember { mutableStateOf<Rect?>(null) }
     var searchWasPulled by remember { mutableStateOf(false) }
@@ -409,9 +411,10 @@ fun ThingsHomeScreen(viewModel: ThingsViewModel = hiltViewModel()) {
                                 searchMorphSource = sourceBounds
                                 searchWasPulled = wasPulled
                                 searchFromWideField = true
+                                isSearchMorphReady = false
                                 isSearchOverlayActive = true
                             },
-                            isSearchOverlayActive = isSearchOverlayActive,
+                            isSearchOverlayActive = isSearchOverlayActive && isSearchMorphReady,
                             editingProjectId = editingProjectId,
                             onEditingProjectIdChange = { editingProjectId = it },
                             editingAreaId = editingAreaId,
@@ -509,6 +512,7 @@ fun ThingsHomeScreen(viewModel: ThingsViewModel = hiltViewModel()) {
                                     searchMorphSource = event.sourceBounds
                                     searchWasPulled = true
                                     searchFromWideField = false
+                                    isSearchMorphReady = false
                                     isSearchOverlayActive = true
                                 }
                                 ThingsCategoryListEvent.ClickBack -> {
@@ -698,6 +702,7 @@ fun ThingsHomeScreen(viewModel: ThingsViewModel = hiltViewModel()) {
                     morphSource = searchMorphSource,
                     wasPulled = searchWasPulled,
                     morphFromWideField = searchFromWideField,
+                    onMorphReady = { isSearchMorphReady = true },
                     searchQuery = searchQuery,
                     onSearchQueryChange = { viewModel.setSearchQuery(it) },
                     allTasks = allTasksRaw,
