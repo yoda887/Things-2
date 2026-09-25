@@ -288,8 +288,15 @@ fun ThingsSearchOverlay(
     val textSecondary = if (isDark) Color(0xFF8E8E93) else Color(0xFF8E8E93)
     val inputNormalBackground = if (isDark) Color(0xFF2C2C2E) else Color(0xFFF2F2F7)
     val startCardBg = if (wasPulled) ThingsBlue else inputNormalBackground
-    val currentCardBg = androidx.compose.ui.graphics.lerp(startCardBg, cardBackground, progress)
-    val currentInputBg = androidx.compose.ui.graphics.lerp(Color.Transparent, inputNormalBackground, progress)
+    // Из поля стартового экрана карточка сразу белая, а цвет поля (синий при оттяжке) меняет
+    // только сама капсула поиска. Из круга оттяжки карточка и есть круг — она белеет вместе с ним
+    val currentCardBg = if (morphFromWideField) cardBackground
+        else androidx.compose.ui.graphics.lerp(startCardBg, cardBackground, progress)
+    val currentInputBg = if (morphFromWideField) {
+        androidx.compose.ui.graphics.lerp(startCardBg, inputNormalBackground, progress)
+    } else {
+        androidx.compose.ui.graphics.lerp(Color.Transparent, inputNormalBackground, progress)
+    }
     val closeButtonBackground = if (isDark) Color(0xFF2C2C2E) else Color(0xFFE5E5EA)
 
     // Карточка всегда раскладывается в своём итоговом месте, путь от источника к нему
