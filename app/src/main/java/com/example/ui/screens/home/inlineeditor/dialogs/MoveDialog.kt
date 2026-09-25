@@ -37,7 +37,7 @@ import com.example.data.model.Item
 import com.example.data.model.ItemWithChecklist
 import com.example.ui.components.ProjectProgressArc
 import com.example.ui.theme.ThingsBlue
-import com.example.ui.theme.ThingsLogbookGreen
+import com.example.ui.theme.ThingsAreaGreen
 import androidx.compose.material.icons.outlined.Layers
 import com.example.ui.theme.dimens
 
@@ -274,7 +274,7 @@ fun ThingsMoveDialog(
                                 MoveDialogRow(
                                     title = area.title,
                                     icon = CustomAreaIcon,
-                                    iconColor = ThingsLogbookGreen,
+                                    iconColor = ThingsAreaGreen,
                                     isSelected = isSelected,
                                     isAreaHeader = true,
                                     onClick = {

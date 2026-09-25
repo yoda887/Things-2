@@ -986,7 +986,7 @@ fun ThingsHomeScreen(viewModel: ThingsViewModel = hiltViewModel()) {
                                     Icon(
                                         imageVector = Icons.Default.Layers,
                                         contentDescription = null,
-                                        tint = ThingsLogbookGreen,
+                                        tint = ThingsAreaGreen,
                                         modifier = Modifier.size(20.dp)
                                     )
                                 }
