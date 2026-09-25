@@ -166,7 +166,7 @@ fun ThingsHomeScreen(viewModel: ThingsViewModel = hiltViewModel()) {
     // Прямоугольник, из которого разворачивается Quick Find (поле поиска или круг оттяжки)
     var searchMorphSource by remember { mutableStateOf<Rect?>(null) }
     var searchWasPulled by remember { mutableStateOf(false) }
-    // Источник морфинга: широкое поле поиска стартового экрана или круглая иконка оттяжки на списках
+    // Источник морфинга — поле поиска стартового экрана (иначе круг оттяжки на экранах списков)
     var searchFromWideField by remember { mutableStateOf(true) }
     var newTaskTitlePrefill by remember { mutableStateOf("") }
     var isListDialogActive by remember { mutableStateOf(false) }
@@ -700,8 +700,8 @@ fun ThingsHomeScreen(viewModel: ThingsViewModel = hiltViewModel()) {
             if (isSearchOverlayActive) {
                 ThingsSearchOverlay(
                     morphSource = searchMorphSource,
-                    wasPulled = searchWasPulled,
                     morphFromWideField = searchFromWideField,
+                    wasPulled = searchWasPulled,
                     onMorphReady = { isSearchMorphReady = true },
                     searchQuery = searchQuery,
                     onSearchQueryChange = { viewModel.setSearchQuery(it) },
