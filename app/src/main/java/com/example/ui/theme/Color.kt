@@ -19,6 +19,13 @@ val ThingsAreaGreen: Color
     get() = if (isSystemInDarkTheme()) ThingsAreaGreenDark else ThingsAreaGreenLight
 val ThingsSwipeWhenYellow = Color(0xFFFFD401)
 
+// Quick Find search match highlight (themes-ios.json)
+val SearchMatchHighlightLight = Color(0xFFFFE692)
+val SearchMatchHighlightDark = Color(0xFF6E5D01)
+val SearchMatchHighlight: Color
+    @Composable
+    get() = if (isSystemInDarkTheme()) SearchMatchHighlightDark else SearchMatchHighlightLight
+
 // Light Mode Theme
 val ThingsBackgroundLight = Color(0xFFFFFFFF)
 val ThingsSurfaceLight = Color(0xFFF4F5F7)

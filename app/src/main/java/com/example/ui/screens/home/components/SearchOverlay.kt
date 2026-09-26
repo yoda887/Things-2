@@ -5,6 +5,7 @@ import kotlinx.coroutines.launch
 import androidx.compose.animation.*
 import androidx.compose.animation.core.Animatable
 import androidx.compose.animation.core.CubicBezierEasing
+import androidx.compose.animation.core.Easing
 import androidx.compose.animation.core.FastOutSlowInEasing
 import androidx.compose.animation.core.LinearEasing
 import androidx.compose.ui.graphics.TransformOrigin
@@ -52,6 +53,9 @@ import androidx.compose.ui.unit.LayoutDirection
 import androidx.compose.ui.unit.toSize
 import androidx.compose.ui.platform.LocalView
 import androidx.compose.ui.platform.testTag
+import androidx.compose.ui.text.AnnotatedString
+import androidx.compose.ui.text.SpanStyle
+import androidx.compose.ui.text.buildAnnotatedString
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontStyle
 import androidx.compose.ui.text.font.FontWeight
@@ -72,17 +76,79 @@ import com.example.ui.components.HideTextSelectionHandles
 import com.example.ui.components.hideSoftKeyboardNow
 import com.example.ui.theme.*
 
-// Длительность геометрического морфинга карточки Quick Find
-private const val MORPH_DURATION_MS = 250
+// Номинальная длительность раскрытия формы карточки Quick Find (0.22 с)
+private const val MORPH_TRANSFORM_DURATION_MS = 220
+// Номинальная длительность проявления контента Quick Find (0.154 с = 220 * 0.7, functionByExpanding: 0.7)
+private const val MORPH_CONTENT_DURATION_MS = 154
+
 // Запасной источник, если прямоугольник поля/иконки неизвестен: доля карточки у её верхнего края
 private const val MORPH_FALLBACK_SCALE = 0.55f
 // Карточка стартует полупрозрачной и становится непрозрачной с самого начала роста
 private const val MORPH_START_ALPHA = 0.55f
 private const val MORPH_FADE_IN_FRACTION = 0.6f
 private val MORPH_FINAL_CORNER_RADIUS = 24.dp
-// Один короткий отскок как в эталоне: рост перелетает финальный размер примерно на 2%
-// и мягко возвращается назад
-private val MorphOvershootEasing = CubicBezierEasing(0.2f, 1.25f, 0.45f, 1f)
+
+/**
+ * Точная кривая пружины затухания, соответствующая оригинальному
+ * MSInterpolationFunctions.spring(withDampingRatio: 0.8, duration: 0.22).
+ * Окно нормировано к [0, 1] с естественным пиком перелёта ~1.5% (микро-overshoot).
+ */
+class ThingsSpringEasing(
+    private val zeta: Float = 0.8f
+) : Easing {
+    override fun transform(fraction: Float): Float {
+        if (fraction <= 0f) return 0f
+        if (fraction >= 1f) return 1f
+        val z = zeta.coerceIn(1e-4f, 0.9999f)
+        val w0 = 2f * Math.PI.toFloat()
+        val wd = w0 * kotlin.math.sqrt(1f - z * z)
+        val e = kotlin.math.exp(-z * w0 * fraction)
+        val raw = 1f - e * (kotlin.math.cos(wd * fraction) + (z * w0 / wd) * kotlin.math.sin(wd * fraction))
+        val endVal = 1f - kotlin.math.exp(-z * w0)
+        return (raw / endVal).coerceAtLeast(0f)
+    }
+}
+
+/**
+ * Подсвечивает совпадения поискового запроса [searchQuery] в строке [text] фоновым цветом [highlightColor].
+ */
+@Composable
+fun rememberHighlightedText(
+    text: String,
+    query: String,
+    highlightColor: Color = SearchMatchHighlight
+): AnnotatedString {
+    return remember(text, query, highlightColor) {
+        if (query.isBlank() || !text.contains(query, ignoreCase = true)) {
+            AnnotatedString(text)
+        } else {
+            buildAnnotatedString {
+                var currentIndex = 0
+                val lowerText = text.lowercase()
+                val lowerQuery = query.trim().lowercase()
+                val queryLength = lowerQuery.length
+
+                while (currentIndex < text.length) {
+                    val matchIndex = lowerText.indexOf(lowerQuery, currentIndex)
+                    if (matchIndex < 0) {
+                        append(text.substring(currentIndex))
+                        break
+                    } else {
+                        if (matchIndex > currentIndex) {
+                            append(text.substring(currentIndex, matchIndex))
+                        }
+                        val matchEnd = matchIndex + queryLength
+                        val matchText = text.substring(matchIndex, matchEnd)
+                        pushStyle(SpanStyle(background = highlightColor))
+                        append(matchText)
+                        pop()
+                        currentIndex = matchEnd
+                    }
+                }
+            }
+        }
+    }
+}
 
 /**
  * Форма карточки во время морфинга: скруглённый прямоугольник [rect] в локальных координатах
@@ -142,42 +208,85 @@ fun ThingsSearchOverlay(
 ) {
     val isDark = isSystemInDarkTheme()
     val coroutineScope = rememberCoroutineScope()
-    val expansionAnim = remember { Animatable(0f) }
-    val exitAlphaAnim = remember { Animatable(1f) }
+    val transformProgress = remember { Animatable(0f) }
+    val opacityProgress = remember { Animatable(0f) }
     var isMorphClosing by remember { mutableStateOf(false) }
+
+    val context = androidx.compose.ui.platform.LocalContext.current
+    val isReduceMotion = remember {
+        try {
+            android.provider.Settings.Global.getFloat(
+                context.contentResolver,
+                android.provider.Settings.Global.ANIMATOR_DURATION_SCALE,
+                1f
+            ) == 0f
+        } catch (e: Exception) {
+            false
+        }
+    }
 
     // Итоговый прямоугольник карточки нужен до старта роста: морфинг идёт от источника к нему
     var cardBoundsInRoot by remember { mutableStateOf<Rect?>(null) }
     val isMorphMeasured = cardBoundsInRoot != null
 
-    // [ИЗМЕНЕНИЕ]: Геометрический морфинг как в эталоне — карточка вырастает из источника
-    // (поле поиска или кружок оттяжки) за 250 мс с одним коротким отскоком
+    // [ИЗМЕНЕНИЕ]: Физика MotionSickness — форма раскрывается за 220 мс по пружине ζ = 0.8,
+    // а контент проявляется за 154 мс (functionByExpanding: 0.7)
     LaunchedEffect(isMorphMeasured) {
         if (!isMorphMeasured) return@LaunchedEffect
-        expansionAnim.animateTo(
-            targetValue = 1f,
-            animationSpec = tween(
-                durationMillis = MORPH_DURATION_MS,
-                easing = LinearEasing
-            )
-        )
+        if (isReduceMotion) {
+            transformProgress.snapTo(1f)
+            opacityProgress.animateTo(1f, tween(100))
+        } else {
+            coroutineScope.launch {
+                transformProgress.animateTo(
+                    targetValue = 1f,
+                    animationSpec = tween(
+                        durationMillis = MORPH_TRANSFORM_DURATION_MS,
+                        easing = ThingsSpringEasing(0.8f)
+                    )
+                )
+            }
+            coroutineScope.launch {
+                opacityProgress.animateTo(
+                    targetValue = 1f,
+                    animationSpec = tween(
+                        durationMillis = MORPH_CONTENT_DURATION_MS,
+                        easing = ThingsSpringEasing(0.8f)
+                    )
+                )
+            }
+        }
     }
 
     val view = LocalView.current
 
-    val handleClose: () -> Unit = remember(isMorphClosing) {
+    val handleClose: () -> Unit = remember(isMorphClosing, isReduceMotion) {
         {
             if (!isMorphClosing) {
                 isMorphClosing = true
                 view.hideSoftKeyboardNow()
                 coroutineScope.launch {
-                    exitAlphaAnim.animateTo(
-                        targetValue = 0f,
-                        animationSpec = tween(
-                            durationMillis = 180,
-                            easing = FastOutSlowInEasing
+                    if (isReduceMotion) {
+                        opacityProgress.animateTo(0f, tween(100))
+                        transformProgress.snapTo(0f)
+                    } else {
+                        launch {
+                            opacityProgress.animateTo(
+                                targetValue = 0f,
+                                animationSpec = tween(
+                                    durationMillis = MORPH_CONTENT_DURATION_MS,
+                                    easing = ThingsSpringEasing(0.8f)
+                                )
+                            )
+                        }
+                        transformProgress.animateTo(
+                            targetValue = 0f,
+                            animationSpec = tween(
+                                durationMillis = MORPH_TRANSFORM_DURATION_MS,
+                                easing = ThingsSpringEasing(0.8f)
+                            )
                         )
-                    )
+                    }
                     onClose()
                 }
             }
@@ -279,9 +388,10 @@ fun ThingsSearchOverlay(
         projects.firstOrNull { it.type == 1 }
     }
 
-    // Ход анимации линейный: масштаб берёт свою кривую с отскоком, остальное — обычное замедление
-    val morphRaw = expansionAnim.value
-    val progress = FastOutSlowInEasing.transform(morphRaw)
+    // Ход анимации формы (220 мс, пружина ζ = 0.8) и проявления контента (154 мс, functionByExpanding: 0.7)
+    val morphRaw = transformProgress.value
+    val progress = morphRaw.coerceIn(0f, 1f)
+    val contentAlpha = opacityProgress.value.coerceIn(0f, 1f)
 
     val cardBackground = if (isDark) Color(0xFF1C1C1E) else Color.White
     val textPrimary = if (isDark) Color.White else Color(0xFF1C1C1E)
@@ -304,7 +414,6 @@ fun ThingsSearchOverlay(
     val currentHorizontalMargin = 14.dp
     val density = LocalDensity.current
     val finalRadiusPx = with(density) { MORPH_FINAL_CORNER_RADIUS.toPx() }
-    val morphEased = MorphOvershootEasing.transform(morphRaw)
 
     // Высота шапки (поле ввода и ✕) в раскладке — нужна, чтобы содержимое шло сразу под несжатой шапкой
     var headerHeightPx by remember { mutableStateOf(0) }
@@ -322,12 +431,12 @@ fun ThingsSearchOverlay(
             right = dst.center.x + dst.width * MORPH_FALLBACK_SCALE / 2f,
             bottom = dst.top + dst.height * MORPH_FALLBACK_SCALE
         )
-        // Текущий прямоугольник на экране: от источника к карточке, с одним коротким отскоком
+        // Текущий прямоугольник на экране: от источника к карточке по пружине
         val cur = Rect(
-            left = lerpF(src.left, dst.left, morphEased),
-            top = lerpF(src.top, dst.top, morphEased),
-            right = lerpF(src.right, dst.right, morphEased),
-            bottom = lerpF(src.bottom, dst.bottom, morphEased)
+            left = lerpF(src.left, dst.left, morphRaw),
+            top = lerpF(src.top, dst.top, morphRaw),
+            right = lerpF(src.right, dst.right, morphRaw),
+            bottom = lerpF(src.bottom, dst.bottom, morphRaw)
         )
         val sourceRadius = minOf(src.width, src.height) / 2f
         val radius = lerpF(sourceRadius, finalRadiusPx, progress)
@@ -348,27 +457,21 @@ fun ThingsSearchOverlay(
     val currentElevation = androidx.compose.ui.unit.lerp(0.dp, 12.dp, progress)
 
     // Из поля стартового экрана поле окна в первом кадре занимает всю капсулу:
-    // отступы от краёв карточки нарастают от 0. Отступы, верхний отступ шапки и ширина ✕ идут
-    // по той же кривой, что и прямоугольник окна, иначе край окна уезжает раньше отступов
-    // и поле в первые кадры скачет вверх и в сторону
-    val fieldMorph = morphEased.coerceAtLeast(0f)
+    // отступы от краёв карточки нарастают от 0.
+    val fieldMorph = morphRaw.coerceAtLeast(0f)
     val innerHorizontalPadding = if (morphFromWideField) {
-        androidx.compose.ui.unit.lerp(0.dp, 14.dp, fieldMorph)
+        androidx.compose.ui.unit.lerp(0.dp, 14.dp, fieldMorph.coerceAtMost(1f))
     } else {
         14.dp
     }
     val innerTopPadding = 20.dp
 
-    val exitAlpha = exitAlphaAnim.value
-    val backdropAlpha = (progress * 0.45f * exitAlpha).coerceIn(0f, 0.45f)
-    // Внутренняя раскладка при морфинге не пересчитывается — меняется только прозрачность,
-    // поэтому рост карточки остаётся чистым преобразованием слоя
-    val closeButtonAlpha = (progress / 0.5f).coerceIn(0f, 1f)
+    val backdropAlpha = (morphRaw * 0.45f).coerceIn(0f, 0.45f)
+    // Внутренняя раскладка при морфинге не пересчитывается — меняется только прозрачность
+    val closeButtonAlpha = (opacityProgress.value / 0.7f).coerceIn(0f, 1f)
     // Из поля стартового экрана ✕ раздвигается и отодвигает правый край поля
     val closeButtonWidth = if (morphFromWideField) androidx.compose.ui.unit.lerp(0.dp, 44.dp, fieldMorph.coerceAtMost(1f)) else 44.dp
     val closeButtonSpacer = if (morphFromWideField) androidx.compose.ui.unit.lerp(0.dp, 12.dp, fieldMorph.coerceAtMost(1f)) else 12.dp
-
-    val contentAlpha = (progress / 0.45f).coerceIn(0f, 1f)
 
     Box(
         modifier = modifier
@@ -381,7 +484,7 @@ fun ThingsSearchOverlay(
             ),
         contentAlignment = Alignment.TopCenter
     ) {
-        // [ИЗМЕНЕНИЕ]: Контейнер диалога поиска с бесшовным морфингом при открытии и чистым fade-out при закрытии
+        // [ИЗМЕНЕНИЕ]: Контейнер диалога поиска с бесшовным морфингом при открытии и обратным схлопыванием при закрытии
         Card(
             colors = CardDefaults.cardColors(containerColor = currentCardBg),
             shape = cardShape,
@@ -397,7 +500,7 @@ fun ThingsSearchOverlay(
                     if (!wasMeasured) onMorphReady()
                 }
                 .graphicsLayer {
-                    alpha = exitAlpha * cardAppearAlpha
+                    alpha = cardAppearAlpha
                     translationX = layerTranslationX
                     translationY = layerTranslationY
                     scaleX = layerScaleX
@@ -498,17 +601,21 @@ fun ThingsSearchOverlay(
                                 }
                             }
                             
-                            // Кнопка очистки текста внутри инпута
+                            // Кнопка очистки текста внутри инпута (iOS cut-out badge)
                             if (searchQuery.isNotEmpty()) {
-                                IconButton(
-                                    onClick = { onSearchQueryChange("") },
-                                    modifier = Modifier.size(20.dp)
+                                Box(
+                                    contentAlignment = Alignment.Center,
+                                    modifier = Modifier
+                                        .size(18.dp)
+                                        .clip(CircleShape)
+                                        .background(textSecondary.copy(alpha = 0.5f))
+                                        .clickable { onSearchQueryChange("") }
                                 ) {
                                     Icon(
-                                        imageVector = Icons.Default.Cancel,
+                                        imageVector = Icons.Default.Close,
                                         contentDescription = "Clear",
-                                        tint = textSecondary.copy(alpha = 0.8f),
-                                        modifier = Modifier.size(18.dp)
+                                        tint = currentInputBg,
+                                        modifier = Modifier.size(11.dp)
                                     )
                                 }
                             }
@@ -581,6 +688,7 @@ fun ThingsSearchOverlay(
                                         allTasks = allTasks,
                                         projects = projects,
                                         areas = areas,
+                                        searchQuery = searchQuery,
                                         onTaskClick = onTaskClick,
                                         onProjectClick = onProjectClick,
                                         onAreaClick = onAreaClick,
@@ -597,7 +705,7 @@ fun ThingsSearchOverlay(
                                             imageVector = AppIcons.Today,
                                             contentDescription = null,
                                             tint = Color.Unspecified,
-                                            modifier = Modifier.size(20.dp)
+                                            modifier = Modifier.size(19.dp)
                                         )
                                     },
                                     textPrimary = textPrimary,
@@ -612,7 +720,7 @@ fun ThingsSearchOverlay(
                                             imageVector = Icons.Outlined.LocalOffer,
                                             contentDescription = null,
                                             tint = ThingsSomedayGrey,
-                                            modifier = Modifier.size(20.dp)
+                                            modifier = Modifier.size(19.dp)
                                         )
                                     },
                                     textPrimary = textPrimary,
@@ -625,18 +733,12 @@ fun ThingsSearchOverlay(
                                 RecentRow(
                                     title = recentProjectName,
                                     icon = {
-                                        Canvas(modifier = Modifier.size(20.dp)) {
-                                            drawCircle(
-                                                color = ThingsAnytimeTeal.copy(alpha = 0.2f),
-                                                radius = size.minDimension / 2f
-                                            )
-                                            drawArc(
-                                                color = ThingsAnytimeTeal,
-                                                startAngle = -90f,
-                                                sweepAngle = 120f,
-                                                useCenter = true
-                                            )
-                                        }
+                                        ProjectProgressArc(
+                                            completed = 1,
+                                            total = 3,
+                                            color = ThingsInboxBlue,
+                                            modifier = Modifier.size(20.dp)
+                                        )
                                     },
                                     textPrimary = textPrimary,
                                     onClick = {
@@ -653,10 +755,10 @@ fun ThingsSearchOverlay(
                                     title = "Upcoming",
                                     icon = {
                                         Icon(
-                                            imageVector = Icons.Default.CalendarToday,
+                                            imageVector = AppIcons.Upcoming,
                                             contentDescription = null,
-                                            tint = ThingsUpcomingRed,
-                                            modifier = Modifier.size(18.dp)
+                                            tint = Color.Unspecified,
+                                            modifier = Modifier.size(19.dp)
                                         )
                                     },
                                     textPrimary = textPrimary,
@@ -708,6 +810,7 @@ fun ThingsSearchOverlay(
                                 // [ИЗМЕНЕНИЕ]: Показываем только элемент Continue Search, если видимых результатов нет, но есть совпадения в глубоком поиске
                                 ContinueSearchTaskRow(
                                     onClick = onContinueSearchClick,
+                                    textPrimary = textPrimary,
                                     modifier = Modifier.fillMaxWidth()
                                 )
                             }
@@ -741,6 +844,7 @@ fun ThingsSearchOverlay(
                                         allTasks = allTasks,
                                         projects = projects,
                                         areas = areas,
+                                        searchQuery = searchQuery,
                                         onTaskClick = onTaskClick,
                                         onProjectClick = onProjectClick,
                                         onAreaClick = onAreaClick,
@@ -755,6 +859,7 @@ fun ThingsSearchOverlay(
                                         Spacer(modifier = Modifier.height(4.dp))
                                         ContinueSearchTaskRow(
                                             onClick = onContinueSearchClick,
+                                            textPrimary = textPrimary,
                                             modifier = Modifier.fillMaxWidth()
                                         )
                                     }
@@ -769,39 +874,40 @@ fun ThingsSearchOverlay(
 }
 
 /**
- * [ИЗМЕНЕНИЕ]: Компонент строки "Continue Search" (только иконка и заголовок, оба черного цвета)
+ * [ИЗМЕНЕНИЕ]: Компонент строки "Continue Search" (высота 44dp, капсула 22dp, лупа 22dp в колонке 28dp, вес SemiBold)
  */
 @Composable
 fun ContinueSearchTaskRow(
     onClick: () -> Unit,
-    modifier: Modifier = Modifier
+    modifier: Modifier = Modifier,
+    textPrimary: Color = MaterialTheme.colorScheme.onSurface
 ) {
     Row(
         verticalAlignment = Alignment.CenterVertically,
         modifier = modifier
             .fillMaxWidth()
-            .height(46.dp)
-            .clip(RoundedCornerShape(8.dp))
+            .height(44.dp)
+            .clip(RoundedCornerShape(22.dp))
             .clickable(onClick = onClick)
             .padding(start = 8.dp, end = 4.dp)
     ) {
         Box(
-            modifier = Modifier.size(24.dp),
+            modifier = Modifier.size(MaterialTheme.dimens.searchLeftColumnWidth),
             contentAlignment = Alignment.Center
         ) {
             Icon(
                 imageVector = Icons.Default.Search,
                 contentDescription = null,
-                tint = Color.Black,
-                modifier = Modifier.size(18.dp)
+                tint = textPrimary,
+                modifier = Modifier.size(22.dp)
             )
         }
-        Spacer(modifier = Modifier.width(12.dp))
+        Spacer(modifier = Modifier.width(MaterialTheme.dimens.searchSpacingToText))
         Text(
             text = "Continue Search",
-            color = Color.Black,
+            color = textPrimary,
             fontSize = MaterialTheme.typography.titleMedium.fontSize,
-            fontWeight = FontWeight.Normal,
+            fontWeight = FontWeight.SemiBold,
             maxLines = 1,
             overflow = TextOverflow.Ellipsis,
             modifier = Modifier.weight(1f)
@@ -820,22 +926,23 @@ fun RecentRow(
         verticalAlignment = Alignment.CenterVertically,
         modifier = Modifier
             .fillMaxWidth()
-            .clip(RoundedCornerShape(10.dp))
+            .height(44.dp)
+            .clip(RoundedCornerShape(22.dp))
             .clickable(onClick = onClick)
-            .padding(vertical = 10.dp, horizontal = 12.dp)
+            .padding(start = 8.dp, end = 4.dp)
     ) {
         Box(
-            modifier = Modifier.size(24.dp),
+            modifier = Modifier.size(MaterialTheme.dimens.searchLeftColumnWidth),
             contentAlignment = Alignment.Center
         ) {
             icon()
         }
-        Spacer(modifier = Modifier.width(12.dp))
+        Spacer(modifier = Modifier.width(MaterialTheme.dimens.searchSpacingToText))
         Text(
             text = title,
             color = textPrimary,
             fontSize = 16.sp,
-            fontWeight = FontWeight.Medium
+            fontWeight = FontWeight.Normal
         )
     }
 }
@@ -859,6 +966,7 @@ fun SearchResultRow(
     allTasks: List<ItemWithChecklist>,
     projects: List<Item>,
     areas: List<Area> = emptyList(),
+    searchQuery: String = "",
     onTaskClick: (ItemWithChecklist) -> Unit,
     onProjectClick: (Item) -> Unit,
     onAreaClick: (Area) -> Unit,
@@ -883,12 +991,15 @@ fun SearchResultRow(
         is SearchResultItem.ProjectResult -> {
             val totalCount = allTasks.count { it.item.projectId == result.project.id && it.item.type == 0 }
             val completedCount = allTasks.count { it.item.projectId == result.project.id && it.item.type == 0 && it.item.isCompleted }
-            
+            val isSomeday = result.project.isSomeday
+            val arcColor = if (isSomeday) ThingsSomedayGrey else ThingsInboxBlue
+            val highlightedTitle = rememberHighlightedText(result.project.title, searchQuery)
+
             Row(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .height(46.dp)
-                    .clip(RoundedCornerShape(8.dp))
+                    .height(44.dp)
+                    .clip(RoundedCornerShape(22.dp))
                     .clickable { onProjectClick(result.project) }
                     .padding(start = 8.dp, end = 4.dp),
                 verticalAlignment = Alignment.CenterVertically
@@ -900,12 +1011,13 @@ fun SearchResultRow(
                     ProjectProgressArc(
                         completed = completedCount,
                         total = totalCount,
+                        color = arcColor,
                         modifier = Modifier.size(20.dp)
                     )
                 }
                 Spacer(modifier = Modifier.width(MaterialTheme.dimens.searchSpacingToText))
                 Text(
-                    text = result.project.title,
+                    text = highlightedTitle,
                     style = MaterialTheme.typography.displaySmall.copy(
                         color = textPrimary,
                         fontWeight = FontWeight.Medium
@@ -921,12 +1033,20 @@ fun SearchResultRow(
             val rowBg = if (isHighlighted) ThingsInboxBlue.copy(alpha = 0.12f) else Color.Transparent
             val textStyleColor = if (isHighlighted) ThingsInboxBlue else textPrimary
 
+            val title = when (result) {
+                is SearchResultItem.SmartListResult -> result.title
+                is SearchResultItem.SpecialResult -> result.title
+                is SearchResultItem.AreaResult -> result.area.title
+                else -> ""
+            }
+            val highlightedTitle = rememberHighlightedText(title, searchQuery)
+
             Row(
                 verticalAlignment = Alignment.CenterVertically,
                 modifier = Modifier
                     .fillMaxWidth()
-                    .height(46.dp)
-                    .clip(RoundedCornerShape(8.dp))
+                    .height(44.dp)
+                    .clip(RoundedCornerShape(22.dp))
                     .background(rowBg)
                     .clickable {
                         when (result) {
@@ -939,7 +1059,7 @@ fun SearchResultRow(
                     .padding(start = 8.dp, end = 4.dp)
             ) {
                 Box(
-                    modifier = Modifier.size(24.dp),
+                    modifier = Modifier.size(MaterialTheme.dimens.searchLeftColumnWidth),
                     contentAlignment = Alignment.Center
                 ) {
                     when (result) {
@@ -953,29 +1073,23 @@ fun SearchResultRow(
                                 ActiveScreen.LOGBOOK -> Pair(AppIcons.Logbook, Color.Unspecified)
                                 else -> Pair(Icons.Default.Layers, ThingsSomedayGrey)
                             }
-                            Icon(imageVector = info.first, contentDescription = null, tint = info.second, modifier = Modifier.size(20.dp))
+                            Icon(imageVector = info.first, contentDescription = null, tint = info.second, modifier = Modifier.size(19.dp))
                         }
                         is SearchResultItem.SpecialResult -> {
                             Icon(imageVector = result.icon, contentDescription = null, tint = result.iconColor, modifier = Modifier.size(20.dp))
                         }
                         is SearchResultItem.AreaResult -> {
-                            Icon(imageVector = Icons.Default.Layers, contentDescription = null, tint = ThingsSomedayGrey, modifier = Modifier.size(20.dp))
+                            Icon(imageVector = AppIcons.Area, contentDescription = null, tint = ThingsAreaGreen, modifier = Modifier.size(20.dp))
                         }
                         else -> {}
                     }
                 }
 
-                Spacer(modifier = Modifier.width(12.dp))
+                Spacer(modifier = Modifier.width(MaterialTheme.dimens.searchSpacingToText))
 
                 Column(modifier = Modifier.weight(1f)) {
-                    val title = when (result) {
-                        is SearchResultItem.SmartListResult -> result.title
-                        is SearchResultItem.SpecialResult -> result.title
-                        is SearchResultItem.AreaResult -> result.area.title
-                        else -> ""
-                    }
                     Text(
-                        text = title,
+                        text = highlightedTitle,
                         color = textStyleColor,
                         fontSize = MaterialTheme.typography.titleMedium.fontSize,
                         fontWeight = FontWeight.Normal,
@@ -1004,3 +1118,4 @@ fun SearchResultRow(
         }
     }
 }
+
