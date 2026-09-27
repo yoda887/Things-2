@@ -227,6 +227,11 @@ fun TaskItemRow(
                             .size(16.dp)
                     )
                 } else {
+                    val checkboxUncheckedColor = if (isHighlighted) {
+                        androidx.compose.ui.graphics.lerp(Color(0xFFC7C7CC), ThingsBlue, 0.45f)
+                    } else {
+                        Color(0xFFC7C7CC)
+                    }
                     ThingsCheckbox(
                         checked = localCompleted,
                         onCheckedChange = {
@@ -261,6 +266,7 @@ fun TaskItemRow(
                             }
                         },
                         size = 16.dp,
+                        uncheckedColor = checkboxUncheckedColor,
                         isDashed = task.start == 3 && !localCompleted,
                         modifier = Modifier
                             .testTag("task_checkbox")
@@ -455,11 +461,16 @@ fun TaskItemRow(
                 }
 
                 if (subtitle != null) {
+                    val subtitleColor = if (isHighlighted) {
+                        androidx.compose.ui.graphics.lerp(Color(0xFF8E8E93), ThingsBlue, 0.45f)
+                    } else {
+                        Color(0xFF8E8E93)
+                    }
                     Text(
                         text = subtitle,
                         style = TextStyle(
                             fontSize = subFontSize,
-                            color = Color(0xFF8E8E93),
+                            color = subtitleColor,
                             fontWeight = FontWeight.Normal
                         )
                     )

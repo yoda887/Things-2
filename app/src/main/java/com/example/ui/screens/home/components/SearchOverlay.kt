@@ -31,9 +31,12 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.drawWithContent
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
+import androidx.compose.ui.graphics.BlendMode
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.CompositingStrategy
 import androidx.compose.ui.graphics.SolidColor
 import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.graphics.graphicsLayer
@@ -204,7 +207,10 @@ fun ThingsSearchOverlay(
     morphFromWideField: Boolean = false,
     // Карточка измерена и со следующего кадра рисуется на месте источника: только теперь
     // можно прятать поле стартового экрана, иначе между ними остаётся пустой кадр
-    onMorphReady: () -> Unit = {}
+    onMorphReady: () -> Unit = {},
+    currentScreen: ActiveScreen = ActiveScreen.HOME,
+    currentProject: Item? = null,
+    currentArea: Area? = null
 ) {
     val isDark = isSystemInDarkTheme()
     val coroutineScope = rememberCoroutineScope()
@@ -592,7 +598,7 @@ fun ThingsSearchOverlay(
                                         ),
                                         singleLine = true,
                                         keyboardOptions = KeyboardOptions(imeAction = ImeAction.Search),
-                                        cursorBrush = SolidColor(if (isMorphClosing || isClosing) Color.Unspecified else Color.Black),
+                                        cursorBrush = SolidColor(if (isMorphClosing || isClosing) Color.Unspecified else ThingsBlue),
                                         modifier = Modifier
                                             .fillMaxWidth()
                                             .focusRequester(focusRequester)
@@ -681,6 +687,12 @@ fun ThingsSearchOverlay(
                             // Отображаем недавно найденные в поиске объекты, либо фоллбек по умолчанию
                             if (recentSearchItems.isNotEmpty()) {
                                 recentSearchItems.take(5).forEach { result ->
+                                    val isCurrent = when (result) {
+                                        is SearchResultItem.SmartListResult -> currentScreen == result.screen
+                                        is SearchResultItem.ProjectResult -> currentScreen == ActiveScreen.PROJECT_DETAIL && currentProject?.id == result.project.id
+                                        is SearchResultItem.AreaResult -> currentScreen == ActiveScreen.AREA_DETAIL && currentArea?.id == result.area.id
+                                        else -> false
+                                    }
                                     SearchResultRow(
                                         result = result,
                                         textPrimary = textPrimary,
@@ -689,6 +701,8 @@ fun ThingsSearchOverlay(
                                         projects = projects,
                                         areas = areas,
                                         searchQuery = searchQuery,
+                                        isHighlighted = false,
+                                        isChecked = isCurrent,
                                         onTaskClick = onTaskClick,
                                         onProjectClick = onProjectClick,
                                         onAreaClick = onAreaClick,
@@ -697,6 +711,24 @@ fun ThingsSearchOverlay(
                                     )
                                 }
                             } else {
+                                // Если поиск открыт из экрана области ответственности — показываем её с синей галочкой
+                                if (currentScreen == ActiveScreen.AREA_DETAIL && currentArea != null) {
+                                    RecentRow(
+                                        title = currentArea.title,
+                                        icon = {
+                                            Icon(
+                                                imageVector = AppIcons.Area,
+                                                contentDescription = null,
+                                                tint = ThingsAreaGreen,
+                                                modifier = Modifier.size(20.dp)
+                                            )
+                                        },
+                                        textPrimary = textPrimary,
+                                        isChecked = true,
+                                        onClick = { onAreaClick(currentArea) }
+                                    )
+                                }
+
                                 // 1. Today
                                 RecentRow(
                                     title = "Today",
@@ -709,6 +741,7 @@ fun ThingsSearchOverlay(
                                         )
                                     },
                                     textPrimary = textPrimary,
+                                    isChecked = (currentScreen == ActiveScreen.TODAY),
                                     onClick = { onSmartListClick(ActiveScreen.TODAY) }
                                 )
 
@@ -724,26 +757,37 @@ fun ThingsSearchOverlay(
                                         )
                                     },
                                     textPrimary = textPrimary,
+                                    isChecked = (currentScreen == ActiveScreen.ANYTIME),
                                     onClick = {
                                         onSmartListClick(ActiveScreen.ANYTIME)
                                     }
                                 )
 
-                                // 3. Динамический или статический проект (как Vacation in Rome)
+                                // 3. Проект (текущий если открыт из проекта, иначе первый проект или Vacation in Rome)
+                                val displayProject = if (currentScreen == ActiveScreen.PROJECT_DETAIL && currentProject != null) {
+                                    currentProject
+                                } else {
+                                    recentProject
+                                }
+                                val displayProjectName = displayProject?.title ?: recentProjectName
+                                val isCurrentProject = currentScreen == ActiveScreen.PROJECT_DETAIL && (currentProject == null || currentProject.id == displayProject?.id)
                                 RecentRow(
-                                    title = recentProjectName,
+                                    title = displayProjectName,
                                     icon = {
+                                        val totalCount = if (displayProject != null) allTasks.count { it.item.projectId == displayProject.id && it.item.type == 0 } else 3
+                                        val completedCount = if (displayProject != null) allTasks.count { it.item.projectId == displayProject.id && it.item.type == 0 && it.item.isCompleted } else 1
                                         ProjectProgressArc(
-                                            completed = 1,
-                                            total = 3,
+                                            completed = completedCount,
+                                            total = totalCount,
                                             color = ThingsInboxBlue,
                                             modifier = Modifier.size(20.dp)
                                         )
                                     },
                                     textPrimary = textPrimary,
+                                    isChecked = isCurrentProject,
                                     onClick = {
-                                        if (recentProject != null) {
-                                            onProjectClick(recentProject)
+                                        if (displayProject != null) {
+                                            onProjectClick(displayProject)
                                         } else {
                                             onSmartListClick(ActiveScreen.INBOX)
                                         }
@@ -762,6 +806,7 @@ fun ThingsSearchOverlay(
                                         )
                                     },
                                     textPrimary = textPrimary,
+                                    isChecked = (currentScreen == ActiveScreen.UPCOMING),
                                     onClick = { onSmartListClick(ActiveScreen.UPCOMING) }
                                 )
                             }
@@ -845,6 +890,8 @@ fun ThingsSearchOverlay(
                                         projects = projects,
                                         areas = areas,
                                         searchQuery = searchQuery,
+                                        isHighlighted = (index == 0),
+                                        isChecked = false,
                                         onTaskClick = onTaskClick,
                                         onProjectClick = onProjectClick,
                                         onAreaClick = onAreaClick,
@@ -920,6 +967,7 @@ fun RecentRow(
     title: String,
     icon: @Composable () -> Unit,
     textPrimary: Color,
+    isChecked: Boolean = false,
     onClick: () -> Unit
 ) {
     Row(
@@ -929,7 +977,7 @@ fun RecentRow(
             .height(44.dp)
             .clip(RoundedCornerShape(22.dp))
             .clickable(onClick = onClick)
-            .padding(start = 8.dp, end = 4.dp)
+            .padding(start = 8.dp, end = 12.dp)
     ) {
         Box(
             modifier = Modifier.size(MaterialTheme.dimens.searchLeftColumnWidth),
@@ -940,10 +988,22 @@ fun RecentRow(
         Spacer(modifier = Modifier.width(MaterialTheme.dimens.searchSpacingToText))
         Text(
             text = title,
-            color = textPrimary,
-            fontSize = 16.sp,
-            fontWeight = FontWeight.Normal
+            style = MaterialTheme.typography.displaySmall.copy(
+                color = textPrimary,
+                fontWeight = FontWeight.Medium
+            ),
+            modifier = Modifier.weight(1f),
+            maxLines = 1,
+            overflow = TextOverflow.Ellipsis
         )
+        if (isChecked) {
+            Icon(
+                imageVector = Icons.Default.Check,
+                contentDescription = "Current screen",
+                tint = ThingsBlue,
+                modifier = Modifier.size(18.dp)
+            )
+        }
     }
 }
 
@@ -967,6 +1027,8 @@ fun SearchResultRow(
     projects: List<Item>,
     areas: List<Area> = emptyList(),
     searchQuery: String = "",
+    isHighlighted: Boolean = false,
+    isChecked: Boolean = false,
     onTaskClick: (ItemWithChecklist) -> Unit,
     onProjectClick: (Item) -> Unit,
     onAreaClick: (Area) -> Unit,
@@ -980,6 +1042,7 @@ fun SearchResultRow(
                 textPrimaryColor = textPrimary,
                 textSecondaryColor = textSecondary,
                 dividerColor = Color.Transparent,
+                isHighlighted = isHighlighted,
                 onToggle = { onTaskToggle(result.taskWrapper) },
                 onClick = { onTaskClick(result.taskWrapper) },
                 projects = projects,
@@ -992,16 +1055,18 @@ fun SearchResultRow(
             val totalCount = allTasks.count { it.item.projectId == result.project.id && it.item.type == 0 }
             val completedCount = allTasks.count { it.item.projectId == result.project.id && it.item.type == 0 && it.item.isCompleted }
             val isSomeday = result.project.isSomeday
-            val arcColor = if (isSomeday) ThingsSomedayGrey else ThingsInboxBlue
-            val highlightedTitle = rememberHighlightedText(result.project.title, searchQuery)
+            val baseArcColor = if (isSomeday) ThingsSomedayGrey else ThingsInboxBlue
+            val arcColor = if (isHighlighted) androidx.compose.ui.graphics.lerp(baseArcColor, ThingsBlue, 0.45f) else baseArcColor
+            val rowBg = if (isHighlighted) ThingsBlue.copy(alpha = 0.12f) else Color.Transparent
 
             Row(
                 modifier = Modifier
                     .fillMaxWidth()
                     .height(44.dp)
                     .clip(RoundedCornerShape(22.dp))
+                    .background(rowBg)
                     .clickable { onProjectClick(result.project) }
-                    .padding(start = 8.dp, end = 4.dp),
+                    .padding(start = 8.dp, end = 12.dp),
                 verticalAlignment = Alignment.CenterVertically
             ) {
                 Box(
@@ -1017,7 +1082,7 @@ fun SearchResultRow(
                 }
                 Spacer(modifier = Modifier.width(MaterialTheme.dimens.searchSpacingToText))
                 Text(
-                    text = highlightedTitle,
+                    text = result.project.title,
                     style = MaterialTheme.typography.displaySmall.copy(
                         color = textPrimary,
                         fontWeight = FontWeight.Medium
@@ -1026,12 +1091,18 @@ fun SearchResultRow(
                     maxLines = 1,
                     overflow = TextOverflow.Ellipsis
                 )
+                if (isChecked) {
+                    Icon(
+                        imageVector = Icons.Default.Check,
+                        contentDescription = "Current screen",
+                        tint = ThingsBlue,
+                        modifier = Modifier.size(18.dp)
+                    )
+                }
             }
         }
         else -> {
-            val isHighlighted = remember { false }
-            val rowBg = if (isHighlighted) ThingsInboxBlue.copy(alpha = 0.12f) else Color.Transparent
-            val textStyleColor = if (isHighlighted) ThingsInboxBlue else textPrimary
+            val rowBg = if (isHighlighted) ThingsBlue.copy(alpha = 0.12f) else Color.Transparent
 
             val title = when (result) {
                 is SearchResultItem.SmartListResult -> result.title
@@ -1039,7 +1110,6 @@ fun SearchResultRow(
                 is SearchResultItem.AreaResult -> result.area.title
                 else -> ""
             }
-            val highlightedTitle = rememberHighlightedText(title, searchQuery)
 
             Row(
                 verticalAlignment = Alignment.CenterVertically,
@@ -1056,12 +1126,24 @@ fun SearchResultRow(
                             else -> {}
                         }
                     }
-                    .padding(start = 8.dp, end = 4.dp)
+                    .padding(start = 8.dp, end = 12.dp)
             ) {
                 Box(
                     modifier = Modifier.size(MaterialTheme.dimens.searchLeftColumnWidth),
                     contentAlignment = Alignment.Center
                 ) {
+                    val iconModifier = Modifier
+                        .then(
+                            if (isHighlighted) {
+                                Modifier
+                                    .graphicsLayer(compositingStrategy = CompositingStrategy.Offscreen)
+                                    .drawWithContent {
+                                        drawContent()
+                                        drawRect(ThingsBlue.copy(alpha = 0.45f), blendMode = BlendMode.SrcAtop)
+                                    }
+                            } else Modifier
+                        )
+
                     when (result) {
                         is SearchResultItem.SmartListResult -> {
                             val info = when (result.screen) {
@@ -1073,13 +1155,28 @@ fun SearchResultRow(
                                 ActiveScreen.LOGBOOK -> Pair(AppIcons.Logbook, Color.Unspecified)
                                 else -> Pair(Icons.Default.Layers, ThingsSomedayGrey)
                             }
-                            Icon(imageVector = info.first, contentDescription = null, tint = info.second, modifier = Modifier.size(19.dp))
+                            Icon(
+                                imageVector = info.first,
+                                contentDescription = null,
+                                tint = info.second,
+                                modifier = iconModifier.size(19.dp)
+                            )
                         }
                         is SearchResultItem.SpecialResult -> {
-                            Icon(imageVector = result.icon, contentDescription = null, tint = result.iconColor, modifier = Modifier.size(20.dp))
+                            Icon(
+                                imageVector = result.icon,
+                                contentDescription = null,
+                                tint = result.iconColor,
+                                modifier = iconModifier.size(20.dp)
+                            )
                         }
                         is SearchResultItem.AreaResult -> {
-                            Icon(imageVector = AppIcons.Area, contentDescription = null, tint = ThingsAreaGreen, modifier = Modifier.size(20.dp))
+                            Icon(
+                                imageVector = AppIcons.Area,
+                                contentDescription = null,
+                                tint = ThingsAreaGreen,
+                                modifier = iconModifier.size(20.dp)
+                            )
                         }
                         else -> {}
                     }
@@ -1087,32 +1184,24 @@ fun SearchResultRow(
 
                 Spacer(modifier = Modifier.width(MaterialTheme.dimens.searchSpacingToText))
 
-                Column(modifier = Modifier.weight(1f)) {
-                    Text(
-                        text = highlightedTitle,
-                        color = textStyleColor,
-                        fontSize = MaterialTheme.typography.titleMedium.fontSize,
-                        fontWeight = FontWeight.Normal,
-                        maxLines = 1,
-                        overflow = TextOverflow.Ellipsis
+                Text(
+                    text = title,
+                    style = MaterialTheme.typography.displaySmall.copy(
+                        color = textPrimary,
+                        fontWeight = FontWeight.Medium
+                    ),
+                    modifier = Modifier.weight(1f),
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis
+                )
+
+                if (isChecked) {
+                    Icon(
+                        imageVector = Icons.Default.Check,
+                        contentDescription = "Current screen",
+                        tint = ThingsBlue,
+                        modifier = Modifier.size(18.dp)
                     )
-
-                    val subText = when (result) {
-                        is SearchResultItem.AreaResult -> "Area"
-                        is SearchResultItem.SmartListResult -> "List"
-                        else -> null
-                    }
-
-                    if (!subText.isNullOrBlank()) {
-                        Text(
-                            text = subText,
-                            color = textSecondary.copy(alpha = 0.65f),
-                            fontSize = MaterialTheme.typography.bodySmall.fontSize,
-                            fontWeight = FontWeight.Normal,
-                            maxLines = 1,
-                            overflow = TextOverflow.Ellipsis
-                        )
-                    }
                 }
             }
         }
