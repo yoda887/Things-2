@@ -830,10 +830,11 @@ fun ThingsHomePanel(
             (pullOffset.value * 0.32f).coerceAtMost(with(density) { 32.dp.toPx() })
         }
 
-        // Плавное посинение фона и переход текста/иконки в белый цвет
-        val inputBackground = androidx.compose.ui.graphics.lerp(inputNormalBackground, ThingsBlue, pullProgress)
-        val iconTint = androidx.compose.ui.graphics.lerp(textSecondaryColor, Color.White, pullProgress)
-        val textTint = androidx.compose.ui.graphics.lerp(textSecondaryColor.copy(alpha = 0.6f), Color.White.copy(alpha = 0.9f), pullProgress)
+        // Плавное посинение фона и переход текста/иконки в белый цвет только перед срабатыванием триггера (с 80% до 100%)
+        val colorProgress = ((pullProgress - 0.80f) / 0.20f).coerceIn(0f, 1f)
+        val inputBackground = androidx.compose.ui.graphics.lerp(inputNormalBackground, ThingsBlue, colorProgress)
+        val iconTint = androidx.compose.ui.graphics.lerp(textSecondaryColor, Color.White, colorProgress)
+        val textTint = androidx.compose.ui.graphics.lerp(textSecondaryColor.copy(alpha = 0.6f), Color.White.copy(alpha = 0.9f), colorProgress)
 
         val searchHeightPx = with(density) { 68.dp.toPx() }
         val scrollOffset = if (lazyListState.firstVisibleItemIndex > 0) {

@@ -430,6 +430,18 @@ fun ThingsCategoryListPanel(
     var pullIndicatorBoxBounds by remember { mutableStateOf<Rect?>(null) }
     val maxOffsetPx = with(density) { 150.dp.toPx() }
 
+    // Тактильный отклик при пересечении порога активации поиска (100.dp)
+    val isPastThreshold = pullOffset.value >= thresholdPx
+    var hasTriggeredThresholdHaptic by remember { mutableStateOf(false) }
+    LaunchedEffect(isPastThreshold) {
+        if (isPastThreshold && !hasTriggeredThresholdHaptic) {
+            hasTriggeredThresholdHaptic = true
+            view.performHapticFeedback(android.view.HapticFeedbackConstants.CLOCK_TICK)
+        } else if (!isPastThreshold) {
+            hasTriggeredThresholdHaptic = false
+        }
+    }
+
     // Извлечение nestedScrollConnection "PullToSearch" в CategoryListState
     val nestedScrollConnection = rememberPullToSearchConnection(
         coroutineScope = coroutineScope,

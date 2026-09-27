@@ -67,12 +67,15 @@ fun PullToSearchIndicator(
     // "Стрелка" плавно выдвигается из-под круга на протяжении всего растяжения до maxOffsetPx
     val arrowProgress = if (maxOffsetPx > 0f) (pullOffset / maxOffsetPx).coerceIn(0f, 1f) else 0f
 
-    // Цвета c плавным переходом (lerp)
+    // Переход цвета в ThingsBlue начинается только перед срабатыванием триггера (с 80% до 100% порога)
+    val colorProgress = ((progress - 0.80f) / 0.20f).coerceIn(0f, 1f)
+
+    // Цвета c плавным переходом только перед срабатыванием триггера
     val bgNormal = if (isDark) Color(0xFF2C2C2E) else Color(0xFFE5E5EA)
-    val circleColor = androidx.compose.ui.graphics.lerp(bgNormal, ThingsBlue, progress)
+    val circleColor = androidx.compose.ui.graphics.lerp(bgNormal, ThingsBlue, colorProgress)
     val iconNormal = if (isDark) ThingsTextSecondaryDark else ThingsTextSecondaryLight
-    val iconColor = androidx.compose.ui.graphics.lerp(iconNormal, Color.White, progress)
-    val arrowColor = androidx.compose.ui.graphics.lerp(iconNormal, ThingsBlue, progress)
+    val iconColor = androidx.compose.ui.graphics.lerp(iconNormal, Color.White, colorProgress)
+    val arrowColor = androidx.compose.ui.graphics.lerp(iconNormal, ThingsBlue, colorProgress)
 
     if (pullOffset > 0f) {
         Canvas(
