@@ -171,6 +171,8 @@ fun ThingsHomePanel(
     onSearchClick: (sourceBounds: Rect?, wasPulled: Boolean) -> Unit = { _, _ -> },
     // [ИЗМЕНЕНИЕ]: Добавлено состояние активности поискового оверлея
     isSearchOverlayActive: Boolean = false,
+    // [ИЗМЕНЕНИЕ]: Плавная прозрачность капсулы поиска для бесшовного cross-fade при закрытии оверлея
+    searchCapsuleAlpha: Float = 1f,
     editingProjectId: String? = null,
     onEditingProjectIdChange: (String?) -> Unit = {},
     editingAreaId: String? = null,
@@ -810,7 +812,7 @@ fun ThingsHomePanel(
 
     // Поле поиска ("Quick Find"), вынесенное на уровень корневого Box для исключения
     // обрезания (clipping) контейнером LazyColumn при оттяжке списка вниз
-    if (!isSearchOverlayActive) {
+    if (!isSearchOverlayActive || searchCapsuleAlpha > 0f) {
         val isDark = isSystemInDarkTheme()
         val inputNormalBackground = if (isDark) Color(0xFF2C2C2E) else Color(0xFFF2F2F7)
 
@@ -857,6 +859,7 @@ fun ThingsHomePanel(
                 }
                 .graphicsLayer {
                     translationY = searchResistanceOffset - scrollOffset
+                    alpha = if (isSearchOverlayActive) searchCapsuleAlpha else 1f
                 }
                 .fillMaxWidth()
                 .padding(horizontal = 6.dp, vertical = 4.dp)
@@ -864,6 +867,7 @@ fun ThingsHomePanel(
                 .clip(RoundedCornerShape(22.dp))
                 .background(inputBackground)
                 .draggable(
+                    enabled = !isSearchOverlayActive,
                     orientation = Orientation.Vertical,
                     state = rememberDraggableState { delta ->
                         if (pullOffset.value > 0f || (delta > 0f && lazyListState.firstVisibleItemIndex == 0 && lazyListState.firstVisibleItemScrollOffset == 0)) {
@@ -884,7 +888,7 @@ fun ThingsHomePanel(
                         }
                     }
                 )
-                .clickable { onSearchClick(searchFieldBoundsAt(searchResistanceOffset - scrollOffset), false) }
+                .clickable(enabled = !isSearchOverlayActive) { onSearchClick(searchFieldBoundsAt(searchResistanceOffset - scrollOffset), false) }
                 .padding(horizontal = 14.dp)
                 .testTag("home_search_input"),
             contentAlignment = Alignment.CenterStart

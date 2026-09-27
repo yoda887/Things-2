@@ -163,6 +163,8 @@ fun ThingsHomeScreen(viewModel: ThingsViewModel = hiltViewModel()) {
     var isSearchOverlayActive by remember { mutableStateOf(false) }
     // Окно поиска готово рисоваться на месте поля: поле стартового экрана прячется только после этого
     var isSearchMorphReady by remember { mutableStateOf(false) }
+    // [ИЗМЕНЕНИЕ]: Плавная прозрачность капсулы поиска для бесшовного cross-fade при закрытии оверлея
+    var searchCapsuleAlpha by remember { mutableFloatStateOf(1f) }
     // Прямоугольник, из которого разворачивается Quick Find (поле поиска или круг оттяжки)
     var searchMorphSource by remember { mutableStateOf<Rect?>(null) }
     var searchWasPulled by remember { mutableStateOf(false) }
@@ -412,9 +414,11 @@ fun ThingsHomeScreen(viewModel: ThingsViewModel = hiltViewModel()) {
                                 searchWasPulled = wasPulled
                                 searchFromWideField = true
                                 isSearchMorphReady = false
+                                searchCapsuleAlpha = 0f
                                 isSearchOverlayActive = true
                             },
                             isSearchOverlayActive = isSearchOverlayActive && isSearchMorphReady,
+                            searchCapsuleAlpha = searchCapsuleAlpha,
                             editingProjectId = editingProjectId,
                             onEditingProjectIdChange = { editingProjectId = it },
                             editingAreaId = editingAreaId,
@@ -513,6 +517,7 @@ fun ThingsHomeScreen(viewModel: ThingsViewModel = hiltViewModel()) {
                                     searchWasPulled = true
                                     searchFromWideField = false
                                     isSearchMorphReady = false
+                                    searchCapsuleAlpha = 0f
                                     isSearchOverlayActive = true
                                 }
                                 ThingsCategoryListEvent.ClickBack -> {
@@ -703,6 +708,7 @@ fun ThingsHomeScreen(viewModel: ThingsViewModel = hiltViewModel()) {
                     morphFromWideField = searchFromWideField,
                     wasPulled = searchWasPulled,
                     onMorphReady = { isSearchMorphReady = true },
+                    onDismissProgress = { searchCapsuleAlpha = it },
                     currentScreen = activeScreen,
                     currentProject = selectedProject,
                     currentArea = selectedArea,
@@ -791,6 +797,7 @@ fun ThingsHomeScreen(viewModel: ThingsViewModel = hiltViewModel()) {
                     },
                     onClose = {
                         isSearchOverlayActive = false
+                        searchCapsuleAlpha = 1f
                         viewModel.setSearchQuery("")
                     },
                     // [ИЗМЕНЕНИЕ]: Передача списка недавно найденных/искавшихся объектов

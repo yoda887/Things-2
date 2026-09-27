@@ -210,12 +210,15 @@ fun ThingsSearchOverlay(
     onMorphReady: () -> Unit = {},
     currentScreen: ActiveScreen = ActiveScreen.HOME,
     currentProject: Item? = null,
-    currentArea: Area? = null
+    currentArea: Area? = null,
+    // [ИЗМЕНЕНИЕ]: Прогресс синхронного появления капсулы поиска (0f..1f)
+    onDismissProgress: ((Float) -> Unit)? = null
 ) {
     val isDark = isSystemInDarkTheme()
     val coroutineScope = rememberCoroutineScope()
     val transformProgress = remember { Animatable(0f) }
     val opacityProgress = remember { Animatable(0f) }
+    val dismissProgress = remember { Animatable(0f) }
     var isMorphClosing by remember { mutableStateOf(false) }
 
     val context = androidx.compose.ui.platform.LocalContext.current
@@ -266,32 +269,27 @@ fun ThingsSearchOverlay(
 
     val view = LocalView.current
 
-    val handleClose: () -> Unit = remember(isMorphClosing, isReduceMotion) {
+    val handleClose: () -> Unit = remember(isMorphClosing, isReduceMotion, onDismissProgress) {
         {
             if (!isMorphClosing) {
                 isMorphClosing = true
                 view.hideSoftKeyboardNow()
                 coroutineScope.launch {
                     if (isReduceMotion) {
-                        opacityProgress.animateTo(0f, tween(100))
-                        transformProgress.snapTo(0f)
+                        dismissProgress.snapTo(1f)
+                        onDismissProgress?.invoke(1f)
                     } else {
-                        launch {
-                            opacityProgress.animateTo(
-                                targetValue = 0f,
-                                animationSpec = tween(
-                                    durationMillis = MORPH_CONTENT_DURATION_MS,
-                                    easing = ThingsSpringEasing(0.8f)
-                                )
-                            )
-                        }
-                        transformProgress.animateTo(
-                            targetValue = 0f,
+                        dismissProgress.animateTo(
+                            targetValue = 1f,
                             animationSpec = tween(
-                                durationMillis = MORPH_TRANSFORM_DURATION_MS,
-                                easing = ThingsSpringEasing(0.8f)
+                                durationMillis = 250,
+                                easing = FastOutSlowInEasing
                             )
-                        )
+                        ) {
+                            // Синхронный cross-fade: капсула начинает мягко проявляться с 50% пути съезда окна
+                            val capsuleAlpha = ((value - 0.50f) / 0.50f).coerceIn(0f, 1f)
+                            onDismissProgress?.invoke(capsuleAlpha)
+                        }
                     }
                     onClose()
                 }
@@ -406,7 +404,7 @@ fun ThingsSearchOverlay(
     val startCardBg = if (wasPulled) ThingsBlue else inputNormalBackground
     // Из поля стартового экрана карточка сразу белая, а цвет поля (синий при оттяжке) меняет
     // только сама капсула поиска. Из круга оттяжки карточка и есть круг — она белеет вместе с ним
-    val currentCardBg = if (morphFromWideField) cardBackground
+    val currentCardBg = if (morphFromWideField || isMorphClosing) cardBackground
         else androidx.compose.ui.graphics.lerp(startCardBg, cardBackground, progress)
     val currentInputBg = if (morphFromWideField) {
         androidx.compose.ui.graphics.lerp(startCardBg, inputNormalBackground, progress)
@@ -458,26 +456,46 @@ fun ThingsSearchOverlay(
             radiusY = radius / layerScaleY
         )
     }
-    val cardAppearAlpha = if (!isMorphMeasured) 0f
+    val dismissSlidePx = with(density) { 110.dp.toPx() }
+    val dismissVal = dismissProgress.value.coerceIn(0f, 1f)
+    val finalTranslationX = if (isMorphClosing) 0f else layerTranslationX
+    val finalTranslationY = if (isMorphClosing) dismissVal * dismissSlidePx else layerTranslationY
+    val finalScaleX = if (isMorphClosing) 1f else layerScaleX
+    val finalScaleY = if (isMorphClosing) 1f else layerScaleY
+    val finalCardShape = if (isMorphClosing) RoundedCornerShape(MORPH_FINAL_CORNER_RADIUS) else cardShape
+    val finalCardAlpha = if (!isMorphMeasured) 0f
+        else if (isMorphClosing) {
+            // Вариант А (Порог задержки): первые 50% пути смещения вниз карточка остаётся 100% непрозрачной (alpha = 1.0f),
+            // а растворение начинается только после того, как карточка набрала ход вниз и прошла 50% пути
+            if (dismissVal <= 0.50f) {
+                1f
+            } else {
+                val fadeProgress = ((dismissVal - 0.50f) / 0.50f).coerceIn(0f, 1f)
+                (1f - fadeProgress).coerceIn(0f, 1f)
+            }
+        }
         else lerpF(MORPH_START_ALPHA, 1f, (progress / MORPH_FADE_IN_FRACTION).coerceIn(0f, 1f))
-    val currentElevation = androidx.compose.ui.unit.lerp(0.dp, 12.dp, progress)
+    val currentElevation = if (isMorphClosing) androidx.compose.ui.unit.lerp(12.dp, 0.dp, dismissVal)
+        else androidx.compose.ui.unit.lerp(0.dp, 12.dp, progress)
 
     // Из поля стартового экрана поле окна в первом кадре занимает всю капсулу:
     // отступы от краёв карточки нарастают от 0.
-    val fieldMorph = morphRaw.coerceAtLeast(0f)
-    val innerHorizontalPadding = if (morphFromWideField) {
+    val fieldMorph = if (isMorphClosing) 1f else morphRaw.coerceAtLeast(0f)
+    val innerHorizontalPadding = if (morphFromWideField && !isMorphClosing) {
         androidx.compose.ui.unit.lerp(0.dp, 14.dp, fieldMorph.coerceAtMost(1f))
     } else {
         14.dp
     }
     val innerTopPadding = 20.dp
 
-    val backdropAlpha = (morphRaw * 0.45f).coerceIn(0f, 0.45f)
+    val backdropAlpha = if (isMorphClosing) ((1f - dismissVal) * 0.45f).coerceIn(0f, 0.45f)
+        else (morphRaw * 0.45f).coerceIn(0f, 0.45f)
     // Внутренняя раскладка при морфинге не пересчитывается — меняется только прозрачность
-    val closeButtonAlpha = (opacityProgress.value / 0.7f).coerceIn(0f, 1f)
+    val closeButtonAlpha = if (isMorphClosing) (1f - dismissVal).coerceIn(0f, 1f)
+        else (opacityProgress.value / 0.7f).coerceIn(0f, 1f)
     // Из поля стартового экрана ✕ раздвигается и отодвигает правый край поля
-    val closeButtonWidth = if (morphFromWideField) androidx.compose.ui.unit.lerp(0.dp, 44.dp, fieldMorph.coerceAtMost(1f)) else 44.dp
-    val closeButtonSpacer = if (morphFromWideField) androidx.compose.ui.unit.lerp(0.dp, 12.dp, fieldMorph.coerceAtMost(1f)) else 12.dp
+    val closeButtonWidth = if (morphFromWideField && !isMorphClosing) androidx.compose.ui.unit.lerp(0.dp, 44.dp, fieldMorph.coerceAtMost(1f)) else 44.dp
+    val closeButtonSpacer = if (morphFromWideField && !isMorphClosing) androidx.compose.ui.unit.lerp(0.dp, 12.dp, fieldMorph.coerceAtMost(1f)) else 12.dp
 
     Box(
         modifier = modifier
@@ -493,7 +511,7 @@ fun ThingsSearchOverlay(
         // [ИЗМЕНЕНИЕ]: Контейнер диалога поиска с бесшовным морфингом при открытии и обратным схлопыванием при закрытии
         Card(
             colors = CardDefaults.cardColors(containerColor = currentCardBg),
-            shape = cardShape,
+            shape = finalCardShape,
             elevation = CardDefaults.cardElevation(defaultElevation = currentElevation),
             modifier = Modifier
                 .fillMaxWidth()
@@ -506,14 +524,14 @@ fun ThingsSearchOverlay(
                     if (!wasMeasured) onMorphReady()
                 }
                 .graphicsLayer {
-                    alpha = cardAppearAlpha
-                    translationX = layerTranslationX
-                    translationY = layerTranslationY
-                    scaleX = layerScaleX
-                    scaleY = layerScaleY
+                    alpha = finalCardAlpha
+                    translationX = finalTranslationX
+                    translationY = finalTranslationY
+                    scaleX = finalScaleX
+                    scaleY = finalScaleY
                     transformOrigin = TransformOrigin(pivotFractionX = 0f, pivotFractionY = 0f)
                 }
-                .clip(cardShape)
+                .clip(finalCardShape)
                 .clickable(
                     interactionSource = remember { MutableInteractionSource() },
                     indication = null,
@@ -659,8 +677,8 @@ fun ThingsSearchOverlay(
                     modifier = Modifier
                         .fillMaxWidth()
                         .graphicsLayer {
-                            alpha = contentAlpha
-                            if (morphFromWideField) {
+                            alpha = if (isMorphClosing) 1f else contentAlpha
+                            if (morphFromWideField && !isMorphClosing) {
                                 // Содержимое растягивается вместе с карточкой, но начинается сразу
                                 // под несжатой шапкой, а не наезжает на неё
                                 val shiftOnScreen = headerHeightPx * (1f - layerScaleY) -
