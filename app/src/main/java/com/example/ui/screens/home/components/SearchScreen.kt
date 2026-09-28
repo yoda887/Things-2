@@ -7,38 +7,60 @@ import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.BasicTextField
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.KeyboardArrowLeft
+import androidx.compose.material.icons.automirrored.filled.KeyboardArrowRight
 import androidx.compose.material.icons.filled.*
 import androidx.compose.material.icons.outlined.*
-import com.example.ui.theme.AppIcons
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.focus.FocusRequester
+import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalView
 import androidx.compose.ui.platform.testTag
+import androidx.compose.ui.text.TextRange
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.input.TextFieldValue
+import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.text.style.TextDecoration
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.example.data.model.Area
 import com.example.data.model.Item
 import com.example.data.model.ItemWithChecklist
-import com.example.data.model.ChecklistItem
+import com.example.data.model.Tag
+import com.example.ui.components.ProjectProgressArc
 import com.example.ui.components.ThingsCheckbox
 import com.example.ui.components.hideSoftKeyboardNow
-import androidx.compose.ui.platform.LocalView
 import com.example.ui.theme.*
 
 /**
- * Fullscreen Search screen conforming to ActiveScreen.SEARCH in high fidelity.
- * Performs deep search in titles, notes, checklists, and active/completed tasks.
+ * Модель секции результатов поиска на экране Search.
+ */
+private data class SearchSectionData(
+    val id: String,
+    val title: String,
+    val icon: @Composable () -> Unit,
+    val onClick: (() -> Unit)? = null,
+    val showChevron: Boolean = false,
+    val tasks: List<ItemWithChecklist> = emptyList(),
+    val isLogbook: Boolean = false
+)
+
+/**
+ * Полноэкранный экран поиска (ActiveScreen.SEARCH) в точном соответствии с эталоном Things 3.
+ * Отображает найденные задачи, распределенные по секциям (Logbook, Проекты, Области, Списки),
+ * чистыми строками задач без искусственных рамок-карточек.
  */
 @Composable
 fun ThingsSearchScreen(
@@ -54,57 +76,183 @@ fun ThingsSearchScreen(
     onTaskToggle: (ItemWithChecklist) -> Unit,
     onBack: () -> Unit,
     onFabClick: () -> Unit,
+    allSavedTagObjects: List<Tag> = emptyList(),
+    onProjectClick: (Item) -> Unit = {},
+    onAreaClick: (Area) -> Unit = {},
+    onTagClick: (Tag) -> Unit = {},
     modifier: Modifier = Modifier
 ) {
     val isDark = isSystemInDarkTheme()
     val bkgColor = if (isDark) ThingsBackgroundDark else ThingsBackgroundLight
-    val capsuleBkg = if (isDark) Color(0xFF2C2C2E) else Color(0xFFF2F2F7)
+    val capsuleBkg = if (isDark) Color(0xFF2C2C2E) else Color(0xFFEFEFF0)
 
-    // Deep search results filtering: titles, notes, checklists, and logbook completed/uncompleted tasks
-    val deepResults = remember(searchQuery, allTasks, projects, areas) {
-        if (searchQuery.isBlank()) {
-            emptyList<DeepSearchResult>()
-        } else {
-            val list = mutableListOf<DeepSearchResult>()
-            val query = searchQuery.trim()
+    val focusRequester = remember { FocusRequester() }
+    var textFieldValue by remember {
+        mutableStateOf(
+            TextFieldValue(
+                text = searchQuery,
+                selection = TextRange(searchQuery.length)
+            )
+        )
+    }
 
-            // 1. Filter tasks (both active and completed)
-            allTasks.forEach { wrapper ->
-                val matchesTitle = wrapper.item.type == 0 && wrapper.item.title.contains(query, ignoreCase = true)
-                val matchesNotes = wrapper.item.type == 0 && wrapper.item.notes.contains(query, ignoreCase = true)
-                
-                // Matches checklist items
-                val matchingChecklistItems = wrapper.checklist.filter { 
-                    it.title.contains(query, ignoreCase = true) 
-                }
-
-                if (matchesTitle || matchesNotes || matchingChecklistItems.isNotEmpty()) {
-                    list.add(
-                        DeepSearchResult.TaskMatch(
-                            taskWrapper = wrapper,
-                            matchedChecklist = matchingChecklistItems
-                        )
-                    )
-                }
-            }
-
-            // 2. Filter projects
-            projects.forEach { proj ->
-                if (proj.type == 1 && (proj.title.contains(query, ignoreCase = true) || proj.notes.contains(query, ignoreCase = true))) {
-                    list.add(DeepSearchResult.ProjectMatch(proj))
-                }
-            }
-
-            // 3. Filter areas
-            areas.forEach { area ->
-                if (area.title.contains(query, ignoreCase = true)) {
-                    list.add(DeepSearchResult.AreaMatch(area))
-                }
-            }
-
-            list
+    LaunchedEffect(searchQuery) {
+        if (textFieldValue.text != searchQuery) {
+            textFieldValue = textFieldValue.copy(
+                text = searchQuery,
+                selection = TextRange(searchQuery.length)
+            )
         }
     }
+
+    LaunchedEffect(Unit) {
+        focusRequester.requestFocus()
+    }
+
+    // Прямой поиск проектов и областей по названию/заметкам (только неудаленные)
+    val matchingProjects = remember(searchQuery, projects) {
+        if (searchQuery.isBlank()) emptyList()
+        else {
+            val q = searchQuery.trim()
+            projects.filter {
+                it.type == 1 && !it.trashed && (
+                    it.title.contains(q, ignoreCase = true) ||
+                    it.notes.contains(q, ignoreCase = true)
+                )
+            }
+        }
+    }
+
+    val matchingAreas = remember(searchQuery, areas) {
+        if (searchQuery.isBlank()) emptyList()
+        else {
+            val q = searchQuery.trim()
+            areas.filter { !it.trashed && it.title.contains(q, ignoreCase = true) }
+        }
+    }
+
+    val matchingTags = remember(searchQuery, allSavedTagObjects) {
+        if (searchQuery.isBlank()) emptyList()
+        else {
+            val q = searchQuery.trim()
+            allSavedTagObjects.filter { it.title.isNotBlank() && it.title.contains(q, ignoreCase = true) }
+        }
+    }
+
+    // Поиск задач (активных и завершенных) по заголовку, заметкам и чеклистам (только неудаленные)
+    val (looseActiveTasks, sections) = remember(searchQuery, allTasks, projects, areas) {
+        if (searchQuery.isBlank()) {
+            emptyList<ItemWithChecklist>() to emptyList<SearchSectionData>()
+        } else {
+            val q = searchQuery.trim()
+            val matchedTasks = allTasks.filter { wrapper ->
+                wrapper.item.type == 0 && !wrapper.item.trashed && (
+                    wrapper.item.title.contains(q, ignoreCase = true) ||
+                    wrapper.item.notes.contains(q, ignoreCase = true) ||
+                    wrapper.checklist.any { it.title.contains(q, ignoreCase = true) }
+                )
+            }
+
+            // 1. Активные задачи без проекта и области (Inbox, Today, etc.)
+            // В эталоне Things 3 отображаются прямо в списке без искусственных заголовков
+            val loose = matchedTasks.filter { !it.item.isCompleted && it.item.status != 2 && it.item.projectId == null && it.item.areaId == null }
+
+            val resultSections = mutableListOf<SearchSectionData>()
+
+            // 2. Активные задачи по проектам
+            val projectTasksMap = matchedTasks.filter { !it.item.isCompleted && it.item.status != 2 && it.item.projectId != null }
+                .groupBy { it.item.projectId!! }
+
+            for ((projId, pTasks) in projectTasksMap) {
+                val proj = projects.firstOrNull { it.id == projId && !it.trashed } ?: continue
+                val projTitle = proj.title
+                val allProjTasks = allTasks.filter { it.item.projectId == projId && it.item.type == 0 && !it.item.trashed }
+                val completedCount = allProjTasks.count { it.item.isCompleted }
+
+                resultSections.add(
+                    SearchSectionData(
+                        id = "proj_$projId",
+                        title = projTitle,
+                        icon = {
+                            ProjectProgressArc(
+                                completed = completedCount,
+                                total = allProjTasks.size,
+                                modifier = Modifier.size(18.dp),
+                                color = ThingsBlue
+                            )
+                        },
+                        onClick = { onProjectClick(proj) },
+                        showChevron = true,
+                        tasks = pTasks,
+                        isLogbook = false
+                    )
+                )
+            }
+
+            // 3. Активные задачи по областям (без проекта)
+            val areaTasksMap = matchedTasks.filter { !it.item.isCompleted && it.item.status != 2 && it.item.projectId == null && it.item.areaId != null }
+                .groupBy { it.item.areaId!! }
+
+            for ((arId, aTasks) in areaTasksMap) {
+                val area = areas.firstOrNull { it.id == arId && !it.trashed } ?: continue
+                val areaTitle = area.title
+
+                resultSections.add(
+                    SearchSectionData(
+                        id = "area_$arId",
+                        title = areaTitle,
+                        icon = {
+                            Icon(
+                                imageVector = Icons.Default.Layers,
+                                contentDescription = null,
+                                tint = ThingsSomedayGrey,
+                                modifier = Modifier.size(18.dp)
+                            )
+                        },
+                        onClick = { onAreaClick(area) },
+                        showChevron = true,
+                        tasks = aTasks,
+                        isLogbook = false
+                    )
+                )
+            }
+
+            // 4. Завершенные и отмененные задачи (Logbook) - только неудаленные
+            val logbookTasks = matchedTasks.filter { (it.item.isCompleted || it.item.status == 2) && !it.item.trashed }
+                .sortedByDescending { it.item.stopDate ?: it.item.modificationDate }
+
+            if (logbookTasks.isNotEmpty()) {
+                resultSections.add(
+                    SearchSectionData(
+                        id = "logbook",
+                        title = "Logbook",
+                        icon = {
+                            Box(
+                                contentAlignment = Alignment.Center,
+                                modifier = Modifier
+                                    .size(18.dp)
+                                    .clip(RoundedCornerShape(4.dp))
+                                    .background(ThingsLogbookGreen)
+                            ) {
+                                Icon(
+                                    imageVector = Icons.Default.Check,
+                                    contentDescription = null,
+                                    tint = Color.White,
+                                    modifier = Modifier.size(13.dp)
+                                )
+                            }
+                        },
+                        tasks = logbookTasks,
+                        isLogbook = true
+                    )
+                )
+            }
+
+            loose to resultSections
+        }
+    }
+
+    val hasAnyResults = matchingTags.isNotEmpty() || matchingProjects.isNotEmpty() || matchingAreas.isNotEmpty() || looseActiveTasks.isNotEmpty() || sections.isNotEmpty()
 
     Box(
         modifier = modifier
@@ -116,16 +264,14 @@ fun ThingsSearchScreen(
                 .fillMaxSize()
                 .statusBarsPadding()
         ) {
-            // Header: Back Arrow on left, "..." on right
+            // Верхняя панель: Стрелка назад слева, кнопка «...» справа
             Row(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .padding(horizontal = 16.dp, vertical = 8.dp),
+                    .padding(horizontal = 16.dp, vertical = 6.dp),
                 horizontalArrangement = Arrangement.SpaceBetween,
                 verticalAlignment = Alignment.CenterVertically
             ) {
-                // Клавиатуру прячем до перехода: экран уезжает 300 мс, и поле поиска уйдёт уже после
-                // полного скрытия клавиатуры (см. hideSoftKeyboardNow)
                 val view = LocalView.current
                 IconButton(onClick = {
                     view.hideSoftKeyboardNow()
@@ -134,13 +280,13 @@ fun ThingsSearchScreen(
                     Icon(
                         imageVector = Icons.AutoMirrored.Filled.KeyboardArrowLeft,
                         contentDescription = "Back",
-                        tint = ThingsBlue,
+                        tint = textPrimaryColor,
                         modifier = Modifier.size(28.dp)
                     )
                 }
 
                 IconButton(
-                    onClick = { /* Additional options / more context shortcuts */ },
+                    onClick = { /* Опции контекста поиска */ },
                     modifier = Modifier
                         .size(36.dp)
                         .border(1.dp, textSecondaryColor.copy(alpha = 0.2f), CircleShape)
@@ -154,11 +300,10 @@ fun ThingsSearchScreen(
                 }
             }
 
-            // Large Title: Search
+            // Заголовок: Лупа + "Search" (как в эталоне)
             Row(
                 verticalAlignment = Alignment.CenterVertically,
-                // [ИЗМЕНЕНИЕ]: Уменьшено расстояние от левой и правой стороны экрана с 24.dp до 14.dp
-                modifier = Modifier.padding(horizontal = 14.dp, vertical = 8.dp)
+                modifier = Modifier.padding(horizontal = 16.dp, vertical = 4.dp)
             ) {
                 Icon(
                     imageVector = Icons.Default.Search,
@@ -169,21 +314,20 @@ fun ThingsSearchScreen(
                 Spacer(modifier = Modifier.width(8.dp))
                 Text(
                     text = "Search",
-                    fontSize = 32.sp,
+                    fontSize = 30.sp,
                     fontWeight = FontWeight.Bold,
                     color = textPrimaryColor
                 )
             }
 
-            // Search input capsule
+            // Поисковая капсула
             Row(
                 verticalAlignment = Alignment.CenterVertically,
                 modifier = Modifier
                     .fillMaxWidth()
-                    // [ИЗМЕНЕНИЕ]: Уменьшено расстояние от левой и правой стороны экрана с 24.dp до 14.dp
-                    .padding(horizontal = 14.dp, vertical = 8.dp)
-                    .height(44.dp)
-                    .clip(RoundedCornerShape(22.dp))
+                    .padding(horizontal = 16.dp, vertical = 6.dp)
+                    .height(38.dp)
+                    .clip(RoundedCornerShape(19.dp))
                     .background(capsuleBkg)
                     .padding(horizontal = 14.dp)
             ) {
@@ -197,74 +341,88 @@ fun ThingsSearchScreen(
                 Box(modifier = Modifier.weight(1f)) {
                     if (searchQuery.isEmpty()) {
                         Text(
-                            text = "Search notes, checklists, logbook...",
+                            text = "Search",
                             color = textSecondaryColor.copy(alpha = 0.5f),
-                            fontSize = 15.sp
+                            fontSize = 16.sp
                         )
                     }
                     BasicTextField(
-                        value = searchQuery,
-                        onValueChange = onSearchQueryChange,
+                        value = textFieldValue,
+                        onValueChange = { newValue ->
+                            textFieldValue = newValue
+                            if (newValue.text != searchQuery) {
+                                onSearchQueryChange(newValue.text)
+                            }
+                        },
                         textStyle = TextStyle(
                             color = textPrimaryColor,
-                            fontSize = 15.sp
+                            fontSize = 16.sp
                         ),
                         singleLine = true,
-                        modifier = Modifier.fillMaxWidth().testTag("fullscreen_search_input")
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .focusRequester(focusRequester)
+                            .testTag("fullscreen_search_input")
                     )
                 }
                 if (searchQuery.isNotEmpty()) {
-                    IconButton(
-                        onClick = { onSearchQueryChange("") },
-                        modifier = Modifier.size(24.dp)
+                    Box(
+                        contentAlignment = Alignment.Center,
+                        modifier = Modifier
+                            .size(18.dp)
+                            .clip(CircleShape)
+                            .background(textSecondaryColor.copy(alpha = 0.5f))
+                            .clickable {
+                                onSearchQueryChange("")
+                                textFieldValue = TextFieldValue("", selection = TextRange.Zero)
+                            }
                     ) {
                         Icon(
-                            imageVector = Icons.Default.Cancel,
+                            imageVector = Icons.Default.Close,
                             contentDescription = "Clear",
-                            tint = textSecondaryColor.copy(alpha = 0.8f),
-                            modifier = Modifier.size(16.dp)
+                            tint = if (isDark) ThingsBackgroundDark else Color.White,
+                            modifier = Modifier.size(11.dp)
                         )
                     }
                 }
             }
 
-            // Results Listing
+            // Список результатов
             if (searchQuery.isBlank()) {
                 Box(
                     modifier = Modifier
                         .fillMaxWidth()
                         .weight(1f)
-                        // [ИЗМЕНЕНИЕ]: Уменьшено расстояние от левой и правой стороны экрана с 24.dp до 14.dp
-                        .padding(horizontal = 14.dp),
+                        .padding(horizontal = 24.dp),
                     contentAlignment = Alignment.Center
                 ) {
                     Text(
-                        text = "Type to search your notes, checklists, and completed items.",
-                        color = textSecondaryColor.copy(alpha = 0.6f),
+                        text = "Quickly find to-dos, notes,\nchecklists, and completed items.",
+                        color = textSecondaryColor.copy(alpha = 0.55f),
                         fontSize = 15.sp,
-                        modifier = Modifier.padding(24.dp)
+                        lineHeight = 22.sp,
+                        textAlign = TextAlign.Center
                     )
                 }
-            } else if (deepResults.isEmpty()) {
+            } else if (!hasAnyResults) {
                 Box(
                     modifier = Modifier
                         .fillMaxWidth()
                         .weight(1f)
-                        // [ИЗМЕНЕНИЕ]: Уменьшено расстояние от левой и правой стороны экрана с 24.dp до 14.dp
-                        .padding(horizontal = 14.dp),
+                        .padding(horizontal = 24.dp),
                     contentAlignment = Alignment.Center
                 ) {
                     Column(horizontalAlignment = Alignment.CenterHorizontally) {
                         Icon(
                             imageVector = Icons.Outlined.SearchOff,
                             contentDescription = null,
-                            tint = textSecondaryColor.copy(alpha = 0.4f),
-                            modifier = Modifier.size(48.dp)
+                            tint = textSecondaryColor.copy(alpha = 0.35f),
+                            modifier = Modifier.size(44.dp)
                         )
                         Spacer(modifier = Modifier.height(12.dp))
                         Text(
                             text = "No results found for \"$searchQuery\"",
-                            color = textSecondaryColor,
+                            color = textSecondaryColor.copy(alpha = 0.8f),
                             fontSize = 15.sp
                         )
                     }
@@ -274,28 +432,263 @@ fun ThingsSearchScreen(
                     modifier = Modifier
                         .fillMaxWidth()
                         .weight(1f)
-                        // [ИЗМЕНЕНИЕ]: Уменьшено расстояние от левой и правой стороны экрана с 24.dp до 14.dp
-                        .padding(horizontal = 14.dp),
-                    verticalArrangement = Arrangement.spacedBy(8.dp),
-                    contentPadding = PaddingValues(top = 12.dp, bottom = 80.dp)
+                        .padding(horizontal = 16.dp),
+                    contentPadding = PaddingValues(top = 10.dp, bottom = 80.dp)
                 ) {
-                    items(deepResults) { result ->
-                        DeepSearchResultRow(
-                            result = result,
-                            textPrimaryColor = textPrimaryColor,
-                            textSecondaryColor = textSecondaryColor,
-                            dividerColor = dividerColor,
-                            onTaskClick = onTaskClick,
-                            onTaskToggle = onTaskToggle,
-                            projects = projects,
-                            areas = areas
-                        )
+                    // 1. Активные задачи верхнего уровня без проектов (Inbox и т.д.)
+                    // В эталоне Things 3 выводятся в начале списка чистыми строками без искусственных заголовков
+                    if (looseActiveTasks.isNotEmpty()) {
+                        itemsIndexed(looseActiveTasks, key = { _, t -> "loose_${t.item.id}" }) { index, wrapper ->
+                            SearchTaskRow(
+                                taskWrapper = wrapper,
+                                isLogbook = false,
+                                textPrimaryColor = textPrimaryColor,
+                                textSecondaryColor = textSecondaryColor,
+                                onTaskClick = onTaskClick,
+                                onTaskToggle = onTaskToggle
+                            )
+                            if (index < looseActiveTasks.size - 1) {
+                                HorizontalDivider(
+                                    color = dividerColor.copy(alpha = 0.5f),
+                                    thickness = 0.5.dp,
+                                    modifier = Modifier.padding(start = 36.dp)
+                                )
+                            }
+                        }
+                        item(key = "space_loose") {
+                            Spacer(modifier = Modifier.height(16.dp))
+                        }
+                    }
+
+                    // Секция найденных проектов (если есть совпадения)
+                    if (matchingProjects.isNotEmpty()) {
+                        item(key = "hdr_projects") {
+                            SearchSectionHeader(
+                                title = "Projects",
+                                icon = {
+                                    Icon(
+                                        imageVector = Icons.Default.PieChart,
+                                        contentDescription = null,
+                                        tint = ThingsAnytimeTeal,
+                                        modifier = Modifier.size(18.dp)
+                                    )
+                                },
+                                textPrimaryColor = textPrimaryColor,
+                                textSecondaryColor = textSecondaryColor,
+                                dividerColor = dividerColor
+                            )
+                        }
+                        itemsIndexed(matchingProjects, key = { _, p -> "p_${p.id}" }) { index, proj ->
+                            Row(
+                                verticalAlignment = Alignment.CenterVertically,
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .clickable { onProjectClick(proj) }
+                                    .padding(vertical = 11.dp, horizontal = 4.dp)
+                            ) {
+                                val allPTasks = allTasks.filter { it.item.projectId == proj.id && it.item.type == 0 }
+                                val pCompleted = allPTasks.count { it.item.isCompleted }
+                                ProjectProgressArc(
+                                    completed = pCompleted,
+                                    total = allPTasks.size,
+                                    modifier = Modifier.size(18.dp),
+                                    color = ThingsBlue
+                                )
+                                Spacer(modifier = Modifier.width(10.dp))
+                                Text(
+                                    text = proj.title,
+                                    color = textPrimaryColor,
+                                    fontSize = 16.sp,
+                                    fontWeight = FontWeight.Medium,
+                                    maxLines = 1,
+                                    overflow = TextOverflow.Ellipsis,
+                                    modifier = Modifier.weight(1f)
+                                )
+                                Icon(
+                                    imageVector = Icons.AutoMirrored.Filled.KeyboardArrowRight,
+                                    contentDescription = null,
+                                    tint = textSecondaryColor.copy(alpha = 0.6f),
+                                    modifier = Modifier.size(16.dp)
+                                )
+                            }
+                            if (index < matchingProjects.size - 1) {
+                                HorizontalDivider(
+                                    color = dividerColor.copy(alpha = 0.5f),
+                                    thickness = 0.5.dp,
+                                    modifier = Modifier.padding(start = 32.dp)
+                                )
+                            }
+                        }
+                        item(key = "space_projects") {
+                            Spacer(modifier = Modifier.height(18.dp))
+                        }
+                    }
+
+                    // Секция найденных областей (если есть совпадения)
+                    if (matchingAreas.isNotEmpty()) {
+                        item(key = "hdr_areas") {
+                            SearchSectionHeader(
+                                title = "Areas",
+                                icon = {
+                                    Icon(
+                                        imageVector = Icons.Default.Layers,
+                                        contentDescription = null,
+                                        tint = ThingsSomedayGrey,
+                                        modifier = Modifier.size(18.dp)
+                                    )
+                                },
+                                textPrimaryColor = textPrimaryColor,
+                                textSecondaryColor = textSecondaryColor,
+                                dividerColor = dividerColor
+                            )
+                        }
+                        itemsIndexed(matchingAreas, key = { _, a -> "a_${a.id}" }) { index, area ->
+                            Row(
+                                verticalAlignment = Alignment.CenterVertically,
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .clickable { onAreaClick(area) }
+                                    .padding(vertical = 11.dp, horizontal = 4.dp)
+                            ) {
+                                Icon(
+                                    imageVector = Icons.Default.Layers,
+                                    contentDescription = null,
+                                    tint = ThingsSomedayGrey,
+                                    modifier = Modifier.size(18.dp)
+                                )
+                                Spacer(modifier = Modifier.width(10.dp))
+                                Text(
+                                    text = area.title,
+                                    color = textPrimaryColor,
+                                    fontSize = 16.sp,
+                                    fontWeight = FontWeight.Medium,
+                                    maxLines = 1,
+                                    overflow = TextOverflow.Ellipsis,
+                                    modifier = Modifier.weight(1f)
+                                )
+                                Icon(
+                                    imageVector = Icons.AutoMirrored.Filled.KeyboardArrowRight,
+                                    contentDescription = null,
+                                    tint = textSecondaryColor.copy(alpha = 0.6f),
+                                    modifier = Modifier.size(16.dp)
+                                )
+                            }
+                            if (index < matchingAreas.size - 1) {
+                                HorizontalDivider(
+                                    color = dividerColor.copy(alpha = 0.5f),
+                                    thickness = 0.5.dp,
+                                    modifier = Modifier.padding(start = 32.dp)
+                                )
+                            }
+                        }
+                        item(key = "space_areas") {
+                            Spacer(modifier = Modifier.height(18.dp))
+                        }
+                    }
+
+                    // Секция найденных тегов (если есть совпадения)
+                    if (matchingTags.isNotEmpty()) {
+                        item(key = "hdr_tags") {
+                            SearchSectionHeader(
+                                title = "Tags",
+                                icon = {
+                                    Icon(
+                                        imageVector = Icons.Outlined.LocalOffer,
+                                        contentDescription = null,
+                                        tint = ThingsSomedayGrey,
+                                        modifier = Modifier.size(18.dp)
+                                    )
+                                },
+                                textPrimaryColor = textPrimaryColor,
+                                textSecondaryColor = textSecondaryColor,
+                                dividerColor = dividerColor
+                            )
+                        }
+                        itemsIndexed(matchingTags, key = { _, tag -> "tag_${tag.id}" }) { index, tag ->
+                            Row(
+                                verticalAlignment = Alignment.CenterVertically,
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .clickable { onTagClick(tag) }
+                                    .padding(vertical = 11.dp, horizontal = 4.dp)
+                            ) {
+                                Icon(
+                                    imageVector = Icons.Outlined.LocalOffer,
+                                    contentDescription = null,
+                                    tint = ThingsSomedayGrey,
+                                    modifier = Modifier.size(18.dp)
+                                )
+                                Spacer(modifier = Modifier.width(10.dp))
+                                Text(
+                                    text = tag.title,
+                                    color = textPrimaryColor,
+                                    fontSize = 16.sp,
+                                    fontWeight = FontWeight.Medium,
+                                    maxLines = 1,
+                                    overflow = TextOverflow.Ellipsis,
+                                    modifier = Modifier.weight(1f)
+                                )
+                                Icon(
+                                    imageVector = Icons.AutoMirrored.Filled.KeyboardArrowRight,
+                                    contentDescription = null,
+                                    tint = textSecondaryColor.copy(alpha = 0.6f),
+                                    modifier = Modifier.size(16.dp)
+                                )
+                            }
+                            if (index < matchingTags.size - 1) {
+                                HorizontalDivider(
+                                    color = dividerColor.copy(alpha = 0.5f),
+                                    thickness = 0.5.dp,
+                                    modifier = Modifier.padding(start = 32.dp)
+                                )
+                            }
+                        }
+                        item(key = "space_tags") {
+                            Spacer(modifier = Modifier.height(18.dp))
+                        }
+                    }
+
+                    // Секции найденных задач
+                    sections.forEach { sec ->
+                        item(key = "hdr_${sec.id}") {
+                            SearchSectionHeader(
+                                title = sec.title,
+                                icon = sec.icon,
+                                onClick = sec.onClick,
+                                showChevron = sec.showChevron,
+                                textPrimaryColor = textPrimaryColor,
+                                textSecondaryColor = textSecondaryColor,
+                                dividerColor = dividerColor
+                            )
+                        }
+
+                        itemsIndexed(sec.tasks, key = { _, t -> "${sec.id}_${t.item.id}" }) { index, wrapper ->
+                            SearchTaskRow(
+                                taskWrapper = wrapper,
+                                isLogbook = sec.isLogbook,
+                                textPrimaryColor = textPrimaryColor,
+                                textSecondaryColor = textSecondaryColor,
+                                onTaskClick = onTaskClick,
+                                onTaskToggle = onTaskToggle
+                            )
+                            if (index < sec.tasks.size - 1) {
+                                HorizontalDivider(
+                                    color = dividerColor.copy(alpha = 0.5f),
+                                    thickness = 0.5.dp,
+                                    modifier = Modifier.padding(start = 36.dp)
+                                )
+                            }
+                        }
+
+                        item(key = "space_${sec.id}") {
+                            Spacer(modifier = Modifier.height(18.dp))
+                        }
                     }
                 }
             }
         }
 
-        // FAB + at bottom right to add a task with current query prefilled
+        // Кнопка FAB «+» в правом нижнем углу
         FloatingActionButton(
             onClick = onFabClick,
             containerColor = ThingsBlue,
@@ -317,240 +710,154 @@ fun ThingsSearchScreen(
 }
 
 /**
- * Custom result model representing matching targets in deep search
+ * Заголовок секции результатов поиска с иконкой и тонким разделителем.
  */
-sealed class DeepSearchResult {
-    data class TaskMatch(
-        val taskWrapper: ItemWithChecklist,
-        val matchedChecklist: List<ChecklistItem>
-    ) : DeepSearchResult()
-
-    data class ProjectMatch(val project: Item) : DeepSearchResult()
-    data class AreaMatch(val area: Area) : DeepSearchResult()
-}
-
 @Composable
-fun DeepSearchResultRow(
-    result: DeepSearchResult,
+private fun SearchSectionHeader(
+    title: String,
+    icon: @Composable () -> Unit,
+    onClick: (() -> Unit)? = null,
+    showChevron: Boolean = false,
     textPrimaryColor: Color,
     textSecondaryColor: Color,
     dividerColor: Color,
-    onTaskClick: (ItemWithChecklist) -> Unit,
-    onTaskToggle: (ItemWithChecklist) -> Unit,
-    projects: List<Item>,
-    areas: List<com.example.data.model.Area> = emptyList()
+    modifier: Modifier = Modifier
 ) {
-    when (result) {
-        is DeepSearchResult.TaskMatch -> {
-            val wrapper = result.taskWrapper
-            val task = wrapper.item
-            
-            Column(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .clip(RoundedCornerShape(12.dp))
-                    .background(textSecondaryColor.copy(alpha = 0.03f))
-                    .border(1.dp, dividerColor.copy(alpha = 0.2f), RoundedCornerShape(12.dp))
-                    .clickable { onTaskClick(wrapper) }
-                    .padding(12.dp)
-            ) {
-                // Task Header Row: Custom styled checkbox + Title + Notes/Checklist icons
-                Row(
-                    verticalAlignment = Alignment.CenterVertically,
-                    modifier = Modifier.fillMaxWidth()
-                ) {
-                    ThingsCheckbox(
-                        checked = task.isCompleted,
-                        onCheckedChange = { onTaskToggle(wrapper) },
-                        size = 18.dp
-                    )
-                    Spacer(modifier = Modifier.width(10.dp))
-                    Text(
-                        text = if (task.title.isBlank()) "Untitled To-Do" else task.title,
-                        color = if (task.isCompleted) textSecondaryColor else textPrimaryColor,
-                        fontSize = 16.sp,
-                        fontWeight = FontWeight.Medium,
-                        maxLines = 1,
-                        overflow = TextOverflow.Ellipsis,
-                        modifier = Modifier.weight(1f)
-                    )
-                    
-                    // Match indicators on right
-                    if (task.notes.isNotBlank() || wrapper.checklist.isNotEmpty() || task.cachedTags.isNotBlank()) {
-                        Row(horizontalArrangement = Arrangement.spacedBy(4.dp)) {
-                            if (task.notes.isNotBlank()) {
-                                Icon(
-                                    imageVector = Icons.Outlined.Description,
-                                    contentDescription = "Has notes",
-                                    tint = textSecondaryColor.copy(alpha = 0.4f),
-                                    modifier = Modifier.size(14.dp)
-                                )
-                            }
-                            if (wrapper.checklist.isNotEmpty()) {
-                                Icon(
-                                    imageVector = AppIcons.BulletList,
-                                    contentDescription = "Has checklist",
-                                    tint = textSecondaryColor.copy(alpha = 0.4f),
-                                    modifier = Modifier.size(14.dp)
-                                )
-                            }
-                            if (task.cachedTags.isNotBlank()) {
-                                Icon(
-                                    imageVector = Icons.Outlined.LocalOffer,
-                                    contentDescription = "Has tags",
-                                    tint = textSecondaryColor.copy(alpha = 0.4f),
-                                    modifier = Modifier.size(14.dp)
-                                )
-                            }
-                        }
-                    }
-                }
-
-                // Subtitle: Project/Area name and Section info if available
-                val project = remember(task.projectId, projects) {
-                    projects.firstOrNull { it.id == task.projectId }
-                }
-                val area = remember(task.areaId, areas) {
-                    areas.firstOrNull { it.id == task.areaId }
-                }
-                val contextText = remember(task, project, area) {
-                    buildString {
-                        if (task.isCompleted) {
-                            append("Logbook")
-                        } else {
-                            when {
-                                task.isInbox -> append("Inbox")
-                                task.isToday -> append("Today")
-                                task.isUpcoming -> append("Upcoming")
-                                task.isAnytime -> append("Anytime")
-                                task.isSomeday -> append("Someday")
-                            }
-                        }
-                        if (project != null) {
-                            append(" • ")
-                            append(project.title)
-                        } else if (area != null) {
-                            append(" • ")
-                            append(area.title)
-                        }
-                    }
-                }
-
-                if (contextText.isNotBlank()) {
-                    Text(
-                        text = contextText,
-                        color = textSecondaryColor.copy(alpha = 0.5f),
-                        fontSize = 12.sp,
-                        modifier = Modifier.padding(start = 28.dp, top = 2.dp)
-                    )
-                }
-
-                // If notes or checklist items matched, draw preview boxes under the title
-                if (task.notes.isNotBlank()) {
-                    Text(
-                        text = task.notes,
-                        color = textSecondaryColor.copy(alpha = 0.7f),
-                        fontSize = 13.sp,
-                        maxLines = 2,
-                        overflow = TextOverflow.Ellipsis,
-                        modifier = Modifier.padding(start = 28.dp, top = 6.dp)
-                    )
-                }
-
-                // Render matched checklist items
-                if (result.matchedChecklist.isNotEmpty()) {
-                    Column(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .padding(start = 28.dp, top = 8.dp),
-                        verticalArrangement = Arrangement.spacedBy(4.dp)
-                    ) {
-                        result.matchedChecklist.forEach { chItem ->
-                            Row(verticalAlignment = Alignment.CenterVertically) {
-                                Icon(
-                                    imageVector = if (chItem.isCompleted) Icons.Default.CheckCircle else Icons.Outlined.RadioButtonUnchecked,
-                                    contentDescription = null,
-                                    tint = if (chItem.isCompleted) ThingsLogbookGreen else textSecondaryColor.copy(alpha = 0.4f),
-                                    modifier = Modifier.size(12.dp)
-                                )
-                                Spacer(modifier = Modifier.width(6.dp))
-                                Text(
-                                    text = chItem.title,
-                                    color = if (chItem.isCompleted) textSecondaryColor else textPrimaryColor.copy(alpha = 0.8f),
-                                    fontSize = 13.sp,
-                                    maxLines = 1,
-                                    overflow = TextOverflow.Ellipsis
-                                )
-                            }
-                        }
-                    }
-                }
+    Column(modifier = modifier.fillMaxWidth()) {
+        Row(
+            verticalAlignment = Alignment.CenterVertically,
+            modifier = Modifier
+                .fillMaxWidth()
+                .then(if (onClick != null) Modifier.clickable(onClick = onClick) else Modifier)
+                .padding(vertical = 8.dp, horizontal = 4.dp)
+        ) {
+            icon()
+            Spacer(modifier = Modifier.width(8.dp))
+            Text(
+                text = title,
+                fontSize = 17.sp,
+                fontWeight = FontWeight.Bold,
+                color = textPrimaryColor,
+                modifier = Modifier.weight(1f)
+            )
+            if (showChevron) {
+                Icon(
+                    imageVector = Icons.AutoMirrored.Filled.KeyboardArrowRight,
+                    contentDescription = null,
+                    tint = textSecondaryColor.copy(alpha = 0.6f),
+                    modifier = Modifier.size(16.dp)
+                )
             }
         }
-        is DeepSearchResult.ProjectMatch -> {
-            val proj = result.project
-            Row(
-                verticalAlignment = Alignment.CenterVertically,
+        HorizontalDivider(
+            color = dividerColor,
+            thickness = 0.5.dp
+        )
+    }
+}
+
+/**
+ * Плоская строка задачи в результатах поиска, точно повторяющая стиль Things 3.
+ */
+@Composable
+private fun SearchTaskRow(
+    taskWrapper: ItemWithChecklist,
+    isLogbook: Boolean,
+    textPrimaryColor: Color,
+    textSecondaryColor: Color,
+    onTaskClick: (ItemWithChecklist) -> Unit,
+    onTaskToggle: (ItemWithChecklist) -> Unit
+) {
+    val task = taskWrapper.item
+    val stopMillis = task.stopDate ?: task.modificationDate
+    val dateText = remember(stopMillis) {
+        java.text.SimpleDateFormat("MM/dd/yy", java.util.Locale.US).format(java.util.Date(stopMillis))
+    }
+
+    Row(
+        verticalAlignment = Alignment.CenterVertically,
+        modifier = Modifier
+            .fillMaxWidth()
+            .clickable { onTaskClick(taskWrapper) }
+            .padding(vertical = 10.dp, horizontal = 4.dp)
+    ) {
+        val isCancelled = task.status == 2
+        val isStruckThrough = task.isCompleted || isCancelled
+
+        if (isCancelled) {
+            Box(
+                contentAlignment = Alignment.Center,
                 modifier = Modifier
-                    .fillMaxWidth()
-                    .clip(RoundedCornerShape(12.dp))
-                    .background(ThingsAnytimeTeal.copy(alpha = 0.05f))
-                    .border(1.dp, ThingsAnytimeTeal.copy(alpha = 0.2f), RoundedCornerShape(12.dp))
-                    .padding(12.dp)
+                    .size(18.dp)
+                    .clip(RoundedCornerShape(4.dp))
+                    .background(ThingsBlue)
             ) {
                 Icon(
-                    imageVector = Icons.Default.PieChart,
-                    contentDescription = null,
-                    tint = ThingsAnytimeTeal,
-                    modifier = Modifier.size(18.dp)
+                    imageVector = Icons.Default.Close,
+                    contentDescription = "Cancelled",
+                    tint = Color.White,
+                    modifier = Modifier.size(12.dp)
                 )
-                Spacer(modifier = Modifier.width(10.dp))
-                Column(modifier = Modifier.weight(1f)) {
-                    Text(
-                        text = proj.title,
-                        color = textPrimaryColor,
-                        fontSize = 16.sp,
-                        fontWeight = FontWeight.Bold
-                    )
-                    Text(
-                        text = "Project",
-                        color = textSecondaryColor.copy(alpha = 0.5f),
-                        fontSize = 12.sp
-                    )
-                }
             }
+        } else {
+            ThingsCheckbox(
+                checked = task.isCompleted,
+                onCheckedChange = { onTaskToggle(taskWrapper) },
+                size = 18.dp
+            )
         }
-        is DeepSearchResult.AreaMatch -> {
-            val area = result.area
-            Row(
-                verticalAlignment = Alignment.CenterVertically,
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .clip(RoundedCornerShape(12.dp))
-                    .background(textSecondaryColor.copy(alpha = 0.03f))
-                    .border(1.dp, dividerColor.copy(alpha = 0.2f), RoundedCornerShape(12.dp))
-                    .padding(12.dp)
-            ) {
+
+        Spacer(modifier = Modifier.width(10.dp))
+
+        if (isLogbook) {
+            Text(
+                text = dateText,
+                color = ThingsBlue,
+                fontSize = 14.sp,
+                fontWeight = FontWeight.Medium
+            )
+            Spacer(modifier = Modifier.width(8.dp))
+        }
+
+        Text(
+            text = if (task.title.isBlank()) "Untitled To-Do" else task.title,
+            color = if (isStruckThrough) textSecondaryColor else textPrimaryColor,
+            fontSize = 16.sp,
+            fontWeight = FontWeight.Normal,
+            textDecoration = if (isStruckThrough) TextDecoration.LineThrough else TextDecoration.None,
+            maxLines = 1,
+            overflow = TextOverflow.Ellipsis,
+            modifier = Modifier.weight(1f)
+        )
+
+        // Индикаторы справа (Заметки, Чеклист, Теги)
+        Row(
+            horizontalArrangement = Arrangement.spacedBy(4.dp),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            if (task.notes.isNotBlank()) {
                 Icon(
-                    imageVector = Icons.Default.Layers,
-                    contentDescription = null,
-                    tint = ThingsSomedayGrey,
-                    modifier = Modifier.size(18.dp)
+                    imageVector = Icons.Outlined.Description,
+                    contentDescription = "Notes",
+                    tint = textSecondaryColor.copy(alpha = 0.5f),
+                    modifier = Modifier.size(15.dp)
                 )
-                Spacer(modifier = Modifier.width(10.dp))
-                Column(modifier = Modifier.weight(1f)) {
-                    Text(
-                        text = area.title,
-                        color = textPrimaryColor,
-                        fontSize = 16.sp,
-                        fontWeight = FontWeight.Bold
-                    )
-                    Text(
-                        text = "Area",
-                        color = textSecondaryColor.copy(alpha = 0.5f),
-                        fontSize = 12.sp
-                    )
-                }
+            }
+            if (taskWrapper.checklist.isNotEmpty()) {
+                Icon(
+                    imageVector = AppIcons.BulletList,
+                    contentDescription = "Checklist",
+                    tint = textSecondaryColor.copy(alpha = 0.5f),
+                    modifier = Modifier.size(15.dp)
+                )
+            }
+            if (task.cachedTags.isNotBlank()) {
+                Icon(
+                    imageVector = Icons.Outlined.LocalOffer,
+                    contentDescription = "Tags",
+                    tint = textSecondaryColor.copy(alpha = 0.5f),
+                    modifier = Modifier.size(15.dp)
+                )
             }
         }
     }

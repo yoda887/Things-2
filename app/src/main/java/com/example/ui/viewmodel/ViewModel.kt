@@ -129,6 +129,7 @@ class ThingsViewModel @Inject constructor(
         screen: ActiveScreen,
         project: Item?,
         area: Area?,
+        tag: Tag? = null,
         expandedTaskId: String?,
         selectedTag: String?,
         taskList: List<ItemWithChecklist>,
@@ -157,6 +158,7 @@ class ThingsViewModel @Inject constructor(
                     ActiveScreen.LOGBOOK -> task.isCompleted
                     ActiveScreen.PROJECT_DETAIL -> task.projectId == project?.id && !task.isCompleted
                     ActiveScreen.AREA_DETAIL -> task.areaId == area?.id && task.type == 0 && !task.isCompleted
+                    ActiveScreen.TAG_DETAIL -> task.type == 0 && tag != null && task.tags.contains(tag.title) && !task.isCompleted
                     else -> false
                 }
             }
@@ -182,6 +184,7 @@ class ThingsViewModel @Inject constructor(
             screen = screen,
             project = project,
             area = area,
+            tag = tag,
             inlineExpandedTaskId = expandedTaskId,
             selectedTagFilter = selectedTag,
             allTags = allTagsSet,
@@ -205,12 +208,14 @@ class ThingsViewModel @Inject constructor(
     fun getCategoryListStateSnapshot(
         screen: ActiveScreen,
         project: Item?,
-        area: Area?
+        area: Area?,
+        tag: Tag? = null
     ): ThingsCategoryListState {
         return computeCategoryListState(
             screen = screen,
             project = project,
             area = area,
+            tag = tag,
             expandedTaskId = inlineExpandedTaskId.value,
             selectedTag = selectedTagFilter.value,
             taskList = tasks.value,
@@ -238,7 +243,8 @@ class ThingsViewModel @Inject constructor(
     fun getCategoryListStateFlow(
         screen: ActiveScreen,
         project: Item?,
-        area: Area?
+        area: Area?,
+        tag: Tag? = null
     ): Flow<ThingsCategoryListState> {
         return combine(
             listOf(
@@ -276,6 +282,7 @@ class ThingsViewModel @Inject constructor(
                 screen = screen,
                 project = project,
                 area = area,
+                tag = tag,
                 expandedTaskId = expandedTaskId,
                 selectedTag = selectedTag,
                 taskList = taskList,

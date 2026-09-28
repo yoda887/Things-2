@@ -23,6 +23,8 @@ import com.example.R
 import com.example.data.model.Area
 import com.example.data.model.Item
 import com.example.data.model.ItemWithChecklist
+import com.example.data.model.Tag
+import androidx.compose.material.icons.outlined.LocalOffer
 import com.example.ui.screens.home.ActiveScreen
 import com.example.ui.theme.AppIcons
 import com.example.ui.theme.ThingsBlue
@@ -94,6 +96,7 @@ fun CategoryListTopAppBar(
     textSecondaryColor: Color = Color.Unspecified,
     project: Item? = null,
     area: Area? = null,
+    tag: Tag? = null,
     tasks: List<ItemWithChecklist> = emptyList(),
     backgroundProgress: Float = 0f,
     titleProgress: Float = 0f,
@@ -123,6 +126,7 @@ fun CategoryListTopAppBar(
                     screen = screen,
                     project = project,
                     area = area,
+                    tag = tag,
                     tasks = tasks,
                     textPrimaryColor = textPrimaryColor
                 )
@@ -247,6 +251,7 @@ private fun CategoryTopAppBarTitleContent(
     screen: ActiveScreen,
     project: Item?,
     area: Area?,
+    tag: Tag?,
     tasks: List<ItemWithChecklist>,
     textPrimaryColor: Color
 ) {
@@ -373,6 +378,23 @@ private fun CategoryTopAppBarTitleContent(
                 Spacer(modifier = Modifier.width(TOP_APP_BAR_SPACING))
                 Text(
                     text = area?.title ?: "Responsibility Area",
+                    style = MaterialTheme.typography.topAppBarTitle,
+                    color = textPrimaryColor,
+                    fontWeight = FontWeight.SemiBold,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis
+                )
+            }
+            ActiveScreen.TAG_DETAIL -> {
+                Icon(
+                    imageVector = Icons.Outlined.LocalOffer,
+                    contentDescription = null,
+                    tint = ThingsAreaGreen,
+                    modifier = Modifier.size(AREA_ICON_SIZE)
+                )
+                Spacer(modifier = Modifier.width(TOP_APP_BAR_SPACING))
+                Text(
+                    text = tag?.title ?: "Tag",
                     style = MaterialTheme.typography.topAppBarTitle,
                     color = textPrimaryColor,
                     fontWeight = FontWeight.SemiBold,

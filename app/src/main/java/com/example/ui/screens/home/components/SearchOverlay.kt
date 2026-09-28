@@ -1,6 +1,7 @@
 package com.example.ui.screens.home.components
 
 import androidx.activity.compose.BackHandler
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import androidx.compose.animation.*
 import androidx.compose.animation.core.Animatable
@@ -8,6 +9,8 @@ import androidx.compose.animation.core.CubicBezierEasing
 import androidx.compose.animation.core.Easing
 import androidx.compose.animation.core.FastOutSlowInEasing
 import androidx.compose.animation.core.LinearEasing
+import androidx.compose.animation.core.Spring
+import androidx.compose.animation.core.spring
 import androidx.compose.ui.graphics.TransformOrigin
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.Canvas
@@ -71,6 +74,7 @@ import androidx.compose.ui.unit.sp
 import com.example.data.model.Area
 import com.example.data.model.Item
 import com.example.data.model.ItemWithChecklist
+import com.example.data.model.Tag
 import com.example.ui.screens.home.ActiveScreen
 import com.example.ui.theme.AppIcons
 import com.example.ui.screens.home.subcomponents.TaskItemRow
@@ -89,7 +93,7 @@ private const val MORPH_FALLBACK_SCALE = 0.55f
 // Карточка стартует полупрозрачной и становится непрозрачной с самого начала роста
 private const val MORPH_START_ALPHA = 0.55f
 private const val MORPH_FADE_IN_FRACTION = 0.6f
-private val MORPH_FINAL_CORNER_RADIUS = 24.dp
+private val MORPH_FINAL_CORNER_RADIUS = 28.dp
 
 /**
  * Точная кривая пружины затухания, соответствующая оригинальному
@@ -192,6 +196,8 @@ fun ThingsSearchOverlay(
     onSmartListClick: (ActiveScreen) -> Unit,
     onClose: () -> Unit,
     modifier: Modifier = Modifier,
+    allSavedTagObjects: List<Tag> = emptyList(),
+    onTagClick: (Tag) -> Unit = {},
     // [ИЗМЕНЕНИЕ]: Список недавно искавшихся/выбранных в поиске объектов
     recentSearchItems: List<SearchResultItem> = emptyList(),
     onContinueSearchClick: () -> Unit = {},
@@ -238,29 +244,38 @@ fun ThingsSearchOverlay(
     var cardBoundsInRoot by remember { mutableStateOf<Rect?>(null) }
     val isMorphMeasured = cardBoundsInRoot != null
 
-    // [ИЗМЕНЕНИЕ]: Физика MotionSickness — форма раскрывается за 220 мс по пружине ζ = 0.8,
-    // а контент проявляется за 154 мс (functionByExpanding: 0.7)
+    // Фокус и клавиатура
+    val focusRequester = remember { FocusRequester() }
+
+    // [ИЗМЕНЕНИЕ]: Физическая пружина Jetpack Compose (dampingRatio = 0.8f, stiffness = Spring.StiffnessMediumLow).
+    // Клавиатура запрашивается на середине хода (~110 мс) — её системный подъем происходит
+    // одновременно с приземлением карточки, устраняя задержку появления.
     LaunchedEffect(isMorphMeasured) {
         if (!isMorphMeasured) return@LaunchedEffect
         if (isReduceMotion) {
             transformProgress.snapTo(1f)
             opacityProgress.animateTo(1f, tween(100))
+            focusRequester.requestFocus()
         } else {
             coroutineScope.launch {
-                transformProgress.animateTo(
-                    targetValue = 1f,
-                    animationSpec = tween(
-                        durationMillis = MORPH_TRANSFORM_DURATION_MS,
-                        easing = ThingsSpringEasing(0.8f)
-                    )
-                )
+                delay(110)
+                focusRequester.requestFocus()
             }
             coroutineScope.launch {
                 opacityProgress.animateTo(
                     targetValue = 1f,
-                    animationSpec = tween(
-                        durationMillis = MORPH_CONTENT_DURATION_MS,
-                        easing = ThingsSpringEasing(0.8f)
+                    animationSpec = spring(
+                        dampingRatio = 0.8f,
+                        stiffness = Spring.StiffnessMediumLow
+                    )
+                )
+            }
+            coroutineScope.launch {
+                transformProgress.animateTo(
+                    targetValue = 1f,
+                    animationSpec = spring(
+                        dampingRatio = 0.8f,
+                        stiffness = Spring.StiffnessMediumLow
                     )
                 )
             }
@@ -307,14 +322,10 @@ fun ThingsSearchOverlay(
         }
     }
 
-    // Фокус и клавиатура
-    val focusRequester = remember { FocusRequester() }
-    LaunchedEffect(Unit) {
-        focusRequester.requestFocus()
-    }
+
 
     // Алгоритм умного поиска (Quick Find)
-    val searchResults = remember(searchQuery, allTasks, projects, areas) {
+    val searchResults = remember(searchQuery, allTasks, projects, areas, allSavedTagObjects) {
         if (searchQuery.isBlank()) {
             emptyList<SearchResultItem>()
         } else {
@@ -336,21 +347,32 @@ fun ThingsSearchOverlay(
                 }
             }
 
-
-
-            // 2. Поиск по областям ответственности
-            val matchedAreas = areas.filter { it.title.contains(query, ignoreCase = true) }
+            // 2. Поиск по областям ответственности (только активные, неудаленные)
+            val matchedAreas = areas.filter { !it.trashed && it.title.contains(query, ignoreCase = true) }
             results.addAll(matchedAreas.map { SearchResultItem.AreaResult(it) })
 
-            // 3. Поиск по проектам (только активные по названию)
+            // 2.1 Поиск по тегам (отображаются карточкой, аналогичной области)
+            val matchedTags = allSavedTagObjects.filter {
+                it.title.isNotBlank() && it.title.contains(query, ignoreCase = true)
+            }
+            results.addAll(matchedTags.map { SearchResultItem.TagResult(it) })
+
+            // 3. Поиск по проектам (только активные по названию, заметкам; исключая удаленные и завершенные/отмененные)
             val matchedProjects = projects.filter {
-                it.type == 1 && !it.isCompleted && it.title.contains(query, ignoreCase = true)
+                it.type == 1 && !it.trashed && !it.isCompleted && it.status != 2 && (
+                    it.title.contains(query, ignoreCase = true) ||
+                    it.notes.contains(query, ignoreCase = true)
+                )
             }
             results.addAll(matchedProjects.map { SearchResultItem.ProjectResult(it) })
 
-            // 4. Поиск по задачам (только активные по названию)
-            val matchedTasks = allTasks.filter {
-                it.item.type == 0 && !it.item.isCompleted && it.item.title.contains(query, ignoreCase = true)
+            // 4. Поиск по задачам (только активные по названию, заметкам, чеклистам; исключая удаленные и завершенные/отмененные)
+            val matchedTasks = allTasks.filter { wrapper ->
+                wrapper.item.type == 0 && !wrapper.item.trashed && !wrapper.item.isCompleted && wrapper.item.status != 2 && (
+                    wrapper.item.title.contains(query, ignoreCase = true) ||
+                    wrapper.item.notes.contains(query, ignoreCase = true) ||
+                    wrapper.checklist.any { it.title.contains(query, ignoreCase = true) }
+                )
             }
             results.addAll(matchedTasks.map { SearchResultItem.TaskResult(it) })
 
@@ -358,38 +380,15 @@ fun ThingsSearchOverlay(
         }
     }
 
-    // [ИЗМЕНЕНИЕ]: Проверяем, есть ли искомый текст в заметках, чек-листах или Logbook (выполненных задачах/проектах)
-    val showContinueSearch = remember(searchQuery, allTasks, projects) {
-        if (searchQuery.isBlank()) {
-            false
-        } else {
-            val query = searchQuery.trim()
-            val matchesInTasks = allTasks.any { wrapper ->
-                val matchesInNotes = wrapper.item.notes.contains(query, ignoreCase = true)
-                val matchesInChecklist = wrapper.checklist.any { it.title.contains(query, ignoreCase = true) }
-                val matchesInLogbook = wrapper.item.isCompleted && (
-                    wrapper.item.title.contains(query, ignoreCase = true) ||
-                    wrapper.item.notes.contains(query, ignoreCase = true) ||
-                    wrapper.checklist.any { it.title.contains(query, ignoreCase = true) }
-                )
-                matchesInNotes || matchesInChecklist || matchesInLogbook
-            }
-            val matchesInProjectNotes = projects.any { proj ->
-                proj.type == 1 && proj.notes.contains(query, ignoreCase = true)
-            }
-            val matchesInProjectLogbook = projects.any { proj ->
-                proj.type == 1 && proj.isCompleted && proj.title.contains(query, ignoreCase = true)
-            }
-            matchesInTasks || matchesInProjectNotes || matchesInProjectLogbook
-        }
-    }
+    // В эталоне Things 3 кнопка "Continue Search" отображается всегда при наличии любого поискового запроса
+    val showContinueSearch = searchQuery.isNotBlank()
 
     // Имя первого доступного проекта для отображения в "Recent"
     val recentProjectName = remember(projects) {
-        projects.firstOrNull { it.type == 1 }?.title ?: "Vacation in Rome"
+        projects.firstOrNull { it.type == 1 && !it.trashed && !it.isCompleted && it.status != 2 }?.title ?: "Vacation in Rome"
     }
     val recentProject = remember(projects) {
-        projects.firstOrNull { it.type == 1 }
+        projects.firstOrNull { it.type == 1 && !it.trashed && !it.isCompleted && it.status != 2 }
     }
 
     // Ход анимации формы (220 мс, пружина ζ = 0.8) и проявления контента (154 мс, functionByExpanding: 0.7)
@@ -401,16 +400,9 @@ fun ThingsSearchOverlay(
     val textPrimary = if (isDark) Color.White else Color(0xFF1C1C1E)
     val textSecondary = if (isDark) Color(0xFF8E8E93) else Color(0xFF8E8E93)
     val inputNormalBackground = if (isDark) Color(0xFF2C2C2E) else Color(0xFFF2F2F7)
-    val startCardBg = if (wasPulled) ThingsBlue else inputNormalBackground
-    // Из поля стартового экрана карточка сразу белая, а цвет поля (синий при оттяжке) меняет
-    // только сама капсула поиска. Из круга оттяжки карточка и есть круг — она белеет вместе с ним
-    val currentCardBg = if (morphFromWideField || isMorphClosing) cardBackground
-        else androidx.compose.ui.graphics.lerp(startCardBg, cardBackground, progress)
-    val currentInputBg = if (morphFromWideField) {
-        androidx.compose.ui.graphics.lerp(startCardBg, inputNormalBackground, progress)
-    } else {
-        androidx.compose.ui.graphics.lerp(Color.Transparent, inputNormalBackground, progress)
-    }
+    // Карточка и поле ввода всегда имеют свой итоговый цвет с первого кадра (белая карточка, серый инпут)
+    val currentCardBg = cardBackground
+    val currentInputBg = inputNormalBackground
     val closeButtonBackground = if (isDark) Color(0xFF2C2C2E) else Color(0xFFE5E5EA)
 
     // Карточка всегда раскладывается в своём итоговом месте, путь от источника к нему
@@ -475,8 +467,7 @@ fun ThingsSearchOverlay(
             }
         }
         else lerpF(MORPH_START_ALPHA, 1f, (progress / MORPH_FADE_IN_FRACTION).coerceIn(0f, 1f))
-    val currentElevation = if (isMorphClosing) androidx.compose.ui.unit.lerp(12.dp, 0.dp, dismissVal)
-        else androidx.compose.ui.unit.lerp(0.dp, 12.dp, progress)
+    val currentElevation = 12.dp
 
     // Из поля стартового экрана поле окна в первом кадре занимает всю капсулу:
     // отступы от краёв карточки нарастают от 0.
@@ -490,7 +481,6 @@ fun ThingsSearchOverlay(
 
     val backdropAlpha = if (isMorphClosing) ((1f - dismissVal) * 0.45f).coerceIn(0f, 0.45f)
         else (morphRaw * 0.45f).coerceIn(0f, 0.45f)
-    // Внутренняя раскладка при морфинге не пересчитывается — меняется только прозрачность
     val closeButtonAlpha = if (isMorphClosing) (1f - dismissVal).coerceIn(0f, 1f)
         else (opacityProgress.value / 0.7f).coerceIn(0f, 1f)
     // Из поля стартового экрана ✕ раздвигается и отодвигает правый край поля
@@ -575,27 +565,17 @@ fun ThingsSearchOverlay(
                                 .background(currentInputBg)
                                 .padding(horizontal = 14.dp)
                         ) {
-                            val startIconTint = if (wasPulled) Color.White else textSecondary
-                            val currentIconTint = androidx.compose.ui.graphics.lerp(startIconTint, textSecondary, progress)
-                            val overlayIconScale = if (wasPulled) (1.18f - 0.18f * progress) else 1f
-                            val overlayIconRotation = if (wasPulled) (-12f * (1f - progress)) else 0f
+                            val currentIconTint = textSecondary
                             Icon(
                                 imageVector = Icons.Default.Search,
                                 contentDescription = "Search",
                                 tint = currentIconTint,
-                                modifier = Modifier
-                                    .size(20.dp)
-                                    .graphicsLayer {
-                                        scaleX = overlayIconScale
-                                        scaleY = overlayIconScale
-                                        rotationZ = overlayIconRotation
-                                    }
+                                modifier = Modifier.size(20.dp)
                             )
                             Spacer(modifier = Modifier.width(8.dp))
                             Box(modifier = Modifier.weight(1f)) {
                                 if (searchQuery.isEmpty()) {
-                                    val startTextTint = if (wasPulled) Color.White.copy(alpha = 0.9f) else textSecondary.copy(alpha = 0.6f)
-                                    val currentTextTint = androidx.compose.ui.graphics.lerp(startTextTint, textSecondary.copy(alpha = 0.6f), progress)
+                                    val currentTextTint = textSecondary.copy(alpha = 0.6f)
                                     Text(
                                         text = "Quick Find",
                                         color = currentTextTint,
@@ -689,26 +669,66 @@ fun ThingsSearchOverlay(
                         .padding(horizontal = 14.dp)
                 ) {
                     if (searchQuery.isBlank()) {
-                        // РЕЖИМ 1: Стартовый экран (без запроса)
-                        Text(
-                            text = "Recent",
-                            color = textSecondary.copy(alpha = 0.7f),
-                            fontSize = 13.sp,
-                            fontWeight = FontWeight.Bold,
-                            modifier = Modifier.padding(start = 4.dp, bottom = 8.dp)
-                        )
+                        // Валидация списка Recent: исключаем удаленные/помещенные в корзину задачи, проекты, области и теги,
+                        // а также подтягиваем актуальное состояние сущностей
+                        val validRecentItems = remember(recentSearchItems, projects, areas, allSavedTagObjects, allTasks) {
+                            recentSearchItems.mapNotNull { item: SearchResultItem ->
+                                when (item) {
+                                    is SearchResultItem.TaskResult -> {
+                                        val currentTask = allTasks.find { it.item.id == item.taskWrapper.item.id }
+                                        if (currentTask != null && !currentTask.item.trashed) {
+                                            SearchResultItem.TaskResult(currentTask)
+                                        } else null
+                                    }
+                                    is SearchResultItem.ProjectResult -> {
+                                        val currentProject = projects.find { it.id == item.project.id && !it.trashed }
+                                        if (currentProject != null) {
+                                            SearchResultItem.ProjectResult(currentProject)
+                                        } else null
+                                    }
+                                    is SearchResultItem.AreaResult -> {
+                                        val currentArea = areas.find { it.id == item.area.id && !it.trashed }
+                                        if (currentArea != null) {
+                                            SearchResultItem.AreaResult(currentArea)
+                                        } else null
+                                    }
+                                    is SearchResultItem.TagResult -> {
+                                        val currentTag = allSavedTagObjects.find { it.id == item.tag.id }
+                                        if (currentTag != null) {
+                                            SearchResultItem.TagResult(currentTag)
+                                        } else null
+                                    }
+                                    is SearchResultItem.SmartListResult -> item
+                                    is SearchResultItem.SpecialResult -> item
+                                }
+                            }
+                        }
 
-                        Column(
-                            verticalArrangement = Arrangement.spacedBy(4.dp),
-                            modifier = Modifier.fillMaxWidth()
-                        ) {
-                            // Отображаем недавно найденные в поиске объекты, либо фоллбек по умолчанию
-                            if (recentSearchItems.isNotEmpty()) {
-                                recentSearchItems.take(5).forEach { result ->
+                        // РЕЖИМ 1: Стартовый экран (без запроса)
+                        if (validRecentItems.isNotEmpty()) {
+                            Text(
+                                text = "Recent",
+                                color = textSecondary,
+                                fontSize = 15.sp,
+                                fontWeight = FontWeight.SemiBold,
+                                modifier = Modifier.padding(start = 4.dp, bottom = 6.dp)
+                            )
+                            HorizontalDivider(
+                                color = dividerColor,
+                                thickness = 0.5.dp,
+                                modifier = Modifier.padding(bottom = 6.dp)
+                            )
+
+                            Column(
+                                verticalArrangement = Arrangement.spacedBy(4.dp),
+                                modifier = Modifier.fillMaxWidth()
+                            ) {
+                                validRecentItems.take(5).forEach { result ->
                                     val isCurrent = when (result) {
                                         is SearchResultItem.SmartListResult -> currentScreen == result.screen
                                         is SearchResultItem.ProjectResult -> currentScreen == ActiveScreen.PROJECT_DETAIL && currentProject?.id == result.project.id
                                         is SearchResultItem.AreaResult -> currentScreen == ActiveScreen.AREA_DETAIL && currentArea?.id == result.area.id
+                                        is SearchResultItem.TagResult -> currentScreen == ActiveScreen.TAG_DETAIL
                                         else -> false
                                     }
                                     SearchResultRow(
@@ -724,122 +744,28 @@ fun ThingsSearchOverlay(
                                         onTaskClick = onTaskClick,
                                         onProjectClick = onProjectClick,
                                         onAreaClick = onAreaClick,
+                                        onTagClick = onTagClick,
                                         onSmartListClick = onSmartListClick,
                                         onTaskToggle = onTaskToggle
                                     )
                                 }
-                            } else {
-                                // Если поиск открыт из экрана области ответственности — показываем её с синей галочкой
-                                if (currentScreen == ActiveScreen.AREA_DETAIL && currentArea != null) {
-                                    RecentRow(
-                                        title = currentArea.title,
-                                        icon = {
-                                            Icon(
-                                                imageVector = AppIcons.Area,
-                                                contentDescription = null,
-                                                tint = ThingsAreaGreen,
-                                                modifier = Modifier.size(20.dp)
-                                            )
-                                        },
-                                        textPrimary = textPrimary,
-                                        isChecked = true,
-                                        onClick = { onAreaClick(currentArea) }
-                                    )
-                                }
-
-                                // 1. Today
-                                RecentRow(
-                                    title = "Today",
-                                    icon = {
-                                        Icon(
-                                            imageVector = AppIcons.Today,
-                                            contentDescription = null,
-                                            tint = Color.Unspecified,
-                                            modifier = Modifier.size(19.dp)
-                                        )
-                                    },
-                                    textPrimary = textPrimary,
-                                    isChecked = (currentScreen == ActiveScreen.TODAY),
-                                    onClick = { onSmartListClick(ActiveScreen.TODAY) }
-                                )
-
-                                // 2. Important
-                                RecentRow(
-                                    title = "Important",
-                                    icon = {
-                                        Icon(
-                                            imageVector = Icons.Outlined.LocalOffer,
-                                            contentDescription = null,
-                                            tint = ThingsSomedayGrey,
-                                            modifier = Modifier.size(19.dp)
-                                        )
-                                    },
-                                    textPrimary = textPrimary,
-                                    isChecked = (currentScreen == ActiveScreen.ANYTIME),
-                                    onClick = {
-                                        onSmartListClick(ActiveScreen.ANYTIME)
-                                    }
-                                )
-
-                                // 3. Проект (текущий если открыт из проекта, иначе первый проект или Vacation in Rome)
-                                val displayProject = if (currentScreen == ActiveScreen.PROJECT_DETAIL && currentProject != null) {
-                                    currentProject
-                                } else {
-                                    recentProject
-                                }
-                                val displayProjectName = displayProject?.title ?: recentProjectName
-                                val isCurrentProject = currentScreen == ActiveScreen.PROJECT_DETAIL && (currentProject == null || currentProject.id == displayProject?.id)
-                                RecentRow(
-                                    title = displayProjectName,
-                                    icon = {
-                                        val totalCount = if (displayProject != null) allTasks.count { it.item.projectId == displayProject.id && it.item.type == 0 } else 3
-                                        val completedCount = if (displayProject != null) allTasks.count { it.item.projectId == displayProject.id && it.item.type == 0 && it.item.isCompleted } else 1
-                                        ProjectProgressArc(
-                                            completed = completedCount,
-                                            total = totalCount,
-                                            color = ThingsInboxBlue,
-                                            modifier = Modifier.size(20.dp)
-                                        )
-                                    },
-                                    textPrimary = textPrimary,
-                                    isChecked = isCurrentProject,
-                                    onClick = {
-                                        if (displayProject != null) {
-                                            onProjectClick(displayProject)
-                                        } else {
-                                            onSmartListClick(ActiveScreen.INBOX)
-                                        }
-                                    }
-                                )
-
-                                // 4. Upcoming
-                                RecentRow(
-                                    title = "Upcoming",
-                                    icon = {
-                                        Icon(
-                                            imageVector = AppIcons.Upcoming,
-                                            contentDescription = null,
-                                            tint = Color.Unspecified,
-                                            modifier = Modifier.size(19.dp)
-                                        )
-                                    },
-                                    textPrimary = textPrimary,
-                                    isChecked = (currentScreen == ActiveScreen.UPCOMING),
-                                    onClick = { onSmartListClick(ActiveScreen.UPCOMING) }
-                                )
                             }
-                        }
 
-                        Spacer(modifier = Modifier.height(24.dp))
+                            Spacer(modifier = Modifier.height(24.dp))
+                        } else {
+                            // При пустой истории даем аккуратный отступ сверху
+                            Spacer(modifier = Modifier.height(18.dp))
+                        }
 
                         // Подпись внизу
                         Text(
                             text = "Quickly switch lists, find to-dos,\nsearch for tags...",
-                            color = textSecondary.copy(alpha = 0.6f),
-                            fontSize = 13.sp,
+                            color = textSecondary.copy(alpha = 0.8f),
+                            fontSize = 15.5.sp,
+                            fontWeight = FontWeight.Normal,
                             fontStyle = FontStyle.Normal,
                             textAlign = TextAlign.Center,
-                            lineHeight = 18.sp,
+                            lineHeight = 22.sp,
                             modifier = Modifier
                                 .fillMaxWidth()
                                 .padding(bottom = 20.dp)
@@ -847,30 +773,12 @@ fun ThingsSearchOverlay(
                     } else {
                         // РЕЖИМ 2: Экран результатов поиска
                         if (searchResults.isEmpty()) {
-                            if (!showContinueSearch) {
-                                Box(
-                                    modifier = Modifier
-                                        .fillMaxWidth()
-                                        .height(200.dp),
-                                    contentAlignment = Alignment.Center
-                                ) {
-                                    Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                                        Icon(
-                                            imageVector = Icons.Outlined.SearchOff,
-                                            contentDescription = null,
-                                            tint = textSecondary.copy(alpha = 0.4f),
-                                            modifier = Modifier.size(48.dp)
-                                        )
-                                        Spacer(modifier = Modifier.height(8.dp))
-                                        Text(
-                                            text = "No results found for \"$searchQuery\"",
-                                            color = textSecondary,
-                                            fontSize = 14.sp
-                                        )
-                                    }
-                                }
-                            } else {
-                                // [ИЗМЕНЕНИЕ]: Показываем только элемент Continue Search, если видимых результатов нет, но есть совпадения в глубоком поиске
+                            // Если нет прямых результатов в списках/проектах, сразу предлагаем глубокий поиск
+                            Column(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .padding(vertical = 8.dp)
+                            ) {
                                 ContinueSearchTaskRow(
                                     onClick = onContinueSearchClick,
                                     textPrimary = textPrimary,
@@ -913,6 +821,7 @@ fun ThingsSearchOverlay(
                                         onTaskClick = onTaskClick,
                                         onProjectClick = onProjectClick,
                                         onAreaClick = onAreaClick,
+                                        onTagClick = onTagClick,
                                         onSmartListClick = onSmartListClick,
                                         onTaskToggle = onTaskToggle
                                     )
@@ -1032,6 +941,7 @@ sealed class SearchResultItem {
     data class SmartListResult(val title: String, val screen: ActiveScreen) : SearchResultItem()
     data class SpecialResult(val title: String, val icon: androidx.compose.ui.graphics.vector.ImageVector, val iconColor: Color) : SearchResultItem()
     data class AreaResult(val area: Area) : SearchResultItem()
+    data class TagResult(val tag: Tag) : SearchResultItem()
     data class ProjectResult(val project: Item) : SearchResultItem()
     data class TaskResult(val taskWrapper: ItemWithChecklist) : SearchResultItem()
 }
@@ -1050,6 +960,7 @@ fun SearchResultRow(
     onTaskClick: (ItemWithChecklist) -> Unit,
     onProjectClick: (Item) -> Unit,
     onAreaClick: (Area) -> Unit,
+    onTagClick: (Tag) -> Unit = {},
     onSmartListClick: (ActiveScreen) -> Unit,
     onTaskToggle: (ItemWithChecklist) -> Unit = {}
 ) {
@@ -1126,6 +1037,7 @@ fun SearchResultRow(
                 is SearchResultItem.SmartListResult -> result.title
                 is SearchResultItem.SpecialResult -> result.title
                 is SearchResultItem.AreaResult -> result.area.title
+                is SearchResultItem.TagResult -> result.tag.title
                 else -> ""
             }
 
@@ -1141,6 +1053,7 @@ fun SearchResultRow(
                             is SearchResultItem.SmartListResult -> onSmartListClick(result.screen)
                             is SearchResultItem.SpecialResult -> onSmartListClick(ActiveScreen.INBOX)
                             is SearchResultItem.AreaResult -> onAreaClick(result.area)
+                            is SearchResultItem.TagResult -> onTagClick(result.tag)
                             else -> {}
                         }
                     }
@@ -1193,6 +1106,14 @@ fun SearchResultRow(
                                 imageVector = AppIcons.Area,
                                 contentDescription = null,
                                 tint = ThingsAreaGreen,
+                                modifier = iconModifier.size(20.dp)
+                            )
+                        }
+                        is SearchResultItem.TagResult -> {
+                            Icon(
+                                imageVector = Icons.Outlined.LocalOffer,
+                                contentDescription = null,
+                                tint = ThingsSomedayGrey,
                                 modifier = iconModifier.size(20.dp)
                             )
                         }

@@ -28,6 +28,8 @@ import androidx.compose.ui.unit.sp
 import com.example.data.model.Area
 import com.example.data.model.Item
 import com.example.data.model.ItemWithChecklist
+import com.example.data.model.Tag
+import androidx.compose.material.icons.outlined.LocalOffer
 import com.example.ui.components.ProjectProgressArc
 import com.example.ui.screens.home.components.TaskListKeys
 import com.example.ui.screens.home.ActiveScreen
@@ -42,6 +44,7 @@ fun MainCategoryHeader(
     project: Item?,
     tasks: List<ItemWithChecklist>,
     area: Area?,
+    tag: Tag? = null,
     scaleFactor: Float,
     textPrimaryColor: Color,
     globalDimAlpha: Float,
@@ -413,6 +416,27 @@ fun MainCategoryHeader(
                 Text(
                     text = areaTitleAnnotated,
                     inlineContent = areaInlineContentMap,
+                    style = TextStyle(
+                        fontSize = headerTitleFontSize,
+                        fontWeight = FontWeight.Bold,
+                        color = textPrimaryColor
+                    ),
+                    modifier = Modifier.weight(1f, fill = false)
+                )
+            }
+            ActiveScreen.TAG_DETAIL -> {
+                Icon(
+                    imageVector = Icons.Outlined.LocalOffer,
+                    contentDescription = null,
+                    tint = ThingsAreaGreen,
+                    modifier = Modifier
+                        .size((30 * scaleFactor).dp)
+                        .align(Alignment.Top)
+                        .padding(top = (2 * scaleFactor).dp)
+                )
+                Spacer(modifier = Modifier.width(12.dp))
+                Text(
+                    text = tag?.title ?: "Tag",
                     style = TextStyle(
                         fontSize = headerTitleFontSize,
                         fontWeight = FontWeight.Bold,

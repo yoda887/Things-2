@@ -375,9 +375,11 @@ fun rememberFlattenedList(
     projects: List<Item>,
     area: Area?,
     displayTasks: List<ItemWithChecklist>,
-    isLaterItemsHidden: Boolean = false
+    isLaterItemsHidden: Boolean = false,
+    tag: Tag? = null,
+    allTasks: List<ItemWithChecklist> = emptyList()
 ): List<Any> {
-    return remember(screen, standardToday, eveningToday, draggedItemKey, upcomingDays, upcomingMonths, projects, area, displayTasks, isLaterItemsHidden) {
+    return remember(screen, standardToday, eveningToday, draggedItemKey, upcomingDays, upcomingMonths, projects, area, displayTasks, isLaterItemsHidden, tag, allTasks) {
         buildList<Any> {
             if (screen == ActiveScreen.TODAY) {
                 addAll(standardToday)
@@ -444,6 +446,23 @@ fun rememberFlattenedList(
                         }
                     }
                     add(TaskListKeys.AREA_LATER_TOGGLE)
+                }
+            } else if (screen == ActiveScreen.TAG_DETAIL) {
+                val tagTitle = tag?.title ?: ""
+                val tagProjects = projects.filter { !it.trashed && !it.isCompleted && it.status != 2 && it.tags.contains(tagTitle) }
+                if (tagProjects.isNotEmpty()) {
+                    addAll(tagProjects)
+                }
+                val activeTagTasks = displayTasks.filter { !it.item.trashed && !it.item.isCompleted && it.item.status != 2 }
+                if (tagProjects.isNotEmpty() && activeTagTasks.isNotEmpty()) {
+                    add(TaskListKeys.AREA_PROJECTS_SPACER)
+                }
+                addAll(activeTagTasks)
+
+                val logbookTasks = allTasks.filter { !it.item.trashed && (it.item.isCompleted || it.item.status == 2) && it.item.tags.contains(tagTitle) }
+                    .sortedByDescending { it.item.stopDate ?: it.item.modificationDate }
+                if (logbookTasks.isNotEmpty()) {
+                    addAll(logbookTasks)
                 }
             } else {
                 addAll(displayTasks)
@@ -526,6 +545,7 @@ data class ThingsCategoryListState(
     val screen: ActiveScreen = ActiveScreen.INBOX,
     val project: Item? = null,
     val area: Area? = null,
+    val tag: Tag? = null,
     val inlineExpandedTaskId: String? = null,
     val selectedTagFilter: String? = null,
     val allTags: Set<String> = emptySet(),

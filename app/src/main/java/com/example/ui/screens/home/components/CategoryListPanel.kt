@@ -274,7 +274,9 @@ fun ThingsCategoryListPanel(
         projects = projects,
         area = area,
         displayTasks = displayTasks,
-        isLaterItemsHidden = isLaterItemsHidden
+        isLaterItemsHidden = isLaterItemsHidden,
+        tag = state.tag,
+        allTasks = state.allTasks
     )
 
     val density = androidx.compose.ui.platform.LocalDensity.current
@@ -542,6 +544,7 @@ fun ThingsCategoryListPanel(
                         project = project,
                         tasks = state.allTasks,
                         area = area,
+                        tag = state.tag,
                         scaleFactor = scaleFactor,
                         textPrimaryColor = textPrimaryColor,
                         globalDimAlpha = globalDimAlpha,
@@ -589,6 +592,13 @@ fun ThingsCategoryListPanel(
                     val areaProjCount = projects.count { it.areaId == area?.id }
                     val areaTasksCount = displayTasks.count { it.item.areaId == area?.id && (it.item.projectId == null || it.item.projectId == "") }
                     areaProjCount > 0 || areaTasksCount > 0
+                }
+                ActiveScreen.TAG_DETAIL -> {
+                    val tagTitle = state.tag?.title ?: ""
+                    val tagProjCount = projects.count { !it.trashed && !it.isCompleted && it.status != 2 && it.tags.contains(tagTitle) }
+                    val tagTasksCount = displayTasks.count { !it.item.trashed && !it.item.isCompleted && it.item.status != 2 }
+                    val logbookCount = state.allTasks.count { !it.item.trashed && (it.item.isCompleted || it.item.status == 2) && it.item.tags.contains(tagTitle) }
+                    tagProjCount > 0 || tagTasksCount > 0 || logbookCount > 0
                 }
                 else -> displayTasks.isNotEmpty()
             }
@@ -799,6 +809,7 @@ fun ThingsCategoryListPanel(
             textSecondaryColor = textSecondaryColor,
             project = project,
             area = area,
+            tag = state.tag,
             tasks = state.allTasks,
             backgroundProgress = toolbarBackgroundProgress,
             titleProgress = toolbarTitleProgress,

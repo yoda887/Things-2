@@ -44,6 +44,7 @@ import com.example.data.model.Item
 import com.example.data.model.ItemWithChecklist
 import com.example.data.model.TaskSection
 import com.example.data.model.Area
+import com.example.data.model.Tag
 import com.example.ui.screens.home.components.ThingsHomePanel
 import com.example.ui.screens.home.components.ThingsCategoryListPanel
 import com.example.ui.screens.home.components.ThingsCategoryListState
@@ -75,11 +76,11 @@ import androidx.navigation.toRoute
 
 @Serializable object HomeRoute
 @Serializable object SearchRoute
-@Serializable data class ListRoute(val screen: ActiveScreen)
+@Serializable data class ListRoute(val screen: ActiveScreen, val entityId: String? = null)
 
 @Serializable
 enum class ActiveScreen {
-    HOME, INBOX, TODAY, UPCOMING, ANYTIME, SOMEDAY, LOGBOOK, PROJECT_DETAIL, AREA_DETAIL, SEARCH
+    HOME, INBOX, TODAY, UPCOMING, ANYTIME, SOMEDAY, LOGBOOK, PROJECT_DETAIL, AREA_DETAIL, SEARCH, TAG_DETAIL
 }
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -88,6 +89,7 @@ fun ThingsHomeScreen(viewModel: ThingsViewModel = hiltViewModel()) {
     val tasks by viewModel.filteredTasks.collectAsState()
     val allTasksRaw by viewModel.tasks.collectAsState()
     val projects by viewModel.projects.collectAsState()
+    val areas by viewModel.areas.collectAsState()
     val searchQuery by viewModel.searchQuery.collectAsState()
     val selectedTagFilter by viewModel.selectedTagFilter.collectAsState()
     val allTags by viewModel.allTags.collectAsState()
@@ -118,16 +120,42 @@ fun ThingsHomeScreen(viewModel: ThingsViewModel = hiltViewModel()) {
     val navController = rememberNavController()
     val navBackStackEntry by navController.currentBackStackEntryAsState()
     var activeScreen by remember { mutableStateOf(ActiveScreen.HOME) }
+    var selectedProject by remember { mutableStateOf<Item?>(null) }
+    var selectedArea by remember { mutableStateOf<Area?>(null) }
+    var selectedTagDetail by remember { mutableStateOf<Tag?>(null) }
 
-    LaunchedEffect(navBackStackEntry) {
+    LaunchedEffect(navBackStackEntry, projects, areas, allSavedTagObjects) {
         navBackStackEntry?.let { entry ->
             val route = entry.destination.route ?: ""
             val newScreen = when {
-                route.contains("HomeRoute") -> ActiveScreen.HOME
+                route.contains("HomeRoute") -> {
+                    selectedProject = null
+                    selectedArea = null
+                    selectedTagDetail = null
+                    ActiveScreen.HOME
+                }
                 route.contains("SearchRoute") -> ActiveScreen.SEARCH
                 route.contains("ListRoute") -> {
                     try {
-                        entry.toRoute<ListRoute>().screen
+                        val listRoute = entry.toRoute<ListRoute>()
+                        if (listRoute.screen == ActiveScreen.PROJECT_DETAIL) {
+                            selectedProject = projects.firstOrNull { it.id == listRoute.entityId } ?: selectedProject
+                            selectedArea = null
+                            selectedTagDetail = null
+                        } else if (listRoute.screen == ActiveScreen.AREA_DETAIL) {
+                            selectedArea = areas.firstOrNull { it.id == listRoute.entityId } ?: selectedArea
+                            selectedProject = null
+                            selectedTagDetail = null
+                        } else if (listRoute.screen == ActiveScreen.TAG_DETAIL) {
+                            selectedTagDetail = allSavedTagObjects.firstOrNull { it.id == listRoute.entityId || it.title == listRoute.entityId } ?: selectedTagDetail
+                            selectedProject = null
+                            selectedArea = null
+                        } else {
+                            selectedProject = null
+                            selectedArea = null
+                            selectedTagDetail = null
+                        }
+                        listRoute.screen
                     } catch (e: Exception) {
                         ActiveScreen.HOME
                     }
@@ -140,19 +168,28 @@ fun ThingsHomeScreen(viewModel: ThingsViewModel = hiltViewModel()) {
         }
     }
 
-    fun navigateTo(screen: ActiveScreen) {
-        if (activeScreen == screen) return
+    fun navigateTo(screen: ActiveScreen, entityId: String? = null) {
+        val currentListRoute = try {
+            navBackStackEntry?.toRoute<ListRoute>()
+        } catch (e: Exception) {
+            null
+        }
+        if (activeScreen == screen) {
+            if (screen == ActiveScreen.PROJECT_DETAIL || screen == ActiveScreen.AREA_DETAIL || screen == ActiveScreen.TAG_DETAIL) {
+                if (currentListRoute?.entityId == entityId && entityId != null) return
+            } else {
+                return
+            }
+        }
         val route: Any = when (screen) {
             ActiveScreen.HOME -> HomeRoute
             ActiveScreen.SEARCH -> SearchRoute
-            else -> ListRoute(screen)
+            else -> ListRoute(screen, entityId)
         }
         navController.navigate(route) {
             launchSingleTop = true
         }
     }
-    var selectedProject by remember { mutableStateOf<Item?>(null) }
-    var selectedArea by remember { mutableStateOf<Area?>(null) }
     var taskToEdit by remember { mutableStateOf<ItemWithChecklist?>(null) }
     var showAddDialog by remember { mutableStateOf(false) }
     var showAddProjectDialog by remember { mutableStateOf(false) }
@@ -196,6 +233,8 @@ fun ThingsHomeScreen(viewModel: ThingsViewModel = hiltViewModel()) {
                         existing.project.id == item.project.id
                     existing is SearchResultItem.AreaResult && item is SearchResultItem.AreaResult -> 
                         existing.area.id == item.area.id
+                    existing is SearchResultItem.TagResult && item is SearchResultItem.TagResult -> 
+                        existing.tag.id == item.tag.id
                     existing is SearchResultItem.SmartListResult && item is SearchResultItem.SmartListResult -> 
                         existing.screen == item.screen
                     else -> false
@@ -211,7 +250,6 @@ fun ThingsHomeScreen(viewModel: ThingsViewModel = hiltViewModel()) {
     
     // Project input fields
     var newProjectName by remember { mutableStateOf("") }
-    val areas by viewModel.areas.collectAsState()
     var selectedAreaIdForNewProject by remember { mutableStateOf<String?>(null) }
     var showAreaDropdownInNewProject by remember { mutableStateOf(false) }
     
@@ -269,10 +307,12 @@ fun ThingsHomeScreen(viewModel: ThingsViewModel = hiltViewModel()) {
                                 ActiveScreen.ANYTIME -> TaskSection.ANYTIME
                                 ActiveScreen.SOMEDAY -> TaskSection.SOMEDAY
                                 ActiveScreen.AREA_DETAIL -> TaskSection.ANYTIME
+                                ActiveScreen.TAG_DETAIL -> TaskSection.ANYTIME
                                 else -> TaskSection.INBOX
                             }
                             val initialProjectId = if (targetScreen == ActiveScreen.PROJECT_DETAIL) selectedProject?.id else null
                             val initialAreaId = if (targetScreen == ActiveScreen.AREA_DETAIL) selectedArea?.id else null
+                            val initialCachedTags = if (targetScreen == ActiveScreen.TAG_DETAIL) selectedTagDetail?.title ?: "" else ""
                             val newTaskId = java.util.UUID.randomUUID().toString()
 
                             val startValue = when (initialSection) {
@@ -308,6 +348,7 @@ fun ThingsHomeScreen(viewModel: ThingsViewModel = hiltViewModel()) {
                                 start = startValue,
                                 projectId = initialProjectId,
                                 areaId = initialAreaId,
+                                cachedTags = initialCachedTags,
                                 startDate = computedStartDate,
                                 creationDate = System.currentTimeMillis()
                             )
@@ -394,11 +435,11 @@ fun ThingsHomeScreen(viewModel: ThingsViewModel = hiltViewModel()) {
                             onSmartListClick = { listScreen -> navigateTo(listScreen) },
                             onProjectClick = { proj ->
                                 selectedProject = proj
-                                navigateTo(ActiveScreen.PROJECT_DETAIL)
+                                navigateTo(ActiveScreen.PROJECT_DETAIL, proj.id)
                             },
                             onAreaClick = { area ->
                                 selectedArea = area
-                                navigateTo(ActiveScreen.AREA_DETAIL)
+                                navigateTo(ActiveScreen.AREA_DETAIL, area.id)
                             },
                             onAddProjectClick = {},
                             areas = areas,
@@ -457,26 +498,52 @@ fun ThingsHomeScreen(viewModel: ThingsViewModel = hiltViewModel()) {
                                 taskToEdit = null
                                 newTaskTitlePrefill = searchQuery
                                 showAddDialog = true
+                            },
+                            onProjectClick = { proj ->
+                                selectedProject = proj
+                                navigateTo(ActiveScreen.PROJECT_DETAIL, proj.id)
+                            },
+                            onAreaClick = { area ->
+                                selectedArea = area
+                                navigateTo(ActiveScreen.AREA_DETAIL, area.id)
+                            },
+                            allSavedTagObjects = allSavedTagObjects,
+                            onTagClick = { tag ->
+                                selectedTagDetail = tag
+                                navigateTo(ActiveScreen.TAG_DETAIL, tag.id)
                             }
                         )
                     }
                 }
                 
                 // Helper for the category lists
-                val listScreenContent: @Composable (ActiveScreen) -> Unit = { screen ->
+                val listScreenContent: @Composable (ActiveScreen, String?) -> Unit = { screen, entityId ->
                     // Мы запоминаем проект и область именно для данного инстанса экрана на момент его создания/отображения,
                     // чтобы при изменении глобальных selectedProject/selectedArea на других экранах (или при сбросе в null на "Назад")
                     // этот конкретный экран сохранял свое состояние и данные для плавной анимации ухода.
-                    val screenProject = remember(screen) { selectedProject }
-                    val screenArea = remember(screen) { selectedArea }
+                    val screenProject = remember(screen, entityId, projects) {
+                        if (screen == ActiveScreen.PROJECT_DETAIL) {
+                            projects.firstOrNull { it.id == entityId } ?: selectedProject
+                        } else null
+                    }
+                    val screenArea = remember(screen, entityId, areas) {
+                        if (screen == ActiveScreen.AREA_DETAIL) {
+                            areas.firstOrNull { it.id == entityId } ?: selectedArea
+                        } else null
+                    }
+                    val screenTag = remember(screen, entityId, allSavedTagObjects) {
+                        if (screen == ActiveScreen.TAG_DETAIL) {
+                            allSavedTagObjects.firstOrNull { it.id == entityId || it.title == entityId } ?: selectedTagDetail
+                        } else null
+                    }
 
                     // Поток холодный: подписка живёт ровно столько, сколько отображается экран.
                     // Снимок нужен как начальное значение, пока первая эмиссия считается в фоне.
-                    val screenStateFlow = remember(screen, screenProject, screenArea) {
-                        viewModel.getCategoryListStateFlow(screen, screenProject, screenArea)
+                    val screenStateFlow = remember(screen, screenProject, screenArea, screenTag) {
+                        viewModel.getCategoryListStateFlow(screen, screenProject, screenArea, screenTag)
                     }
-                    val initialScreenState = remember(screen, screenProject, screenArea) {
-                        viewModel.getCategoryListStateSnapshot(screen, screenProject, screenArea)
+                    val initialScreenState = remember(screen, screenProject, screenArea, screenTag) {
+                        viewModel.getCategoryListStateSnapshot(screen, screenProject, screenArea, screenTag)
                     }
                     val screenState by screenStateFlow.collectAsState(initial = initialScreenState)
 
@@ -502,11 +569,11 @@ fun ThingsHomeScreen(viewModel: ThingsViewModel = hiltViewModel()) {
                                 }
                                 is ThingsCategoryListEvent.ClickProject -> {
                                     selectedProject = event.project
-                                    navigateTo(ActiveScreen.PROJECT_DETAIL)
+                                    navigateTo(ActiveScreen.PROJECT_DETAIL, event.project.id)
                                 }
                                 is ThingsCategoryListEvent.ClickArea -> {
                                     selectedArea = event.area
-                                    navigateTo(ActiveScreen.AREA_DETAIL)
+                                    navigateTo(ActiveScreen.AREA_DETAIL, event.area.id)
                                 }
                                 is ThingsCategoryListEvent.ChangeInlineExpandedTaskId -> {
                                     viewModel.setInlineExpandedTaskId(event.taskId)
@@ -522,8 +589,6 @@ fun ThingsHomeScreen(viewModel: ThingsViewModel = hiltViewModel()) {
                                 }
                                 ThingsCategoryListEvent.ClickBack -> {
                                     navController.popBackStack()
-                                    selectedProject = null
-                                    selectedArea = null
                                     viewModel.selectTag(null)
                                 }
                                 is ThingsCategoryListEvent.CreateTag -> {
@@ -696,7 +761,7 @@ fun ThingsHomeScreen(viewModel: ThingsViewModel = hiltViewModel()) {
                     val route = backStackEntry.toRoute<ListRoute>()
                     // Применяем обертку ScreenTransitionWrapper со сплошным фоном и эффектом затемнения
                     ScreenTransitionWrapper(isStartDestination = false, backgroundColor = backgroundColor) {
-                        listScreenContent(route.screen)
+                        listScreenContent(route.screen, route.entityId)
                     }
                 }
             }
@@ -745,7 +810,12 @@ fun ThingsHomeScreen(viewModel: ThingsViewModel = hiltViewModel()) {
                             task.item.isSomeday -> ActiveScreen.SOMEDAY
                             else -> ActiveScreen.INBOX
                         }
-                        navigateTo(targetScreen)
+                        val targetEntityId = when {
+                            task.item.projectId != null -> proj?.id
+                            task.item.areaId != null -> area?.id
+                            else -> null
+                        }
+                        navigateTo(targetScreen, targetEntityId)
                         
                         // [ИЗМЕНЕНИЕ]: Кликнутая задача более не разворачивается для редактирования, а кратковременно подсвечивается
                         viewModel.setHighlightedTaskId(task.item.id)
@@ -765,7 +835,7 @@ fun ThingsHomeScreen(viewModel: ThingsViewModel = hiltViewModel()) {
                         addToRecent(SearchResultItem.ProjectResult(proj))
 
                         selectedProject = proj
-                        navigateTo(ActiveScreen.PROJECT_DETAIL)
+                        navigateTo(ActiveScreen.PROJECT_DETAIL, proj.id)
                         viewModel.setSearchQuery("")
                         isSearchOverlayActive = false
                     },
@@ -774,7 +844,15 @@ fun ThingsHomeScreen(viewModel: ThingsViewModel = hiltViewModel()) {
                         addToRecent(SearchResultItem.AreaResult(area))
 
                         selectedArea = area
-                        navigateTo(ActiveScreen.AREA_DETAIL)
+                        navigateTo(ActiveScreen.AREA_DETAIL, area.id)
+                        viewModel.setSearchQuery("")
+                        isSearchOverlayActive = false
+                    },
+                    allSavedTagObjects = allSavedTagObjects,
+                    onTagClick = { tag ->
+                        addToRecent(SearchResultItem.TagResult(tag))
+                        selectedTagDetail = tag
+                        navigateTo(ActiveScreen.TAG_DETAIL, tag.id)
                         viewModel.setSearchQuery("")
                         isSearchOverlayActive = false
                     },
