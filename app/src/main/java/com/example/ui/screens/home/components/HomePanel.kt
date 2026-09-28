@@ -15,6 +15,13 @@ import androidx.compose.foundation.gestures.scrollBy
 import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.foundation.border
 import androidx.compose.foundation.background
+import androidx.compose.foundation.Canvas
+import androidx.compose.animation.animateColorAsState
+import androidx.compose.animation.core.LinearEasing
+import androidx.compose.ui.graphics.Path
+import androidx.compose.ui.graphics.StrokeCap
+import androidx.compose.ui.graphics.StrokeJoin
+import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.text.BasicTextField
 import androidx.compose.foundation.text.KeyboardActions
@@ -832,11 +839,31 @@ fun ThingsHomePanel(
             (pullOffset.value * 0.32f).coerceAtMost(with(density) { 32.dp.toPx() })
         }
 
-        // Плавное посинение фона и переход текста/иконки в белый цвет только перед срабатыванием триггера (с 80% до 100%)
-        val colorProgress = ((pullProgress - 0.80f) / 0.20f).coerceIn(0f, 1f)
-        val inputBackground = androidx.compose.ui.graphics.lerp(inputNormalBackground, ThingsBlue, colorProgress)
-        val iconTint = androidx.compose.ui.graphics.lerp(textSecondaryColor, Color.White, colorProgress)
-        val textTint = androidx.compose.ui.graphics.lerp(textSecondaryColor.copy(alpha = 0.6f), Color.White.copy(alpha = 0.9f), colorProgress)
+        // Дискретное переключение темы цвета (_selected) строго на пороге с коротким кроссфейдом 100 мс
+        val inputBackground by animateColorAsState(
+            targetValue = if (isPastThreshold) ThingsBlue else inputNormalBackground,
+            animationSpec = tween(durationMillis = 100, easing = LinearEasing),
+            label = "homeSearchInputBg"
+        )
+        val iconTint by animateColorAsState(
+            targetValue = if (isPastThreshold) Color.White else textSecondaryColor,
+            animationSpec = tween(durationMillis = 100, easing = LinearEasing),
+            label = "homeSearchIconTint"
+        )
+        val textTint by animateColorAsState(
+            targetValue = if (isPastThreshold) Color.White.copy(alpha = 0.9f) else textSecondaryColor.copy(alpha = 0.6f),
+            animationSpec = tween(durationMillis = 100, easing = LinearEasing),
+            label = "homeSearchTextTint"
+        )
+        // Цвета темы quickFind.sourceListSearchBar.arrow: #000b1b50 (светлая) / #e7f1ff4b (тёмная);
+        // после порога (_selected): #5b9aff (светлая) / #3f85f4 (тёмная)
+        val arrowNormalColor = if (isDark) Color(0x4BE7F1FF) else Color(0x50000B1B)
+        val arrowSelectedColor = if (isDark) Color(0xFF3F85F4) else Color(0xFF5B9AFF)
+        val arrowColor by animateColorAsState(
+            targetValue = if (isPastThreshold) arrowSelectedColor else arrowNormalColor,
+            animationSpec = tween(durationMillis = 100, easing = LinearEasing),
+            label = "homeSearchArrowColor"
+        )
 
         val searchHeightPx = with(density) { 68.dp.toPx() }
         val scrollOffset = if (lazyListState.firstVisibleItemIndex > 0) {
@@ -914,6 +941,49 @@ fun ThingsHomePanel(
                     color = textTint,
                     fontSize = 16.sp,
                     fontWeight = FontWeight.Normal
+                )
+            }
+        }
+
+        // [ИЗМЕНЕНИЕ]: Стрелка-шеврон вниз при оттягивании списка для вызова быстрого поиска (PullArrow)
+        // Стрелка плавно выплывает из-под капсулы (зазор растет от 0 до 10 dp к порогу),
+        // а прозрачность мягко нарастает от 0 до 1 по всему свайпу. При перетяжке за порог
+        // добавляется дополнительный ход до +30 dp (суммарный максимальный зазор 40 dp).
+        if (pullOffset.value > 0f && !isSearchOverlayActive) {
+            val fontScale = density.fontScale
+            val arrowAlpha = pullProgress
+            val currentBaseGap = with(density) { (10.dp * fontScale).toPx() } * pullProgress
+            val dynamicGap = currentBaseGap + with(density) { (30.dp * fontScale).toPx() } * overPullProgress
+            val capsuleBottomY = searchResistanceOffset - scrollOffset + with(density) { 52.dp.toPx() }
+            // Округление смещения до целого пикселя
+            val pixelArrowTranslationY = kotlin.math.round(capsuleBottomY + dynamicGap)
+
+            Canvas(
+                modifier = Modifier
+                    .align(Alignment.TopCenter)
+                    .padding(bottom = 2.dp)
+                    .size(width = 32.dp * fontScale, height = 14.dp * fontScale)
+                    .graphicsLayer {
+                        translationY = pixelArrowTranslationY
+                        alpha = arrowAlpha
+                    }
+            ) {
+                val strokeWidth = (3.dp * fontScale).toPx()
+                // Нативная геометрия 32×14 pt: точки (3, 3) -> (16, 11.75) -> (29, 3)
+                val arrowPath = Path().apply {
+                    moveTo((3.dp * fontScale).toPx(), (3.dp * fontScale).toPx())
+                    lineTo((16.dp * fontScale).toPx(), (11.75.dp * fontScale).toPx())
+                    lineTo((29.dp * fontScale).toPx(), (3.dp * fontScale).toPx())
+                }
+
+                drawPath(
+                    path = arrowPath,
+                    color = arrowColor,
+                    style = Stroke(
+                        width = strokeWidth,
+                        cap = StrokeCap.Round,
+                        join = StrokeJoin.Round
+                    )
                 )
             }
         }
