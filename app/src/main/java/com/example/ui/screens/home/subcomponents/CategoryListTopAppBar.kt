@@ -387,7 +387,7 @@ private fun CategoryTopAppBarTitleContent(
             }
             ActiveScreen.TAG_DETAIL -> {
                 Icon(
-                    imageVector = Icons.Outlined.LocalOffer,
+                    imageVector = AppIcons.Tag,
                     contentDescription = null,
                     tint = ThingsAreaGreen,
                     modifier = Modifier.size(AREA_ICON_SIZE)

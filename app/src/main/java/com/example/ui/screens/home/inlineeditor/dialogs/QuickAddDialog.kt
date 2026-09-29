@@ -623,7 +623,7 @@ fun QuickAddDialog(
                             ) {
                                 Box(modifier = Modifier.padding(start = MaterialTheme.dimens.taskEditorActionIconsSpacing)) {
                                     Icon(
-                                        imageVector = Icons.Outlined.LocalOffer,
+                                        imageVector = AppIcons.Tag,
                                         contentDescription = "Tags",
                                         tint = iconInactiveColor,
                                         modifier = Modifier

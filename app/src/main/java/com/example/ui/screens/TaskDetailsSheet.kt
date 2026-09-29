@@ -481,7 +481,7 @@ fun ThingsTaskDetailsSheet(
                 verticalAlignment = Alignment.CenterVertically
             ) {
                 Icon(
-                    Icons.Outlined.LocalOffer,
+                    AppIcons.Tag,
                     contentDescription = "Tags",
                     tint = ThingsAnytimeTeal,
                     modifier = Modifier.size(20.dp)

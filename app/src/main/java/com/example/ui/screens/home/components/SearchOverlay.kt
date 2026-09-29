@@ -1111,7 +1111,7 @@ fun SearchResultRow(
                         }
                         is SearchResultItem.TagResult -> {
                             Icon(
-                                imageVector = Icons.Outlined.LocalOffer,
+                                imageVector = AppIcons.Tag,
                                 contentDescription = null,
                                 tint = ThingsSomedayGrey,
                                 modifier = iconModifier.size(20.dp)

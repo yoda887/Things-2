@@ -593,7 +593,7 @@ fun ThingsSearchScreen(
                                 title = "Tags",
                                 icon = {
                                     Icon(
-                                        imageVector = Icons.Outlined.LocalOffer,
+                                        imageVector = AppIcons.Tag,
                                         contentDescription = null,
                                         tint = ThingsSomedayGrey,
                                         modifier = Modifier.size(18.dp)
@@ -613,7 +613,7 @@ fun ThingsSearchScreen(
                                     .padding(vertical = 11.dp, horizontal = 4.dp)
                             ) {
                                 Icon(
-                                    imageVector = Icons.Outlined.LocalOffer,
+                                    imageVector = AppIcons.Tag,
                                     contentDescription = null,
                                     tint = ThingsSomedayGrey,
                                     modifier = Modifier.size(18.dp)
@@ -853,7 +853,7 @@ private fun SearchTaskRow(
             }
             if (task.cachedTags.isNotBlank()) {
                 Icon(
-                    imageVector = Icons.Outlined.LocalOffer,
+                    imageVector = AppIcons.Tag,
                     contentDescription = "Tags",
                     tint = textSecondaryColor.copy(alpha = 0.5f),
                     modifier = Modifier.size(15.dp)

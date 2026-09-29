@@ -448,4 +448,77 @@ object AppIcons {
             }
         }.build()
     }
+
+    // Кастомная контурная иконка тега в каноничном стиле Things 3 (бирка с отверстием)
+    val Tag: ImageVector by lazy(LazyThreadSafetyMode.NONE) {
+        ImageVector.Builder(
+            name = "ThingsTag",
+            defaultWidth = 24.dp,
+            defaultHeight = 24.dp,
+            viewportWidth = 24f,
+            viewportHeight = 24f
+        ).apply {
+            // Контур бирки: канонический срез под 45° и параллельные грани со 100% симметрией
+            path(
+                stroke = SolidColor(Color.White),
+                strokeLineWidth = 1.8f,
+                strokeLineCap = StrokeCap.Round,
+                strokeLineJoin = StrokeJoin.Round
+            ) {
+                moveTo(12.0f, 3.0f)
+                horizontalLineTo(5.5f)
+                curveTo(4.1f, 3.0f, 3.0f, 4.1f, 3.0f, 5.5f)
+                verticalLineTo(12.0f)
+                lineTo(11.5f, 20.5f)
+                curveTo(12.3f, 21.3f, 13.3f, 21.3f, 14.3f, 20.5f)
+                lineTo(20.5f, 14.3f)
+                curveTo(21.3f, 13.3f, 21.3f, 12.3f, 20.5f, 11.5f)
+                lineTo(12.0f, 3.0f)
+                close()
+            }
+            // Отверстие (люверс) - сплошная залитая точка по канону Things 3
+            path(
+                fill = SolidColor(Color.White)
+            ) {
+                moveTo(7.5f, 6.0f)
+                arcTo(1.5f, 1.5f, 0f, isMoreThanHalf = true, isPositiveArc = true, 7.5f, 9.0f)
+                arcTo(1.5f, 1.5f, 0f, isMoreThanHalf = true, isPositiveArc = true, 7.5f, 6.0f)
+                close()
+            }
+        }.build()
+    }
+
+    // Кастомная залитая иконка тега в каноничном стиле Things 3 (для активного выбора в диалогах)
+    val TagFilled: ImageVector by lazy(LazyThreadSafetyMode.NONE) {
+        ImageVector.Builder(
+            name = "ThingsTagFilled",
+            defaultWidth = 24.dp,
+            defaultHeight = 24.dp,
+            viewportWidth = 24f,
+            viewportHeight = 24f
+        ).apply {
+            // Тело бирки со 100% симметрией и вырезанным отверстием (EvenOdd)
+            path(
+                fill = SolidColor(Color.White),
+                pathFillType = androidx.compose.ui.graphics.PathFillType.EvenOdd
+            ) {
+                moveTo(12.0f, 3.0f)
+                horizontalLineTo(5.5f)
+                curveTo(4.1f, 3.0f, 3.0f, 4.1f, 3.0f, 5.5f)
+                verticalLineTo(12.0f)
+                lineTo(11.5f, 20.5f)
+                curveTo(12.3f, 21.3f, 13.3f, 21.3f, 14.3f, 20.5f)
+                lineTo(20.5f, 14.3f)
+                curveTo(21.3f, 13.3f, 21.3f, 12.3f, 20.5f, 11.5f)
+                lineTo(12.0f, 3.0f)
+                close()
+
+                // Вырезанное отверстие
+                moveTo(7.5f, 5.9f)
+                arcTo(1.6f, 1.6f, 0f, isMoreThanHalf = true, isPositiveArc = true, 7.5f, 9.1f)
+                arcTo(1.6f, 1.6f, 0f, isMoreThanHalf = true, isPositiveArc = true, 7.5f, 5.9f)
+                close()
+            }
+        }.build()
+    }
 }

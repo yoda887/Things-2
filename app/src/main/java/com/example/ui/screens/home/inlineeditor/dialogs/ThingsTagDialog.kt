@@ -26,8 +26,7 @@ import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.KeyboardArrowLeft
 import androidx.compose.material.icons.filled.KeyboardArrowRight
-import androidx.compose.material.icons.filled.LocalOffer
-import androidx.compose.material.icons.outlined.LocalOffer
+import com.example.ui.theme.AppIcons
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -516,7 +515,7 @@ fun ThingsTagDialog(
                                     verticalAlignment = Alignment.CenterVertically
                                 ) {
                                     Icon(
-                                        imageVector = if (isSelected) Icons.Filled.LocalOffer else Icons.Outlined.LocalOffer,
+                                        imageVector = if (isSelected) AppIcons.TagFilled else AppIcons.Tag,
                                         contentDescription = null,
                                         tint = if (isSelected) ThingsBlue else ItemMutedColor,
                                         modifier = Modifier.size(18.dp)

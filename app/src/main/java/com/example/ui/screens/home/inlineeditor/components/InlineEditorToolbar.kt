@@ -147,7 +147,7 @@ fun InlineEditorToolbar(
             // Tag
             if (!showTagHelper && tagInput.trim().isEmpty()) {
                 Icon(
-                    imageVector = Icons.Outlined.LocalOffer,
+                    imageVector = AppIcons.Tag,
                     contentDescription = "Tags",
                     tint = iconInactiveColor,
                     modifier = Modifier

@@ -160,7 +160,7 @@ fun BatchActionToolbar(
                             text = { Text(stringResource(R.string.batch_action_set_tags), color = Color.White) },
                             leadingIcon = {
                                 Icon(
-                                    imageVector = Icons.Outlined.LocalOffer,
+                                    imageVector = AppIcons.Tag,
                                     contentDescription = null,
                                     tint = Color.White,
                                     modifier = Modifier.size(20.dp)

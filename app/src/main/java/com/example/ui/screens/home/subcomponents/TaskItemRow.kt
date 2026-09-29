@@ -378,7 +378,7 @@ fun TaskItemRow(
                                 }
                                 if (task.cachedTags.isNotBlank()) {
                                     Icon(
-                                        imageVector = Icons.Outlined.LocalOffer,
+                                        imageVector = AppIcons.Tag,
                                         contentDescription = "Has tags",
                                         tint = textSecondaryColor.copy(alpha = 0.4f),
                                         modifier = Modifier.size(13.dp)
