@@ -5,6 +5,9 @@ import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
 import androidx.compose.animation.slideInVertically
 import androidx.compose.animation.slideOutVertically
+import androidx.compose.animation.core.animateFloatAsState
+import androidx.compose.animation.core.spring
+import androidx.compose.animation.core.Spring
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.LocalOverscrollConfiguration
@@ -15,9 +18,10 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.foundation.gestures.detectDragGesturesAfterLongPress
 import androidx.compose.foundation.gestures.detectTapGestures
-import androidx.compose.foundation.gestures.scrollBy
+import androidx.compose.foundation.text.KeyboardActions
+import androidx.compose.foundation.text.KeyboardOptions
+import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.Edit
@@ -47,8 +51,14 @@ import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
 import androidx.compose.ui.platform.LocalView
 import com.example.ui.components.ClearFocusOnImeHidden
+import com.example.ui.components.IME_FOCUS_CLEAR_DIALOG_SETTLE_MS
 import com.example.ui.components.hideSoftKeyboardNow
 import com.example.ui.components.hideSoftKeyboardThen
+import com.example.ui.components.holdForSoftKeyboardHide
+import com.example.ui.components.SOFT_KEYBOARD_SYSTEM_HIDE_SETTLE_MS
+import com.example.ui.components.HideTextSelectionHandles
+import com.example.ui.components.dragdrop.rememberGenericDragDropState
+import com.example.domain.tag.TagTitles
 
 import com.example.R
 import com.example.data.model.Tag
@@ -113,24 +123,36 @@ fun ThingsTagDialog(
     onTagsSelected: (List<String>) -> Unit,
     onDismissRequest: () -> Unit
 ) {
-    // Map database tags by title
-    val dbTagsByTitle = remember(allSavedTagObjects) {
-        allSavedTagObjects.associateBy { it.title }
+    // Правки тегов, ещё не дошедшие до базы: запись откладывается до скрытия клавиатуры,
+    // а список показывает новое название сразу
+    var tagOverrides by remember { mutableStateOf(emptyMap<String, Tag>()) }
+    val savedTags = remember(allSavedTagObjects, tagOverrides) {
+        allSavedTagObjects.map { tagOverrides[it.id] ?: it }
+    }
+    val savedTagIds = remember(savedTags) { savedTags.map { it.id }.toSet() }
+
+    // Теги справочника по названию — без учёта регистра, как их сопоставляет база
+    val dbTagsByKey = remember(savedTags) {
+        savedTags.associateBy { TagTitles.key(it.title) }
     }
 
     var deletedTags by remember { mutableStateOf(emptySet<String>()) }
 
     // Combined available tags list (transformed into Tag objects)
-    val availableTagObjects = remember(allSavedTagObjects, activeTags, deletedTags) {
+    val availableTagObjects = remember(savedTags, activeTags, deletedTags) {
         val activeTagObjects = activeTags
             .filter { it !in deletedTags }
             .map { title ->
-                dbTagsByTitle[title] ?: Tag(id = title, title = title, parentId = null)
+                dbTagsByKey[TagTitles.key(title)] ?: Tag(id = title, title = title, parentId = null)
             }
-        (allSavedTagObjects + activeTagObjects)
+        (savedTags + activeTagObjects)
             .filter { it.title !in deletedTags }
-            .distinctBy { it.title }
+            .distinctBy { TagTitles.key(it.title) }
     }
+
+    /** Тег справочника с таким названием (без учёта регистра), кроме [exceptId] и удалённых в диалоге. */
+    fun existingTag(title: String, exceptId: String? = null): Tag? =
+        TagTitles.find(savedTags.filter { it.title !in deletedTags }, title, exceptId)
 
     // Build the flat list of tuples (Tag, isChild: Boolean)
     val flatTagList = remember(availableTagObjects) {
@@ -173,178 +195,59 @@ fun ThingsTagDialog(
     var groupSelectionTargetScreen by remember { mutableStateOf(DialogScreen.CREATE) }
     val focusRequester = remember { FocusRequester() }
     val lazyListState = rememberLazyListState()
-    var draggedTagId by remember { mutableStateOf<String?>(null) }
-    var draggedGroupIds by remember { mutableStateOf<Set<String>>(emptySet()) }
-    var dragAccumulatedOffset by remember { mutableStateOf(0f) }
-    var currentDragPosition by remember { mutableStateOf(0f) }
-    var grabOffset by remember { mutableStateOf(0f) }
-    var localManageTags by remember { mutableStateOf(flatTagList) }
+    // Перетаскивание — общим движком списков (как задачи, проекты и области), правила перестановки — в TagReorder
+    val dragDropState = rememberGenericDragDropState(lazyListState)
+    var localManageTags by remember { mutableStateOf<List<TagRow>>(flatTagList) }
+    // Группы тегов, перенесённых перетаскиванием, пока база их не сохранила: до этого список
+    // не перечитывается из базы, иначе строка на мгновение вернулась бы в прежнюю группу
+    var awaitingParents by remember { mutableStateOf<Map<String, String?>?>(null) }
 
-    LaunchedEffect(flatTagList) {
+    LaunchedEffect(awaitingParents) {
+        if (awaitingParents != null) {
+            delay(2000L)
+            awaitingParents = null
+        }
+    }
+
+    // Список из базы подхватывается, только когда ничего не перетаскивается и строка уже встала на место
+    LaunchedEffect(flatTagList, awaitingParents, dragDropState.draggedItemKey) {
+        if (dragDropState.draggedItemKey != null) return@LaunchedEffect
+        val flatParents = flatTagList.associate { it.first.id to it.first.parentId }
+        awaitingParents?.let { awaited ->
+            if (awaited.any { (id, parentId) -> id in flatParents && flatParents[id] != parentId }) return@LaunchedEffect
+            awaitingParents = null
+        }
         val localIds = localManageTags.map { it.first.id }.toSet()
-        val flatIds = flatTagList.map { it.first.id }.toSet()
+        val flatIds = flatParents.keys
         val parentIdsChanged = localManageTags.any { localPair ->
-            val flatPair = flatTagList.find { it.first.id == localPair.first.id }
-            flatPair != null && flatPair.first.parentId != localPair.first.parentId
+            val id = localPair.first.id
+            id in flatParents && flatParents[id] != localPair.first.parentId
         }
         if (localIds != flatIds || parentIdsChanged) {
             localManageTags = flatTagList
         } else {
-            val newLocal = localManageTags.map { localPair ->
-                val updatedPair = flatTagList.find { it.first.id == localPair.first.id }
-                updatedPair ?: localPair
-            }
-            localManageTags = newLocal.toMutableList()
-        }
-    }
-
-    val getBlock = { parentId: String, list: List<Pair<Tag, Boolean>> ->
-        val startIndex = list.indexOfFirst { it.first.id == parentId }
-        if (startIndex != -1) {
-            val block = mutableListOf(list[startIndex])
-            for (i in startIndex + 1 until list.size) {
-                if (list[i].second) {
-                    block.add(list[i])
-                } else {
-                    break
-                }
-            }
-            block
-        } else {
-            emptyList()
-        }
-    }
-
-    val evaluateSwap: (String) -> Unit = { tagId ->
-        val visibleItems = lazyListState.layoutInfo.visibleItemsInfo
-        val detectedSpacing = run {
-            var spacing = 0f
-            try { spacing = lazyListState.layoutInfo.mainAxisItemSpacing.toFloat() } catch (e: Exception) {}
-            spacing
-        }
-        val draggedItemInfo = visibleItems.firstOrNull { it.key == tagId }
-        val currentIndex = localManageTags.indexOfFirst { it.first.id == tagId }
-
-        if (draggedItemInfo != null && draggedItemInfo.index == currentIndex) {
-            // FIX 1: визуальный центр через layout offset + накопленный сдвиг
-            val dragCenterY = draggedItemInfo.offset.toFloat() + draggedItemInfo.size / 2f + dragAccumulatedOffset
-
-            val hoveredItem = visibleItems.firstOrNull { item ->
-                val itemKey = item.key as? String
-                itemKey != null && itemKey !in draggedGroupIds &&
-                dragCenterY > item.offset &&
-                dragCenterY < item.offset + item.size
-            }
-
-            if (hoveredItem != null) {
-                val hoveredTagId = hoveredItem.key as String
-                val hoveredItemPair = localManageTags.find { it.first.id == hoveredTagId }
-                val draggedItemPair = localManageTags.find { it.first.id == tagId }
-
-                if (hoveredItemPair != null && draggedItemPair != null) {
-                    if (!draggedItemPair.second) {
-                        // 1. DRAGGING A PARENT (Block swap)
-                        val hoveredParentId = if (hoveredItemPair.second) hoveredItemPair.first.parentId!! else hoveredItemPair.first.id
-                        if (hoveredParentId != tagId) {
-                            val block1 = getBlock(tagId, localManageTags)
-                            val block2 = getBlock(hoveredParentId, localManageTags)
-
-                            val index1 = localManageTags.indexOf(block1.first())
-                            val index2 = localManageTags.indexOf(block2.first())
-
-                            val standardHeight = draggedItemInfo.size.toFloat() + detectedSpacing
-                            // FIX 3: реальный offset block2 из layoutInfo, аппроксимация как фолбэк
-                            val block2FirstId = block2.first().first.id
-                            val block2StartItem = visibleItems.firstOrNull { it.key == block2FirstId }
-                            val b2Top = block2StartItem?.offset?.toFloat()
-                                ?: (draggedItemInfo.offset.toFloat() + (index2 - currentIndex) * standardHeight)
-                            val hysteresis = 0.1f * standardHeight
-
-                            val centerThreshold = b2Top + block2.size * standardHeight / 2f
-                            val shouldSwap = if (index1 < index2) {
-                                dragCenterY > centerThreshold + hysteresis
-                            } else {
-                                dragCenterY < centerThreshold - hysteresis
-                            }
-
-                            if (shouldSwap) {
-                                val newList = localManageTags.toMutableList()
-                                newList.removeAll(block1)
-                                val insertIndex = newList.indexOf(block2.first()) + if (index1 < index2) block2.size else 0
-                                newList.addAll(insertIndex, block1)
-                                localManageTags = newList
-
-                                val distance = if (index1 < index2) block2.size * standardHeight else -(block2.size * standardHeight)
-                                dragAccumulatedOffset -= distance
-                            }
-                        }
-                    } else {
-                        // 2. DRAGGING A CHILD (Single item swap within same parent group)
-                        if (hoveredItemPair.second && hoveredItemPair.first.parentId == draggedItemPair.first.parentId) {
-                            val index1 = localManageTags.indexOf(draggedItemPair)
-                            val index2 = localManageTags.indexOf(hoveredItemPair)
-
-                            val standardHeight = draggedItemInfo.size.toFloat() + detectedSpacing
-                            // FIX 2: реальный offset из уже найденного hoveredItem
-                            val b2Top = hoveredItem.offset.toFloat()
-                            val hysteresis = 0.1f * standardHeight
-
-                            val centerThreshold = b2Top + standardHeight / 2f
-                            val shouldSwap = if (index1 < index2) {
-                                dragCenterY > centerThreshold + hysteresis
-                            } else {
-                                dragCenterY < centerThreshold - hysteresis
-                            }
-
-                            if (shouldSwap) {
-                                val newList = localManageTags.toMutableList()
-                                val movedItem = newList.removeAt(index1)
-                                newList.add(index2, movedItem)
-                                localManageTags = newList
-
-                                val distance = if (index1 < index2) standardHeight else -standardHeight
-                                dragAccumulatedOffset -= distance
-                            }
-                        }
-                    }
-                }
+            localManageTags = localManageTags.map { localPair ->
+                flatTagList.find { it.first.id == localPair.first.id } ?: localPair
             }
         }
     }
 
-    LaunchedEffect(draggedTagId) {
-        while (draggedTagId != null) {
-            val id = draggedTagId ?: break
-            val viewportHeight = lazyListState.layoutInfo.viewportSize.height.toFloat()
-            if (viewportHeight > 0f) {
-                val scrollThreshold = 150f
-                var scrollAmount = 0f
-                
-                if (currentDragPosition < scrollThreshold) {
-                    scrollAmount = (currentDragPosition - scrollThreshold) * 0.15f
-                } else if (currentDragPosition > viewportHeight - scrollThreshold) {
-                    scrollAmount = (currentDragPosition - (viewportHeight - scrollThreshold)) * 0.15f
-                }
-                
-                if (scrollAmount != 0f) {
-                    val consumed = lazyListState.scrollBy(scrollAmount)
-                    dragAccumulatedOffset += consumed
-                    
-                    val visibleItems = lazyListState.layoutInfo.visibleItemsInfo
-                    val draggedItemInfo = visibleItems.firstOrNull { it.key == id }
-                    if (draggedItemInfo != null) {
-                        val minOffset = -draggedItemInfo.offset.toFloat()
-                        val maxOffset = viewportHeight - (draggedItemInfo.offset + draggedItemInfo.size).toFloat()
-                        if (minOffset <= maxOffset) {
-                            dragAccumulatedOffset = dragAccumulatedOffset.coerceIn(minOffset, maxOffset)
-                        }
-                    }
-                    
-                    evaluateSwap(id)
-                }
-            }
-            delay(16L)
-        }
+    // Пока группу несут под пальцем, её теги убраны из списка — как проекты свёрнутой области
+    // на главном экране; после отпускания они снова встают под ней
+    val draggedGroupId = (dragDropState.draggedItemKey as? String)
+        ?.takeIf { key -> localManageTags.any { it.first.id == key && !it.second } }
+    val displayedManageTags = remember(localManageTags, draggedGroupId) {
+        TagReorder.withoutChildrenOf(localManageTags, draggedGroupId)
+    }
+
+    /** Отпускание: порядок и группы тегов сохраняются в базу. */
+    fun saveManageOrder() {
+        val initialParents = flatTagList.associate { it.first.id to it.first.parentId }
+        val movedParents = localManageTags
+            .filter { (tag, _) -> tag.id in initialParents && initialParents[tag.id] != tag.parentId }
+            .associate { it.first.id to it.first.parentId }
+        if (movedParents.isNotEmpty()) awaitingParents = movedParents
+        onUpdateTagsOrder(localManageTags.map { it.first }.filter { it.id in savedTagIds })
     }
 
     // Focus immediately when switching to creation or edit mode
@@ -394,15 +297,68 @@ fun ThingsTagDialog(
         properties = DialogProperties(usePlatformDefaultWidth = false)
     ) {
         // У диалога своё окно — со своими отступами клавиатуры и своим фокусом,
-        // поэтому снятие курсора при сворачивании клавиатуры подключается здесь отдельно
-        ClearFocusOnImeHidden()
+        // поэтому снятие курсора при сворачивании клавиатуры подключается здесь отдельно — с паузой
+        // на хвост штатной анимации скрытия (управляемую окну диалога система не даёт)
+        ClearFocusOnImeHidden(settleMillis = IME_FOCUS_CLEAR_DIALOG_SETTLE_MS)
         // У диалога своё окно, и клавиатура сейчас принадлежит ему — прячем её через его View
         val dialogView = LocalView.current
-        // Экран ввода тега уезжает 300 мс — клавиатуру прячем в момент ухода с него (см. hideSoftKeyboardNow)
+        // Запасной путь для ухода с экрана ввода не через кнопки ниже. Кнопки прячут клавиатуру сами,
+        // прямо в обработчике нажатия: эффект сработал бы только на следующем кадре
         LaunchedEffect(currentScreen) {
             if (currentScreen != DialogScreen.CREATE && currentScreen != DialogScreen.EDIT) {
                 dialogView.hideSoftKeyboardNow()
             }
+        }
+
+        // Уход с экранов ввода. Клавиатура прячется в том же кадре, что и нажатие, экран уезжает вместе
+        // с ней, а запись в базу идёт после её скрытия: переименование переписывает задачи с этим тегом,
+        // и пересборка списков под диалогом сбивала бы кадры анимации клавиатуры
+        // Поля не очищаем: экран ещё виден, пока уезжает. Их сбрасывает открытие экрана
+        fun closeCreateScreen() {
+            dialogView.hideSoftKeyboardNow()
+            currentScreen = createScreenReturnTarget
+        }
+
+        fun saveNewTag() {
+            val name = newTagName.trim()
+            if (name.isEmpty()) return
+            // Такой тег уже есть — отмечаем его, а не заводим второй с тем же названием
+            val existing = existingTag(name)
+            val title = existing?.title ?: name
+            if (existing == null) {
+                val parentId = selectedGroup?.id
+                dialogView.hideSoftKeyboardThen { onNewTagCreated(title, parentId) }
+            }
+            selectedTags = selectedTags + title
+            deletedTags = deletedTags - title
+            closeCreateScreen()
+        }
+
+        fun closeEditScreen() {
+            dialogView.hideSoftKeyboardNow()
+            currentScreen = DialogScreen.MANAGE
+            editingTag = null
+        }
+
+        fun saveEditedTag() {
+            val name = editTagName.trim()
+            val tagToEdit = editingTag
+            if (name.isEmpty() || tagToEdit == null) return
+            // Переименование в занятое название сливает тег с существующим (см. репозиторий)
+            val clash = existingTag(name, exceptId = tagToEdit.id)
+            val newTitle = clash?.title ?: name
+            val updated = tagToEdit.copy(
+                title = newTitle,
+                parentId = selectedGroup?.id?.takeIf { it != tagToEdit.id }
+            )
+            val oldKey = TagTitles.key(tagToEdit.title)
+            if (selectedTags.any { TagTitles.key(it) == oldKey }) {
+                selectedTags = selectedTags.filterNot { TagTitles.key(it) == oldKey }.toSet() + newTitle
+            }
+            if (clash == null) tagOverrides = tagOverrides + (tagToEdit.id to updated)
+            if (tagToEdit.title != newTitle) deletedTags = (deletedTags + tagToEdit.title) - newTitle
+            dialogView.hideSoftKeyboardThen { onUpdateTag(updated) }
+            closeEditScreen()
         }
         Box(
             modifier = Modifier
@@ -570,6 +526,8 @@ fun ThingsTagDialog(
                             Button(
                                 onClick = {
                                     createScreenReturnTarget = DialogScreen.LIST
+                                    newTagName = ""
+                                    selectedGroup = null
                                     currentScreen = DialogScreen.CREATE
                                 },
                                 colors = ButtonDefaults.buttonColors(
@@ -601,7 +559,10 @@ fun ThingsTagDialog(
                     exit = slideOutVertically(
                         targetOffsetY = { it },
                         animationSpec = tween(300)
-                    ) + fadeOut(animationSpec = tween(150))
+                    ) + fadeOut(animationSpec = tween(150)) +
+                        // Поле держится, пока клавиатура не скрыта полностью: в окне диалога она уходит штатной
+                        // анимацией, дольше, чем в окне приложения (см. SOFT_KEYBOARD_SYSTEM_HIDE_SETTLE_MS)
+                        holdForSoftKeyboardHide(SOFT_KEYBOARD_SYSTEM_HIDE_SETTLE_MS)
                 ) {
                     Column(
                         modifier = Modifier
@@ -622,11 +583,7 @@ fun ThingsTagDialog(
                                     .size(36.dp)
                                     .clip(androidx.compose.foundation.shape.CircleShape)
                                     .background(DarkButtonBgColor)
-                                    .clickable {
-                                        currentScreen = createScreenReturnTarget
-                                        newTagName = ""
-                                        selectedGroup = null
-                                    },
+                                    .clickable { closeCreateScreen() },
                                 contentAlignment = Alignment.Center
                             ) {
                                 Icon(
@@ -652,17 +609,7 @@ fun ThingsTagDialog(
                                     .size(36.dp)
                                     .clip(androidx.compose.foundation.shape.CircleShape)
                                     .background(if (isSaveEnabled) ThingsBlue else DarkButtonBgColor)
-                                    .clickable(enabled = isSaveEnabled) {
-                                        val name = newTagName.trim()
-                                        if (name.isNotEmpty()) {
-                                            onNewTagCreated(name, selectedGroup?.id)
-                                            selectedTags = selectedTags + name
-                                            deletedTags = deletedTags - name
-                                        }
-                                        currentScreen = createScreenReturnTarget
-                                        newTagName = ""
-                                        selectedGroup = null
-                                    },
+                                    .clickable(enabled = isSaveEnabled) { saveNewTag() },
                                 contentAlignment = Alignment.Center
                             ) {
                                 Icon(
@@ -674,27 +621,34 @@ fun ThingsTagDialog(
                             }
                         }
 
-                        // Frameless Tag Input Field with Dark Container
-                        OutlinedTextField(
-                            value = newTagName,
-                            onValueChange = { newTagName = it },
-                            placeholder = { Text(stringResource(id = R.string.tag_dialog_placeholder), color = ItemMutedColor) },
-                            singleLine = true,
-                            colors = OutlinedTextFieldDefaults.colors(
-                                focusedContainerColor = DarkButtonBgColor,
-                                unfocusedContainerColor = DarkButtonBgColor,
-                                disabledContainerColor = DarkButtonBgColor,
-                                focusedTextColor = Color.White,
-                                unfocusedTextColor = Color.White,
-                                focusedBorderColor = ThingsBlue,
-                                unfocusedBorderColor = Color.Transparent,
-                                cursorColor = ThingsBlue
-                            ),
-                            shape = RoundedCornerShape(8.dp),
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .focusRequester(focusRequester)
-                        )
+                        // Frameless Tag Input Field with Dark Container.
+                        // Пока экран уезжает, фокус остаётся на поле — снять его до скрытия клавиатуры нельзя
+                        // (см. hideSoftKeyboardNow), поэтому курсор и маркеры прячем, как в редакторе задачи
+                        val leaving = currentScreen != DialogScreen.CREATE
+                        HideTextSelectionHandles(hidden = leaving) {
+                            OutlinedTextField(
+                                value = newTagName,
+                                onValueChange = { newTagName = it },
+                                keyboardOptions = KeyboardOptions(imeAction = ImeAction.Done),
+                                keyboardActions = KeyboardActions(onDone = { saveNewTag() }),
+                                placeholder = { Text(stringResource(id = R.string.tag_dialog_placeholder), color = ItemMutedColor) },
+                                singleLine = true,
+                                colors = OutlinedTextFieldDefaults.colors(
+                                    focusedContainerColor = DarkButtonBgColor,
+                                    unfocusedContainerColor = DarkButtonBgColor,
+                                    disabledContainerColor = DarkButtonBgColor,
+                                    focusedTextColor = Color.White,
+                                    unfocusedTextColor = Color.White,
+                                    focusedBorderColor = ThingsBlue,
+                                    unfocusedBorderColor = Color.Transparent,
+                                    cursorColor = if (leaving) Color.Transparent else ThingsBlue
+                                ),
+                                shape = RoundedCornerShape(8.dp),
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .focusRequester(focusRequester)
+                            )
+                        }
 
                         // "Group" Action Picker
                         Row(
@@ -702,6 +656,7 @@ fun ThingsTagDialog(
                                 .fillMaxWidth()
                                 .clip(RoundedCornerShape(8.dp))
                                 .clickable {
+                                    dialogView.hideSoftKeyboardNow()
                                     groupSelectionTargetScreen = DialogScreen.CREATE
                                     currentScreen = DialogScreen.SELECT_GROUP
                                 }
@@ -801,8 +756,11 @@ fun ThingsTagDialog(
                         }
 
                         // Presaved groups list (all top-level tags + Sentinel)
-                        val groupOptions = remember(allSavedTagObjects) {
-                            listOf(Tag(id = "No Tag", title = "No Tag", parentId = null)) + allSavedTagObjects.filter { it.parentId == null }
+                        // Группой может быть корневой тег справочника, но не сам редактируемый тег
+                        val groupOptions = remember(savedTags, deletedTags, editingTag, groupSelectionTargetScreen) {
+                            val excludedId = editingTag?.id?.takeIf { groupSelectionTargetScreen == DialogScreen.EDIT }
+                            listOf(Tag(id = "No Tag", title = "No Tag", parentId = null)) +
+                                savedTags.filter { it.parentId == null && it.id != excludedId && it.title !in deletedTags }
                         }
                         LazyColumn(
                             modifier = Modifier
@@ -905,79 +863,6 @@ fun ThingsTagDialog(
 
 
 
-                        // Drag & Drop Reorderable list modifier on LazyColumn
-                        val manageDragModifier = Modifier.pointerInput(Unit) {
-                            detectDragGesturesAfterLongPress(
-                                onDragStart = { offset ->
-                                    val visibleItems = lazyListState.layoutInfo.visibleItemsInfo
-                                    val hitItem = visibleItems.firstOrNull { item ->
-                                        offset.y >= item.offset && offset.y <= item.offset + item.size
-                                    }
-                                    val tagId = hitItem?.key as? String
-                                    if (tagId != null) {
-                                        val currentPair = localManageTags.find { it.first.id == tagId }
-                                        if (currentPair != null) {
-                                            val tag = currentPair.first
-                                            draggedTagId = tag.id
-                                            dragAccumulatedOffset = 0f
-                                            currentDragPosition = offset.y
-                                            grabOffset = offset.y - (hitItem.offset + hitItem.size / 2f)
-                                            if (!currentPair.second) {
-                                                // Parent dragged: whole block
-                                                draggedGroupIds = getBlock(tag.id, localManageTags).map { it.first.id }.toSet()
-                                            } else {
-                                                // Child dragged: just itself
-                                                draggedGroupIds = setOf(tag.id)
-                                            }
-                                        }
-                                    }
-                                },
-                                onDrag = { change, dragAmount ->
-                                    val id = draggedTagId
-                                    if (id != null) {
-                                        change.consume()
-                                        
-                                        val visibleItems = lazyListState.layoutInfo.visibleItemsInfo
-                                        val draggedItemInfo = visibleItems.firstOrNull { it.key == id }
-                                        if (draggedItemInfo != null) {
-                                            val viewportHeight = lazyListState.layoutInfo.viewportSize.height.toFloat()
-                                            
-                                            // Clamp currentDragPosition to [0f, viewportHeight]
-                                            currentDragPosition = change.position.y.coerceIn(0f, viewportHeight)
-                                            
-                                            var newOffset = dragAccumulatedOffset + dragAmount.y
-                                            val minOffset = -draggedItemInfo.offset.toFloat()
-                                            val maxOffset = viewportHeight - (draggedItemInfo.offset + draggedItemInfo.size).toFloat()
-                                            if (minOffset <= maxOffset) {
-                                                newOffset = newOffset.coerceIn(minOffset, maxOffset)
-                                            }
-                                            dragAccumulatedOffset = newOffset
-                                        } else {
-                                            currentDragPosition = change.position.y
-                                            dragAccumulatedOffset += dragAmount.y
-                                        }
-                                        
-                                        evaluateSwap(id)
-                                    }
-                                },
-                                onDragEnd = {
-                                    val id = draggedTagId
-                                    if (id != null) {
-                                        val updatedTags = localManageTags.map { it.first }
-                                        onUpdateTagsOrder(updatedTags)
-                                    }
-                                    draggedTagId = null
-                                    draggedGroupIds = emptySet()
-                                    dragAccumulatedOffset = 0f
-                                },
-                                onDragCancel = {
-                                    draggedTagId = null
-                                    draggedGroupIds = emptySet()
-                                    dragAccumulatedOffset = 0f
-                                }
-                            )
-                        }
-
                         CompositionLocalProvider(
                             LocalOverscrollConfiguration provides null
                         ) {
@@ -985,27 +870,47 @@ fun ThingsTagDialog(
                                 state = lazyListState,
                                 modifier = Modifier
                                     .fillMaxWidth()
-                                    .weight(1f)
-                                    .then(manageDragModifier),
+                                    .weight(1f),
                                 verticalArrangement = Arrangement.spacedBy(4.dp)
                             ) {
-                                items(localManageTags, key = { it.first.id }) { item ->
+                                items(displayedManageTags, key = { it.first.id }) { item ->
                                     val tag = item.first
                                     val isChild = item.second
-                                    
-                                    val isDragged = tag.id in draggedGroupIds
-                                    val dragOffset = if (isDragged) dragAccumulatedOffset else 0f
-                                    val isPrimaryDraggedItem = draggedTagId == tag.id
-                                    val rowBg = if (isDragged) DarkButtonBgColor.copy(alpha = 0.8f) else Color.Transparent
+
+                                    val isDragged = dragDropState.draggedItemKey == tag.id
+                                    // Поднятая строка чуть крупнее и с тенью, как проекты и области на главном экране;
+                                    // опускается, как только палец отпущен, — вместе с возвратом на место
+                                    val lift by animateFloatAsState(
+                                        targetValue = if (isDragged && dragDropState.isInteracting) 1f else 0f,
+                                        animationSpec = spring(stiffness = Spring.StiffnessMediumLow),
+                                        label = "tagLift"
+                                    )
+                                    val isLifted = isDragged || lift > 0f
+                                    // Фон непрозрачный: поднятая строка проходит над соседними, и они не должны просвечивать
+                                    val rowBg = if (isLifted) DarkButtonBgColor else Color.Transparent
 
                                     Row(
                                         modifier = Modifier
                                             .fillMaxWidth()
-                                            .then(if (!isDragged) Modifier.animateItem() else Modifier)
+                                            .zIndex(if (isLifted) 1f else 0f)
+                                            .then(if (!isLifted) Modifier.animateItem() else Modifier)
                                             .graphicsLayer {
-                                                translationY = dragOffset
+                                                translationY = if (isDragged) dragDropState.visualDragOffsetY(tag.id) else 0f
+                                                val scale = 1f + 0.03f * lift
+                                                scaleX = scale
+                                                scaleY = scale
+                                                shadowElevation = 8.dp.toPx() * lift
+                                                shape = RoundedCornerShape(8.dp)
+                                                clip = false
                                             }
-                                            .zIndex(if (isDragged) 1f else 0f)
+                                            .tagDragAndDrop(
+                                                state = dragDropState,
+                                                row = item,
+                                                rows = localManageTags,
+                                                canBeGroup = { it in savedTagIds },
+                                                onRowsChange = { localManageTags = it },
+                                                onDragEnd = { saveManageOrder() }
+                                            )
                                             .background(rowBg, RoundedCornerShape(8.dp))
                                             .padding(
                                                 start = if (isChild) RowPaddingStartChild else RowPaddingStartNormal,
@@ -1065,7 +970,7 @@ fun ThingsTagDialog(
                                                 .clickable {
                                                     editingTag = tag
                                                     editTagName = tag.title
-                                                    selectedGroup = allSavedTagObjects.firstOrNull { it.id == tag.parentId }
+                                                    selectedGroup = savedTags.firstOrNull { it.id == tag.parentId }
                                                     currentScreen = DialogScreen.EDIT
                                                 },
                                             contentAlignment = Alignment.Center
@@ -1086,6 +991,8 @@ fun ThingsTagDialog(
                         Button(
                             onClick = {
                                 createScreenReturnTarget = DialogScreen.MANAGE
+                                newTagName = ""
+                                selectedGroup = null
                                 currentScreen = DialogScreen.CREATE
                             },
                             colors = ButtonDefaults.buttonColors(
@@ -1116,7 +1023,10 @@ fun ThingsTagDialog(
                     exit = slideOutVertically(
                         targetOffsetY = { it },
                         animationSpec = tween(300)
-                    ) + fadeOut(animationSpec = tween(150))
+                    ) + fadeOut(animationSpec = tween(150)) +
+                        // Поле держится, пока клавиатура не скрыта полностью: в окне диалога она уходит штатной
+                        // анимацией, дольше, чем в окне приложения (см. SOFT_KEYBOARD_SYSTEM_HIDE_SETTLE_MS)
+                        holdForSoftKeyboardHide(SOFT_KEYBOARD_SYSTEM_HIDE_SETTLE_MS)
                 ) {
                     Column(
                         modifier = Modifier
@@ -1137,12 +1047,7 @@ fun ThingsTagDialog(
                                     .size(36.dp)
                                     .clip(androidx.compose.foundation.shape.CircleShape)
                                     .background(DarkButtonBgColor)
-                                    .clickable {
-                                        currentScreen = DialogScreen.MANAGE
-                                        editingTag = null
-                                        editTagName = ""
-                                        selectedGroup = null
-                                    },
+                                    .clickable { closeEditScreen() },
                                 contentAlignment = Alignment.Center
                             ) {
                                 Icon(
@@ -1168,24 +1073,7 @@ fun ThingsTagDialog(
                                     .size(36.dp)
                                     .clip(androidx.compose.foundation.shape.CircleShape)
                                     .background(if (isSaveEnabled) ThingsBlue else DarkButtonBgColor)
-                                    .clickable(enabled = isSaveEnabled) {
-                                        val name = editTagName.trim()
-                                        val tagToEdit = editingTag
-                                        if (name.isNotEmpty() && tagToEdit != null) {
-                                            // Update selectedTags if renamed
-                                            if (selectedTags.contains(tagToEdit.title)) {
-                                                selectedTags = (selectedTags - tagToEdit.title) + name
-                                            }
-
-                                            // Update the existing custom tag
-                                            onUpdateTag(tagToEdit.copy(title = name, parentId = selectedGroup?.id))
-                                            deletedTags = (deletedTags + tagToEdit.title) - name
-                                        }
-                                        currentScreen = DialogScreen.MANAGE
-                                        editingTag = null
-                                        editTagName = ""
-                                        selectedGroup = null
-                                    },
+                                    .clickable(enabled = isSaveEnabled) { saveEditedTag() },
                                 contentAlignment = Alignment.Center
                             ) {
                                 Icon(
@@ -1197,38 +1085,45 @@ fun ThingsTagDialog(
                             }
                         }
 
-                        // Frameless Tag Input Field with Dark Container
-                        OutlinedTextField(
-                            value = editTagName,
-                            onValueChange = { editTagName = it },
-                            placeholder = { Text(stringResource(id = R.string.tag_dialog_placeholder), color = ItemMutedColor) },
-                            singleLine = true,
-                            colors = OutlinedTextFieldDefaults.colors(
-                                focusedContainerColor = DarkButtonBgColor,
-                                unfocusedContainerColor = DarkButtonBgColor,
-                                disabledContainerColor = DarkButtonBgColor,
-                                focusedTextColor = Color.White,
-                                unfocusedTextColor = Color.White,
-                                focusedBorderColor = ThingsBlue,
-                                unfocusedBorderColor = Color.Transparent,
-                                cursorColor = ThingsBlue
-                            ),
-                            trailingIcon = {
-                                if (editTagName.isNotEmpty()) {
-                                    IconButton(onClick = { editTagName = "" }) {
-                                        Icon(
-                                            imageVector = Icons.Default.Close,
-                                            contentDescription = "Clear",
-                                            tint = ItemMutedColor
-                                        )
+                        // Frameless Tag Input Field with Dark Container.
+                        // Пока экран уезжает, фокус остаётся на поле — снять его до скрытия клавиатуры нельзя
+                        // (см. hideSoftKeyboardNow), поэтому курсор и маркеры прячем, как в редакторе задачи
+                        val leaving = currentScreen != DialogScreen.EDIT
+                        HideTextSelectionHandles(hidden = leaving) {
+                            OutlinedTextField(
+                                value = editTagName,
+                                onValueChange = { editTagName = it },
+                                keyboardOptions = KeyboardOptions(imeAction = ImeAction.Done),
+                                keyboardActions = KeyboardActions(onDone = { saveEditedTag() }),
+                                placeholder = { Text(stringResource(id = R.string.tag_dialog_placeholder), color = ItemMutedColor) },
+                                singleLine = true,
+                                colors = OutlinedTextFieldDefaults.colors(
+                                    focusedContainerColor = DarkButtonBgColor,
+                                    unfocusedContainerColor = DarkButtonBgColor,
+                                    disabledContainerColor = DarkButtonBgColor,
+                                    focusedTextColor = Color.White,
+                                    unfocusedTextColor = Color.White,
+                                    focusedBorderColor = ThingsBlue,
+                                    unfocusedBorderColor = Color.Transparent,
+                                    cursorColor = if (leaving) Color.Transparent else ThingsBlue
+                                ),
+                                trailingIcon = {
+                                    if (editTagName.isNotEmpty()) {
+                                        IconButton(onClick = { editTagName = "" }) {
+                                            Icon(
+                                                imageVector = Icons.Default.Close,
+                                                contentDescription = "Clear",
+                                                tint = ItemMutedColor
+                                            )
+                                        }
                                     }
-                                }
-                            },
-                            shape = RoundedCornerShape(8.dp),
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .focusRequester(focusRequester)
-                        )
+                                },
+                                shape = RoundedCornerShape(8.dp),
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .focusRequester(focusRequester)
+                            )
+                        }
 
                         // "Group" Action Picker
                         Row(
@@ -1236,6 +1131,7 @@ fun ThingsTagDialog(
                                 .fillMaxWidth()
                                 .clip(RoundedCornerShape(8.dp))
                                 .clickable {
+                                    dialogView.hideSoftKeyboardNow()
                                     groupSelectionTargetScreen = DialogScreen.EDIT
                                     currentScreen = DialogScreen.SELECT_GROUP
                                 }
