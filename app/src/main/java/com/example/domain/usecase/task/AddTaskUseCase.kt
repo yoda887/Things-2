@@ -2,7 +2,6 @@ package com.example.domain.usecase.task
 
 import com.example.data.model.Item
 import com.example.data.model.ChecklistItem
-import com.example.data.model.Tag
 import com.example.data.model.TaskSection
 import com.example.data.model.toStartVal
 import com.example.domain.repository.ITaskRepository
@@ -49,18 +48,13 @@ class AddTaskUseCase @Inject constructor(private val repository: ITaskRepository
             projectId = projectId,
             priority = priority
         )
-        repository.insertTask(item)
-
-        if (cleanTags.isNotEmpty()) {
-            val tagList = cleanTags.map { Tag(title = it) }
-            for (t in tagList) {
-                repository.insertTag(t)
+        repository.inTransaction {
+            repository.insertTask(item)
+            if (cleanTags.isNotEmpty()) repository.setItemTagsByTitles(itemId, cleanTags)
+            if (checklist.isNotEmpty()) {
+                val listEntities = checklist.map { it.copy(itemId = itemId) }
+                repository.updateChecklistItems(itemId, listEntities)
             }
-            repository.updateItemTags(itemId, tagList)
-        }
-        if (checklist.isNotEmpty()) {
-            val listEntities = checklist.map { it.copy(itemId = itemId) }
-            repository.updateChecklistItems(itemId, listEntities)
         }
     }
 }

@@ -457,7 +457,7 @@ fun AnimatedTaskItem(
                                 isTonight = currentIsTonight,
                                 startDate = currentStartDate,
                                 dueDate = currentDueDate,
-                                cachedTags = currentTags.joinToString(","),
+                                cachedTags = com.example.domain.tag.TagTitles.join(currentTags),
                                 projectId = currentProjectId,
                                 priority = currentPriority
                             )

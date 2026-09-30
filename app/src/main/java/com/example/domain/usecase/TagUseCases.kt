@@ -13,5 +13,6 @@ class TagUseCases @Inject constructor(
     val deleteTag: DeleteTagUseCase,
     val updateTag: UpdateTagUseCase,
     val updateTagsOrder: UpdateTagsOrderUseCase,
-    val insertTag: InsertTagUseCase
+    val insertTag: InsertTagUseCase,
+    val repairTags: RepairTagsUseCase
 )

@@ -19,6 +19,10 @@ class ToggleTaskCompletionUseCase @Inject constructor(private val repository: IT
             status = if (isCompleting) 3 else 0,
             stopDate = if (isCompleting) System.currentTimeMillis() else null
         )
-        repository.insertTask(updated, wrapper.checklist)
+        // Задачу отмечают и из раскрытого редактора — вместе с несохранёнными правками, в том числе тегов
+        repository.inTransaction {
+            repository.insertTask(updated, wrapper.checklist)
+            repository.setItemTagsByTitles(updated.id, updated.tags)
+        }
     }
 }

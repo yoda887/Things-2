@@ -1,6 +1,7 @@
 package com.example.ui.viewmodel
 
 import androidx.lifecycle.ViewModel
+import com.example.domain.tag.TagTitles
 import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.viewModelScope
 import javax.inject.Inject
@@ -67,6 +68,10 @@ class ThingsViewModel @Inject constructor(
             // Просто загружаем календарь при старте
             syncLocalCalendar()
         }
+        viewModelScope.launch {
+            // Дубли тегов и потерянные связи задач с тегами, оставшиеся от прежних версий
+            tagUseCases.repairTags()
+        }
     }
 
     val tasks: StateFlow<List<ItemWithChecklist>> = queryUseCases.observeAllTasks()
@@ -105,7 +110,7 @@ class ThingsViewModel @Inject constructor(
                     wrapper.item.title.contains(query, ignoreCase = true) ||
                     wrapper.item.notes.contains(query, ignoreCase = true)
             
-            val matchesTag = tag == null || wrapper.item.cachedTags.contains(tag, ignoreCase = true)
+            val matchesTag = tag == null || wrapper.item.tags.any { TagTitles.key(it) == TagTitles.key(tag) }
             
             matchesQuery && matchesTag
         }
@@ -114,8 +119,8 @@ class ThingsViewModel @Inject constructor(
     val allTags: StateFlow<Set<String>> = tasks
         .combine(searchQuery) { taskList, _ ->
             taskList.flatMap { wrapper ->
-                if (wrapper.item.cachedTags.isBlank()) emptyList() else wrapper.item.cachedTags.split(", ").map { it.trim() }
-            }.filter { it.isNotBlank() }.toSet()
+                wrapper.item.tags
+            }.toSet()
         }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptySet())
 
     val allSavedTags: StateFlow<List<String>> = queryUseCases.observeAllTags()
@@ -446,7 +451,7 @@ class ThingsViewModel @Inject constructor(
                 isTonight = isTonight,
                 startDate = startDate,
                 dueDate = dueDate,
-                cachedTags = tags.joinToString(", "),
+                cachedTags = TagTitles.join(tags),
                 projectId = projectId,
                 priority = priority,
                 modificationDate = System.currentTimeMillis()
@@ -605,12 +610,10 @@ class ThingsViewModel @Inject constructor(
     fun batchAddTags(taskWrappers: List<ItemWithChecklist>, newTags: List<String>) {
         viewModelScope.launch {
             val updated = taskWrappers.map { wrapper ->
-                val currentTags = wrapper.item.tags
-                val mergedTags = (currentTags + newTags).distinct()
-                val cachedString = mergedTags.joinToString(", ")
-                wrapper.item.copy(cachedTags = cachedString)
+                val mergedTags = TagTitles.clean(wrapper.item.tags + newTags)
+                wrapper.item.copy(cachedTags = TagTitles.join(mergedTags), modificationDate = System.currentTimeMillis())
             }
-            taskUseCases.updateTask(updated)
+            taskUseCases.updateTask.withTags(updated)
         }
     }
 

@@ -1,7 +1,6 @@
 package com.example.domain.usecase.task
 
 import com.example.data.model.ItemWithChecklist
-import com.example.data.model.Tag
 import com.example.domain.repository.ITaskRepository
 import java.util.UUID
 import javax.inject.Inject
@@ -26,20 +25,9 @@ class DuplicateTaskUseCase @Inject constructor(private val repository: ITaskRepo
         val newChecklist = wrapper.checklist.map {
             it.copy(id = UUID.randomUUID().toString(), itemId = newId)
         }
-        repository.insertTask(copiedItem, newChecklist)
-        
-        val cleanTags = copiedItem.tags.map { it.trim() }.filter { it.isNotEmpty() }
-        val allTagsList = repository.getAllTags()
-        val tagObjects = cleanTags.map { title ->
-            val existing = allTagsList.firstOrNull { it.title.equals(title, ignoreCase = true) }
-            if (existing != null) {
-                existing
-            } else {
-                val newTag = Tag(title = title)
-                repository.insertTag(newTag)
-                newTag
-            }
+        repository.inTransaction {
+            repository.insertTask(copiedItem, newChecklist)
+            repository.setItemTagsByTitles(newId, copiedItem.tags)
         }
-        repository.updateItemTags(newId, tagObjects)
     }
 }

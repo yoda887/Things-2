@@ -2,7 +2,6 @@ package com.example.domain.usecase.task
 
 import com.example.data.model.Item
 import com.example.data.model.ChecklistItem
-import com.example.data.model.Tag
 import com.example.domain.repository.ITaskRepository
 import javax.inject.Inject
 
@@ -42,19 +41,17 @@ class UpdateTaskUseCase @Inject constructor(private val repository: ITaskReposit
         repository.insertTasks(items)
     }
 
-    private suspend fun resolveAndAttachTags(item: Item) {
-        val cleanTags = item.tags.map { it.trim() }.filter { it.isNotEmpty() }
-        val allTagsList = repository.getAllTags()
-        val tagObjects = cleanTags.map { title ->
-            val existing = allTagsList.firstOrNull { it.title.equals(title, ignoreCase = true) }
-            if (existing != null) {
-                existing
-            } else {
-                val newTag = Tag(title = title)
-                repository.insertTag(newTag)
-                newTag
-            }
+    /**
+     * Пакетное обновление задач с изменившимися тегами: теги каждой задачи сверяются со справочником.
+     */
+    suspend fun withTags(items: List<Item>) {
+        repository.inTransaction {
+            repository.insertTasks(items)
+            items.forEach { resolveAndAttachTags(it) }
         }
-        repository.updateItemTags(item.id, tagObjects)
+    }
+
+    private suspend fun resolveAndAttachTags(item: Item) {
+        repository.setItemTagsByTitles(item.id, item.tags)
     }
 }

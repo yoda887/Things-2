@@ -176,6 +176,16 @@ class LocalTaskDataSource(private val taskDao: TaskDao) {
         taskDao.insertTags(tags)
     }
 
+    /** Переносит дочерние теги одной группы в другую (или в корень при null). */
+    suspend fun reparentTags(oldParentId: String, newParentId: String?) {
+        taskDao.reparentTags(oldParentId, newParentId)
+    }
+
+    /** Все связи задач с тегами. */
+    suspend fun getAllItemTags(): List<ItemTag> {
+        return taskDao.getAllItemTags()
+    }
+
     /**
      * Удаляет связи тегов с конкретной задачей.
      * @param itemId Идентификатор задачи

@@ -114,15 +114,24 @@ interface TaskDao {
     @Query("SELECT * FROM tags ORDER BY sortOrder ASC")
     suspend fun getAllTags(): List<Tag>
 
-    @Insert(onConflict = OnConflictStrategy.REPLACE)
+    // Upsert, а не REPLACE: REPLACE удаляет строку тега и вставляет заново, и внешний ключ
+    // item_tags каскадно удалял бы все связи задач с этим тегом при каждом переименовании,
+    // переносе в группу или перестановке
+    @Upsert
     suspend fun insertTag(tag: Tag)
 
     @Delete
     suspend fun deleteTag(tag: Tag)
 
     // [ИЗМЕНЕНИЕ]: Добавлена поддержка пакетной вставки тегов
-    @Insert(onConflict = OnConflictStrategy.REPLACE)
+    @Upsert
     suspend fun insertTags(tags: List<Tag>)
+
+    @Query("UPDATE tags SET parentId = :newParentId WHERE parentId = :oldParentId")
+    suspend fun reparentTags(oldParentId: String, newParentId: String?)
+
+    @Query("SELECT * FROM item_tags")
+    suspend fun getAllItemTags(): List<ItemTag>
 
     @Query("SELECT * FROM tags WHERE id = :id")
     suspend fun getTagById(id: String): Tag?

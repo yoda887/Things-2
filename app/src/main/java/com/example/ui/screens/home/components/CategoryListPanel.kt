@@ -1001,10 +1001,7 @@ fun ThingsCategoryListPanel(
             onShowCalendarHelperChange = { },
             growFromOffset = swipeWhenOrigin,
             onDismissRequest = {
-                val tagsList = targetTask.item.cachedTags
-                    .split(",")
-                    .map { it.trim() }
-                    .filter { it.isNotEmpty() }
+                val tagsList = targetTask.item.tags
 
                 onEvent(
                     ThingsCategoryListEvent.SaveTask(

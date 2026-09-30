@@ -140,7 +140,7 @@ data class Item(
 
     @get:Ignore
     val tags: List<String>
-        get() = if (cachedTags.isBlank()) emptyList() else cachedTags.split(", ").map { it.trim() }
+        get() = com.example.domain.tag.TagTitles.parse(cachedTags)
 }
 
 /**

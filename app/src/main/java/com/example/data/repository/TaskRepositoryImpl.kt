@@ -20,6 +20,7 @@ import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.withContext
 import androidx.room.withTransaction
 import com.example.data.local.AppDatabase
+import com.example.domain.tag.TagTitles
 
 /**
  * Реализация репозитория управления задачами, проектами и областями.
@@ -64,9 +65,9 @@ class TaskRepositoryImpl @Inject constructor(
 
     override suspend fun refreshCachedTags(itemId: String): Unit = withContext(Dispatchers.IO) {
         val tags = localDataSource.getTagsByItemId(itemId)
-        val cachedString = tags.joinToString(", ") { it.title }
+        val cachedString = TagTitles.join(tags.map { it.title })
         val item = localDataSource.getItemById(itemId)
-        if (item != null) {
+        if (item != null && item.cachedTags != cachedString) {
             localDataSource.insertItem(item.copy(cachedTags = cachedString))
         }
     }
@@ -122,39 +123,77 @@ class TaskRepositoryImpl @Inject constructor(
     }
 
     override suspend fun insertTag(tag: Tag): Unit = withContext(Dispatchers.IO) {
-        val oldTag = localDataSource.getTagById(tag.id)
-        localDataSource.insertTag(tag)
-        
-        if (oldTag != null && oldTag.title != tag.title) {
-            val allItems = localDataSource.getAllItemsSync()
-            for (item in allItems) {
-                val currentTags = item.tags
-                if (currentTags.any { it.equals(oldTag.title, ignoreCase = true) }) {
-                    val newTags = currentTags.map { 
-                        if (it.equals(oldTag.title, ignoreCase = true)) tag.title else it 
-                    }
-                    val newCachedString = newTags.joinToString(", ")
-                    localDataSource.insertItem(item.copy(cachedTags = newCachedString))
-                }
-            }
+        inTransaction { saveTag(tag) }
+    }
+
+    /**
+     * Создание, переименование и перенос тега. Названия уникальны без учёта регистра:
+     * новый тег с уже занятым названием не создаётся, а переименование в занятое название
+     * сливает тег с существующим — иначе задачи расходились бы между двумя одинаковыми тегами.
+     */
+    private suspend fun saveTag(tag: Tag): Tag? {
+        val title = tag.title.trim()
+        if (title.isEmpty()) return null
+        val allTags = localDataSource.getAllTags()
+        val old = allTags.firstOrNull { it.id == tag.id }
+        val clash = TagTitles.find(allTags, title, exceptId = tag.id)
+
+        if (old == null) {
+            if (clash != null) return clash
+            val created = tag.copy(
+                title = title,
+                sortOrder = (allTags.maxOfOrNull { it.sortOrder } ?: -1) + 1
+            )
+            localDataSource.insertTag(created)
+            return created
         }
+
+        if (clash != null) {
+            mergeTag(from = old, into = clash)
+            return clash
+        }
+
+        val updated = tag.copy(title = title)
+        localDataSource.insertTag(updated)
+        if (old.title != title) {
+            updateItemsTags { titles -> TagTitles.rename(titles, old.title, title) }
+        }
+        return updated
+    }
+
+    /** Переносит задачи и дочерние теги [from] на [into] и удаляет [from]. */
+    private suspend fun mergeTag(from: Tag, into: Tag) {
+        localDataSource.getAllItemTags()
+            .filter { it.tagId == from.id }
+            .forEach { localDataSource.insertItemTag(ItemTag(it.itemId, into.id)) }
+        localDataSource.reparentTags(from.id, into.id)
+        localDataSource.deleteTag(from)
+        updateItemsTags { titles -> TagTitles.rename(titles, from.title, into.title) }
+    }
+
+    /**
+     * Меняет строки тегов у всех задач по [transform] и сохраняет одним пакетом —
+     * только изменившиеся задачи.
+     */
+    private suspend fun updateItemsTags(transform: (List<String>) -> List<String>) {
+        val changed = localDataSource.getAllItemsSync().mapNotNull { item ->
+            val newCached = TagTitles.join(transform(TagTitles.parse(item.cachedTags)))
+            if (newCached != item.cachedTags) item.copy(cachedTags = newCached) else null
+        }
+        if (changed.isNotEmpty()) localDataSource.insertItems(changed)
     }
 
     override suspend fun createGroup(groupName: String): Tag = withContext(Dispatchers.IO) {
-        val group = Tag(title = groupName, parentId = null)
-        localDataSource.insertTag(group)
-        group
+        inTransaction { saveTag(Tag(title = groupName, parentId = null)) } ?: Tag(title = groupName)
     }
 
     override suspend fun createTagInGroup(tagName: String, parentId: String?): Tag = withContext(Dispatchers.IO) {
-        val tag = Tag(title = tagName, parentId = parentId)
-        localDataSource.insertTag(tag)
-        tag
+        inTransaction { saveTag(Tag(title = tagName, parentId = parentId)) } ?: Tag(title = tagName, parentId = parentId)
     }
 
     override suspend fun moveTagToGroup(tagId: String, newGroupId: String?): Unit = withContext(Dispatchers.IO) {
         val tag = localDataSource.getTagById(tagId)
-        if (tag != null) {
+        if (tag != null && tag.id != newGroupId) {
             localDataSource.insertTag(tag.copy(parentId = newGroupId))
         }
     }
@@ -168,36 +207,30 @@ class TaskRepositoryImpl @Inject constructor(
     }
 
     override suspend fun deleteTag(tag: Tag): Unit = withContext(Dispatchers.IO) {
-        val allItems = localDataSource.getAllItemsSync()
-        val allTags = localDataSource.getAllTags()
-        
-        val tagsToDelete = mutableSetOf<Tag>()
-        fun addTagAndChildren(t: Tag) {
-            if (tagsToDelete.add(t)) {
-                val children = allTags.filter { it.parentId == t.id }
-                children.forEach { addTagAndChildren(it) }
+        inTransaction {
+            val allTags = localDataSource.getAllTags()
+            // Удаляется тег вместе со всеми вложенными
+            val tagsToDelete = mutableSetOf<Tag>()
+            fun addTagAndChildren(t: Tag) {
+                if (tagsToDelete.add(t)) {
+                    allTags.filter { it.parentId == t.id }.forEach { addTagAndChildren(it) }
+                }
             }
-        }
-        addTagAndChildren(tag)
-        
-        val titlesToDelete = tagsToDelete.map { it.title.lowercase() }
-        
-        for (t in tagsToDelete) {
-            localDataSource.deleteTag(t)
-        }
-        
-        for (item in allItems) {
-            val currentTags = item.tags
-            if (currentTags.any { titlesToDelete.contains(it.lowercase()) }) {
-                val newTags = currentTags.filter { !titlesToDelete.contains(it.lowercase()) }
-                val newCachedString = newTags.joinToString(", ")
-                localDataSource.insertItem(item.copy(cachedTags = newCachedString))
-            }
+            addTagAndChildren(allTags.firstOrNull { it.id == tag.id } ?: tag)
+            tagsToDelete.forEach { localDataSource.deleteTag(it) }
+            val titles = tagsToDelete.map { it.title }
+            updateItemsTags { current -> TagTitles.remove(current, titles) }
         }
     }
 
     override suspend fun updateTagsOrder(tags: List<Tag>): Unit = withContext(Dispatchers.IO) {
-        localDataSource.insertTags(tags)
+        inTransaction {
+            // Только теги из справочника: в списке диалога бывают временные записи для названий,
+            // которые есть у задачи, но ещё не заведены в справочник
+            val existingIds = localDataSource.getAllTags().map { it.id }.toSet()
+            val toSave = tags.filter { it.id in existingIds && it.parentId != it.id }
+            if (toSave.isNotEmpty()) localDataSource.insertTags(toSave)
+        }
     }
 
     override suspend fun updateItemTags(itemId: String, tags: List<Tag>): Unit = withContext(Dispatchers.IO) {
@@ -206,6 +239,55 @@ class TaskRepositoryImpl @Inject constructor(
             localDataSource.insertItemTag(ItemTag(itemId, tag.id))
         }
         refreshCachedTags(itemId)
+    }
+
+    override suspend fun setItemTagsByTitles(itemId: String, titles: List<String>): Unit = withContext(Dispatchers.IO) {
+        linkItemTags(itemId, titles, localDataSource.getAllTags().toMutableList())
+    }
+
+    /**
+     * Привязывает к задаче теги по названиям: находит существующие без учёта регистра, недостающие
+     * заводит в справочник, пересобирает связи и нормализует строку тегов задачи.
+     * [knownTags] — справочник; дополняется созданными тегами, чтобы пакетные вызовы не читали его заново.
+     */
+    private suspend fun linkItemTags(itemId: String, titles: List<String>, knownTags: MutableList<Tag>) {
+        val resolution = TagTitles.resolve(titles, knownTags)
+        if (resolution.created.isNotEmpty()) {
+            localDataSource.insertTags(resolution.created)
+            knownTags += resolution.created
+        }
+        val currentIds = localDataSource.getTagsByItemId(itemId).map { it.id }.toSet()
+        val newIds = resolution.tags.map { it.id }.toSet()
+        if (currentIds != newIds) {
+            localDataSource.deleteItemTagsByItemId(itemId)
+            resolution.tags.forEach { localDataSource.insertItemTag(ItemTag(itemId, it.id)) }
+        }
+        val item = localDataSource.getItemById(itemId) ?: return
+        val newCached = TagTitles.join(resolution.tags.map { it.title })
+        if (item.cachedTags != newCached) {
+            localDataSource.insertItem(item.copy(cachedTags = newCached))
+        }
+    }
+
+    override suspend fun repairTags(): Unit = withContext(Dispatchers.IO) {
+        inTransaction {
+            // 1. Сливаем дубли справочника, оставшиеся от прежних версий
+            val tags = localDataSource.getAllTags().toMutableList()
+            TagTitles.duplicates(tags).forEach { (duplicate, keep) ->
+                localDataSource.getAllItemTags()
+                    .filter { it.tagId == duplicate.id }
+                    .forEach { localDataSource.insertItemTag(ItemTag(it.itemId, keep.id)) }
+                localDataSource.reparentTags(duplicate.id, keep.id)
+                localDataSource.deleteTag(duplicate)
+                tags.remove(duplicate)
+            }
+            // 2. Восстанавливаем связи задач со справочником по их строке тегов — ей верит интерфейс.
+            // Связи могли пропасть: раньше каждое переименование и перестановка тега удаляли их каскадом
+            val linkedItemIds = localDataSource.getAllItemTags().map { it.itemId }.toSet()
+            localDataSource.getAllItemsSync()
+                .filter { it.cachedTags.isNotBlank() || it.id in linkedItemIds }
+                .forEach { item -> linkItemTags(item.id, TagTitles.parse(item.cachedTags), tags) }
+        }
     }
 
     override suspend fun getTagsByItemId(itemId: String): List<Tag> = withContext(Dispatchers.IO) {
