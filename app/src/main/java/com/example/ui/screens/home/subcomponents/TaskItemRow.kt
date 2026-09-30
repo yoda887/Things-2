@@ -94,6 +94,10 @@ fun TaskItemRow(
     }
 
     val isMarkedDoneOrDeleted = localCompleted || localDeleted
+    val isCancelledTask = task.status == 2
+    // Выполненные и отменённые задачи в результатах поиска — как в Logbook эталона: без серой
+    // подложки, с заполненным тёмно-синим флажком и датой завершения перед названием
+    val isSearchLogbookStyle = screen == ActiveScreen.SEARCH && (task.isCompleted || isCancelledTask)
 
     val completionFillProgress by androidx.compose.animation.core.animateFloatAsState(
         targetValue = if (isMarkedDoneOrDeleted) 1f else 0f,
@@ -105,7 +109,7 @@ fun TaskItemRow(
     )
 
     val animatedTitleColor by androidx.compose.animation.animateColorAsState(
-        targetValue = if (isMarkedDoneOrDeleted) textSecondaryColor else textPrimaryColor,
+        targetValue = if (isMarkedDoneOrDeleted || (isSearchLogbookStyle && isCancelledTask)) textSecondaryColor else textPrimaryColor,
         animationSpec = androidx.compose.animation.core.tween(durationMillis = 300),
         label = "titleColor_${task.id}"
     )
@@ -192,7 +196,7 @@ fun TaskItemRow(
             .background(animatedRowBgColor, RoundedCornerShape(8.dp))
             .clip(RoundedCornerShape(8.dp))
             .drawBehind {
-                if (localCompleted && completionFillProgress > 0f) {
+                if (localCompleted && completionFillProgress > 0f && !isSearchLogbookStyle) {
                     val centerX = (10.dp + leftColumnWidth / 2f).toPx()
                     val centerY = size.height / 2f
                     val maxRadius = kotlin.math.hypot(size.width - centerX, centerY)
@@ -233,7 +237,7 @@ fun TaskItemRow(
                         Color(0xFFC7C7CC)
                     }
                     ThingsCheckbox(
-                        checked = localCompleted,
+                        checked = localCompleted || (isSearchLogbookStyle && isCancelledTask),
                         onCheckedChange = {
                             val newChecked = !localCompleted
                             localCompleted = newChecked
@@ -266,8 +270,10 @@ fun TaskItemRow(
                             }
                         },
                         size = 16.dp,
+                        checkedColor = if (isSearchLogbookStyle) searchLogbookCheckColor() else ThingsBlue,
                         uncheckedColor = checkboxUncheckedColor,
-                        isDashed = task.start == 3 && !localCompleted,
+                        isDashed = task.start == 3 && !localCompleted && !isSearchLogbookStyle,
+                        isCancelled = isSearchLogbookStyle && isCancelledTask,
                         modifier = Modifier
                             .testTag("task_checkbox")
                     )
@@ -299,6 +305,23 @@ fun TaskItemRow(
                 if (badgeBesideBothLines) {
                     DateBadge(text = dateBadge!!)
                     Spacer(modifier = Modifier.width(6.dp))
+                }
+
+                // Дата завершения — отдельной колонкой слева от названия и подзаголовка,
+                // по центру строки по вертикали
+                if (isSearchLogbookStyle) {
+                    val completedAt = task.stopDate ?: task.modificationDate
+                    val dateText = remember(completedAt) { formatSearchLogbookDate(completedAt) }
+                    Text(
+                        text = dateText,
+                        style = TextStyle(
+                            fontSize = titleFontSize * 0.9f,
+                            fontWeight = FontWeight.SemiBold,
+                            color = searchLogbookDateColor()
+                        ),
+                        maxLines = 1
+                    )
+                    Spacer(modifier = Modifier.width(8.dp))
                 }
 
                 Column(modifier = Modifier.weight(1f)) {
@@ -341,7 +364,12 @@ fun TaskItemRow(
                                 style = TextStyle(
                                     fontSize = titleFontSize,
                                     fontWeight = FontWeight.Normal,
-                                    color = animatedTitleColor
+                                    color = animatedTitleColor,
+                                    textDecoration = if (isSearchLogbookStyle && isCancelledTask) {
+                                        androidx.compose.ui.text.style.TextDecoration.LineThrough
+                                    } else {
+                                        null
+                                    }
                                 ),
                                 maxLines = 1,
                                 overflow = TextOverflow.Ellipsis,
@@ -685,3 +713,17 @@ private fun getStartDateIndicator(startDate: Long, isTonight: Boolean): DateIndi
     return DateIndicatorResult.TextIndicator(monthAndDayStr)
 }
 
+/** Заливка флажка выполненной/отменённой задачи в результатах поиска — фирменный голубой. */
+@Composable
+private fun searchLogbookCheckColor(): Color = ThingsBlue
+
+/** Цвет даты завершения перед названием задачи в результатах поиска — фирменный голубой. */
+@Composable
+private fun searchLogbookDateColor(): Color = ThingsBlue
+
+/** Короткая числовая дата в формате системы: 04/28/24 для en-US, 28.04.24 для ru/uk. */
+private fun formatSearchLogbookDate(millis: Long): String {
+    val locale = java.util.Locale.getDefault()
+    val pattern = android.text.format.DateFormat.getBestDateTimePattern(locale, "ddMMyy")
+    return java.text.SimpleDateFormat(pattern, locale).format(java.util.Date(millis))
+}

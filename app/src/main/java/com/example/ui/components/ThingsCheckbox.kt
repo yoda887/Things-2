@@ -35,7 +35,9 @@ fun ThingsCheckbox(
     size: Dp = 22.dp,
     checkedColor: Color = ThingsBlue,
     uncheckedColor: Color = Color(0xFFC7C7CC),
-    isDashed: Boolean = false
+    isDashed: Boolean = false,
+    // Отменённая задача: вместо галочки в заполненном квадрате рисуется крестик
+    isCancelled: Boolean = false
 ) {
     // 1. Анимация ПРУЖИНЫ для всей карточки (нажатие/отжатие)
     // Использование Spring.DampingRatioHighBouncy дает легкий пружинящий отскок в конце
@@ -82,11 +84,18 @@ fun ThingsCheckbox(
         val cornerRadius = (size * 0.23f).toPx()
         val strokeWidth = (size * 0.07f).toPx().coerceAtLeast(1.dp.toPx())
 
-        // Векторный путь самой галочки внутри квадрата
+        // Векторный путь самой галочки (или крестика у отменённой задачи) внутри квадрата
         val checkPath = Path().apply {
-            moveTo(width * 0.28f, height * 0.5f)
-            lineTo(width * 0.45f, height * 0.68f)
-            lineTo(width * 0.75f, height * 0.32f)
+            if (isCancelled) {
+                moveTo(width * 0.32f, height * 0.32f)
+                lineTo(width * 0.68f, height * 0.68f)
+                moveTo(width * 0.68f, height * 0.32f)
+                lineTo(width * 0.32f, height * 0.68f)
+            } else {
+                moveTo(width * 0.28f, height * 0.5f)
+                lineTo(width * 0.45f, height * 0.68f)
+                lineTo(width * 0.75f, height * 0.32f)
+            }
         }
 
         // Рисуем пустую неактивную рамку (подложку)
@@ -119,7 +128,18 @@ fun ThingsCheckbox(
         }
 
         // ЭФФЕКТ КАРАНДАША: Рисуем галочку строго по ее длине на основе прогресса анимации
-        if (checkDrawProgress > 0f) {
+        if (checkDrawProgress > 0f && isCancelled) {
+            // У крестика два штриха — прорисовка по длине пути взяла бы только первый,
+            // поэтому он проявляется целиком
+            drawPath(
+                path = checkPath,
+                color = Color.White.copy(alpha = checkDrawProgress.coerceIn(0f, 1f)),
+                style = Stroke(
+                    width = (size * 0.09f).toPx().coerceAtLeast(1.5.dp.toPx()),
+                    cap = androidx.compose.ui.graphics.StrokeCap.Round
+                )
+            )
+        } else if (checkDrawProgress > 0f) {
             val pathMeasure = PathMeasure()
             pathMeasure.setPath(checkPath, false)
             val partialPath = Path()
