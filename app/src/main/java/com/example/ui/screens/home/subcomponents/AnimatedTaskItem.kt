@@ -553,20 +553,24 @@ fun AnimatedTaskItem(
                                 rowCenter.value = coordinates.boundsInRoot().center -
                                     Offset(root.size.width / 2f, root.size.height / 2f)
                             }
-                            .taskDragAndDrop(
-                            state = dragDropState,
-                            taskWrapper = taskWrapper,
-                            screen = screen,
-                            upcomingDays = upcomingDays,
-                            localTasksList = localTasksList,
-                            filteredTasks = displayTasks,
-                            onLocalTasksListChange = onLocalTasksListChange,
-                            onTasksReordered = { items ->
-                                onEvent(ThingsCategoryListEvent.ReorderTasks(items))
-                            },
-                            selectedTaskIds = selectedTaskIds,
-                            onExitSelectionMode = onExitSelectionMode
-                        ),
+                            // В результатах поиска порядок задаёт выдача, перетаскивание отключено
+                            .then(
+                                if (screen == ActiveScreen.SEARCH) Modifier
+                                else Modifier.taskDragAndDrop(
+                                    state = dragDropState,
+                                    taskWrapper = taskWrapper,
+                                    screen = screen,
+                                    upcomingDays = upcomingDays,
+                                    localTasksList = localTasksList,
+                                    filteredTasks = displayTasks,
+                                    onLocalTasksListChange = onLocalTasksListChange,
+                                    onTasksReordered = { items ->
+                                        onEvent(ThingsCategoryListEvent.ReorderTasks(items))
+                                    },
+                                    selectedTaskIds = selectedTaskIds,
+                                    onExitSelectionMode = onExitSelectionMode
+                                )
+                            ),
                         onSwipeLeft = { onEvent(ThingsCategoryListEvent.SwipeTaskLeft(taskWrapper)) },
                         onSwipeRight = {
                             onEvent(ThingsCategoryListEvent.SwipeTaskRight(taskWrapper, rowCenter.value))

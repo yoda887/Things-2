@@ -139,7 +139,8 @@ class ThingsViewModel @Inject constructor(
         savedTags: List<String>,
         savedTagObjs: List<Tag>,
         allTagsSet: Set<String>,
-        highlighted: String?
+        highlighted: String?,
+        query: String = ""
     ): ThingsCategoryListState {
         // Границы дня считаем один раз на весь список, а не в геттерах каждой задачи
         val bounds = DayBounds.now()
@@ -159,6 +160,15 @@ class ThingsViewModel @Inject constructor(
                     ActiveScreen.PROJECT_DETAIL -> task.projectId == project?.id && !task.isCompleted
                     ActiveScreen.AREA_DETAIL -> task.areaId == area?.id && task.type == 0 && !task.isCompleted
                     ActiveScreen.TAG_DETAIL -> task.type == 0 && tag != null && task.tags.contains(tag.title) && !task.isCompleted
+                    // Поиск: задачи (открытые, выполненные и отменённые) по названию, заметкам и чек-листу
+                    ActiveScreen.SEARCH -> {
+                        val q = query.trim()
+                        q.isNotEmpty() && task.type == 0 && !task.trashed && (
+                            task.title.contains(q, ignoreCase = true) ||
+                                task.notes.contains(q, ignoreCase = true) ||
+                                wrapper.checklist.any { it.title.contains(q, ignoreCase = true) }
+                            )
+                    }
                     else -> false
                 }
             }
@@ -196,7 +206,8 @@ class ThingsViewModel @Inject constructor(
             projects = projectList,
             highlightedTaskId = highlighted,
             allTasks = taskList,
-            projectProgressMap = projectProgressMap
+            projectProgressMap = projectProgressMap,
+            searchQuery = query
         )
     }
 
@@ -225,7 +236,8 @@ class ThingsViewModel @Inject constructor(
             savedTags = allSavedTags.value,
             savedTagObjs = allSavedTagObjects.value,
             allTagsSet = allTags.value,
-            highlighted = highlightedTaskId.value
+            highlighted = highlightedTaskId.value,
+            query = searchQuery.value
         )
     }
 
@@ -257,7 +269,8 @@ class ThingsViewModel @Inject constructor(
                 allSavedTags,
                 allSavedTagObjects,
                 allTags,
-                highlightedTaskId
+                highlightedTaskId,
+                searchQuery
             )
         ) { array ->
             val expandedTaskId = array[0] as? String
@@ -277,6 +290,7 @@ class ThingsViewModel @Inject constructor(
             @Suppress("UNCHECKED_CAST")
             val allTagsSet = array[8] as Set<String>
             val highlighted = array[9] as? String
+            val query = array[10] as? String ?: ""
 
             computeCategoryListState(
                 screen = screen,
@@ -292,7 +306,8 @@ class ThingsViewModel @Inject constructor(
                 savedTags = savedTags,
                 savedTagObjs = savedTagObjs,
                 allTagsSet = allTagsSet,
-                highlighted = highlighted
+                highlighted = highlighted,
+                query = query
             )
         }.flowOn(Dispatchers.Default)
     }

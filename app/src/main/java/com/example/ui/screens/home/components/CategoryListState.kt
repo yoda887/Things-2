@@ -361,6 +361,27 @@ fun rememberUpcomingSchedule(
     }
 }
 
+/** Вид заголовка секции в результатах поиска. */
+enum class SearchSectionKind { TAGS, PROJECT, AREA, LOGBOOK }
+
+/**
+ * Заголовок секции результатов поиска: найденные теги, задачи конкретного проекта или области, Logbook.
+ * Найденные проекты и области идут строками без заголовка.
+ */
+data class SearchSectionHeaderItem(
+    val key: String,
+    val title: String,
+    val kind: SearchSectionKind,
+    val project: Item? = null,
+    val area: Area? = null
+)
+
+/** Найденная по названию область. */
+data class SearchAreaItem(val area: Area)
+
+/** Найденный по названию тег. */
+data class SearchTagItem(val tag: Tag)
+
 /**
  * Создает плоский список элементов для отображения в LazyColumn на основе текущего экрана и данных.
  */
@@ -377,9 +398,12 @@ fun rememberFlattenedList(
     displayTasks: List<ItemWithChecklist>,
     isLaterItemsHidden: Boolean = false,
     tag: Tag? = null,
-    allTasks: List<ItemWithChecklist> = emptyList()
+    allTasks: List<ItemWithChecklist> = emptyList(),
+    areas: List<Area> = emptyList(),
+    savedTags: List<Tag> = emptyList(),
+    searchQuery: String = ""
 ): List<Any> {
-    return remember(screen, standardToday, eveningToday, draggedItemKey, upcomingDays, upcomingMonths, projects, area, displayTasks, isLaterItemsHidden, tag, allTasks) {
+    return remember(screen, standardToday, eveningToday, draggedItemKey, upcomingDays, upcomingMonths, projects, area, displayTasks, isLaterItemsHidden, tag, allTasks, areas, savedTags, searchQuery) {
         buildList<Any> {
             if (screen == ActiveScreen.TODAY) {
                 addAll(standardToday)
@@ -464,10 +488,72 @@ fun rememberFlattenedList(
                 if (logbookTasks.isNotEmpty()) {
                     addAll(logbookTasks)
                 }
+            } else if (screen == ActiveScreen.SEARCH) {
+                addSearchResults(displayTasks, projects, areas, savedTags, searchQuery)
             } else {
                 addAll(displayTasks)
             }
         }
+    }
+}
+
+/**
+ * Результаты поиска в порядке эталона: открытые задачи без проекта и области, найденные проекты,
+ * области и теги, открытые задачи по проектам и областям, затем выполненные и отменённые (Logbook).
+ */
+private fun MutableList<Any>.addSearchResults(
+    matchedTasks: List<ItemWithChecklist>,
+    projects: List<Item>,
+    areas: List<Area>,
+    savedTags: List<Tag>,
+    searchQuery: String
+) {
+    val q = searchQuery.trim()
+    if (q.isEmpty()) return
+
+    fun Item.isDone() = isCompleted || status == 2
+    val active = matchedTasks.filter { !it.item.isDone() }
+
+    // 1. Открытые задачи без проекта и области — сразу под строкой поиска, без заголовка
+    addAll(active.filter { it.item.projectId.isNullOrEmpty() && it.item.areaId.isNullOrEmpty() })
+
+    // 2. Найденные проекты и области — строками без заголовка секции, затем теги
+    val matchedProjects = projects.filter {
+        it.type == 1 && !it.trashed && (it.title.contains(q, ignoreCase = true) || it.notes.contains(q, ignoreCase = true))
+    }
+    addAll(matchedProjects)
+    val matchedAreas = areas.filter { !it.trashed && it.title.contains(q, ignoreCase = true) }
+    addAll(matchedAreas.map { SearchAreaItem(it) })
+    val matchedTags = savedTags.filter { it.title.isNotBlank() && it.title.contains(q, ignoreCase = true) }
+    if (matchedTags.isNotEmpty()) {
+        add(SearchSectionHeaderItem("search_hdr_tags", "Tags", SearchSectionKind.TAGS))
+        addAll(matchedTags.map { SearchTagItem(it) })
+    }
+
+    // 3. Открытые задачи по проектам
+    active.filter { !it.item.projectId.isNullOrEmpty() }
+        .groupBy { it.item.projectId!! }
+        .forEach { (projectId, tasks) ->
+            val project = projects.firstOrNull { it.id == projectId && !it.trashed } ?: return@forEach
+            add(SearchSectionHeaderItem("search_hdr_project_$projectId", project.title, SearchSectionKind.PROJECT, project = project))
+            addAll(tasks)
+        }
+
+    // 4. Открытые задачи по областям (без проекта)
+    active.filter { it.item.projectId.isNullOrEmpty() && !it.item.areaId.isNullOrEmpty() }
+        .groupBy { it.item.areaId!! }
+        .forEach { (areaId, tasks) ->
+            val area = areas.firstOrNull { it.id == areaId && !it.trashed } ?: return@forEach
+            add(SearchSectionHeaderItem("search_hdr_area_$areaId", area.title, SearchSectionKind.AREA, area = area))
+            addAll(tasks)
+        }
+
+    // 5. Выполненные и отменённые задачи — Logbook, свежие сверху
+    val logbook = matchedTasks.filter { it.item.isDone() }
+        .sortedByDescending { it.item.stopDate ?: it.item.modificationDate }
+    if (logbook.isNotEmpty()) {
+        add(SearchSectionHeaderItem("search_hdr_logbook", "Logbook", SearchSectionKind.LOGBOOK))
+        addAll(logbook)
     }
 }
 
@@ -562,7 +648,9 @@ data class ThingsCategoryListState(
     val allTasks: List<ItemWithChecklist> = emptyList(),
     val projectProgressMap: Map<String, ProjectProgress> = emptyMap(),
     val isSelectionMode: Boolean = false,
-    val selectedTaskIds: Set<String> = emptySet()
+    val selectedTaskIds: Set<String> = emptySet(),
+    // Текст запроса экрана поиска
+    val searchQuery: String = ""
 )
 
 /**
@@ -578,6 +666,9 @@ sealed interface ThingsCategoryListEvent {
     // sourceBounds — круг индикатора оттяжки в координатах корня, из него вырастает Quick Find
     data class ClickSearch(val sourceBounds: Rect? = null) : ThingsCategoryListEvent
     object ClickBack : ThingsCategoryListEvent
+    // Экран поиска: изменение запроса и переход к найденному тегу
+    data class ChangeSearchQuery(val query: String) : ThingsCategoryListEvent
+    data class ClickTag(val tag: Tag) : ThingsCategoryListEvent
     
     // События изменения/сохранения задачи из инлайн-редактора
     data class CreateTag(val title: String, val parentId: String?) : ThingsCategoryListEvent

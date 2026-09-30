@@ -94,6 +94,11 @@ import com.example.ui.screens.home.subcomponents.UpcomingMonthHeader
 import com.example.ui.screens.home.subcomponents.TagFilterRow
 import com.example.ui.screens.home.subcomponents.ProjectItemRow
 import com.example.ui.screens.home.subcomponents.EmptyStateView
+import com.example.ui.screens.home.subcomponents.SearchEmptyState
+import com.example.ui.screens.home.subcomponents.SearchEntityRow
+import com.example.ui.screens.home.subcomponents.SearchQueryField
+import com.example.ui.screens.home.subcomponents.SearchSectionHeader
+import com.example.ui.screens.home.subcomponents.SEARCH_ROW_ICON_SIZE
 import com.example.ui.screens.home.subcomponents.CategoryListTopAppBar
 import com.example.ui.screens.home.subcomponents.TopAppBarSelectionState
 import com.example.ui.screens.home.subcomponents.AnimatedTaskItem
@@ -276,7 +281,10 @@ fun ThingsCategoryListPanel(
         displayTasks = displayTasks,
         isLaterItemsHidden = isLaterItemsHidden,
         tag = state.tag,
-        allTasks = state.allTasks
+        allTasks = state.allTasks,
+        areas = areasState,
+        savedTags = allSavedTagObjects,
+        searchQuery = state.searchQuery
     )
 
     val density = androidx.compose.ui.platform.LocalDensity.current
@@ -514,7 +522,7 @@ fun ThingsCategoryListPanel(
             state = lazyListState,
             modifier = Modifier
                 .fillMaxSize()
-                .nestedScroll(nestedScrollConnection)
+                .then(if (screen == ActiveScreen.SEARCH) Modifier else Modifier.nestedScroll(nestedScrollConnection))
                 .nestedScroll(scrollTrackingConnection)
                 .graphicsLayer { translationY = pullOffset.value }
                 .observeTouchesOutsideEditor(editorOutsideTouch) { isEditorOpen }
@@ -551,6 +559,21 @@ fun ThingsCategoryListPanel(
                         onDeleteProject = { onEvent(ThingsCategoryListEvent.DeleteProject(it)) },
                         onDeleteArea = { onEvent(ThingsCategoryListEvent.DeleteArea(it)) }
                     )
+                }
+            }
+
+            if (screen == ActiveScreen.SEARCH) {
+                item(key = "search_field") {
+                    SearchQueryField(
+                        query = state.searchQuery,
+                        onQueryChange = { onEvent(ThingsCategoryListEvent.ChangeSearchQuery(it)) },
+                        textPrimaryColor = textPrimaryColor,
+                        textSecondaryColor = textSecondaryColor,
+                        modifier = Modifier
+                            .padding(horizontal = 8.dp)
+                            .graphicsLayer { alpha = globalDimAlpha }
+                    )
+                    Spacer(modifier = Modifier.height(12.dp))
                 }
             }
 
@@ -603,7 +626,23 @@ fun ThingsCategoryListPanel(
                 else -> displayTasks.isNotEmpty()
             }
 
-            if (!hasTasks) {
+            if (screen == ActiveScreen.SEARCH && flattened.isEmpty()) {
+                item(key = TaskListKeys.EMPTY_STATE) {
+                    if (state.searchQuery.isBlank()) {
+                        SearchEmptyState(
+                            icon = Icons.Default.Search,
+                            text = "Quickly find to-dos, notes,\nchecklists, and completed items.",
+                            textSecondaryColor = textSecondaryColor
+                        )
+                    } else {
+                        SearchEmptyState(
+                            icon = Icons.Outlined.SearchOff,
+                            text = "No results found for \"${state.searchQuery}\"",
+                            textSecondaryColor = textSecondaryColor
+                        )
+                    }
+                }
+            } else if (!hasTasks && screen != ActiveScreen.SEARCH) {
                 item(key = TaskListKeys.EMPTY_STATE) {
                     Box(modifier = Modifier.padding(horizontal = 8.dp)) {
                         EmptyStateView(textSecondaryColor = textSecondaryColor)
@@ -617,6 +656,9 @@ fun ThingsCategoryListPanel(
                         is UpcomingHeaderItem -> "${TaskListKeys.DAY_HEADER_PREFIX}${item.dateMillis}"
                         is UpcomingMonthHeaderItem -> "${TaskListKeys.MONTH_HEADER_PREFIX}${item.monthMillis}"
                         is UpcomingEventItem -> "${TaskListKeys.CALENDAR_EVENT_PREFIX}${item.event.id}_${item.dateMillis}"
+                        is SearchSectionHeaderItem -> item.key
+                        is SearchAreaItem -> "search_area_${item.area.id}"
+                        is SearchTagItem -> "search_tag_${item.tag.id}"
                         else -> item.toString()
                     }
                 }) { item ->
@@ -729,6 +771,60 @@ fun ThingsCategoryListPanel(
                                         placementSpec = placementSpec
                                     )
                                     .graphicsLayer { alpha = dimAlpha }
+                            )
+                        }
+                        is SearchSectionHeaderItem -> {
+                            val header = item
+                            val dimAlpha by animateFloatAsState(
+                                targetValue = if (inlineExpandedTaskId != null) 0.3f else 1f,
+                                label = "dimAlpha_${header.key}"
+                            )
+                            SearchSectionHeader(
+                                title = header.title,
+                                icon = { SearchSectionIcon(header, state.projectProgressMap) },
+                                dividerColor = dividerColor,
+                                textPrimaryColor = textPrimaryColor,
+                                onClick = when {
+                                    header.project != null -> { { onEvent(ThingsCategoryListEvent.ClickProject(header.project)) } }
+                                    header.area != null -> { { onEvent(ThingsCategoryListEvent.ClickArea(header.area)) } }
+                                    else -> null
+                                },
+                                showChevron = header.project != null || header.area != null,
+                                modifier = Modifier
+                                    .animateItem(placementSpec = placementSpec)
+                                    .graphicsLayer { alpha = dimAlpha }
+                            )
+                        }
+                        is SearchAreaItem -> {
+                            SearchEntityRow(
+                                title = item.area.title,
+                                icon = {
+                                    Icon(
+                                        imageVector = AppIcons.Area,
+                                        contentDescription = null,
+                                        tint = ThingsAreaGreen,
+                                        modifier = Modifier.requiredSize(SEARCH_ROW_ICON_SIZE)
+                                    )
+                                },
+                                textPrimaryColor = textPrimaryColor,
+                                onClick = { onEvent(ThingsCategoryListEvent.ClickArea(item.area)) },
+                                modifier = Modifier.animateItem(placementSpec = placementSpec)
+                            )
+                        }
+                        is SearchTagItem -> {
+                            SearchEntityRow(
+                                title = item.tag.title,
+                                icon = {
+                                    Icon(
+                                        imageVector = AppIcons.Tag,
+                                        contentDescription = null,
+                                        tint = ThingsSomedayGrey,
+                                        modifier = Modifier.requiredSize(SEARCH_ROW_ICON_SIZE)
+                                    )
+                                },
+                                textPrimaryColor = textPrimaryColor,
+                                onClick = { onEvent(ThingsCategoryListEvent.ClickTag(item.tag)) },
+                                modifier = Modifier.animateItem(placementSpec = placementSpec)
                             )
                         }
                         is UpcomingEventItem -> {
@@ -1140,4 +1236,42 @@ fun ThingsCategoryListPanel(
         modifier = Modifier.align(Alignment.BottomCenter)
     )
   }
+}
+
+/** Иконка заголовка секции результатов поиска — те же иконки, что у проектов, областей и списков. */
+@Composable
+private fun SearchSectionIcon(
+    header: SearchSectionHeaderItem,
+    projectProgressMap: Map<String, ProjectProgress>
+) {
+    val iconModifier = Modifier.requiredSize(SEARCH_ROW_ICON_SIZE)
+    when (header.kind) {
+        SearchSectionKind.AREA -> Icon(
+            imageVector = AppIcons.Area,
+            contentDescription = null,
+            tint = ThingsAreaGreen,
+            modifier = iconModifier
+        )
+        SearchSectionKind.TAGS -> Icon(
+            imageVector = AppIcons.Tag,
+            contentDescription = null,
+            tint = ThingsSomedayGrey,
+            modifier = iconModifier
+        )
+        SearchSectionKind.PROJECT -> {
+            val progress = header.project?.let { projectProgressMap[it.id] }
+            ProjectProgressArc(
+                completed = progress?.completed ?: 0,
+                total = progress?.total ?: 0,
+                color = ThingsBlue,
+                modifier = iconModifier
+            )
+        }
+        SearchSectionKind.LOGBOOK -> Icon(
+            imageVector = AppIcons.Logbook,
+            contentDescription = null,
+            tint = Color.Unspecified,
+            modifier = iconModifier
+        )
+    }
 }

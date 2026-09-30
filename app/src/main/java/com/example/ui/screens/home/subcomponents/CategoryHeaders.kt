@@ -445,6 +445,23 @@ fun MainCategoryHeader(
                     modifier = Modifier.weight(1f, fill = false)
                 )
             }
+            ActiveScreen.SEARCH -> {
+                Icon(
+                    imageVector = Icons.Default.Search,
+                    contentDescription = null,
+                    tint = textPrimaryColor,
+                    modifier = Modifier.size((32 * scaleFactor).dp)
+                )
+                Spacer(modifier = Modifier.width((10 * scaleFactor).dp))
+                Text(
+                    text = "Search",
+                    style = TextStyle(
+                        fontSize = headerTitleFontSize,
+                        fontWeight = FontWeight.Bold,
+                        color = textPrimaryColor
+                    )
+                )
+            }
             else -> {}
         }
     }

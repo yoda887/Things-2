@@ -50,7 +50,6 @@ import com.example.ui.screens.home.components.ThingsCategoryListPanel
 import com.example.ui.screens.home.components.ThingsCategoryListState
 import com.example.ui.screens.home.components.ThingsCategoryListEvent
 import com.example.ui.screens.home.components.ThingsSearchOverlay
-import com.example.ui.screens.home.components.ThingsSearchScreen
 import com.example.ui.screens.home.components.SearchResultItem
 import com.example.ui.screens.ThingsTaskDetailsSheet
 import com.example.ui.screens.home.inlineeditor.dialogs.QuickAddDialog
@@ -299,6 +298,11 @@ fun ThingsHomeScreen(viewModel: ThingsViewModel = hiltViewModel()) {
                         view.performHapticFeedback(android.view.HapticFeedbackConstants.CLOCK_TICK)
                         if (activeScreen == ActiveScreen.HOME) {
                             showFabMenu = true
+                        } else if (activeScreen == ActiveScreen.SEARCH) {
+                            // На экране поиска новая задача создаётся с текстом запроса
+                            taskToEdit = null
+                            newTaskTitlePrefill = searchQuery
+                            showAddDialog = true
                         } else {
                             val targetScreen = activeScreen
                             val initialSection = when (targetScreen) {
@@ -471,51 +475,6 @@ fun ThingsHomeScreen(viewModel: ThingsViewModel = hiltViewModel()) {
                         )
                     }
                 }
-                composable<SearchRoute> {
-                    // Применяем обертку ScreenTransitionWrapper со сплошным фоном и эффектом затемнения
-                    ScreenTransitionWrapper(isStartDestination = false, backgroundColor = backgroundColor) {
-                        ThingsSearchScreen(
-                            searchQuery = searchQuery,
-                            onSearchQueryChange = { viewModel.setSearchQuery(it) },
-                            allTasks = allTasksRaw,
-                            projects = projects,
-                            areas = areas,
-                            textPrimaryColor = textPrimaryColor,
-                            textSecondaryColor = textSecondaryColor,
-                            dividerColor = dividerColor,
-                            onTaskClick = { clickedTask ->
-                                taskToEdit = clickedTask
-                                showAddDialog = true
-                            },
-                            onTaskToggle = { toggledTask ->
-                                viewModel.toggleTaskCompletion(toggledTask)
-                            },
-                            onBack = {
-                                navController.popBackStack()
-                                viewModel.setSearchQuery("")
-                            },
-                            onFabClick = {
-                                taskToEdit = null
-                                newTaskTitlePrefill = searchQuery
-                                showAddDialog = true
-                            },
-                            onProjectClick = { proj ->
-                                selectedProject = proj
-                                navigateTo(ActiveScreen.PROJECT_DETAIL, proj.id)
-                            },
-                            onAreaClick = { area ->
-                                selectedArea = area
-                                navigateTo(ActiveScreen.AREA_DETAIL, area.id)
-                            },
-                            allSavedTagObjects = allSavedTagObjects,
-                            onTagClick = { tag ->
-                                selectedTagDetail = tag
-                                navigateTo(ActiveScreen.TAG_DETAIL, tag.id)
-                            }
-                        )
-                    }
-                }
-                
                 // Helper for the category lists
                 val listScreenContent: @Composable (ActiveScreen, String?) -> Unit = { screen, entityId ->
                     // Мы запоминаем проект и область именно для данного инстанса экрана на момент его создания/отображения,
@@ -588,8 +547,17 @@ fun ThingsHomeScreen(viewModel: ThingsViewModel = hiltViewModel()) {
                                     isSearchOverlayActive = true
                                 }
                                 ThingsCategoryListEvent.ClickBack -> {
+                                    val wasSearch = activeScreen == ActiveScreen.SEARCH
                                     navController.popBackStack()
                                     viewModel.selectTag(null)
+                                    if (wasSearch) viewModel.setSearchQuery("")
+                                }
+                                is ThingsCategoryListEvent.ChangeSearchQuery -> {
+                                    viewModel.setSearchQuery(event.query)
+                                }
+                                is ThingsCategoryListEvent.ClickTag -> {
+                                    selectedTagDetail = event.tag
+                                    navigateTo(ActiveScreen.TAG_DETAIL, event.tag.id)
                                 }
                                 is ThingsCategoryListEvent.CreateTag -> {
                                     viewModel.insertTag(event.title, event.parentId)
@@ -762,6 +730,14 @@ fun ThingsHomeScreen(viewModel: ThingsViewModel = hiltViewModel()) {
                     // Применяем обертку ScreenTransitionWrapper со сплошным фоном и эффектом затемнения
                     ScreenTransitionWrapper(isStartDestination = false, backgroundColor = backgroundColor) {
                         listScreenContent(route.screen, route.entityId)
+                    }
+                }
+
+                composable<SearchRoute> {
+                    // Экран поиска — такая же панель списка, как у остальных экранов: те же строки задач,
+                    // раскрытие и редактирование, выделение, свайпы
+                    ScreenTransitionWrapper(isStartDestination = false, backgroundColor = backgroundColor) {
+                        listScreenContent(ActiveScreen.SEARCH, null)
                     }
                 }
             }

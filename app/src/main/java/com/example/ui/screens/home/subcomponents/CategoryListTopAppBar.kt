@@ -5,6 +5,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.MoreVert
+import androidx.compose.material.icons.filled.Search
 import androidx.compose.material.icons.outlined.Layers
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
@@ -400,6 +401,21 @@ private fun CategoryTopAppBarTitleContent(
                     fontWeight = FontWeight.SemiBold,
                     maxLines = 1,
                     overflow = TextOverflow.Ellipsis
+                )
+            }
+            ActiveScreen.SEARCH -> {
+                Icon(
+                    imageVector = Icons.Default.Search,
+                    contentDescription = null,
+                    tint = textPrimaryColor,
+                    modifier = Modifier.size(TOP_APP_BAR_ICON_SIZE)
+                )
+                Spacer(modifier = Modifier.width(TOP_APP_BAR_SPACING))
+                Text(
+                    text = "Search",
+                    style = MaterialTheme.typography.topAppBarTitle,
+                    color = textPrimaryColor,
+                    fontWeight = FontWeight.SemiBold
                 )
             }
             else -> {}
