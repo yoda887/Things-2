@@ -16,7 +16,7 @@ import android.view.inputmethod.InputMethodManager
 import androidx.annotation.RequiresApi
 import androidx.compose.animation.ExitTransition
 import androidx.compose.animation.core.tween
-import androidx.compose.animation.slideOut
+import androidx.compose.animation.scaleOut
 import androidx.compose.foundation.text.selection.LocalTextSelectionColors
 import androidx.compose.foundation.text.selection.TextSelectionColors
 import androidx.compose.runtime.Composable
@@ -24,7 +24,6 @@ import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalWindowInfo
 import androidx.compose.ui.platform.WindowInfo
-import androidx.compose.ui.unit.IntOffset
 import kotlin.math.roundToInt
 
 /**
@@ -73,15 +72,29 @@ fun View.hideSoftKeyboardThen(onHidden: () -> Unit) {
 const val SOFT_KEYBOARD_HIDE_SETTLE_MS = 350
 
 /**
- * Добавка к exit-анимации `AnimatedVisibility`: держит содержимое в композиции
- * [SOFT_KEYBOARD_HIDE_SETTLE_MS], даже если видимая часть исчезает быстрее, — чтобы поле ввода
- * внутри ушло уже после полного скрытия клавиатуры.
- *
- * Сдвигает содержимое на 1 px в самом конце, когда оно уже невидимо: анимация, у которой начальное
- * и конечное значения совпадают, считается завершённой сразу и, несмотря на задержку, ничего не держит.
+ * То же для окон-диалогов. Окну диалога система не отдаёт управление анимацией клавиатуры
+ * (controlWindowInsetsAnimation сразу отменяется — проверено на HyperOS, в том числе с
+ * decorFitsSystemWindows = false), и [hideSoftKeyboardNow] прячет её штатно: ~530 мс вместе
+ * с невидимым хвостом. Поле, ушедшее из композиции раньше, вызывает restartInput, Gboard
+ * перерисовывается и выглядывает из-под края экрана верхней полоской.
  */
-fun holdForSoftKeyboardHide(): ExitTransition =
-    slideOut(tween(durationMillis = 1, delayMillis = SOFT_KEYBOARD_HIDE_SETTLE_MS)) { IntOffset(0, 1) }
+const val SOFT_KEYBOARD_SYSTEM_HIDE_SETTLE_MS = 700
+
+/**
+ * Добавка к exit-анимации `AnimatedVisibility`: держит содержимое в композиции
+ * [settleMillis] ([SOFT_KEYBOARD_HIDE_SETTLE_MS], в окне диалога — [SOFT_KEYBOARD_SYSTEM_HIDE_SETTLE_MS]),
+ * даже если видимая часть исчезает быстрее, — чтобы поле ввода внутри ушло уже после полного
+ * скрытия клавиатуры.
+ *
+ * Чуть уменьшает содержимое в самом конце, когда оно уже невидимо: анимация, у которой начальное
+ * и конечное значения совпадают, считается завершённой сразу и, несмотря на задержку, ничего не держит.
+ *
+ * Занимает канал масштаба: при сложении exit-анимаций из двух анимаций одного вида остаётся
+ * только правая, поэтому со scaleOut это удержание не складывается. Раньше здесь был slideOut —
+ * и он подменял собой сдвиг экрана (slideOutVertically), экран не уезжал, а резко гас.
+ */
+fun holdForSoftKeyboardHide(settleMillis: Int = SOFT_KEYBOARD_HIDE_SETTLE_MS): ExitTransition =
+    scaleOut(tween(durationMillis = 1, delayMillis = settleMillis), targetScale = 0.999f)
 
 /** Маркер курсора и выделение прозрачного цвета — чтобы спрятать их, не снимая фокус с поля. */
 private val HiddenTextSelectionColors = TextSelectionColors(

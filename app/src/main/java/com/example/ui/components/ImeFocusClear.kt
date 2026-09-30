@@ -22,9 +22,14 @@ import kotlinx.coroutines.delay
  *
  * Вызывается один раз на окно: в корне приложения — на все поля основного экрана, и отдельно
  * внутри диалогов, потому что у них своё окно со своими отступами и своим фокусом.
+ *
+ * @param settleMillis сколько выждать после того, как клавиатура визуально ушла. В окне диалога
+ *   она уходит штатной анимацией с невидимым хвостом (см. SOFT_KEYBOARD_SYSTEM_HIDE_SETTLE_MS):
+ *   снятый в хвосте фокус вызывает restartInput, и Gboard, перерисовываясь, выглядывает из-под
+ *   края экрана верхней полоской. Для диалогов — [IME_FOCUS_CLEAR_DIALOG_SETTLE_MS].
  */
 @Composable
-fun ClearFocusOnImeHidden() {
+fun ClearFocusOnImeHidden(settleMillis: Long = IME_FOCUS_CLEAR_SETTLE_MS) {
     val density = LocalDensity.current
     val focusManager = LocalFocusManager.current
     val imeInsets = WindowInsets.ime
@@ -38,8 +43,17 @@ fun ClearFocusOnImeHidden() {
             imeWasVisible = false
             // При переходе между полями клавиатура на мгновение скрывается — выжидаем,
             // чтобы не снять курсор на ровном месте
-            delay(120)
+            delay(settleMillis)
             if (imeInsets.getBottom(density) == 0) focusManager.clearFocus()
         }
     }
 }
+
+/** Пауза перед снятием фокуса в окне приложения: клавиатуру там прячет управляемая анимация без хвоста. */
+private const val IME_FOCUS_CLEAR_SETTLE_MS = 120L
+
+/**
+ * Пауза перед снятием фокуса в окне диалога: от конца видимой части штатной анимации скрытия
+ * до её полного завершения (~530 мс от начала), с запасом.
+ */
+const val IME_FOCUS_CLEAR_DIALOG_SETTLE_MS = 450L
