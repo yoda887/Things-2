@@ -86,6 +86,17 @@ data class Item(
     val isCompleted: Boolean
         get() = status == 3
 
+    /** Заголовок внутри проекта: группирует задачи проекта, сам задачей не является */
+    @get:Ignore
+    val isHeading: Boolean
+        get() = type == TYPE_HEADING
+
+    companion object {
+        const val TYPE_TASK = 0
+        const val TYPE_PROJECT = 1
+        const val TYPE_HEADING = 2
+    }
+
     @get:Ignore
     val name: String
         get() = title

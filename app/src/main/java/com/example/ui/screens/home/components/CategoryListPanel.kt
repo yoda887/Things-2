@@ -72,6 +72,8 @@ import com.example.ui.components.ProjectProgressArc
 import com.example.ui.components.dragdrop.rememberGenericDragDropState
 import com.example.ui.screens.home.ActiveScreen
 import com.example.ui.screens.home.subcomponents.TaskItemRow
+import com.example.ui.theme.ThingsUpcomingRed
+import com.example.ui.screens.home.subcomponents.ProjectHeadingRow
 import com.example.ui.screens.home.inlineeditor.ThingsTaskInlineEditor
 import com.example.ui.screens.home.inlineeditor.dialogs.ThingsMoveDialog
 import com.example.ui.screens.home.inlineeditor.dialogs.DeleteConfirmDialog
@@ -203,6 +205,28 @@ fun ThingsCategoryListPanel(
         }
     }
 
+    // Заголовки проекта: локальный порядок на время перетаскивания, из базы — когда ничего не несут
+    var localHeadings by remember { mutableStateOf(state.headings) }
+    LaunchedEffect(state.headings, dragDropState.draggedItemKey) {
+        if (dragDropState.draggedItemKey == null) localHeadings = state.headings
+    }
+    val projectHeadingIds = remember(localHeadings) { localHeadings.map { it.id } }
+    // Заголовок, название которого сейчас правят (в том числе только что созданный)
+    var editingHeadingId by remember { mutableStateOf<String?>(null) }
+    var headingToDelete by remember { mutableStateOf<Item?>(null) }
+
+    /** Новый пустой заголовок в конце проекта: сразу открывается для ввода названия */
+    fun addHeading() {
+        val currentProject = project ?: return
+        val heading = Item(
+            type = Item.TYPE_HEADING,
+            projectId = currentProject.id,
+            sortOrder = (localHeadings.maxOfOrNull { it.sortOrder } ?: -1) + 1
+        )
+        editingHeadingId = heading.id
+        onEvent(ThingsCategoryListEvent.SaveHeading(heading))
+    }
+
     val view = androidx.compose.ui.platform.LocalView.current
 
     var showMoveDialog by remember { mutableStateOf(false) }
@@ -284,7 +308,8 @@ fun ThingsCategoryListPanel(
         allTasks = state.allTasks,
         areas = areasState,
         savedTags = allSavedTagObjects,
-        searchQuery = state.searchQuery
+        searchQuery = state.searchQuery,
+        headings = if (screen == ActiveScreen.PROJECT_DETAIL) localHeadings else emptyList()
     )
 
     val density = androidx.compose.ui.platform.LocalDensity.current
@@ -557,6 +582,7 @@ fun ThingsCategoryListPanel(
                         textPrimaryColor = textPrimaryColor,
                         globalDimAlpha = globalDimAlpha,
                         onDeleteProject = { onEvent(ThingsCategoryListEvent.DeleteProject(it)) },
+                        onAddHeading = { addHeading() },
                         onDeleteArea = { onEvent(ThingsCategoryListEvent.DeleteArea(it)) }
                     )
                 }
@@ -623,6 +649,7 @@ fun ThingsCategoryListPanel(
                     val logbookCount = state.allTasks.count { !it.item.trashed && (it.item.isCompleted || it.item.status == 2) && it.item.tags.contains(tagTitle) }
                     tagProjCount > 0 || tagTasksCount > 0 || logbookCount > 0
                 }
+                ActiveScreen.PROJECT_DETAIL -> displayTasks.isNotEmpty() || localHeadings.isNotEmpty()
                 else -> displayTasks.isNotEmpty()
             }
 
@@ -659,6 +686,7 @@ fun ThingsCategoryListPanel(
                         is SearchSectionHeaderItem -> item.key
                         is SearchAreaItem -> "search_area_${item.area.id}"
                         is SearchTagItem -> "search_tag_${item.tag.id}"
+                        is ProjectHeadingItem -> item.key
                         else -> item.toString()
                     }
                 }) { item ->
@@ -691,6 +719,7 @@ fun ThingsCategoryListPanel(
                                 coroutineScope = coroutineScope,
                                 screen = screen,
                                 upcomingDays = upcomingDays,
+                                projectHeadingIds = projectHeadingIds,
                                 localTasksList = localTasksList,
                                 displayTasks = state.displayTasks,
                                 allTasks = state.allTasks,
@@ -795,6 +824,70 @@ fun ThingsCategoryListPanel(
                                     .graphicsLayer { alpha = dimAlpha }
                             )
                         }
+                        is ProjectHeadingItem -> {
+                            val heading = item.heading
+                            val isDragged = dragDropState.draggedItemKey == item.key
+                            val lift by animateFloatAsState(
+                                targetValue = if (isDragged && dragDropState.isInteracting) 1f else 0f,
+                                label = "headingLift_${heading.id}"
+                            )
+                            val isLifted = isDragged || lift > 0f
+                            val dimAlpha by animateFloatAsState(
+                                targetValue = if (inlineExpandedTaskId != null) 0.3f else 1f,
+                                label = "dimAlpha_${item.key}"
+                            )
+                            Box(
+                                modifier = Modifier
+                                    .zIndex(if (isLifted) 1f else 0f)
+                                    .then(if (!isLifted) Modifier.animateItem(placementSpec = placementSpec) else Modifier)
+                                    .padding(top = 22.dp, bottom = 4.dp)
+                            ) {
+                                ProjectHeadingRow(
+                                    heading = heading,
+                                    isEditing = editingHeadingId == heading.id,
+                                    dividerColor = dividerColor,
+                                    onStartEditing = { editingHeadingId = heading.id },
+                                    onTitleCommit = { title ->
+                                        if (editingHeadingId == heading.id) editingHeadingId = null
+                                        when {
+                                            // Пустой новый заголовок не нужен
+                                            title.isEmpty() && heading.title.isEmpty() ->
+                                                onEvent(ThingsCategoryListEvent.DeleteHeading(heading))
+                                            title.isNotEmpty() && title != heading.title ->
+                                                onEvent(ThingsCategoryListEvent.SaveHeading(heading.copy(title = title)))
+                                        }
+                                    },
+                                    onArchive = { onEvent(ThingsCategoryListEvent.ArchiveHeading(heading)) },
+                                    onDelete = {
+                                        val hasTasks = state.allTasks.any { it.item.headingId == heading.id }
+                                        if (hasTasks) headingToDelete = heading
+                                        else onEvent(ThingsCategoryListEvent.DeleteHeading(heading))
+                                    },
+                                    modifier = Modifier
+                                        .graphicsLayer {
+                                            alpha = dimAlpha
+                                            translationY = if (isDragged) dragDropState.visualDragOffsetY(item.key) else 0f
+                                            val scale = 1f + 0.03f * lift
+                                            scaleX = scale
+                                            scaleY = scale
+                                            shadowElevation = 8.dp.toPx() * lift
+                                            shape = RoundedCornerShape(10.dp)
+                                            clip = false
+                                        }
+                                        .background(if (isLifted) bkgColor else Color.Transparent, RoundedCornerShape(10.dp))
+                                        .then(
+                                            if (editingHeadingId == heading.id) Modifier
+                                            else Modifier.headingDragAndDrop(
+                                                state = dragDropState,
+                                                heading = heading,
+                                                headings = localHeadings,
+                                                onHeadingsChange = { localHeadings = it },
+                                                onDragEnd = { onEvent(ThingsCategoryListEvent.ReorderHeadings(localHeadings)) }
+                                            )
+                                        )
+                                )
+                            }
+                        }
                         is SearchAreaItem -> {
                             SearchEntityRow(
                                 title = item.area.title,
@@ -896,6 +989,24 @@ fun ThingsCategoryListPanel(
 
         // TopAppBar
         // [ИЗМЕНЕНИЕ]: Передаем в AppBar дополнительные параметры (состояние скролла, экран, проект, область ответственности и список задач) для вывода иконки и полужирного заголовка
+        headingToDelete?.let { heading ->
+            val count = state.allTasks.count { it.item.headingId == heading.id }
+            AlertDialog(
+                onDismissRequest = { headingToDelete = null },
+                title = { Text("Delete Heading?") },
+                text = { Text("The heading \"${heading.title}\" and its $count to-dos will be deleted.") },
+                confirmButton = {
+                    TextButton(onClick = {
+                        headingToDelete = null
+                        onEvent(ThingsCategoryListEvent.DeleteHeading(heading))
+                    }) { Text("Delete", color = ThingsUpcomingRed) }
+                },
+                dismissButton = {
+                    TextButton(onClick = { headingToDelete = null }) { Text("Cancel") }
+                }
+            )
+        }
+
         CategoryListTopAppBar(
             screen = screen,
             onBackClick = { onEvent(ThingsCategoryListEvent.ClickBack) },
@@ -926,7 +1037,8 @@ fun ThingsCategoryListPanel(
                 if (!newVisible && selectedTag != null) {
                     onEvent(ThingsCategoryListEvent.SelectTag(null))
                 }
-            }
+            },
+            onAddHeading = if (screen == ActiveScreen.PROJECT_DETAIL) { { addHeading() } } else null
         )
 
     // PullToSearchIndicator

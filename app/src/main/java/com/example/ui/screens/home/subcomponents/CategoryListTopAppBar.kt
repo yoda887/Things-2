@@ -104,7 +104,9 @@ fun CategoryListTopAppBar(
     selectionState: TopAppBarSelectionState = TopAppBarSelectionState(),
     hasTags: Boolean = false,
     isTagsFilterVisible: Boolean = false,
-    onToggleTagsFilter: () -> Unit = {}
+    onToggleTagsFilter: () -> Unit = {},
+    // Экран проекта: пункт «Add Heading»
+    onAddHeading: (() -> Unit)? = null
 ) {
     // Фон и разделитель проявляются вместе с прокруткой, синхронно с растворением заголовка экрана,
     // а не включаются скачком по порогу
@@ -190,6 +192,15 @@ fun CategoryListTopAppBar(
                             )
                         }
                     } else {
+                        if (onAddHeading != null) {
+                            DropdownMenuItem(
+                                text = { Text("Add Heading") },
+                                onClick = {
+                                    isOptionsMenuExpanded = false
+                                    onAddHeading()
+                                }
+                            )
+                        }
                         DropdownMenuItem(
                             text = { Text(stringResource(R.string.select_items)) },
                             onClick = {

@@ -31,6 +31,7 @@ fun Modifier.taskDragAndDrop(
     taskWrapper: ItemWithChecklist,
     screen: ActiveScreen,
     upcomingDays: List<UpcomingDay>,
+    projectHeadingIds: List<String> = emptyList(),
     localTasksList: List<ItemWithChecklist>,
     filteredTasks: List<ItemWithChecklist>,
     onLocalTasksListChange: (List<ItemWithChecklist>) -> Unit,
@@ -88,6 +89,7 @@ fun Modifier.taskDragAndDrop(
                 screen = screen,
                 movingDown = movingDown,
                 upcomingDayStarts = upcomingDays.map { it.dateMillis },
+                projectHeadingIds = projectHeadingIds,
             ) ?: return@universalDragAndDrop false
 
             onLocalTasksListChange(reordered)
@@ -149,6 +151,7 @@ fun Modifier.taskDragAndDrop(
                     || original.item.sortOrder != index
                     || original.item.isTonight != wrapper.item.isTonight
                     || original.item.startDate != wrapper.item.startDate
+                    || original.item.headingId != wrapper.item.headingId
                 if (changed) {
                     ItemWithChecklist(
                         item = wrapper.item.copy(
@@ -168,6 +171,7 @@ fun Modifier.taskDragAndDrop(
                     || original.item.sortOrder != wrapper.item.sortOrder
                     || original.item.isTonight != wrapper.item.isTonight
                     || original.item.startDate != wrapper.item.startDate
+                    || original.item.headingId != wrapper.item.headingId
             }
 
             onLocalTasksListChange(updatedList)

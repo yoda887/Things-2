@@ -27,6 +27,7 @@ internal const val MS_PER_DAY = 24 * 3600 * 1000L
  * @param movingDown жест идёт вниз по списку
  * @param upcomingDayStarts начала суток дней-заголовков экрана «Предстоящие», по порядку
  * @param bounds границы сегодняшнего дня для классификации секций экрана сферы
+ * @param projectHeadingIds заголовки экрана проекта по порядку (см. [ProjectHeadings])
  * @return новый порядок списка либо null, если перенос принимать не нужно
  */
 fun planTaskDrop(
@@ -37,11 +38,16 @@ fun planTaskDrop(
     movingDown: Boolean,
     upcomingDayStarts: List<Long>,
     bounds: DayBounds = DayBounds.now(),
+    projectHeadingIds: List<String> = emptyList(),
 ): List<ItemWithChecklist>? {
     val fromIndex = list.indexOfFirst { it.item.id == draggedId }
     if (fromIndex == -1) return null
 
     return when {
+        // Экран проекта: задачи сгруппированы по заголовкам, перенос меняет и заголовок задачи
+        screen == ActiveScreen.PROJECT_DETAIL && targetId != TaskListKeys.MAIN_HEADER ->
+            ProjectHeadings.planDrop(list, draggedId, targetId, movingDown, projectHeadingIds)
+
         targetId == TaskListKeys.EVENING_HEADER -> planEveningDrop(list, fromIndex)
 
         targetId == TaskListKeys.MAIN_HEADER -> planMainHeaderDrop(list, fromIndex)

@@ -50,6 +50,7 @@ fun MainCategoryHeader(
     globalDimAlpha: Float,
     onDeleteProject: (Item) -> Unit = {},
     onDeleteArea: (Area) -> Unit = {},
+    onAddHeading: () -> Unit = {},
     modifier: Modifier = Modifier
 ) {
     val headerEmojiFontSize = MaterialTheme.typography.displayMedium.fontSize
@@ -294,6 +295,20 @@ fun MainCategoryHeader(
                                 onDismissRequest = { showOptionsMenu = false },
                                 modifier = Modifier.background(Color(0xFF22242C))
                             ) {
+                                DropdownMenuItem(
+                                    text = {
+                                        Text(
+                                            text = "Add Heading",
+                                            color = Color.White,
+                                            fontWeight = FontWeight.Normal,
+                                            fontSize = 17.sp
+                                        )
+                                    },
+                                    onClick = {
+                                        showOptionsMenu = false
+                                        onAddHeading()
+                                    }
+                                )
                                 DropdownMenuItem(
                                     leadingIcon = {
                                         Icon(

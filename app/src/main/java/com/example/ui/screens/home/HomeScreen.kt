@@ -626,6 +626,10 @@ fun ThingsHomeScreen(viewModel: ThingsViewModel = hiltViewModel()) {
                                     navController.popBackStack()
                                     selectedArea = null
                                 }
+                                is ThingsCategoryListEvent.SaveHeading -> viewModel.saveHeading(event.heading)
+                                is ThingsCategoryListEvent.DeleteHeading -> viewModel.deleteHeading(event.heading)
+                                is ThingsCategoryListEvent.ArchiveHeading -> viewModel.archiveHeading(event.heading)
+                                is ThingsCategoryListEvent.ReorderHeadings -> viewModel.reorderHeadings(event.headings)
                                 is ThingsCategoryListEvent.SwipeTaskLeft -> {
                                     viewModel.setInlineExpandedTaskId(null)
                                     if (isSelectionMode) {

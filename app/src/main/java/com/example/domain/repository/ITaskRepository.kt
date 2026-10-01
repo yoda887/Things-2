@@ -24,6 +24,21 @@ interface ITaskRepository {
     fun observeAllProjects(): Flow<List<Item>>
 
     /**
+     * Поток заголовков проектов (тип = 2). В [observeAllTasks] их нет: заголовок привязан к проекту
+     * так же, как задача, и иначе попадал бы во все подсчёты и списки задач проекта.
+     */
+    fun observeHeadings(): Flow<List<Item>>
+
+    /**
+     * Архивирует заголовок: он и все его задачи уходят в Logbook, невыполненные задачи
+     * отмечаются выполненными.
+     */
+    suspend fun archiveHeading(heading: Item)
+
+    /** Сохраняет порядок заголовков проекта: sortOrder — позиция в [headings]. */
+    suspend fun reorderHeadings(headings: List<Item>)
+
+    /**
      * Поток всех областей (Areas).
      */
     fun observeAllAreas(): Flow<List<Area>>

@@ -49,7 +49,8 @@ class TaskRepositoryImpl @Inject constructor(
         localDataSource.getAllChecklistItemsFlow()
     ) { items, checklistItems ->
         val checklistMap = checklistItems.groupBy { it.itemId }
-        items.map { item ->
+        // Заголовки проектов идут отдельным потоком (observeHeadings)
+        items.filter { !it.isHeading }.map { item ->
             ItemWithChecklist(
                 item = item,
                 checklist = checklistMap[item.id] ?: emptyList()
@@ -59,6 +60,28 @@ class TaskRepositoryImpl @Inject constructor(
 
     override fun observeAllProjects(): Flow<List<Item>> = localDataSource.getAllItems().map { items ->
         items.filter { it.type == 1 }
+    }
+
+    override fun observeHeadings(): Flow<List<Item>> = localDataSource.getAllItems().map { items ->
+        items.filter { it.isHeading }
+    }
+
+    override suspend fun archiveHeading(heading: Item): Unit = withContext(Dispatchers.IO) {
+        inTransaction {
+            val now = System.currentTimeMillis()
+            val openTasks = localDataSource.getAllItemsSync()
+                .filter { it.headingId == heading.id && !it.isHeading && it.status == 0 }
+                .map { it.copy(status = 3, stopDate = now, modificationDate = now) }
+            val archived = heading.copy(status = 3, stopDate = now, modificationDate = now)
+            localDataSource.insertItems(openTasks + archived)
+        }
+    }
+
+    override suspend fun reorderHeadings(headings: List<Item>): Unit = withContext(Dispatchers.IO) {
+        val changed = headings.mapIndexedNotNull { index, heading ->
+            if (heading.sortOrder != index) heading.copy(sortOrder = index) else null
+        }
+        if (changed.isNotEmpty()) localDataSource.insertItems(changed)
     }
 
     override fun observeAllAreas(): Flow<List<Area>> = localDataSource.getAllAreasFlow()
@@ -84,14 +107,33 @@ class TaskRepositoryImpl @Inject constructor(
 
     // Хирургическое исправление: обновляем чек-лист только если он передан явно (не равен null)
     override suspend fun insertTask(item: Item, checklist: List<ChecklistItem>?): Unit = withContext(Dispatchers.IO) {
-        localDataSource.insertItem(item)
+        localDataSource.insertItem(detachForeignHeadings(listOf(item)).single())
         if (checklist != null) {
             updateChecklistItems(item.id, checklist)
         }
     }
 
     override suspend fun insertTasks(items: List<Item>): Unit = withContext(Dispatchers.IO) {
-        localDataSource.insertItems(items)
+        localDataSource.insertItems(detachForeignHeadings(items))
+    }
+
+    /**
+     * Задача, перенесённая в другой проект (или из проекта), теряет заголовок прежнего проекта.
+     * Проверка здесь, а не на каждом пути переноса: редактор, «Переместить», пакетный перенос.
+     */
+    private suspend fun detachForeignHeadings(items: List<Item>): List<Item> {
+        if (items.none { it.headingId != null && !it.isHeading }) return items
+        val headingProjects = localDataSource.getAllItemsSync()
+            .filter { it.isHeading }
+            .associate { it.id to it.projectId }
+        return items.map { item ->
+            val headingId = item.headingId
+            if (headingId != null && !item.isHeading && headingProjects[headingId] != item.projectId) {
+                item.copy(headingId = null)
+            } else {
+                item
+            }
+        }
     }
 
     override suspend fun deleteTask(item: Item): Unit = withContext(Dispatchers.IO) {

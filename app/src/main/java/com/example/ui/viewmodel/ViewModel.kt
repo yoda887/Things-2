@@ -2,6 +2,8 @@ package com.example.ui.viewmodel
 
 import androidx.lifecycle.ViewModel
 import com.example.domain.tag.TagTitles
+import com.example.domain.usecase.heading.HeadingUseCases
+import com.example.ui.screens.home.components.ProjectHeadings
 import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.viewModelScope
 import javax.inject.Inject
@@ -47,7 +49,8 @@ class ThingsViewModel @Inject constructor(
     private val areaUseCases: AreaUseCases,
     private val syncUseCases: SyncUseCases,
     private val checklistUseCases: ChecklistUseCases,
-    private val queryUseCases: QueryUseCases
+    private val queryUseCases: QueryUseCases,
+    private val headingUseCases: HeadingUseCases
 ) : ViewModel() {
 
     // --- 1. ПЕРЕНОСИМ СОСТОЯНИЯ СИНХРОНИЗАЦИИ ИЗ SYNCHELPER СЮДА ---
@@ -75,6 +78,10 @@ class ThingsViewModel @Inject constructor(
     }
 
     val tasks: StateFlow<List<ItemWithChecklist>> = queryUseCases.observeAllTasks()
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
+
+    /** Заголовки всех проектов, включая архивные; экран проекта берёт свои активные */
+    val headings: StateFlow<List<Item>> = headingUseCases.observe()
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
 
     val projects: StateFlow<List<Item>> = queryUseCases.observeAllProjects()
@@ -145,7 +152,8 @@ class ThingsViewModel @Inject constructor(
         savedTagObjs: List<Tag>,
         allTagsSet: Set<String>,
         highlighted: String?,
-        query: String = ""
+        query: String = "",
+        headingList: List<Item> = emptyList()
     ): ThingsCategoryListState {
         // Границы дня считаем один раз на весь список, а не в геттерах каждой задачи
         val bounds = DayBounds.now()
@@ -179,10 +187,21 @@ class ThingsViewModel @Inject constructor(
             }
         }.sortedBy { it.item.sortOrder }
 
-        val displayTasks = if (selectedTag == null) {
-            listTasks
+        // Экран проекта: активные заголовки проекта, задачи — в порядке экрана, по заголовкам
+        val projectHeadings = if (screen == ActiveScreen.PROJECT_DETAIL && project != null) {
+            headingList.filter { it.projectId == project.id && it.status == 0 && !it.trashed }
+                .sortedBy { it.sortOrder }
         } else {
-            listTasks.filter { it.item.tags.contains(selectedTag) || it.item.id == expandedTaskId }
+            emptyList()
+        }
+        val orderedTasks = if (projectHeadings.isEmpty()) listTasks else {
+            ProjectHeadings.orderByHeading(listTasks, projectHeadings.map { it.id }) { it.item }
+        }
+
+        val displayTasks = if (selectedTag == null) {
+            orderedTasks
+        } else {
+            orderedTasks.filter { it.item.tags.contains(selectedTag) || it.item.id == expandedTaskId }
         }
 
         val projectProgressMap = taskList
@@ -212,7 +231,8 @@ class ThingsViewModel @Inject constructor(
             highlightedTaskId = highlighted,
             allTasks = taskList,
             projectProgressMap = projectProgressMap,
-            searchQuery = query
+            searchQuery = query,
+            headings = projectHeadings
         )
     }
 
@@ -242,7 +262,8 @@ class ThingsViewModel @Inject constructor(
             savedTagObjs = allSavedTagObjects.value,
             allTagsSet = allTags.value,
             highlighted = highlightedTaskId.value,
-            query = searchQuery.value
+            query = searchQuery.value,
+            headingList = headings.value
         )
     }
 
@@ -275,7 +296,8 @@ class ThingsViewModel @Inject constructor(
                 allSavedTagObjects,
                 allTags,
                 highlightedTaskId,
-                searchQuery
+                searchQuery,
+                headings
             )
         ) { array ->
             val expandedTaskId = array[0] as? String
@@ -296,6 +318,8 @@ class ThingsViewModel @Inject constructor(
             val allTagsSet = array[8] as Set<String>
             val highlighted = array[9] as? String
             val query = array[10] as? String ?: ""
+            @Suppress("UNCHECKED_CAST")
+            val headingList = array[11] as List<Item>
 
             computeCategoryListState(
                 screen = screen,
@@ -312,9 +336,31 @@ class ThingsViewModel @Inject constructor(
                 savedTagObjs = savedTagObjs,
                 allTagsSet = allTagsSet,
                 highlighted = highlighted,
-                query = query
+                query = query,
+                headingList = headingList
             )
         }.flowOn(Dispatchers.Default)
+    }
+
+    // --- Заголовки проектов ---
+
+    /** Сохраняет заголовок: новый (пустой — его название вводят сразу) или переименованный */
+    fun saveHeading(heading: Item) {
+        viewModelScope.launch { headingUseCases.save(heading) }
+    }
+
+    /** Удаляет заголовок вместе с его задачами */
+    fun deleteHeading(heading: Item) {
+        viewModelScope.launch { headingUseCases.delete(heading) }
+    }
+
+    /** Архивирует заголовок: он и его задачи уходят в Logbook, невыполненные отмечаются выполненными */
+    fun archiveHeading(heading: Item) {
+        viewModelScope.launch { headingUseCases.archive(heading) }
+    }
+
+    fun reorderHeadings(headings: List<Item>) {
+        viewModelScope.launch { headingUseCases.reorder(headings) }
     }
 
     fun insertTag(tagTitle: String, parentId: String? = null) {

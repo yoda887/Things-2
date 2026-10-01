@@ -122,6 +122,9 @@ object TaskListKeys {
     /** Заглушка пустого списка */
     const val EMPTY_STATE = "empty_state"
 
+    /** Префикс заголовка внутри проекта */
+    const val HEADING_PREFIX = "hd_"
+
     /**
      * Строки, целями перетаскивания быть не могут: обработчик перемещения их всё равно
      * отклонит, а как ближайшая цель сверху они запирают задачу и не дают подняться выше.
@@ -401,9 +404,10 @@ fun rememberFlattenedList(
     allTasks: List<ItemWithChecklist> = emptyList(),
     areas: List<Area> = emptyList(),
     savedTags: List<Tag> = emptyList(),
-    searchQuery: String = ""
+    searchQuery: String = "",
+    headings: List<Item> = emptyList()
 ): List<Any> {
-    return remember(screen, standardToday, eveningToday, draggedItemKey, upcomingDays, upcomingMonths, projects, area, displayTasks, isLaterItemsHidden, tag, allTasks, areas, savedTags, searchQuery) {
+    return remember(screen, standardToday, eveningToday, draggedItemKey, upcomingDays, upcomingMonths, projects, area, displayTasks, isLaterItemsHidden, tag, allTasks, areas, savedTags, searchQuery, headings) {
         buildList<Any> {
             if (screen == ActiveScreen.TODAY) {
                 addAll(standardToday)
@@ -487,6 +491,20 @@ fun rememberFlattenedList(
                     .sortedByDescending { it.item.stopDate ?: it.item.modificationDate }
                 if (logbookTasks.isNotEmpty()) {
                     addAll(logbookTasks)
+                }
+            } else if (screen == ActiveScreen.PROJECT_DETAIL && headings.isNotEmpty()) {
+                // Сначала задачи без заголовка, затем каждый заголовок со своими задачами.
+                // Задачи заголовка, который несут под пальцем, убраны — как проекты свёрнутой области
+                val headingIds = headings.map { it.id }
+                val draggedHeadingId = (draggedItemKey as? String)
+                    ?.takeIf { it.startsWith(TaskListKeys.HEADING_PREFIX) }
+                    ?.removePrefix(TaskListKeys.HEADING_PREFIX)
+                addAll(ProjectHeadings.tasksOf(displayTasks, null, headingIds))
+                headings.forEach { heading ->
+                    add(ProjectHeadingItem(heading))
+                    if (heading.id != draggedHeadingId) {
+                        addAll(ProjectHeadings.tasksOf(displayTasks, heading.id, headingIds))
+                    }
                 }
             } else if (screen == ActiveScreen.SEARCH) {
                 addSearchResults(displayTasks, projects, areas, savedTags, searchQuery)
@@ -650,7 +668,9 @@ data class ThingsCategoryListState(
     val isSelectionMode: Boolean = false,
     val selectedTaskIds: Set<String> = emptySet(),
     // Текст запроса экрана поиска
-    val searchQuery: String = ""
+    val searchQuery: String = "",
+    // Активные заголовки проекта по порядку (экран проекта)
+    val headings: List<Item> = emptyList()
 )
 
 /**
@@ -699,6 +719,12 @@ sealed interface ThingsCategoryListEvent {
     // Удаление проекта и области
     data class DeleteProject(val project: Item) : ThingsCategoryListEvent
     data class DeleteArea(val area: Area) : ThingsCategoryListEvent
+
+    // Заголовки проекта
+    data class SaveHeading(val heading: Item) : ThingsCategoryListEvent
+    data class DeleteHeading(val heading: Item) : ThingsCategoryListEvent
+    data class ArchiveHeading(val heading: Item) : ThingsCategoryListEvent
+    data class ReorderHeadings(val headings: List<Item>) : ThingsCategoryListEvent
 
     // Свайп-события (для вызова мультиселекции и When/календаря)
     data class SwipeTaskLeft(val task: ItemWithChecklist) : ThingsCategoryListEvent

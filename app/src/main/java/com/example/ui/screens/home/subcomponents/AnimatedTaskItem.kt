@@ -108,6 +108,8 @@ fun AnimatedTaskItem(
     coroutineScope: CoroutineScope,
     screen: ActiveScreen,
     upcomingDays: List<UpcomingDay>,
+    // Заголовки экрана проекта по порядку: перенос задачи меняет и её заголовок
+    projectHeadingIds: List<String> = emptyList(),
     localTasksList: List<ItemWithChecklist>,
     displayTasks: List<ItemWithChecklist>,
     allTasks: List<ItemWithChecklist> = emptyList(),
@@ -561,6 +563,7 @@ fun AnimatedTaskItem(
                                     taskWrapper = taskWrapper,
                                     screen = screen,
                                     upcomingDays = upcomingDays,
+                                    projectHeadingIds = projectHeadingIds,
                                     localTasksList = localTasksList,
                                     filteredTasks = displayTasks,
                                     onLocalTasksListChange = onLocalTasksListChange,
