@@ -422,12 +422,19 @@ fun ThingsHomePanel(
                 else -> projectsNow.size
             }.let { if (it < 0) projectsNow.size else it }
             val newProject = Item(type = Item.TYPE_PROJECT, title = "", areaId = areaId, creationDate = System.currentTimeMillis())
-            val list = projectsNow.toMutableList().apply { add(insertAt.coerceIn(0, size), newProject) }
-            val renumbered = list.mapIndexed { index, item -> if (item.sortOrder == index) item else item.copy(sortOrder = index) }
-            val previousOrder = projectsNow.associate { it.id to it.sortOrder }
-            onUpdateProject(renumbered.first { it.id == newProject.id })
-            val others = renumbered.filter { it.id != newProject.id && previousOrder[it.id] != it.sortOrder }
-            if (others.isNotEmpty()) onProjectsReordered(others)
+            val at = insertAt.coerceIn(0, projectsNow.size)
+            val freeOrder = FabInsertion.freeSortOrder(projectsNow.map { it.sortOrder }, at)
+            if (freeOrder != null) {
+                // Место между соседями есть — остальные проекты не трогаем
+                onUpdateProject(newProject.copy(sortOrder = freeOrder))
+            } else {
+                val list = projectsNow.toMutableList().apply { add(at, newProject) }
+                val renumbered = list.mapIndexed { index, item -> if (item.sortOrder == index) item else item.copy(sortOrder = index) }
+                val previousOrder = projectsNow.associate { it.id to it.sortOrder }
+                onUpdateProject(renumbered.first { it.id == newProject.id })
+                val others = renumbered.filter { it.id != newProject.id && previousOrder[it.id] != it.sortOrder }
+                if (others.isNotEmpty()) onProjectsReordered(others)
+            }
             if (areaId != null) expandedStates[areaId] = true
             onEditingProjectIdChange(newProject.id)
             return true

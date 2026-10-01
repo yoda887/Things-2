@@ -366,15 +366,29 @@ fun ThingsCategoryListPanel(
                     isTonight = placement.isTonight,
                     // «Предстоящие»: дата раздела, под заголовком которого раскрылся промежуток
                     startDate = placement.startDate ?: base.startDate
-                )
+                ).let { task ->
+                    when {
+                        // Экран области: секция «Когда-нибудь» и «Планы» задаются свойствами задачи
+                        placement.inAreaSomeday -> task.copy(start = 3)
+                        placement.inAreaUpcoming -> task.copy(startDate = tomorrowNoonMillis())
+                        else -> task
+                    }
+                }
             }
-            val list = tasks.map { it.item }.toMutableList()
-            list.add(placement.taskIndex.coerceIn(0, list.size), newTask)
-            val renumbered = list.mapIndexed { index, item -> if (item.sortOrder == index) item else item.copy(sortOrder = index) }
-            val created = renumbered.first { it.id == newTask.id }
-            val previousOrder = tasks.associate { it.item.id to it.item.sortOrder }
-            val others = renumbered.filter { it.id != newTask.id && previousOrder[it.id] != it.sortOrder }
-            onEvent(ThingsCategoryListEvent.CreateTaskAt(created, others))
+            val insertAt = placement.taskIndex.coerceIn(0, tasks.size)
+            val freeOrder = FabInsertion.freeSortOrder(tasks.map { it.item.sortOrder }, insertAt)
+            if (freeOrder != null) {
+                // Место между соседями есть — остальные задачи не трогаем
+                onEvent(ThingsCategoryListEvent.CreateTaskAt(newTask.copy(sortOrder = freeOrder), emptyList()))
+            } else {
+                val list = tasks.map { it.item }.toMutableList()
+                list.add(insertAt, newTask)
+                val renumbered = list.mapIndexed { index, item -> if (item.sortOrder == index) item else item.copy(sortOrder = index) }
+                val created = renumbered.first { it.id == newTask.id }
+                val previousOrder = tasks.associate { it.item.id to it.item.sortOrder }
+                val others = renumbered.filter { it.id != newTask.id && previousOrder[it.id] != it.sortOrder }
+                onEvent(ThingsCategoryListEvent.CreateTaskAt(created, others))
+            }
         }
         return true
     }
@@ -1588,4 +1602,14 @@ private fun FabGapRow(asHeading: Boolean, modifier: Modifier = Modifier) {
                 .background(Color(0xFFE9EAEE), RoundedCornerShape(10.dp))
         )
     }
+}
+
+/** Завтра, 12:00 — дата для задачи, брошенной в секцию «Планы» на экране области */
+private fun tomorrowNoonMillis(): Long = java.util.Calendar.getInstance().run {
+    add(java.util.Calendar.DAY_OF_YEAR, 1)
+    set(java.util.Calendar.HOUR_OF_DAY, 12)
+    set(java.util.Calendar.MINUTE, 0)
+    set(java.util.Calendar.SECOND, 0)
+    set(java.util.Calendar.MILLISECOND, 0)
+    timeInMillis
 }

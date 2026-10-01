@@ -31,6 +31,10 @@ data class FabTaskPlacement(
     val isTonight: Boolean,
     /** «Предстоящие»: дата дня или месяца, под заголовком которого встала задача; на других экранах null */
     val startDate: Long? = null,
+    /** Экран области: промежуток в секции «Планы» (предстоящие) */
+    val inAreaUpcoming: Boolean = false,
+    /** Экран области: промежуток в секции «Когда-нибудь» */
+    val inAreaSomeday: Boolean = false,
 )
 
 /** Новый заголовок: его место среди заголовков и задачи, которые уйдут под него */
@@ -45,7 +49,8 @@ object FabInsertion {
     /** Строки, между которыми может раскрыться промежуток: задачи, заголовки проекта, «Вечер» */
     fun isAnchor(element: Any): Boolean =
         element is ItemWithChecklist || element is ProjectHeadingItem || element == TaskListKeys.EVENING_HEADER ||
-            element is UpcomingHeaderItem || element is UpcomingMonthHeaderItem
+            element is UpcomingHeaderItem || element is UpcomingMonthHeaderItem ||
+            element == TaskListKeys.AREA_UPCOMING_HEADING || element == TaskListKeys.AREA_SOMEDAY_HEADING
 
     /**
      * Место промежутка по положению пальца [y] в координатах списка.
@@ -78,7 +83,16 @@ object FabInsertion {
             prevTask != null -> tasks.indexOfFirst { it.item.id == prevTask.item.id }.takeIf { it != -1 }?.plus(1)
             else -> null
         } ?: tasks.size
-        return FabTaskPlacement(taskIndex, headingId, isTonight, upcomingDate(flattened, above))
+        // Секции экрана области задаются свойствами задачи, поэтому место промежутка — это секция,
+        // под чьим заголовком он стоит
+        val sectionHeader = above.lastOrNull {
+            it == TaskListKeys.AREA_UPCOMING_HEADING || it == TaskListKeys.AREA_SOMEDAY_HEADING
+        }
+        return FabTaskPlacement(
+            taskIndex, headingId, isTonight, upcomingDate(flattened, above),
+            inAreaUpcoming = sectionHeader == TaskListKeys.AREA_UPCOMING_HEADING,
+            inAreaSomeday = sectionHeader == TaskListKeys.AREA_SOMEDAY_HEADING,
+        )
     }
 
     /**
@@ -118,6 +132,29 @@ object FabInsertion {
             .filterIsInstance<ItemWithChecklist>()
             .map { it.item.id }
         return FabHeadingPlacement(headingIndex, moved)
+    }
+
+    /**
+     * Номер порядка новой задачи, вставляемой в позицию [index] списка [orders] (sortOrder задач экрана
+     * в порядке показа).
+     *
+     * Если между соседями есть свободное число — это число, и остальные задачи не трогаются: перенумерация
+     * всех задач экрана переписывала бы их в базе и на совпадающих номерах меняла их порядок местами.
+     * Нет места (номера соседей совпадают или идут подряд) либо порядок показа не по возрастанию
+     * (например, задачи сгруппированы по заголовкам проекта) — null: вызывающий перенумеровывает список.
+     */
+    fun freeSortOrder(orders: List<Int>, index: Int): Int? {
+        if (orders.zipWithNext().any { (a, b) -> a > b }) return null
+        val i = index.coerceIn(0, orders.size)
+        val prev = orders.getOrNull(i - 1)
+        val next = orders.getOrNull(i)
+        return when {
+            prev == null && next == null -> 0
+            prev == null -> next!! - 1
+            next == null -> prev + 1
+            prev + 1 < next -> prev + 1
+            else -> null
+        }
     }
 
     /** Плоский список с промежутком на месте [slot] */

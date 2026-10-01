@@ -130,4 +130,32 @@ class FabInsertionTest {
         assertTrue(FabInsertion.isAnchor(UpcomingHeaderItem(0L, "1", "Mon")))
         assertTrue(FabInsertion.isAnchor(UpcomingMonthHeaderItem(0L, "June")))
     }
+
+    @Test
+    fun freeSortOrder_usesGapBetweenNeighbours() {
+        assertEquals(6, FabInsertion.freeSortOrder(listOf(5, 10), 1))
+        assertEquals(11, FabInsertion.freeSortOrder(listOf(5, 10), 2))
+        assertEquals(4, FabInsertion.freeSortOrder(listOf(5, 10), 0))
+        assertEquals(0, FabInsertion.freeSortOrder(emptyList(), 0))
+    }
+
+    @Test
+    fun freeSortOrder_nullWhenNoRoomOrOrderIsNotAscending() {
+        assertNull(FabInsertion.freeSortOrder(listOf(3, 3, 3), 1))
+        assertNull(FabInsertion.freeSortOrder(listOf(3, 4), 1))
+        assertNull(FabInsertion.freeSortOrder(listOf(9, 2, 5), 1))
+    }
+
+    @Test
+    fun taskPlacement_areaSections() {
+        val a = task("a")
+        val u = task("u")
+        val s = task("s")
+        val list: List<Any> = listOf(a, TaskListKeys.AREA_UPCOMING_HEADING, u, TaskListKeys.AREA_SOMEDAY_HEADING, s)
+        val all = listOf(a, u, s)
+        assertFalse(FabInsertion.taskPlacement(list, 1, all).let { it.inAreaUpcoming || it.inAreaSomeday })
+        assertTrue(FabInsertion.taskPlacement(list, 2, all).inAreaUpcoming)
+        assertTrue(FabInsertion.taskPlacement(list, 4, all).inAreaSomeday)
+        assertTrue(FabInsertion.isAnchor(TaskListKeys.AREA_SOMEDAY_HEADING))
+    }
 }
