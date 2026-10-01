@@ -101,4 +101,33 @@ class FabInsertionTest {
         assertEquals(listOf("A", "N", "B"), result.map { it.id })
         assertEquals(listOf(0, 1, 2), result.map { it.sortOrder })
     }
+
+    @Test
+    fun taskPlacement_upcoming_takesDateOfSectionAboveGap() {
+        val day1 = UpcomingHeaderItem(1_700_000_000_000L, "1", "Mon")
+        val day2 = UpcomingHeaderItem(1_700_086_400_000L, "2", "Tue")
+        val a = task("a")
+        val b = task("b")
+        val list: List<Any> = listOf(day1, a, day2, b)
+        fun hourOf(millis: Long?) = java.util.Calendar.getInstance().apply { timeInMillis = millis!! }.get(java.util.Calendar.HOUR_OF_DAY)
+        // между a и day2 — день 1; после day2 — день 2
+        assertEquals(1, FabInsertion.taskPlacement(list, 2, listOf(a, b)).taskIndex)
+        val under1 = FabInsertion.taskPlacement(list, 2, listOf(a, b)).startDate!!
+        val under2 = FabInsertion.taskPlacement(list, 3, listOf(a, b)).startDate!!
+        assertEquals(12, hourOf(under1))
+        assertTrue(under2 - under1 in 82_800_000L..90_000_000L)
+        // выше первого заголовка — дата первого
+        assertEquals(under1, FabInsertion.taskPlacement(list, 0, listOf(a, b)).startDate)
+    }
+
+    @Test
+    fun taskPlacement_withoutUpcomingHeaders_hasNoDate() {
+        assertNull(FabInsertion.taskPlacement(project, 3, tasks).startDate)
+    }
+
+    @Test
+    fun upcomingHeadersAreAnchors() {
+        assertTrue(FabInsertion.isAnchor(UpcomingHeaderItem(0L, "1", "Mon")))
+        assertTrue(FabInsertion.isAnchor(UpcomingMonthHeaderItem(0L, "June")))
+    }
 }

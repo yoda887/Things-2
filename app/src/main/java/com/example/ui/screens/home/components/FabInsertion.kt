@@ -29,6 +29,8 @@ data class FabTaskPlacement(
     val headingId: String?,
     /** Задача окажется в вечерней секции «Сегодня» */
     val isTonight: Boolean,
+    /** «Предстоящие»: дата дня или месяца, под заголовком которого встала задача; на других экранах null */
+    val startDate: Long? = null,
 )
 
 /** Новый заголовок: его место среди заголовков и задачи, которые уйдут под него */
@@ -42,7 +44,8 @@ object FabInsertion {
 
     /** Строки, между которыми может раскрыться промежуток: задачи, заголовки проекта, «Вечер» */
     fun isAnchor(element: Any): Boolean =
-        element is ItemWithChecklist || element is ProjectHeadingItem || element == TaskListKeys.EVENING_HEADER
+        element is ItemWithChecklist || element is ProjectHeadingItem || element == TaskListKeys.EVENING_HEADER ||
+            element is UpcomingHeaderItem || element is UpcomingMonthHeaderItem
 
     /**
      * Место промежутка по положению пальца [y] в координатах списка.
@@ -75,7 +78,31 @@ object FabInsertion {
             prevTask != null -> tasks.indexOfFirst { it.item.id == prevTask.item.id }.takeIf { it != -1 }?.plus(1)
             else -> null
         } ?: tasks.size
-        return FabTaskPlacement(taskIndex, headingId, isTonight)
+        return FabTaskPlacement(taskIndex, headingId, isTonight, upcomingDate(flattened, above))
+    }
+
+    /**
+     * «Предстоящие»: дата раздела, в который попал промежуток, — день заголовка дня или начало месяца
+     * заголовка месяца (в полдень, как при переносе задачи на заголовок). Выше первого заголовка —
+     * его же раздел. Нет заголовков (другой экран) — null.
+     */
+    private fun upcomingDate(flattened: List<Any>, above: List<Any>): Long? {
+        val header = above.lastOrNull { it is UpcomingHeaderItem || it is UpcomingMonthHeaderItem }
+            ?: flattened.firstOrNull { it is UpcomingHeaderItem || it is UpcomingMonthHeaderItem }
+            ?: return null
+        val millis = when (header) {
+            is UpcomingHeaderItem -> header.dateMillis
+            is UpcomingMonthHeaderItem -> header.monthMillis
+            else -> return null
+        }
+        return java.util.Calendar.getInstance().run {
+            timeInMillis = millis
+            set(java.util.Calendar.HOUR_OF_DAY, 12)
+            set(java.util.Calendar.MINUTE, 0)
+            set(java.util.Calendar.SECOND, 0)
+            set(java.util.Calendar.MILLISECOND, 0)
+            timeInMillis
+        }
     }
 
     /**

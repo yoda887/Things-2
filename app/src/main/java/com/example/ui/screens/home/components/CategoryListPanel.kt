@@ -328,7 +328,7 @@ fun ThingsCategoryListPanel(
     fun newTaskForScreen(): Item {
         val start = when (screen) {
             ActiveScreen.TODAY -> 1
-            ActiveScreen.ANYTIME, ActiveScreen.AREA_DETAIL, ActiveScreen.TAG_DETAIL -> 2
+            ActiveScreen.UPCOMING, ActiveScreen.ANYTIME, ActiveScreen.AREA_DETAIL, ActiveScreen.TAG_DETAIL -> 2
             ActiveScreen.SOMEDAY -> 3
             else -> 0
         }
@@ -360,7 +360,14 @@ fun ThingsCategoryListPanel(
         } else {
             val tasks = currentLocalTasks
             val placement = FabInsertion.taskPlacement(flat, slot.index, tasks)
-            val newTask = newTaskForScreen().copy(headingId = placement.headingId, isTonight = placement.isTonight)
+            val newTask = newTaskForScreen().let { base ->
+                base.copy(
+                    headingId = placement.headingId,
+                    isTonight = placement.isTonight,
+                    // «Предстоящие»: дата раздела, под заголовком которого раскрылся промежуток
+                    startDate = placement.startDate ?: base.startDate
+                )
+            }
             val list = tasks.map { it.item }.toMutableList()
             list.add(placement.taskIndex.coerceIn(0, list.size), newTask)
             val renumbered = list.mapIndexed { index, item -> if (item.sortOrder == index) item else item.copy(sortOrder = index) }
@@ -1519,7 +1526,7 @@ private fun SearchSectionIcon(
 
 /** Экраны, на которые можно сбросить кнопку «+» */
 private val FAB_DROP_SCREENS = setOf(
-    ActiveScreen.INBOX, ActiveScreen.TODAY, ActiveScreen.ANYTIME, ActiveScreen.SOMEDAY,
+    ActiveScreen.INBOX, ActiveScreen.TODAY, ActiveScreen.UPCOMING, ActiveScreen.ANYTIME, ActiveScreen.SOMEDAY,
     ActiveScreen.PROJECT_DETAIL, ActiveScreen.AREA_DETAIL, ActiveScreen.TAG_DETAIL
 )
 
@@ -1535,6 +1542,8 @@ private fun listItemKey(element: Any): Any? = when (element) {
     is ItemWithChecklist -> element.item.id
     is Item -> element.id
     is ProjectHeadingItem -> element.key
+    is UpcomingHeaderItem -> "${TaskListKeys.DAY_HEADER_PREFIX}${element.dateMillis}"
+    is UpcomingMonthHeaderItem -> "${TaskListKeys.MONTH_HEADER_PREFIX}${element.monthMillis}"
     is String -> element
     else -> null
 }
