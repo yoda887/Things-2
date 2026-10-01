@@ -1102,7 +1102,7 @@ fun ThingsHomeScreen(viewModel: ThingsViewModel = hiltViewModel()) {
             }
 
             // Кнопки отмены и «во Входящие», пока тянут кнопку «+»
-            FabDragActions(controller = fabDragController, bottomPadding = 22.dp)
+            FabDragActions(controller = fabDragController)
         }
     }
     }

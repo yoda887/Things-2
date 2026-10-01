@@ -20,6 +20,11 @@ import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.MoveToInbox
 import androidx.compose.material3.Icon
+import androidx.compose.animation.core.Spring
+import androidx.compose.animation.core.spring
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.offset
+import androidx.compose.ui.layout.positionInRoot
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -70,25 +75,73 @@ fun DraggableAddButton(
     val currentOnClick by rememberUpdatedState(onClick)
     val currentOnDropToInbox by rememberUpdatedState(onDropToInbox)
     val currentCanDrag by rememberUpdatedState(canDrag)
-    val lift by animateFloatAsState(if (controller.isDragging) 1f else 0f, label = "fabLift")
+    // Кнопка «выпрыгивает» из покоя: пружина с отскоком — увеличение и подъём (тень) чуть перелетают цель
+    val lift by animateFloatAsState(
+        targetValue = if (controller.isDragging) 1f else 0f,
+        animationSpec = spring(dampingRatio = 0.42f, stiffness = Spring.StiffnessMediumLow),
+        label = "fabLift"
+    )
 
+    // Кружок отмены лежит под кнопкой в том же слоте и по центру: пока кнопка стоит на месте, он закрыт ею,
+    // а когда она уезжает за пальцем, открывается строго на её месте
+    Box(modifier = modifier, contentAlignment = Alignment.Center) {
+        FabCancelButton(controller)
+        FabBody(
+            controller = controller,
+            homeCoordinates = { homeCoordinates },
+            onHome = { homeCoordinates = it },
+            onLayer = { layerCoordinates = it },
+            layerCoordinates = { layerCoordinates },
+            lift = { lift },
+            containerColor = containerColor,
+            currentOnClick = { currentOnClick() },
+            currentOnDropToInbox = { currentOnDropToInbox() },
+            currentCanDrag = { currentCanDrag() },
+        )
+    }
+}
+
+@Composable
+private fun BoxScope.FabBody(
+    controller: FabDragController,
+    homeCoordinates: () -> LayoutCoordinates?,
+    onHome: (LayoutCoordinates) -> Unit,
+    onLayer: (LayoutCoordinates) -> Unit,
+    layerCoordinates: () -> LayoutCoordinates?,
+    lift: () -> Float,
+    containerColor: Color,
+    currentOnClick: () -> Unit,
+    currentOnDropToInbox: () -> Unit,
+    currentCanDrag: () -> Boolean,
+) {
+    val view = LocalView.current
     Box(
-        modifier = modifier
+        modifier = Modifier
+            .fillMaxSize()
             .zIndex(10f)
-            .onGloballyPositioned { homeCoordinates = it }
+            .onGloballyPositioned {
+                onHome(it)
+                // Центр кнопки в покое — от него считаются сдвиг за пальцем и положение кружка отмены
+                controller.homeCenter = it.boundsInRoot().center
+            }
             .graphicsLayer {
-                val coords = homeCoordinates
+                val coords = homeCoordinates()
+                val l = lift()
                 if (controller.isDragging && coords != null && controller.pointer != Offset.Unspecified) {
+                    // Кнопка держится за ту точку, за которую её взяли, а не прыгает центром под палец
                     val center = coords.boundsInRoot().center
-                    translationX = controller.pointer.x - center.x
-                    translationY = controller.pointer.y - center.y
+                    translationX = controller.pointer.x - controller.grabOffset.x - center.x
+                    translationY = controller.pointer.y - controller.grabOffset.y - center.y
                 }
-                val scale = 1f + 0.12f * lift
+                val scale = 1f + 0.22f * l
                 scaleX = scale
                 scaleY = scale
+                // Подъём: тень растёт вместе с увеличением; на отскоке не уходит в минус
+                shadowElevation = (6f + 12f * l).coerceAtLeast(2f).dp.toPx()
+                shape = CircleShape
+                clip = false
             }
-            .onGloballyPositioned { layerCoordinates = it }
-            .shadow(6.dp + 6.dp * lift, CircleShape)
+            .onGloballyPositioned { onLayer(it) }
             .background(containerColor, CircleShape)
             .pointerInput(Unit) {
                 detectTapGestures(onTap = {
@@ -100,16 +153,18 @@ fun DraggableAddButton(
                 var dragging = false
                 detectDragGesturesAfterLongPress(
                     onDragStart = { offset ->
-                        val coords = layerCoordinates ?: return@detectDragGesturesAfterLongPress
+                        val coords = layerCoordinates() ?: return@detectDragGesturesAfterLongPress
                         if (!currentCanDrag()) return@detectDragGesturesAfterLongPress
                         dragging = true
                         view.performHapticFeedback(HapticFeedbackConstants.LONG_PRESS)
-                        controller.start(coords.localToRoot(offset))
+                        val finger = coords.localToRoot(offset)
+                        // Где палец относительно центра кнопки в момент захвата
+                        controller.start(finger, finger - controller.homeCenter)
                     },
                     onDrag = { change, _ ->
                         if (!dragging) return@detectDragGesturesAfterLongPress
                         change.consume()
-                        val coords = layerCoordinates ?: return@detectDragGesturesAfterLongPress
+                        val coords = layerCoordinates() ?: return@detectDragGesturesAfterLongPress
                         // Касание приходит в координатах сдвинутой кнопки; localToRoot учитывает её сдвиг
                         val fingerInRoot = coords.localToRoot(change.position)
                         controller.move(fingerInRoot)
@@ -136,21 +191,38 @@ fun DraggableAddButton(
     }
 }
 
-/** Кнопки отмены и «во Входящие», которые показываются, пока кнопку «+» тянут. */
+/** Кружок отмены: центр совпадает с центром кнопки «+» (оба центрируются в одном слоте). */
 @Composable
-fun BoxScope.FabDragActions(controller: FabDragController, bottomPadding: androidx.compose.ui.unit.Dp) {
-    FabActionButton(
-        visible = controller.isDragging,
-        icon = { Icon(Icons.Default.MoveToInbox, contentDescription = "Move to Inbox", tint = Color.White, modifier = Modifier.size(22.dp)) },
-        onBounds = { controller.inboxBounds = it },
-        modifier = Modifier.align(Alignment.BottomStart).padding(start = 20.dp, bottom = bottomPadding)
-    )
+private fun BoxScope.FabCancelButton(controller: FabDragController) {
     FabActionButton(
         visible = controller.isDragging,
         icon = { Icon(Icons.Default.Close, contentDescription = "Cancel", tint = Color.White, modifier = Modifier.size(20.dp)) },
         onBounds = { controller.cancelBounds = it },
-        modifier = Modifier.align(Alignment.BottomEnd).padding(end = 26.dp, bottom = bottomPadding)
+        modifier = Modifier.align(Alignment.Center)
     )
+}
+
+/**
+ * Кнопка «во Входящие», которая показывается, пока кнопку «+» тянут: слева от экрана, по одной линии
+ * с центром кнопки «+» и кружка отмены.
+ */
+@Composable
+fun BoxScope.FabDragActions(controller: FabDragController) {
+    var origin by remember { mutableStateOf(Offset.Zero) }
+    val density = androidx.compose.ui.platform.LocalDensity.current
+    val sizePx = with(density) { 44.dp.roundToPx() }
+    val startPx = with(density) { 20.dp.roundToPx() }
+    Box(modifier = Modifier.matchParentSize().onGloballyPositioned { origin = it.positionInRoot() }) {
+        FabActionButton(
+            visible = controller.isDragging,
+            icon = { Icon(Icons.Default.MoveToInbox, contentDescription = "Move to Inbox", tint = Color.White, modifier = Modifier.size(22.dp)) },
+            onBounds = { controller.inboxBounds = it },
+            modifier = Modifier.offset {
+                val center = controller.homeCenter
+                androidx.compose.ui.unit.IntOffset(startPx, (center.y - origin.y - sizePx / 2f).toInt())
+            }
+        )
+    }
 }
 
 @Composable

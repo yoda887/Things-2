@@ -36,8 +36,16 @@ class FabDragController {
     var cancelBounds: androidx.compose.ui.geometry.Rect? = null
     var inboxBounds: androidx.compose.ui.geometry.Rect? = null
 
-    fun start(position: Offset) {
+    /** Центр кнопки «+» в покое в координатах корня; кружок отмены встаёт ровно на него */
+    var homeCenter by mutableStateOf(Offset.Zero)
+
+    /** Где палец был относительно центра кнопки в момент захвата — кнопка держится за эту точку */
+    var grabOffset by mutableStateOf(Offset.Zero)
+        private set
+
+    fun start(position: Offset, grab: Offset = Offset.Zero) {
         pointer = position
+        grabOffset = grab
         isDragging = true
     }
 
