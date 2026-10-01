@@ -379,8 +379,8 @@ fun ThingsHomeScreen(viewModel: ThingsViewModel = hiltViewModel()) {
                         showAddDialog = true
                     },
                     containerColor = ThingsBlue,
+                    // Отступы 16 dp от краёв (Material Design 3) задаёт слот Scaffold
                     modifier = Modifier
-                        .padding(16.dp)
                         .size(56.dp)
                         .testTag("add_task_fab")
                 )
