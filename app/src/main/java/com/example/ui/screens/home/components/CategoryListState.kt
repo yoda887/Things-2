@@ -726,6 +726,10 @@ sealed interface ThingsCategoryListEvent {
     data class ArchiveHeading(val heading: Item) : ThingsCategoryListEvent
     data class ReorderHeadings(val headings: List<Item>) : ThingsCategoryListEvent
 
+    // Добавление перетаскиванием кнопки «+»
+    data class CreateTaskAt(val task: Item, val reorderedOthers: List<Item>) : ThingsCategoryListEvent
+    data class InsertHeading(val headings: List<Item>, val movedTasks: List<Item>) : ThingsCategoryListEvent
+
     // Свайп-события (для вызова мультиселекции и When/календаря)
     data class SwipeTaskLeft(val task: ItemWithChecklist) : ThingsCategoryListEvent
     /** growFromOffset — смещение строки от центра экрана: из него вырастает диалог When */

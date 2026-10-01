@@ -55,6 +55,10 @@ import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.animateDpAsState
 import androidx.compose.animation.core.tween
 import androidx.compose.animation.core.FastOutSlowInEasing
+import androidx.compose.runtime.withFrameNanos
+import androidx.compose.ui.layout.LayoutCoordinates
+import com.example.ui.components.fabdrag.FabDropTarget
+import com.example.ui.components.fabdrag.LocalFabDragController
 import com.example.ui.components.dragdrop.GenericDragDropState
 import com.example.ui.components.dragdrop.rememberGenericDragDropState
 import androidx.compose.ui.geometry.Offset
@@ -106,6 +110,12 @@ private sealed interface HomeTreeItem {
     ) : HomeTreeItem {
         override val key: String get() = HomeListKeys.project(project.id)
         override val contentType: String get() = "project"
+    }
+
+    /** Промежуток на месте пальца, пока тянут кнопку «+» (новый проект) */
+    data object FabGap : HomeTreeItem {
+        override val key: String get() = FabGapItem.KEY
+        override val contentType: String get() = "fab_gap"
     }
 
     data class AreaHeaderItem(
@@ -387,6 +397,102 @@ fun ThingsHomePanel(
             result
         }
 
+        // ── Добавление перетаскиванием кнопки «+»: новый проект на месте пальца (см. FabDragController) ──
+        val fabDrag = LocalFabDragController.current
+        var listCoordinates by remember { mutableStateOf<LayoutCoordinates?>(null) }
+        // Промежуток — перед элементом дерева с этим индексом (размер дерева — в конце)
+        var fabGapIndex by remember { mutableStateOf<Int?>(null) }
+        val currentTree by rememberUpdatedState(flattenedTree)
+        val currentLocalProjects by rememberUpdatedState(localProjects)
+
+        fun dropFab(): Boolean {
+            val gapIndex = fabGapIndex ?: return false
+            fabGapIndex = null
+            val tree = currentTree
+            val above = tree.subList(0, gapIndex.coerceIn(0, tree.size))
+            val areaId = (above.lastOrNull { it is HomeTreeItem.AreaHeaderItem } as? HomeTreeItem.AreaHeaderItem)?.area?.id
+            // Встаёт перед первым проектом ниже промежутка, иначе — после последнего выше
+            val nextProject = tree.drop(gapIndex).firstOrNull { it is HomeTreeItem.ProjectItem } as? HomeTreeItem.ProjectItem
+            val prevProject = above.lastOrNull { it is HomeTreeItem.ProjectItem } as? HomeTreeItem.ProjectItem
+            val projectsNow = currentLocalProjects
+            val insertAt = when {
+                nextProject != null && (nextProject.areaId == areaId) ->
+                    projectsNow.indexOfFirst { it.id == nextProject.project.id }
+                prevProject != null -> projectsNow.indexOfFirst { it.id == prevProject.project.id } + 1
+                else -> projectsNow.size
+            }.let { if (it < 0) projectsNow.size else it }
+            val newProject = Item(type = Item.TYPE_PROJECT, title = "", areaId = areaId, creationDate = System.currentTimeMillis())
+            val list = projectsNow.toMutableList().apply { add(insertAt.coerceIn(0, size), newProject) }
+            val renumbered = list.mapIndexed { index, item -> if (item.sortOrder == index) item else item.copy(sortOrder = index) }
+            val previousOrder = projectsNow.associate { it.id to it.sortOrder }
+            onUpdateProject(renumbered.first { it.id == newProject.id })
+            val others = renumbered.filter { it.id != newProject.id && previousOrder[it.id] != it.sortOrder }
+            if (others.isNotEmpty()) onProjectsReordered(others)
+            if (areaId != null) expandedStates[areaId] = true
+            onEditingProjectIdChange(newProject.id)
+            return true
+        }
+
+        if (fabDrag != null) {
+            DisposableEffect(fabDrag) {
+                val target = FabDropTarget { dropFab() }
+                fabDrag.dropTarget = target
+                onDispose { if (fabDrag.dropTarget === target) fabDrag.dropTarget = null }
+            }
+        }
+
+        LaunchedEffect(fabDrag?.isDragging) {
+            val controller = fabDrag ?: return@LaunchedEffect
+            if (!controller.isDragging) {
+                fabGapIndex = null
+                return@LaunchedEffect
+            }
+            var autoScrollArmed = false
+            while (controller.isDragging) {
+                withFrameNanos { }
+                val coords = listCoordinates ?: continue
+                val pointer = controller.pointer
+                if (controller.isOverAction || pointer == Offset.Unspecified || !coords.isAttached) {
+                    fabGapIndex = null
+                    continue
+                }
+                val y = pointer.y - coords.positionInRoot().y
+                val height = coords.size.height.toFloat()
+                val layoutInfo = lazyListState.layoutInfo
+                val tree = currentTree
+                val indexByKey = HashMap<Any, Int>(tree.size)
+                tree.forEachIndexed { index, item -> indexByKey[item.key] = index }
+                val gapInfo = layoutInfo.visibleItemsInfo.firstOrNull { it.key == FabGapItem.KEY }
+                val gapSize = gapInfo?.size ?: 0
+                val rows = layoutInfo.visibleItemsInfo.mapNotNull { info ->
+                    val index = indexByKey[info.key] ?: return@mapNotNull null
+                    if (tree[index] is HomeTreeItem.FabGap) return@mapNotNull null
+                    var top = (info.offset - layoutInfo.viewportStartOffset).toFloat()
+                    if (gapInfo != null && info.offset > gapInfo.offset) top -= gapSize
+                    FabRow(index, top, info.size.toFloat())
+                }
+                // Промежуток только среди проектов и областей — не выше разделителя под умными списками
+                fabGapIndex = FabInsertion.slotAt(y, rows, asHeading = false)?.index
+                    ?: if (tree.isEmpty() && y > 0f) 0 else fabGapIndex
+                val zone = height * 0.12f
+                // Кнопка стартует у нижнего края — прокрутка включается, только когда палец хотя бы раз
+                // вышел из зон у краёв, иначе список уезжал бы сразу после долгого нажатия
+                if (y in zone..(height - zone)) autoScrollArmed = true
+                val delta = if (!autoScrollArmed) 0f else when {
+                    y < zone -> -28f * ((zone - y) / zone).coerceIn(0f, 1f)
+                    y > height - zone -> 28f * ((y - (height - zone)) / zone).coerceIn(0f, 1f)
+                    else -> 0f
+                }
+                if (delta != 0f) lazyListState.scrollBy(delta)
+            }
+            fabGapIndex = null
+        }
+
+        val displayedTree = remember(flattenedTree, fabGapIndex) {
+            val gap = fabGapIndex ?: return@remember flattenedTree
+            flattenedTree.toMutableList().apply { add(gap.coerceIn(0, size), HomeTreeItem.FabGap) }
+        }
+
         LazyColumn(
             state = lazyListState,
             modifier = Modifier
@@ -394,7 +500,8 @@ fun ThingsHomePanel(
                 .nestedScroll(nestedScrollConnection)
                 .graphicsLayer { translationY = pullOffset.value }
                 // [ИЗМЕНЕНИЕ]: Уменьшено расстояние от левой и правой стороны экрана до списков с 20.dp до 14.dp
-                .padding(horizontal = 14.dp),
+                .padding(horizontal = 14.dp)
+                .onGloballyPositioned { listCoordinates = it },
             verticalArrangement = Arrangement.spacedBy(0.dp)
         ) {
         // Search Filter placeholder spacer to reserve space for the top search capsule
@@ -485,11 +592,21 @@ fun ThingsHomePanel(
 
 
         items(
-            items = flattenedTree,
+            items = displayedTree,
             key = { it.key },
             contentType = { it.contentType }
         ) { treeItem ->
             when (treeItem) {
+                is HomeTreeItem.FabGap -> {
+                    Box(
+                        modifier = Modifier
+                            .animateItem()
+                            .fillMaxWidth()
+                            .height(46.dp)
+                            .padding(vertical = 4.dp)
+                            .background(Color(0xFFE9EAEE), RoundedCornerShape(10.dp))
+                    )
+                }
                 is HomeTreeItem.ProjectItem -> {
                     ProjectItemRow(
                         project = treeItem.project,

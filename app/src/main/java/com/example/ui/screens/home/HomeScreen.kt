@@ -5,6 +5,10 @@ import android.content.pm.PackageManager
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.animation.*
+import com.example.ui.components.fabdrag.DraggableAddButton
+import com.example.ui.components.fabdrag.FabDragActions
+import com.example.ui.components.fabdrag.FabDragController
+import com.example.ui.components.fabdrag.LocalFabDragController
 import com.example.ui.components.holdForSoftKeyboardHide
 import androidx.compose.animation.core.spring
 import androidx.compose.animation.core.tween
@@ -267,6 +271,10 @@ fun ThingsHomeScreen(viewModel: ThingsViewModel = hiltViewModel()) {
         selectedTaskIds = emptySet()
     }
 
+    // Добавление перетаскиванием кнопки «+» (см. FabDragController)
+    val fabDragController = remember { FabDragController() }
+
+    CompositionLocalProvider(LocalFabDragController provides fabDragController) {
     Scaffold(
         modifier = Modifier
             .fillMaxSize()
@@ -279,7 +287,8 @@ fun ThingsHomeScreen(viewModel: ThingsViewModel = hiltViewModel()) {
         floatingActionButton = {
             // Скрывать FAB при открытии inline-редактора, FAB-меню, диалогов, окна быстрой задачи (QuickAddDialog) или режима мультивыбора
             AnimatedVisibility(
-                visible = inlineExpandedTaskId == null && !showFabMenu && !isListDialogActive && !showAddDialog && !isSelectionMode,
+                visible = fabDragController.isDragging ||
+                    (inlineExpandedTaskId == null && !showFabMenu && !isListDialogActive && !showAddDialog && !isSelectionMode),
                 enter = slideInVertically(
                     initialOffsetY = { it * 2 },
                     animationSpec = spring(
@@ -293,10 +302,8 @@ fun ThingsHomeScreen(viewModel: ThingsViewModel = hiltViewModel()) {
                 ) + fadeOut(animationSpec = tween(durationMillis = 180))
             ) {
                 val view = androidx.compose.ui.platform.LocalView.current
-                FloatingActionButton(
-                    onClick = {
-                        view.performHapticFeedback(android.view.HapticFeedbackConstants.CLOCK_TICK)
-                        if (activeScreen == ActiveScreen.HOME) {
+                val onFabClick: () -> Unit = {
+                                                if (activeScreen == ActiveScreen.HOME) {
                             showFabMenu = true
                         } else if (activeScreen == ActiveScreen.SEARCH) {
                             // На экране поиска новая задача создаётся с текстом запроса
@@ -360,17 +367,23 @@ fun ThingsHomeScreen(viewModel: ThingsViewModel = hiltViewModel()) {
                             viewModel.updateTask(newTask)
                             viewModel.setInlineExpandedTaskId(newTaskId)
                         }
+                    }
+                DraggableAddButton(
+                    controller = fabDragController,
+                    // Перетаскивать можно туда, где экран принимает сброс
+                    canDrag = { fabDragController.dropTarget != null },
+                    onClick = onFabClick,
+                    onDropToInbox = {
+                        taskToEdit = null
+                        newTaskTitlePrefill = ""
+                        showAddDialog = true
                     },
                     containerColor = ThingsBlue,
-                    contentColor = Color.White,
-                    shape = CircleShape,
                     modifier = Modifier
                         .padding(16.dp)
                         .size(56.dp)
                         .testTag("add_task_fab")
-                ) {
-                    Icon(Icons.Default.Add, contentDescription = "Create Task", modifier = Modifier.size(28.dp))
-                }
+                )
             }
         }
     ) { innerPadding ->
@@ -630,6 +643,11 @@ fun ThingsHomeScreen(viewModel: ThingsViewModel = hiltViewModel()) {
                                 is ThingsCategoryListEvent.DeleteHeading -> viewModel.deleteHeading(event.heading)
                                 is ThingsCategoryListEvent.ArchiveHeading -> viewModel.archiveHeading(event.heading)
                                 is ThingsCategoryListEvent.ReorderHeadings -> viewModel.reorderHeadings(event.headings)
+                                is ThingsCategoryListEvent.CreateTaskAt -> {
+                                    viewModel.createTaskAt(event.task, event.reorderedOthers)
+                                    viewModel.setInlineExpandedTaskId(event.task.id)
+                                }
+                                is ThingsCategoryListEvent.InsertHeading -> viewModel.insertHeading(event.headings, event.movedTasks)
                                 is ThingsCategoryListEvent.SwipeTaskLeft -> {
                                     viewModel.setInlineExpandedTaskId(null)
                                     if (isSelectionMode) {
@@ -1082,7 +1100,11 @@ fun ThingsHomeScreen(viewModel: ThingsViewModel = hiltViewModel()) {
                     }
                 }
             }
+
+            // Кнопки отмены и «во Входящие», пока тянут кнопку «+»
+            FabDragActions(controller = fabDragController, bottomPadding = 22.dp)
         }
+    }
     }
 
     // Task Create / Edit Sheet

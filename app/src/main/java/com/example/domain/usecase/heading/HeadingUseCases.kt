@@ -40,4 +40,16 @@ class HeadingUseCases @Inject constructor(private val repository: ITaskRepositor
     suspend fun reorder(headings: List<Item>) {
         repository.reorderHeadings(headings)
     }
+
+    /**
+     * Новый заголовок посреди проекта: [headings] — все заголовки проекта с новым на его месте,
+     * [movedTasks] — задачи, ушедшие под него. Сначала заголовки: задачи ссылаются на новый
+     * заголовок внешним ключом.
+     */
+    suspend fun insert(headings: List<Item>, movedTasks: List<Item>) {
+        repository.inTransaction {
+            repository.insertTasks(headings)
+            if (movedTasks.isNotEmpty()) repository.insertTasks(movedTasks)
+        }
+    }
 }

@@ -1,5 +1,9 @@
 package com.example.ui.screens.home.components
 
+import androidx.compose.runtime.withFrameNanos
+import androidx.compose.foundation.gestures.scrollBy
+import com.example.ui.components.fabdrag.FabDropTarget
+import com.example.ui.components.fabdrag.LocalFabDragController
 import com.example.ui.screens.home.inlineeditor.utils.EditorOutsideTouch
 import com.example.ui.screens.home.inlineeditor.utils.observeTouchesOutsideEditor
 
@@ -312,6 +316,126 @@ fun ThingsCategoryListPanel(
         headings = if (screen == ActiveScreen.PROJECT_DETAIL) localHeadings else emptyList()
     )
 
+    // ── Добавление перетаскиванием кнопки «+» (см. FabDragController) ──
+    val fabDrag = LocalFabDragController.current
+    val acceptsFabDrop = screen in FAB_DROP_SCREENS && !state.isSelectionMode
+    var listCoordinates by remember { mutableStateOf<androidx.compose.ui.layout.LayoutCoordinates?>(null) }
+    var fabSlot by remember { mutableStateOf<FabSlot?>(null) }
+    val currentFlattened by rememberUpdatedState(flattened)
+    val currentLocalTasks by rememberUpdatedState(localTasksList)
+
+    /** Новая задача с полями экрана — как при нажатии на «+» */
+    fun newTaskForScreen(): Item {
+        val start = when (screen) {
+            ActiveScreen.TODAY -> 1
+            ActiveScreen.ANYTIME, ActiveScreen.AREA_DETAIL, ActiveScreen.TAG_DETAIL -> 2
+            ActiveScreen.SOMEDAY -> 3
+            else -> 0
+        }
+        return Item(
+            type = Item.TYPE_TASK,
+            start = start,
+            startDate = if (screen == ActiveScreen.TODAY) System.currentTimeMillis() else null,
+            projectId = if (screen == ActiveScreen.PROJECT_DETAIL) project?.id else null,
+            areaId = if (screen == ActiveScreen.AREA_DETAIL) area?.id else null,
+            cachedTags = if (screen == ActiveScreen.TAG_DETAIL) state.tag?.title ?: "" else ""
+        )
+    }
+
+    /** Сброс кнопки «+» на промежуток: задача на его месте, у левого края проекта — заголовок */
+    fun dropFab(): Boolean {
+        val slot = fabSlot ?: return false
+        fabSlot = null
+        val flat = currentFlattened
+        val currentProject = project
+        if (slot.asHeading && currentProject != null) {
+            val placement = FabInsertion.headingPlacement(flat, slot.index)
+            val heading = Item(type = Item.TYPE_HEADING, projectId = currentProject.id, sortOrder = -1)
+            val headings = FabInsertion.headingsWith(localHeadings, heading, placement.headingIndex)
+            val moved = currentLocalTasks
+                .filter { it.item.id in placement.movedTaskIds }
+                .map { it.item.copy(headingId = heading.id, modificationDate = System.currentTimeMillis()) }
+            editingHeadingId = heading.id
+            onEvent(ThingsCategoryListEvent.InsertHeading(headings, moved))
+        } else {
+            val tasks = currentLocalTasks
+            val placement = FabInsertion.taskPlacement(flat, slot.index, tasks)
+            val newTask = newTaskForScreen().copy(headingId = placement.headingId, isTonight = placement.isTonight)
+            val list = tasks.map { it.item }.toMutableList()
+            list.add(placement.taskIndex.coerceIn(0, list.size), newTask)
+            val renumbered = list.mapIndexed { index, item -> if (item.sortOrder == index) item else item.copy(sortOrder = index) }
+            val created = renumbered.first { it.id == newTask.id }
+            val previousOrder = tasks.associate { it.item.id to it.item.sortOrder }
+            val others = renumbered.filter { it.id != newTask.id && previousOrder[it.id] != it.sortOrder }
+            onEvent(ThingsCategoryListEvent.CreateTaskAt(created, others))
+        }
+        return true
+    }
+
+    if (fabDrag != null && acceptsFabDrop) {
+        DisposableEffect(fabDrag) {
+            val target = FabDropTarget { dropFab() }
+            fabDrag.dropTarget = target
+            onDispose { if (fabDrag.dropTarget === target) fabDrag.dropTarget = null }
+        }
+    }
+
+    // Пока тянут «+»: место промежутка по пальцу и автопрокрутка у краёв списка
+    LaunchedEffect(fabDrag?.isDragging, acceptsFabDrop) {
+        val controller = fabDrag ?: return@LaunchedEffect
+        if (!controller.isDragging || !acceptsFabDrop) {
+            fabSlot = null
+            return@LaunchedEffect
+        }
+        var autoScrollArmed = false
+        while (controller.isDragging) {
+            withFrameNanos { }
+            val coords = listCoordinates ?: continue
+            val pointer = controller.pointer
+            if (controller.isOverAction || pointer == androidx.compose.ui.geometry.Offset.Unspecified || !coords.isAttached) {
+                fabSlot = null
+                continue
+            }
+            val origin = coords.positionInRoot()
+            val x = pointer.x - origin.x
+            val y = pointer.y - origin.y
+            val height = coords.size.height.toFloat()
+            val width = coords.size.width.toFloat()
+            val layoutInfo = lazyListState.layoutInfo
+            val flat = currentFlattened
+            val indexByKey = HashMap<Any, Int>(flat.size)
+            flat.forEachIndexed { index, element -> listItemKey(element)?.let { indexByKey[it] = index } }
+            val gapInfo = layoutInfo.visibleItemsInfo.firstOrNull { it.key == FabGapItem.KEY }
+            val gapSize = gapInfo?.size ?: 0
+            val rows = layoutInfo.visibleItemsInfo.mapNotNull { info ->
+                val index = indexByKey[info.key] ?: return@mapNotNull null
+                if (!FabInsertion.isAnchor(flat[index])) return@mapNotNull null
+                var top = (info.offset - layoutInfo.viewportStartOffset).toFloat()
+                if (gapInfo != null && info.offset > gapInfo.offset) top -= gapSize
+                FabRow(index, top, info.size.toFloat())
+            }
+            val asHeading = screen == ActiveScreen.PROJECT_DETAIL && x < width * FAB_HEADING_EDGE_FRACTION
+            fabSlot = if (rows.isEmpty()) {
+                // Пустой список: промежуток в начале
+                if (flat.none { FabInsertion.isAnchor(it) }) FabSlot(flat.size, asHeading) else fabSlot
+            } else {
+                FabInsertion.slotAt(y, rows, asHeading)
+            }
+            // Автопрокрутка, когда палец у края списка
+            val zone = height * FAB_SCROLL_ZONE_FRACTION
+            // Кнопка стартует у нижнего края — прокрутка включается, только когда палец хотя бы раз
+            // вышел из зон у краёв, иначе список уезжал бы сразу после долгого нажатия
+            if (y in zone..(height - zone)) autoScrollArmed = true
+            val delta = if (!autoScrollArmed) 0f else when {
+                y < zone -> -FAB_SCROLL_MAX_STEP * ((zone - y) / zone).coerceIn(0f, 1f)
+                y > height - zone -> FAB_SCROLL_MAX_STEP * ((y - (height - zone)) / zone).coerceIn(0f, 1f)
+                else -> 0f
+            }
+            if (delta != 0f) lazyListState.scrollBy(delta)
+        }
+        fabSlot = null
+    }
+
     val density = androidx.compose.ui.platform.LocalDensity.current
     val itemHeightPx = with(density) { MaterialTheme.dimens.taskItemEstimatedHeight.roundToPx() }
     
@@ -562,6 +686,7 @@ fun ThingsCategoryListPanel(
                 }
                 // [ИЗМЕНЕНИЕ]: Установлен аккуратный отступ 10.dp от края экрана до карточек задач
                 .padding(horizontal = 10.dp)
+                .onGloballyPositioned { listCoordinates = it }
                 .testTag("tasks_lazy_list"),
             contentPadding = PaddingValues(top = topPaddingTotal, bottom = 100.dp)
         ) {
@@ -669,15 +794,16 @@ fun ThingsCategoryListPanel(
                         )
                     }
                 }
-            } else if (!hasTasks && screen != ActiveScreen.SEARCH) {
+            } else if (!hasTasks && screen != ActiveScreen.SEARCH && fabSlot == null) {
                 item(key = TaskListKeys.EMPTY_STATE) {
                     Box(modifier = Modifier.padding(horizontal = 8.dp)) {
                         EmptyStateView(textSecondaryColor = textSecondaryColor)
                     }
                 }
             } else {
-                items(flattened, key = { item ->
+                items(FabInsertion.withGap(flattened, fabSlot), key = { item ->
                     when (item) {
+                        is FabGapItem -> item.key
                         is ItemWithChecklist -> item.item.id
                         is Item -> item.id
                         is UpcomingHeaderItem -> "${TaskListKeys.DAY_HEADER_PREFIX}${item.dateMillis}"
@@ -822,6 +948,12 @@ fun ThingsCategoryListPanel(
                                 modifier = Modifier
                                     .animateItem(placementSpec = placementSpec)
                                     .graphicsLayer { alpha = dimAlpha }
+                            )
+                        }
+                        is FabGapItem -> {
+                            FabGapRow(
+                                asHeading = item.asHeading,
+                                modifier = Modifier.animateItem(placementSpec = placementSpec)
                             )
                         }
                         is ProjectHeadingItem -> {
@@ -1381,6 +1513,70 @@ private fun SearchSectionIcon(
             contentDescription = null,
             tint = Color.Unspecified,
             modifier = iconModifier
+        )
+    }
+}
+
+/** Экраны, на которые можно сбросить кнопку «+» */
+private val FAB_DROP_SCREENS = setOf(
+    ActiveScreen.INBOX, ActiveScreen.TODAY, ActiveScreen.ANYTIME, ActiveScreen.SOMEDAY,
+    ActiveScreen.PROJECT_DETAIL, ActiveScreen.AREA_DETAIL, ActiveScreen.TAG_DETAIL
+)
+
+/** Доля ширины списка у левого края, где на экране проекта промежуток превращается в «новый заголовок» */
+private const val FAB_HEADING_EDGE_FRACTION = 0.2f
+
+/** Автопрокрутка, пока тянут «+»: зона у краёв и наибольший шаг за кадр */
+private const val FAB_SCROLL_ZONE_FRACTION = 0.12f
+private const val FAB_SCROLL_MAX_STEP = 28f
+
+/** Ключ элемента плоского списка — тот же, что у строк LazyColumn */
+private fun listItemKey(element: Any): Any? = when (element) {
+    is ItemWithChecklist -> element.item.id
+    is Item -> element.id
+    is ProjectHeadingItem -> element.key
+    is String -> element
+    else -> null
+}
+
+/** Промежуток на месте пальца: серая плашка задачи или пунктир «NEW HEADING» */
+@Composable
+private fun FabGapRow(asHeading: Boolean, modifier: Modifier = Modifier) {
+    if (asHeading) {
+        Box(
+            modifier = modifier
+                .fillMaxWidth()
+                .height(40.dp)
+                .padding(horizontal = 8.dp),
+            contentAlignment = Alignment.Center
+        ) {
+            androidx.compose.foundation.Canvas(modifier = Modifier.fillMaxWidth().height(2.dp)) {
+                drawLine(
+                    color = Color(0xFFC9CBD1),
+                    start = androidx.compose.ui.geometry.Offset(0f, size.height / 2f),
+                    end = androidx.compose.ui.geometry.Offset(size.width, size.height / 2f),
+                    strokeWidth = size.height,
+                    pathEffect = androidx.compose.ui.graphics.PathEffect.dashPathEffect(floatArrayOf(18f, 12f))
+                )
+            }
+            Text(
+                text = "NEW HEADING",
+                fontSize = 12.sp,
+                fontWeight = FontWeight.SemiBold,
+                letterSpacing = 1.sp,
+                color = Color(0xFFB4B6BC),
+                modifier = Modifier
+                    .background(ThingsBackgroundLight)
+                    .padding(horizontal = 10.dp)
+            )
+        }
+    } else {
+        Box(
+            modifier = modifier
+                .fillMaxWidth()
+                .height(44.dp)
+                .padding(horizontal = 4.dp, vertical = 4.dp)
+                .background(Color(0xFFE9EAEE), RoundedCornerShape(10.dp))
         )
     }
 }

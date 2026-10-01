@@ -363,6 +363,21 @@ class ThingsViewModel @Inject constructor(
         viewModelScope.launch { headingUseCases.reorder(headings) }
     }
 
+    /** Новый заголовок посреди проекта (сброс кнопки «+»): заголовки по порядку и задачи, ушедшие под него */
+    fun insertHeading(headings: List<Item>, movedTasks: List<Item>) {
+        viewModelScope.launch { headingUseCases.insert(headings, movedTasks) }
+    }
+
+    /**
+     * Новая задача на месте сброса кнопки «+»: сама задача (со сверкой тегов) и соседи с новыми sortOrder.
+     */
+    fun createTaskAt(task: Item, reorderedOthers: List<Item>) {
+        viewModelScope.launch {
+            taskUseCases.updateTask(task)
+            if (reorderedOthers.isNotEmpty()) taskUseCases.updateTask(reorderedOthers)
+        }
+    }
+
     fun insertTag(tagTitle: String, parentId: String? = null) {
         viewModelScope.launch {
             tagUseCases.insertTag(tagTitle, parentId)
