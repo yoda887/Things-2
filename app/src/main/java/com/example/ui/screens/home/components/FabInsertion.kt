@@ -53,18 +53,28 @@ object FabInsertion {
             element == TaskListKeys.AREA_UPCOMING_HEADING || element == TaskListKeys.AREA_SOMEDAY_HEADING
 
     /**
-     * Место промежутка по положению пальца [y] в координатах списка.
+     * Место промежутка по положению центра кнопки [y] в координатах списка.
+     *
+     * Промежуток занимает место между строками: его верх — на границе между ними, центр — на
+     * [gapHeight]/2 ниже. Выбирается граница, при которой центр промежутка ближе всего к [y], —
+     * тогда промежуток и кнопка сидят на одной линии, а не промежуток всегда ниже кнопки.
      *
      * [rows] — видимые строки-якоря, геометрия без промежутка (его высота уже вычтена у строк ниже),
-     * поэтому место не дёргается от того, что промежуток сам сдвигает строки.
-     * Промежуток встаёт перед первой строкой, середина которой ниже пальца; ниже всех — после
+     * поэтому место не дёргается от того, что промежуток сам сдвигает строки. Ниже всех — после
      * последней видимой строки-якоря.
      */
-    fun slotAt(y: Float, rows: List<FabRow>, asHeading: Boolean): FabSlot? {
+    fun slotAt(y: Float, rows: List<FabRow>, asHeading: Boolean, gapHeight: Float = 0f): FabSlot? {
         if (rows.isEmpty()) return null
-        val before = rows.firstOrNull { y < it.top + it.size / 2f }
-        val index = before?.index ?: (rows.last().index + 1)
-        return FabSlot(index, asHeading)
+        val target = y - gapHeight / 2f
+        var bestIndex = rows.first().index
+        var bestDistance = kotlin.math.abs(rows.first().top - target)
+        for (row in rows) {
+            val distance = kotlin.math.abs(row.top - target)
+            if (distance < bestDistance) { bestDistance = distance; bestIndex = row.index }
+        }
+        val last = rows.last()
+        if (kotlin.math.abs(last.top + last.size - target) < bestDistance) bestIndex = last.index + 1
+        return FabSlot(bestIndex, asHeading)
     }
 
     /**

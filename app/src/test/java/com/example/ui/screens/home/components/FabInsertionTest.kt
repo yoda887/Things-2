@@ -158,4 +158,16 @@ class FabInsertionTest {
         assertTrue(FabInsertion.taskPlacement(list, 4, all).inAreaSomeday)
         assertTrue(FabInsertion.isAnchor(TaskListKeys.AREA_SOMEDAY_HEADING))
     }
+
+    @Test
+    fun slotAt_centersGapOnButton() {
+        val rows = listOf(FabRow(0, 0f, 100f), FabRow(1, 100f, 100f), FabRow(2, 200f, 100f))
+        // Промежуток высотой 100: его центр = граница + 50, поэтому палец на 120 — граница на 100 (центр 150)
+        assertEquals(1, FabInsertion.slotAt(120f, rows, false, gapHeight = 100f)!!.index)
+        // Палец на 160 — граница на 100 даёт центр 150, на 200 — 250: ближе первая
+        assertEquals(1, FabInsertion.slotAt(160f, rows, false, gapHeight = 100f)!!.index)
+        assertEquals(2, FabInsertion.slotAt(210f, rows, false, gapHeight = 100f)!!.index)
+        // Без поправки на высоту выбирается ближайшая граница
+        assertEquals(2, FabInsertion.slotAt(160f, rows, false)!!.index)
+    }
 }

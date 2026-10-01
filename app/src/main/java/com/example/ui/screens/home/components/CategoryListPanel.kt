@@ -319,6 +319,8 @@ fun ThingsCategoryListPanel(
     // ── Добавление перетаскиванием кнопки «+» (см. FabDragController) ──
     val fabDrag = LocalFabDragController.current
     val acceptsFabDrop = screen in FAB_DROP_SCREENS && !state.isSelectionMode
+    // Высота промежутка до его появления — по ней первый раз выбирается место
+    val fabDefaultGapPx = with(androidx.compose.ui.platform.LocalDensity.current) { 44.dp.toPx() }
     var listCoordinates by remember { mutableStateOf<androidx.compose.ui.layout.LayoutCoordinates?>(null) }
     var fabSlot by remember { mutableStateOf<FabSlot?>(null) }
     val currentFlattened by rememberUpdatedState(flattened)
@@ -419,7 +421,8 @@ fun ThingsCategoryListPanel(
             }
             val origin = coords.positionInRoot()
             val x = pointer.x - origin.x
-            val y = pointer.y - origin.y
+            // Место считается по центру кнопки, а не по пальцу: кнопка держится за точку захвата
+            val y = pointer.y - controller.grabOffset.y - origin.y
             val height = coords.size.height.toFloat()
             val width = coords.size.width.toFloat()
             val layoutInfo = lazyListState.layoutInfo
@@ -440,7 +443,7 @@ fun ThingsCategoryListPanel(
                 // Пустой список: промежуток в начале
                 if (flat.none { FabInsertion.isAnchor(it) }) FabSlot(flat.size, asHeading) else fabSlot
             } else {
-                FabInsertion.slotAt(y, rows, asHeading)
+                FabInsertion.slotAt(y, rows, asHeading, gapHeight = if (gapSize > 0) gapSize.toFloat() else fabDefaultGapPx)
             }
             // Автопрокрутка, когда палец у края списка
             val zone = height * FAB_SCROLL_ZONE_FRACTION

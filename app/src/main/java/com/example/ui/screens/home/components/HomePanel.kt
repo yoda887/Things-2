@@ -403,6 +403,8 @@ fun ThingsHomePanel(
         // Промежуток — перед элементом дерева с этим индексом (размер дерева — в конце)
         var fabGapIndex by remember { mutableStateOf<Int?>(null) }
         val currentTree by rememberUpdatedState(flattenedTree)
+        // Высота промежутка до его появления — по ней первый раз выбирается место
+        val fabDefaultGapPx = with(androidx.compose.ui.platform.LocalDensity.current) { 46.dp.toPx() }
         val currentLocalProjects by rememberUpdatedState(localProjects)
 
         fun dropFab(): Boolean {
@@ -463,7 +465,8 @@ fun ThingsHomePanel(
                     fabGapIndex = null
                     continue
                 }
-                val y = pointer.y - coords.positionInRoot().y
+                // Место считается по центру кнопки, а не по пальцу: кнопка держится за точку захвата
+                val y = pointer.y - controller.grabOffset.y - coords.positionInRoot().y
                 val height = coords.size.height.toFloat()
                 val layoutInfo = lazyListState.layoutInfo
                 val tree = currentTree
@@ -479,7 +482,7 @@ fun ThingsHomePanel(
                     FabRow(index, top, info.size.toFloat())
                 }
                 // Промежуток только среди проектов и областей — не выше разделителя под умными списками
-                fabGapIndex = FabInsertion.slotAt(y, rows, asHeading = false)?.index
+                fabGapIndex = FabInsertion.slotAt(y, rows, asHeading = false, gapHeight = if (gapSize > 0) gapSize.toFloat() else fabDefaultGapPx)?.index
                     ?: if (tree.isEmpty() && y > 0f) 0 else fabGapIndex
                 val zone = height * 0.12f
                 // Кнопка стартует у нижнего края — прокрутка включается, только когда палец хотя бы раз
