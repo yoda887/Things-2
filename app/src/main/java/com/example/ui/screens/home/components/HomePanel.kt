@@ -402,6 +402,14 @@ fun ThingsHomePanel(
         var listCoordinates by remember { mutableStateOf<LayoutCoordinates?>(null) }
         // Промежуток — перед элементом дерева с этим индексом (размер дерева — в конце)
         var fabGapIndex by remember { mutableStateOf<Int?>(null) }
+        var lastFabGapIndex by remember { mutableStateOf<Int?>(null) }
+        LaunchedEffect(fabGapIndex) {
+            val previous = lastFabGapIndex
+            lastFabGapIndex = fabGapIndex
+            if (previous != null && fabGapIndex != null && previous != fabGapIndex && fabDrag?.isDragging == true) {
+                view.performHapticFeedback(android.view.HapticFeedbackConstants.CLOCK_TICK)
+            }
+        }
         val currentTree by rememberUpdatedState(flattenedTree)
         // Высота промежутка до его появления — по ней первый раз выбирается место
         val fabDefaultGapPx = with(androidx.compose.ui.platform.LocalDensity.current) { 46.dp.toPx() }
@@ -409,6 +417,18 @@ fun ThingsHomePanel(
 
         fun dropFab(): Boolean {
             val gapIndex = fabGapIndex ?: return false
+            // Центр промежутка — туда приземлится кнопка; считаем, пока он ещё на месте
+            fabDrag?.dropAnchor = listCoordinates?.let { coords ->
+                lazyListState.layoutInfo.let { info ->
+                    info.visibleItemsInfo.firstOrNull { it.key == FabGapItem.KEY }?.let { gap ->
+                        val origin = coords.positionInRoot()
+                        Offset(
+                            origin.x + coords.size.width / 2f,
+                            origin.y + (gap.offset - info.viewportStartOffset) + gap.size / 2f
+                        )
+                    }
+                }
+            }
             fabGapIndex = null
             val tree = currentTree
             val above = tree.subList(0, gapIndex.coerceIn(0, tree.size))
@@ -461,10 +481,9 @@ fun ThingsHomePanel(
                 withFrameNanos { }
                 val coords = listCoordinates ?: continue
                 val pointer = controller.pointer
-                if (controller.isOverAction || pointer == Offset.Unspecified || !coords.isAttached) {
-                    fabGapIndex = null
-                    continue
-                }
+                // Над кнопкой отмены или вне списка промежуток остаётся на месте
+                if (pointer == Offset.Unspecified || !coords.isAttached) continue
+                if (controller.isOverAction && fabGapIndex != null) continue
                 // Место считается по центру кнопки, а не по пальцу: кнопка держится за точку захвата
                 val y = pointer.y - controller.grabOffset.y - coords.positionInRoot().y
                 val height = coords.size.height.toFloat()

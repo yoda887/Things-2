@@ -273,6 +273,10 @@ fun ThingsHomeScreen(viewModel: ThingsViewModel = hiltViewModel()) {
 
     // Добавление перетаскиванием кнопки «+» (см. FabDragController)
     val fabDragController = remember { FabDragController() }
+    // Редактор закрылся — кнопка снова показывается (она была спрятана после приземления в место новой задачи)
+    LaunchedEffect(inlineExpandedTaskId) {
+        if (inlineExpandedTaskId == null) fabDragController.hiddenAfterSettle = false
+    }
 
     CompositionLocalProvider(LocalFabDragController provides fabDragController) {
     Scaffold(
@@ -287,7 +291,7 @@ fun ThingsHomeScreen(viewModel: ThingsViewModel = hiltViewModel()) {
         floatingActionButton = {
             // Скрывать FAB при открытии inline-редактора, FAB-меню, диалогов, окна быстрой задачи (QuickAddDialog) или режима мультивыбора
             AnimatedVisibility(
-                visible = fabDragController.isDragging ||
+                visible = fabDragController.isDragging || fabDragController.isSettling ||
                     (inlineExpandedTaskId == null && !showFabMenu && !isListDialogActive && !showAddDialog && !isSelectionMode),
                 enter = slideInVertically(
                     initialOffsetY = { it * 2 },
@@ -379,6 +383,7 @@ fun ThingsHomeScreen(viewModel: ThingsViewModel = hiltViewModel()) {
                         showAddDialog = true
                     },
                     containerColor = ThingsBlue,
+                    isEditorOpen = { inlineExpandedTaskId != null },
                     // Отступы 16 dp от краёв (Material Design 3) задаёт слот Scaffold
                     modifier = Modifier
                         .size(56.dp)

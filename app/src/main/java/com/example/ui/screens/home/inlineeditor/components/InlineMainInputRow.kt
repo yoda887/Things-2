@@ -35,6 +35,7 @@ import com.example.ui.theme.dimens
 import com.example.ui.theme.taskEditorNotes
 import com.example.ui.components.HideTextSelectionHandles
 import androidx.compose.ui.graphics.Brush
+import androidx.compose.ui.focus.focusRequester
 
 /**
  * @param showCursor при `false` курсор и его маркер не рисуются, но поле остаётся в фокусе.
@@ -55,7 +56,9 @@ fun InlineMainInputRow(
     subtitleText: String? = null,
     showCursor: Boolean = true,
     // Под заметкой показана панель чек-листа — поле заметки в одну строку с зазором до неё, как в Things 3
-    checklistBelow: Boolean = false
+    checklistBelow: Boolean = false,
+    // Новая задача: курсор встаёт в название, клавиатура выезжает вместе с раскрытием редактора
+    autoFocusTitle: Boolean = false
 ) {
     HideTextSelectionHandles(hidden = !showCursor) {
         InlineMainInputRowContent(
@@ -68,7 +71,8 @@ fun InlineMainInputRow(
             expansionProgress = expansionProgress,
             subtitleText = subtitleText,
             cursorBrush = SolidColor(if (showCursor) ThingsBlue else Color.Unspecified),
-            checklistBelow = checklistBelow
+            checklistBelow = checklistBelow,
+            autoFocusTitle = autoFocusTitle
         )
     }
 }
@@ -84,8 +88,13 @@ private fun InlineMainInputRowContent(
     expansionProgress: () -> Float,
     subtitleText: String?,
     cursorBrush: Brush,
-    checklistBelow: Boolean
+    checklistBelow: Boolean,
+    autoFocusTitle: Boolean
 ) {
+    val titleFocusRequester = androidx.compose.runtime.remember { androidx.compose.ui.focus.FocusRequester() }
+    androidx.compose.runtime.LaunchedEffect(Unit) {
+        if (autoFocusTitle) titleFocusRequester.requestFocus()
+    }
     val textPrimaryColor = Color(0xFF1C1C1E) // blackish font
     val textSecondaryColor = com.example.ui.theme.ThingsTextNotesLight
 
@@ -143,6 +152,7 @@ private fun InlineMainInputRowContent(
                     cursorBrush = cursorBrush,
                     modifier = Modifier
                         .fillMaxWidth()
+                        .focusRequester(titleFocusRequester)
                         .testTag("task_title_input"),
                     decorationBox = { innerTextField ->
                         if (title.isEmpty()) {

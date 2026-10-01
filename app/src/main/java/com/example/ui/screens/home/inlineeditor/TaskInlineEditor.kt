@@ -106,6 +106,8 @@ fun ThingsTaskInlineEditor(
     onUpdateTagsOrder: (List<Tag>) -> Unit = {},
     isDeletedExternally: () -> Boolean = { false },
     isExpanded: Boolean = true,
+    // Новая задача, созданная перетаскиванием «+»: фокус в названии и клавиатура сразу
+    autoFocusTitle: Boolean = false,
     // Касания списка вне редактора: по ним маркеры курсора прячутся ещё до начала сворачивания
     outsideTouch: EditorOutsideTouch? = null,
     // Прогресс раскрытия (0..1) — функцией, а не числом: его читают только лямбды раскладки
@@ -337,6 +339,7 @@ fun ThingsTaskInlineEditor(
                     subtitleText = subtitleText,
                     showCursor = isExpanded && outsideTouch?.hideHandles != true,
                     checklistBelow = showChecklistHelper || checklist.isNotEmpty(),
+                    autoFocusTitle = autoFocusTitle,
                     onCheckboxClick = {
                         val newCompleted = !isCompleted
                         isCompleted = newCompleted

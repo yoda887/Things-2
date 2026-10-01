@@ -25,6 +25,12 @@ import androidx.compose.animation.core.spring
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.offset
 import androidx.compose.ui.layout.positionInRoot
+import androidx.compose.animation.core.animate
+import androidx.compose.animation.core.tween
+import androidx.compose.animation.core.FastOutSlowInEasing
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.animation.core.LinearEasing
+import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -65,9 +71,12 @@ fun DraggableAddButton(
     onClick: () -> Unit,
     onDropToInbox: () -> Unit,
     containerColor: Color,
+    // Открыт ли редактор задачи: пока он открыт, слот Scaffold убирает кнопку, и она не должна мелькнуть в углу
+    isEditorOpen: () -> Boolean = { false },
     modifier: Modifier = Modifier
 ) {
     val view = LocalView.current
+    val currentIsEditorOpen by rememberUpdatedState(isEditorOpen)
     // Место кнопки без её сдвига за пальцем — от его центра считается сдвиг
     var homeCoordinates by remember { mutableStateOf<LayoutCoordinates?>(null) }
     // Кнопка со сдвигом — в этих координатах приходят касания
@@ -77,10 +86,20 @@ fun DraggableAddButton(
     val currentCanDrag by rememberUpdatedState(canDrag)
     // Кнопка «выпрыгивает» из покоя: пружина с отскоком — увеличение и подъём (тень) чуть перелетают цель
     val lift by animateFloatAsState(
-        targetValue = if (controller.isDragging) 1f else 0f,
+        targetValue = if (controller.isDragging || controller.isSettling) 1f else 0f,
         animationSpec = spring(dampingRatio = 0.42f, stiffness = Spring.StiffnessMediumLow),
         label = "fabLift"
     )
+
+    // Приземление: кнопка летит в центр промежутка и уменьшается до нуля
+    LaunchedEffect(controller.settleToken) {
+        if (controller.settleToken == 0) return@LaunchedEffect
+        animate(0f, 1f, animationSpec = tween(durationMillis = 180, easing = LinearEasing)) { value, _ ->
+            controller.settleProgress = value
+        }
+        // Снимается, когда редактор закрывается (HomeScreen) или кнопка уходит из композиции
+        controller.endSettle(hideUntilEditorCloses = currentIsEditorOpen())
+    }
 
     // Кружок отмены лежит под кнопкой в том же слоте и по центру: пока кнопка стоит на месте, он закрыт ею,
     // а когда она уезжает за пальцем, открывается строго на её месте
@@ -115,6 +134,10 @@ private fun BoxScope.FabBody(
     currentCanDrag: () -> Boolean,
 ) {
     val view = LocalView.current
+    // Кнопка ушла из композиции (слот убрал её после сброса) — снова можно показывать
+    DisposableEffect(Unit) {
+        onDispose { controller.hiddenAfterSettle = false }
+    }
     Box(
         modifier = Modifier
             .fillMaxSize()
@@ -127,13 +150,27 @@ private fun BoxScope.FabBody(
             .graphicsLayer {
                 val coords = homeCoordinates()
                 val l = lift()
-                if (controller.isDragging && coords != null && controller.pointer != Offset.Unspecified) {
+                var settleScale = 1f
+                if (controller.isSettling && coords != null) {
+                    val t = controller.settleProgress
+                    // Полёт — быстрый старт и мягкая посадка; уменьшение ровное по времени, чтобы
+                    // кнопка успевала долететь заметной, а не исчезала в первые кадры
+                    val p = FastOutSlowInEasing.transform((t * 1.4f).coerceAtMost(1f))
+                    val center = coords.boundsInRoot().center
+                    val target = controller.settleFrom + (controller.settleTo - controller.settleFrom) * p
+                    translationX = target.x - center.x
+                    translationY = target.y - center.y
+                    settleScale = (1f - t).coerceAtLeast(0f)
+                    alpha = (1f - t * t * t).coerceIn(0f, 1f)
+                } else if (controller.hiddenAfterSettle) {
+                    alpha = 0f
+                } else if (controller.isDragging && coords != null && controller.pointer != Offset.Unspecified) {
                     // Кнопка держится за ту точку, за которую её взяли, а не прыгает центром под палец
                     val center = coords.boundsInRoot().center
                     translationX = controller.pointer.x - controller.grabOffset.x - center.x
                     translationY = controller.pointer.y - controller.grabOffset.y - center.y
                 }
-                val scale = 1f + 0.22f * l
+                val scale = (1f + 0.22f * l) * settleScale
                 scaleX = scale
                 scaleY = scale
                 // Подъём: тень растёт вместе с увеличением; на отскоке не уходит в минус

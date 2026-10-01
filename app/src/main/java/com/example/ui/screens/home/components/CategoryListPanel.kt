@@ -7,6 +7,8 @@ import com.example.ui.components.fabdrag.LocalFabDragController
 import com.example.ui.screens.home.inlineeditor.utils.EditorOutsideTouch
 import com.example.ui.screens.home.inlineeditor.utils.observeTouchesOutsideEditor
 
+import kotlinx.coroutines.flow.first
+import androidx.compose.runtime.snapshotFlow
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.delay
 
@@ -323,7 +325,25 @@ fun ThingsCategoryListPanel(
     val fabDefaultGapPx = with(androidx.compose.ui.platform.LocalDensity.current) { 44.dp.toPx() }
     var listCoordinates by remember { mutableStateOf<androidx.compose.ui.layout.LayoutCoordinates?>(null) }
     var fabSlot by remember { mutableStateOf<FabSlot?>(null) }
+    // Раздвигание после сброса: промежуток вырастает до высоты раскрытой задачи, и только потом создаётся задача
+    val gapExtra = remember { androidx.compose.animation.core.Animatable(0f) }
+    var pendingFabTaskId by remember { mutableStateOf<String?>(null) }
+    val spreadScope = rememberCoroutineScope()
     val currentFlattened by rememberUpdatedState(flattened)
+    // Промежуток перешёл на другое место — лёгкий отклик, как при обмене задач в обычном перетаскивании
+    val fabHapticView = androidx.compose.ui.platform.LocalView.current
+    var lastFabSlot by remember { mutableStateOf<FabSlot?>(null) }
+    LaunchedEffect(fabSlot) {
+        val previous = lastFabSlot
+        lastFabSlot = fabSlot
+        if (previous != null && fabSlot != null && previous != fabSlot && fabDrag?.isDragging == true) {
+            fabHapticView.performHapticFeedback(android.view.HapticFeedbackConstants.CLOCK_TICK)
+        }
+    }
+    // Как только новая строка появилась в списке, промежуток убирается в том же кадре — место не удваивается
+    val shownFabSlot = fabSlot?.takeIf { slot ->
+        pendingFabTaskId == null || localTasksList.none { it.item.id == pendingFabTaskId }
+    }
     val currentLocalTasks by rememberUpdatedState(localTasksList)
 
     /** Новая задача с полями экрана — как при нажатии на «+» */
@@ -347,10 +367,28 @@ fun ThingsCategoryListPanel(
     /** Сброс кнопки «+» на промежуток: задача на его месте, у левого края проекта — заголовок */
     fun dropFab(): Boolean {
         val slot = fabSlot ?: return false
-        fabSlot = null
+        // Центр промежутка после раздвигания — туда приземлится кнопка; считаем, пока промежуток ещё на месте.
+        // Задача раскрывается на высоту [FabDragController.expandedRowHeightPx], поэтому центр — на её половине
+        val gapInfoNow = lazyListState.layoutInfo.visibleItemsInfo.firstOrNull { it.key == FabGapItem.KEY }
+        val finalGapHeight = if (slot.asHeading) (gapInfoNow?.size ?: 0).toFloat()
+        else maxOf(fabDrag?.expandedRowHeightPx ?: 0f, (gapInfoNow?.size ?: 0).toFloat())
+        fabDrag?.dropAnchor = listCoordinates?.let { coords ->
+            gapInfoNow?.let { gap ->
+                val info = lazyListState.layoutInfo
+                val origin = coords.positionInRoot()
+                androidx.compose.ui.geometry.Offset(
+                    origin.x + coords.size.width / 2f,
+                    // Кнопка только уходит в горизонтальный центр: вертикально — в верхнюю часть будущей карточки,
+                    // то есть в центр промежутка до его раздвигания
+                    origin.y + (gap.offset - info.viewportStartOffset) + gap.size / 2f
+                )
+            }
+        }
+        val gapHeightNow = (gapInfoNow?.size ?: 0).toFloat()
         val flat = currentFlattened
         val currentProject = project
         if (slot.asHeading && currentProject != null) {
+            fabSlot = null
             val placement = FabInsertion.headingPlacement(flat, slot.index)
             val heading = Item(type = Item.TYPE_HEADING, projectId = currentProject.id, sortOrder = -1)
             val headings = FabInsertion.headingsWith(localHeadings, heading, placement.headingIndex)
@@ -379,9 +417,9 @@ fun ThingsCategoryListPanel(
             }
             val insertAt = placement.taskIndex.coerceIn(0, tasks.size)
             val freeOrder = FabInsertion.freeSortOrder(tasks.map { it.item.sortOrder }, insertAt)
-            if (freeOrder != null) {
+            val commit: () -> Unit = if (freeOrder != null) {
                 // Место между соседями есть — остальные задачи не трогаем
-                onEvent(ThingsCategoryListEvent.CreateTaskAt(newTask.copy(sortOrder = freeOrder), emptyList()))
+                { onEvent(ThingsCategoryListEvent.CreateTaskAt(newTask.copy(sortOrder = freeOrder), emptyList())) }
             } else {
                 val list = tasks.map { it.item }.toMutableList()
                 list.add(insertAt, newTask)
@@ -389,10 +427,39 @@ fun ThingsCategoryListPanel(
                 val created = renumbered.first { it.id == newTask.id }
                 val previousOrder = tasks.associate { it.item.id to it.item.sortOrder }
                 val others = renumbered.filter { it.id != newTask.id && previousOrder[it.id] != it.sortOrder }
-                onEvent(ThingsCategoryListEvent.CreateTaskAt(created, others))
+                val emit: () -> Unit = { onEvent(ThingsCategoryListEvent.CreateTaskAt(created, others)) }
+                emit
+            }
+            // Порядок: 1) задачи сверху и снизу раздвигаются на высоту раскрытой задачи, 2) в центре
+            // освободившегося места раскрывается новая задача (см. AnimatedTaskItem)
+            pendingFabTaskId = newTask.id
+            spreadScope.launch {
+                gapExtra.snapTo(0f)
+                gapExtra.animateTo(
+                    (finalGapHeight - gapHeightNow).coerceAtLeast(0f),
+                    androidx.compose.animation.core.tween(FAB_SPREAD_MS, easing = androidx.compose.animation.core.FastOutSlowInEasing)
+                )
+                fabDrag?.freshTaskId = newTask.id
+                commit()
+                // Промежуток уйдёт в том же кадре, в котором в списке появится новая строка
+                kotlinx.coroutines.withTimeoutOrNull(800) {
+                    snapshotFlow { localTasksList.any { it.item.id == newTask.id } }.first { it }
+                }
+                withFrameNanos { }
+                fabSlot = null
+                pendingFabTaskId = null
+                gapExtra.snapTo(0f)
             }
         }
         return true
+    }
+
+    // Высота раскрытой строки — по ней промежуток раздвигается в следующий раз точно
+    LaunchedEffect(inlineExpandedTaskId) {
+        val id = inlineExpandedTaskId ?: return@LaunchedEffect
+        kotlinx.coroutines.delay(500)
+        lazyListState.layoutInfo.visibleItemsInfo.firstOrNull { it.key == id }?.size
+            ?.takeIf { it > 0 }?.let { fabDrag?.expandedRowHeightPx = it.toFloat() }
     }
 
     if (fabDrag != null && acceptsFabDrop) {
@@ -407,7 +474,8 @@ fun ThingsCategoryListPanel(
     LaunchedEffect(fabDrag?.isDragging, acceptsFabDrop) {
         val controller = fabDrag ?: return@LaunchedEffect
         if (!controller.isDragging || !acceptsFabDrop) {
-            fabSlot = null
+            // Пока промежуток раздвигается под новую задачу, он остаётся на месте
+            if (pendingFabTaskId == null) fabSlot = null
             return@LaunchedEffect
         }
         var autoScrollArmed = false
@@ -415,10 +483,9 @@ fun ThingsCategoryListPanel(
             withFrameNanos { }
             val coords = listCoordinates ?: continue
             val pointer = controller.pointer
-            if (controller.isOverAction || pointer == androidx.compose.ui.geometry.Offset.Unspecified || !coords.isAttached) {
-                fabSlot = null
-                continue
-            }
+            // Над кнопкой отмены или вне списка промежуток остаётся на месте: просто отпустить здесь — не создавать
+            if (pointer == androidx.compose.ui.geometry.Offset.Unspecified || !coords.isAttached) continue
+            if (controller.isOverAction && fabSlot != null) continue
             val origin = coords.positionInRoot()
             val x = pointer.x - origin.x
             // Место считается по центру кнопки, а не по пальцу: кнопка держится за точку захвата
@@ -457,7 +524,7 @@ fun ThingsCategoryListPanel(
             }
             if (delta != 0f) lazyListState.scrollBy(delta)
         }
-        fabSlot = null
+        if (pendingFabTaskId == null) fabSlot = null
     }
 
     val density = androidx.compose.ui.platform.LocalDensity.current
@@ -818,14 +885,14 @@ fun ThingsCategoryListPanel(
                         )
                     }
                 }
-            } else if (!hasTasks && screen != ActiveScreen.SEARCH && fabSlot == null) {
+            } else if (!hasTasks && screen != ActiveScreen.SEARCH && shownFabSlot == null) {
                 item(key = TaskListKeys.EMPTY_STATE) {
                     Box(modifier = Modifier.padding(horizontal = 8.dp)) {
                         EmptyStateView(textSecondaryColor = textSecondaryColor)
                     }
                 }
             } else {
-                items(FabInsertion.withGap(flattened, fabSlot), key = { item ->
+                items(FabInsertion.withGap(flattened, shownFabSlot), key = { item ->
                     when (item) {
                         is FabGapItem -> item.key
                         is ItemWithChecklist -> item.item.id
@@ -887,7 +954,9 @@ fun ThingsCategoryListPanel(
                                     Modifier
                                 } else {
                                     Modifier.animateItem(
-                                        fadeInSpec = androidx.compose.animation.core.tween(300),
+                                        // Новая задача после сброса «+» раскрывается из центра сама (AnimatedTaskItem)
+                                        fadeInSpec = if (fabDrag?.freshTaskId == item.item.id) null
+                                        else androidx.compose.animation.core.tween(300),
                                         fadeOutSpec = androidx.compose.animation.core.tween(300),
                                         placementSpec = placementSpec
                                     )
@@ -977,7 +1046,9 @@ fun ThingsCategoryListPanel(
                         is FabGapItem -> {
                             FabGapRow(
                                 asHeading = item.asHeading,
-                                modifier = Modifier.animateItem(placementSpec = placementSpec)
+                                extraPx = { gapExtra.value },
+                                // Строка новой задачи встаёт на это место сразу — промежуток не растворяется
+                                modifier = Modifier.animateItem(placementSpec = placementSpec, fadeOutSpec = null)
                             )
                         }
                         is ProjectHeadingItem -> {
@@ -1550,6 +1621,9 @@ private val FAB_DROP_SCREENS = setOf(
 /** Доля ширины списка у левого края, где на экране проекта промежуток превращается в «новый заголовок» */
 private const val FAB_HEADING_EDGE_FRACTION = 0.2f
 
+/** Длительность раздвигания промежутка под новую задачу, мс */
+private const val FAB_SPREAD_MS = 100
+
 /** Автопрокрутка, пока тянут «+»: зона у краёв и наибольший шаг за кадр */
 private const val FAB_SCROLL_ZONE_FRACTION = 0.12f
 private const val FAB_SCROLL_MAX_STEP = 28f
@@ -1567,7 +1641,7 @@ private fun listItemKey(element: Any): Any? = when (element) {
 
 /** Промежуток на месте пальца: серая плашка задачи или пунктир «NEW HEADING» */
 @Composable
-private fun FabGapRow(asHeading: Boolean, modifier: Modifier = Modifier) {
+private fun FabGapRow(asHeading: Boolean, extraPx: () -> Float, modifier: Modifier = Modifier) {
     if (asHeading) {
         Box(
             modifier = modifier
@@ -1597,13 +1671,32 @@ private fun FabGapRow(asHeading: Boolean, modifier: Modifier = Modifier) {
             )
         }
     } else {
+        val density = androidx.compose.ui.platform.LocalDensity.current
+        val baseHeightPx = with(density) { 44.dp.roundToPx() }
         Box(
             modifier = modifier
                 .fillMaxWidth()
-                .height(44.dp)
-                .padding(horizontal = 4.dp, vertical = 4.dp)
-                .background(Color(0xFFE9EAEE), RoundedCornerShape(10.dp))
-        )
+                // Высота читается только при раскладке: раздвигание не пересобирает список
+                .layout { measurable, constraints ->
+                    val height = baseHeightPx + extraPx().toInt()
+                    val placeable = measurable.measure(constraints.copy(minHeight = height, maxHeight = height))
+                    layout(placeable.width, height) { placeable.place(0, 0) }
+                },
+            contentAlignment = Alignment.Center
+        ) {
+            // Та же серая плашка, что остаётся на месте задачи при обычном перетаскивании
+            // (см. AnimatedTaskItem): тот же цвет, полупрозрачность и скругление
+            val isDark = androidx.compose.foundation.isSystemInDarkTheme()
+            val plateColor = if (isDark) Color(0xFF2C2D32) else Color(0xFFE5E6EB)
+            Box(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(44.dp)
+                    // Плашка тает по мере раздвигания: на её месте раскроется задача
+                    .graphicsLayer { alpha = 0.5f * (1f - extraPx() / (baseHeightPx * 3f)).coerceIn(0f, 1f) }
+                    .background(plateColor, RoundedCornerShape(MaterialTheme.dimens.taskCollapsedCornerRadius))
+            )
+        }
     }
 }
 

@@ -2,6 +2,8 @@ package com.example.ui.components.fabdrag
 
 import androidx.compose.runtime.Stable
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableFloatStateOf
+import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
 import androidx.compose.runtime.staticCompositionLocalOf
@@ -43,7 +45,48 @@ class FabDragController {
     var grabOffset by mutableStateOf(Offset.Zero)
         private set
 
+    /** Кнопка летит в центр промежутка и уменьшается до нуля (после успешного сброса на список) */
+    var isSettling by mutableStateOf(false)
+        private set
+
+    /** Откуда (центр кнопки в момент отпускания) и куда (центр промежутка) летит кнопка, в координатах корня */
+    var settleFrom by mutableStateOf(Offset.Zero)
+        private set
+    var settleTo by mutableStateOf(Offset.Zero)
+        private set
+
+    /** Время приземления от 0 до 1 (линейное); положение и размер выводятся из него отдельно */
+    var settleProgress by mutableFloatStateOf(0f)
+
+    /**
+     * Кнопка уже исчезла при приземлении. Пока слот Scaffold ещё убирает её (экран открывает редактор,
+     * и кнопка уезжает вниз), она не должна вернуться в угол на эти кадры. Снимается, когда кнопка
+     * уходит из композиции, и на всякий случай — через секунду.
+     */
+    var hiddenAfterSettle by mutableStateOf(false)
+
+    /**
+     * Высота строки раскрытой задачи в списке, px, — последняя замеренная. Новая задача после сброса
+     * раскрывается сразу на всю высоту, и промежуток заранее раздвигается ровно на неё.
+     */
+    var expandedRowHeightPx by mutableFloatStateOf(DEFAULT_EXPANDED_ROW_HEIGHT_PX)
+
+    /** Задача, только что созданная сбросом кнопки: её строка раскрывается из центра промежутка. */
+    var freshTaskId by mutableStateOf<String?>(null)
+
+    /** Растёт на каждое приземление — по нему анимация запускается заново */
+    var settleToken by mutableIntStateOf(0)
+        private set
+
+    /**
+     * Центр промежутка, на который кнопка приземлится. Экран выставляет его в [FabDropTarget.onFabDrop],
+     * пока промежуток ещё на месте; null — приземляться некуда, кнопка просто возвращается в угол.
+     */
+    var dropAnchor: Offset? = null
+
     fun start(position: Offset, grab: Offset = Offset.Zero) {
+        isSettling = false
+        hiddenAfterSettle = false
         pointer = position
         grabOffset = grab
         isDragging = true
@@ -58,9 +101,30 @@ class FabDragController {
      * @return true, если экран создал объект на месте пальца
      */
     fun dropOnList(): Boolean {
+        dropAnchor = null
         val handled = !isOverAction && dropTarget?.onFabDrop() == true
-        finish()
+        val anchor = dropAnchor
+        dropAnchor = null
+        if (handled && anchor != null && pointer != Offset.Unspecified) {
+            // Кнопка не возвращается в угол, а влетает в место новой строки и исчезает
+            settleFrom = pointer - grabOffset
+            settleTo = anchor
+            settleProgress = 0f
+            settleToken++
+            isSettling = true
+            isDragging = false
+            isOverAction = false
+        } else {
+            finish()
+        }
         return handled
+    }
+
+    /** Приземление закончено: кнопка исчезла, подготовка к следующему жесту. */
+    fun endSettle(hideUntilEditorCloses: Boolean) {
+        hiddenAfterSettle = hideUntilEditorCloses
+        isSettling = false
+        pointer = Offset.Unspecified
     }
 
     fun finish() {
@@ -77,3 +141,6 @@ fun interface FabDropTarget {
 }
 
 val LocalFabDragController = staticCompositionLocalOf<FabDragController?> { null }
+
+/** Высота раскрытой строки до первого замера, px (по ней первый раз раздвигается промежуток) */
+private const val DEFAULT_EXPANDED_ROW_HEIGHT_PX = 560f

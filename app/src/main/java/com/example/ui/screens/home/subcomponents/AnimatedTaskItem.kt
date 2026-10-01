@@ -34,6 +34,7 @@ import androidx.compose.ui.layout.onGloballyPositioned
 import androidx.compose.ui.layout.positionInRoot
 import androidx.compose.ui.layout.findRootCoordinates
 import androidx.compose.foundation.layout.WindowInsets
+import androidx.compose.foundation.layout.ime
 import androidx.compose.foundation.layout.navigationBars
 import androidx.compose.foundation.layout.statusBars
 import androidx.compose.ui.unit.dp
@@ -149,6 +150,28 @@ fun AnimatedTaskItem(
     val isExpanded = inlineExpandedTaskId == task.id
     val shouldDim = inlineExpandedTaskId != null && !isExpanded
 
+    // Новая задача после сброса кнопки «+»: место под неё уже раздвинуто, и она раскрывается
+    // из центра этого места. Строка сразу полной высоты — соседи второй раз не двигаются.
+    val fabController = com.example.ui.components.fabdrag.LocalFabDragController.current
+    val isFreshFromFab = fabController?.freshTaskId == task.id
+    // Решается один раз, когда строка появилась: freshTaskId сбросится после раскрытия
+    val focusTitleOnOpen = remember(task.id) { isFreshFromFab }
+    val reveal = remember(task.id) {
+        androidx.compose.animation.core.Animatable(if (isFreshFromFab) 0f else 1f)
+    }
+    LaunchedEffect(task.id, isFreshFromFab) {
+        if (isFreshFromFab && reveal.value < 1f) {
+            reveal.animateTo(
+                1f,
+                androidx.compose.animation.core.tween(
+                    durationMillis = 160,
+                    easing = androidx.compose.animation.core.FastOutSlowInEasing
+                )
+            )
+            if (fabController?.freshTaskId == task.id) fabController.freshTaskId = null
+        }
+    }
+
     // Прогресс раскрытия читается только в лямбдах раскладки и отрисовки (layout, graphicsLayer,
     // drawBehind) и в snapshotFlow: иначе строка и весь встроенный редактор пересобирались бы
     // на каждом кадре анимации.
@@ -182,6 +205,8 @@ fun AnimatedTaskItem(
     // Раскрытая задача должна помещаться между тулбаром и плашкой действий внизу экрана.
     // Геометрию пишет раскладка карточки, читает только цикл ниже — без рекомпозиций.
     val cardGeometry = remember(task.id) { ExpandedCardGeometry() }
+    // На сколько список уже подтянут ради этой задачи (его пишут раскрытие и выезд клавиатуры)
+    val liftHolder = remember(task.id) { LiftHolder() }
     // Центр строки на экране — точка, из которой вырастает диалог When при свайпе вправо.
     // Держатель, а не состояние: его пишет раскладка и читает обработчик жеста, рекомпозиция не нужна.
     val rowCenter = remember(task.id) { RowCenter() }
@@ -192,17 +217,68 @@ fun AnimatedTaskItem(
             EXPANDED_BOTTOM_GAP).toPx()
     }
 
+    val imeInsets = WindowInsets.ime
+    LaunchedEffect(focusTitleOnOpen) {
+        if (!focusTitleOnOpen) return@LaunchedEffect
+        // Новая задача появилась уже раскрытой, подтягивать по прогрессу нечего. Зато выезжает клавиатура:
+        // список едет вместе с ней, чтобы карточка осталась над клавиатурой, а не ушла под неё.
+        val gapPx = with(density) { 12.dp.toPx() }
+        val startNanos = withFrameNanos { it }
+        // Тот же ход, что у обычного раскрытия задачи по тапу: ту же длительность и кривую
+        // имеет подтяжка списка. Время идёт от первого кадра с замеренной карточкой.
+        // Чуть быстрее обычного раскрытия: здесь всё остальное (раздвигание, раскрытие карточки) тоже ускорено
+        val durationNs = 220_000_000L
+        var timelineStart = -1L
+        var prevProgress = 0f
+        while (currentIsExpanded) {
+            val now = withFrameNanos { it }
+            if (now - startNanos > 1_800_000_000L) break
+            val g = cardGeometry
+            if (!g.measured || g.editorFullHeight <= 0 || g.rootHeight <= 0) continue
+            if (timelineStart < 0L) timelineStart = now
+            val progress = FastOutSlowInEasing.transform(((now - timelineStart).toFloat() / durationNs).coerceIn(0f, 1f))
+            val imeTop = g.rootHeight - imeInsets.getBottom(density)
+            val limit = minOf(imeTop.toFloat(), g.rootHeight - bottomReservePx)
+            val overflow = g.top + g.editorFullHeight - (limit - gapPx)
+            val room = g.top - topLimitPx
+            val pending = liftHolder.pendingComp
+            // Подтяжка списка складывается из отложенной компенсации отступов и подъёма над клавиатурой;
+            // компенсация сама сдвинет карточку вверх, поэтому подъём считается уже за её вычетом
+            val remaining = pending + minOf(overflow - pending, room - pending).coerceAtLeast(0f)
+            val span = 1f - prevProgress
+            // Остаток раскладывается на остаток хода — одно движение, как при обычном раскрытии;
+            // клавиатура растёт позже начала хода, поэтому остаток может прибавляться по пути
+            val step = if (span <= 0f) remaining.coerceAtMost(48f)
+            else remaining * ((progress - prevProgress) / span).coerceIn(0f, 1f)
+            prevProgress = progress
+            if (step > 0f) {
+                lazyListState.dispatchRawDelta(step)
+                val compPart = minOf(step, pending)
+                liftHolder.pendingComp = pending - compPart
+                liftHolder.liftPx += step - compPart
+                liftHolder.liftAtCollapseStart = liftHolder.liftPx
+            }
+        }
+    }
+
     LaunchedEffect(lazyListState, verticalGapLimitPx) {
         // Сколько список уже подтянут ради этой задачи, и сколько было к началу сворачивания
-        var liftPx = 0f
-        var liftAtCollapseStart = 0f
+        var liftPx by liftHolder::liftPx
+        var liftAtCollapseStart by liftHolder::liftAtCollapseStart
         // Прогресс предыдущего кадра: по нему считается, какую часть остатка проехать сейчас
         var prevProgress = 0f
         snapshotFlow { expansionProgressState.value }.collect { progress ->
             val currentPaddingPx = verticalGapLimitPx * progress
             val delta = currentPaddingPx - prevPaddingPx
             if (delta != 0f) {
-                lazyListState.dispatchRawDelta(delta)
+                if (focusTitleOnOpen && !liftHolder.compDeferred && prevPaddingPx == 0f && delta > 0f) {
+                    // Новая задача сразу полной высоты: компенсация отступов не должна выполняться рывком
+                    // в первом кадре — её плавно отрабатывает пружина вместе с подъёмом над клавиатурой
+                    liftHolder.compDeferred = true
+                    liftHolder.pendingComp = delta
+                } else {
+                    lazyListState.dispatchRawDelta(delta)
+                }
             }
             prevPaddingPx = currentPaddingPx
 
@@ -213,7 +289,8 @@ fun AnimatedTaskItem(
                 // заканчивается вместе с раскрытием. Задача, которая помещается целиком, не сдвигается
                 // вовсе; верх карточки не поднимается выше тулбара, даже если ради этого низ не влезет.
                 val g = cardGeometry
-                if (g.measured && g.editorFullHeight > 0 && g.rootHeight > 0) {
+                // У новой задачи, созданной перетаскиванием «+», подъём ведёт пружина выше (вместе с клавиатурой)
+                if (!focusTitleOnOpen && g.measured && g.editorFullHeight > 0 && g.rootHeight > 0) {
                     // Замеренная высота редактора — с отступами этого кадра: они тоже едут по прогрессу
                     // (progressPadding), поэтому к концу раскрытия карточка станет выше на их остаток
                     val finalHeight = g.editorFullHeight +
@@ -377,9 +454,10 @@ fun AnimatedTaskItem(
                 .graphicsLayer {
                     translationX = if (isDragTask) dragDropState.dragAccumulatedX else 0f
                     translationY = if (isDragTask) dragDropState.visualDragOffsetY(task.id) else 0f
-                    scaleX = dragScale
-                    scaleY = dragScale
-                    alpha = dimAlpha
+                    val r = reveal.value
+                    scaleX = dragScale * (0.3f + 0.7f * r)
+                    scaleY = dragScale * r
+                    alpha = dimAlpha * (r * 3f).coerceAtMost(1f)
                 }
                 .progressPadding(
                     progress = expansionProgress,
@@ -447,6 +525,7 @@ fun AnimatedTaskItem(
                         onUpdateTagsOrder = { tags -> onEvent(ThingsCategoryListEvent.UpdateTagsOrder(tags)) },
                         isDeletedExternally = { deletedTaskIds.contains(task.id) },
                         isExpanded = isExpanded,
+                        autoFocusTitle = focusTitleOnOpen,
                         outsideTouch = editorOutsideTouch,
                         expansionProgress = expansionProgress,
                         onFullHeightMeasured = { cardGeometry.editorFullHeight = it },
@@ -724,6 +803,14 @@ private val EXPANDED_BOTTOM_GAP = 12.dp
 /** Смещение центра строки от центра экрана — точка, из которой вырастает диалог When */
 private class RowCenter {
     var value: Offset? = null
+}
+
+private class LiftHolder {
+    var liftPx = 0f
+    var liftAtCollapseStart = 0f
+    // Компенсация отступов новой задачи, которую ещё предстоит плавно отработать
+    var pendingComp = 0f
+    var compDeferred = false
 }
 
 private class ExpandedCardGeometry {
