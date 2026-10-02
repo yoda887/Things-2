@@ -1,5 +1,11 @@
 package com.example.ui.screens.home.inlineeditor.dialogs
 
+import com.example.ui.theme.ThingsDialogBackground
+import com.example.ui.theme.ThingsDialogButton
+import com.example.ui.theme.ThingsDialogRowSelected
+import com.example.ui.theme.ThingsDividerDark
+import com.example.ui.theme.ThingsMetaGrey
+import com.example.ui.theme.ThingsTextPrimaryDark
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
@@ -42,10 +48,10 @@ import androidx.compose.material.icons.outlined.Layers
 import com.example.ui.theme.dimens
 
 // Dialog Color Constants to match ThingsTagDialog perfectly
-private val DialogBackgroundColor = Color(0xFF22242C)
-private val DarkButtonBgColor = Color(0xFF2C2E38)
-private val DividerColor = Color(0xFF28292B)
-private val TextMutedColor = Color(0xFF8E8E93)
+private val DialogBackgroundColor = ThingsDialogBackground
+private val DarkButtonBgColor = ThingsDialogButton
+private val DividerColor = ThingsDividerDark
+private val TextMutedColor = ThingsMetaGrey
 
 // Custom area icon adapted from vector drawable
 private val CustomAreaIcon: ImageVector by lazy {
@@ -333,7 +339,7 @@ private fun MoveDialogRow(
             .fillMaxWidth()
             .padding(start = indentation)
             .clip(RoundedCornerShape(8.dp))
-            .background(if (isSelected) Color(0xFF1E2027) else Color.Transparent)
+            .background(if (isSelected) ThingsDialogRowSelected else Color.Transparent)
             .clickable { onClick() }
             .padding(horizontal = 12.dp, vertical = 10.dp),
         verticalAlignment = Alignment.CenterVertically
@@ -361,7 +367,7 @@ private fun MoveDialogRow(
         }
         Text(
             text = title,
-            color = if (isAreaHeader) Color.White else Color(0xFFECECED),
+            color = if (isAreaHeader) Color.White else ThingsTextPrimaryDark,
             fontWeight = if (isAreaHeader) FontWeight.Bold else FontWeight.Normal,
             fontSize = 18.sp,
             maxLines = 1,

@@ -1,5 +1,8 @@
 package com.example.ui.screens.home.inlineeditor.components
 
+import com.example.ui.theme.ThingsCheckboxBorder
+import com.example.ui.theme.ThingsInk
+import com.example.ui.theme.ThingsMetaGrey
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
@@ -99,7 +102,7 @@ private fun InlineMainInputRowContent(
     androidx.compose.runtime.LaunchedEffect(Unit) {
         if (autoFocusTitle) titleFocusRequester.requestFocus()
     }
-    val textPrimaryColor = Color(0xFF1C1C1E) // blackish font
+    val textPrimaryColor = ThingsInk // blackish font
     val textSecondaryColor = com.example.ui.theme.ThingsTextNotesLight
 
     // Размер шрифта в заголовке статически равен MaterialTheme.typography.titleMedium.fontSize
@@ -131,7 +134,7 @@ private fun InlineMainInputRowContent(
             checked = isCompleted,
             onCheckedChange = { onCheckboxClick() },
             size = MaterialTheme.dimens.mainCheckboxSize,
-            uncheckedColor = Color(0xFFC7C7CC),
+            uncheckedColor = ThingsCheckboxBorder,
             modifier = Modifier.padding(end = titleSpacing, top = 2.dp)
         )
 
@@ -181,7 +184,7 @@ private fun InlineMainInputRowContent(
                         text = subtitleText,
                         style = TextStyle(
                             fontSize = subFontSize,
-                            color = Color(0xFF8E8E93),
+                            color = ThingsMetaGrey,
                             fontWeight = FontWeight.Normal
                         ),
                         maxLines = 1,

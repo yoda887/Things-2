@@ -1,5 +1,6 @@
 package com.example.ui.components
 
+import com.example.ui.theme.ThingsAreaIconStroke
 import androidx.compose.animation.core.*
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.clickable
@@ -22,7 +23,7 @@ private val OvershootEasing = Easing { t ->
     t1 * t1 * ((tension + 1) * t1 + tension) + 1.0f
 }
 
-private val StrokeColor = Color(0xFF9C9C9C)
+private val StrokeColor = ThingsAreaIconStroke
 private val FillColor = Color.White
 
 @Composable

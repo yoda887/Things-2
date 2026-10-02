@@ -1,5 +1,7 @@
 package com.example.ui.screens.home.subcomponents
 
+import com.example.ui.theme.ThingsDialogBackground
+import com.example.ui.theme.ThingsToolbarBackground
 import android.view.HapticFeedbackConstants
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.fadeIn
@@ -81,7 +83,7 @@ fun BatchActionToolbar(
             modifier = Modifier
                 .height(MaterialTheme.dimens.floatingToolbarHeight)
                 .clip(RoundedCornerShape(MaterialTheme.dimens.floatingToolbarCornerRadius))
-                .background(Color(0xFF232329))
+                .background(ThingsToolbarBackground)
                 .padding(horizontal = 16.dp),
             contentAlignment = Alignment.Center
         ) {
@@ -137,7 +139,7 @@ fun BatchActionToolbar(
                     DropdownMenu(
                         expanded = isMoreMenuExpanded,
                         onDismissRequest = { isMoreMenuExpanded = false },
-                        modifier = Modifier.background(Color(0xFF22242C))
+                        modifier = Modifier.background(ThingsDialogBackground)
                     ) {
                         DropdownMenuItem(
                             text = { Text(stringResource(R.string.batch_action_complete), color = Color.White) },

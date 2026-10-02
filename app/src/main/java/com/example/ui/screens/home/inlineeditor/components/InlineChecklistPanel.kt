@@ -1,5 +1,17 @@
 package com.example.ui.screens.home.inlineeditor.components
 
+import com.example.ui.theme.ThingsChecklistCheck
+import com.example.ui.theme.ThingsChecklistCircle
+import com.example.ui.theme.ThingsChecklistCompletedText
+import com.example.ui.theme.ThingsChecklistDelete
+import com.example.ui.theme.ThingsChecklistDivider
+import com.example.ui.theme.ThingsChecklistDrag
+import com.example.ui.theme.ThingsChecklistFocus
+import com.example.ui.theme.ThingsChecklistHandle
+import com.example.ui.theme.ThingsChecklistHighlight
+import com.example.ui.theme.ThingsInk
+import com.example.ui.theme.ThingsTextPrimaryLight
+import com.example.ui.theme.ThingsTextSecondaryLight
 import android.view.HapticFeedbackConstants
 import androidx.compose.animation.*
 import androidx.compose.animation.core.Animatable
@@ -85,17 +97,17 @@ import kotlin.math.abs
 
 // Цвета, пропорции и тайминги сняты с видео Things 3 (пункты чек-листа в карточке задачи).
 // Размеры считаются от размера шрифта пункта (у Roboto высота заглавной ≈ 0,71 размера шрифта).
-private val ChecklistCircleColor = Color(0xFF4A7DF2)
-private val ChecklistCheckColor = Color(0xFF888888)
-private val ChecklistHandleColor = Color(0xFFB5B5B5)
-private val ChecklistDeleteColor = Color(0xFFEE004E)
-private val ChecklistDividerColor = Color(0xFFEBEBEB)
-private val ChecklistHighlightColor = Color(0xFFF0F1F3)
-private val ChecklistTextColor = Color(0xFF000000)
-private val ChecklistCompletedTextColor = Color(0xFF777778)
+private val ChecklistCircleColor = ThingsChecklistCircle
+private val ChecklistCheckColor = ThingsChecklistCheck
+private val ChecklistHandleColor = ThingsChecklistHandle
+private val ChecklistDeleteColor = ThingsChecklistDelete
+private val ChecklistDividerColor = ThingsChecklistDivider
+private val ChecklistHighlightColor = ThingsChecklistHighlight
+private val ChecklistTextColor = ThingsTextPrimaryLight
+private val ChecklistCompletedTextColor = ThingsChecklistCompletedText
 // Строка, которую правят (текст в фокусе), и строка, которую тащат за ≡ (видео 5-checklists-iphone)
-private val ChecklistFocusColor = Color(0xFFF7F7F7)
-private val ChecklistDragColor = Color(0xFFD7E6FD)
+private val ChecklistFocusColor = ThingsChecklistFocus
+private val ChecklistDragColor = ThingsChecklistDrag
 private const val CHECKLIST_MARK_TO_FONT = 0.88f
 /** Высота строки текста пункта в долях шрифта (естественная высота строки Roboto) */
 private const val CHECKLIST_LINE_HEIGHT_TO_FONT = 1.17f
@@ -130,8 +142,8 @@ fun InlineChecklistPanel(
 ) {
     val showPanel = showChecklistHelper || checklist.isNotEmpty()
 
-    val textPrimaryColor = Color(0xFF1C1C1E)
-    val textSecondaryColor = Color(0xFF747679)
+    val textPrimaryColor = ThingsInk
+    val textSecondaryColor = ThingsTextSecondaryLight
     val bodyFontSize = MaterialTheme.typography.taskEditorChecklist.fontSize
     val density = LocalDensity.current
     val fontDp = with(density) { bodyFontSize.toDp() }

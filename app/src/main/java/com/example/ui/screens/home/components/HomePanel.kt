@@ -1,5 +1,14 @@
 package com.example.ui.screens.home.components
 
+import com.example.ui.theme.ThingsBlue
+import com.example.ui.theme.ThingsDropPlaceholderDark
+import com.example.ui.theme.ThingsDropPlaceholderLight
+import com.example.ui.theme.ThingsFieldDark
+import com.example.ui.theme.ThingsFieldLight
+import com.example.ui.theme.ThingsHomeDropPlaceholder
+import com.example.ui.theme.ThingsPullArrowDark
+import com.example.ui.theme.ThingsPullArrowLight
+import com.example.ui.theme.ThingsPullArrowSelectedDark
 import kotlinx.coroutines.launch
 
 import androidx.compose.animation.AnimatedVisibility
@@ -633,7 +642,7 @@ fun ThingsHomePanel(
                             .fillMaxWidth()
                             .height(46.dp)
                             .padding(vertical = 4.dp)
-                            .background(Color(0xFFE9EAEE), RoundedCornerShape(10.dp))
+                            .background(ThingsHomeDropPlaceholder, RoundedCornerShape(10.dp))
                     )
                 }
                 is HomeTreeItem.ProjectItem -> {
@@ -712,7 +721,7 @@ fun ThingsHomePanel(
                             // Подложка на физическом месте области при перетаскивании (placeholder slot)
                             if (isAreaDragging) {
                                 val isDark = isSystemInDarkTheme()
-                                val placeholderBgColor = if (isDark) Color(0xFF2C2D32) else Color(0xFFE5E6EB)
+                                val placeholderBgColor = if (isDark) ThingsDropPlaceholderDark else ThingsDropPlaceholderLight
                                 Box(
                                     modifier = Modifier
                                         .matchParentSize()
@@ -967,7 +976,7 @@ fun ThingsHomePanel(
     // обрезания (clipping) контейнером LazyColumn при оттяжке списка вниз
     if (!isSearchOverlayActive || searchCapsuleAlpha > 0f) {
         val isDark = isSystemInDarkTheme()
-        val inputNormalBackground = if (isDark) Color(0xFF2C2C2E) else Color(0xFFF2F2F7)
+        val inputNormalBackground = if (isDark) ThingsFieldDark else ThingsFieldLight
 
         // Прогресс оттяжки до порога активации (100dp)
         val pullProgress = if (thresholdPx > 0f) (pullOffset.value / thresholdPx).coerceIn(0f, 1f) else 0f
@@ -1003,8 +1012,8 @@ fun ThingsHomePanel(
         )
         // Цвета темы quickFind.sourceListSearchBar.arrow: #000b1b50 (светлая) / #e7f1ff4b (тёмная);
         // после порога (_selected): #5b9aff (светлая) / #3f85f4 (тёмная)
-        val arrowNormalColor = if (isDark) Color(0x4BE7F1FF) else Color(0x50000B1B)
-        val arrowSelectedColor = if (isDark) Color(0xFF3F85F4) else Color(0xFF5B9AFF)
+        val arrowNormalColor = if (isDark) ThingsPullArrowDark else ThingsPullArrowLight
+        val arrowSelectedColor = if (isDark) ThingsPullArrowSelectedDark else ThingsBlue
         val arrowColor by animateColorAsState(
             targetValue = if (isPastThreshold) arrowSelectedColor else arrowNormalColor,
             animationSpec = tween(durationMillis = 100, easing = LinearEasing),
@@ -1202,7 +1211,7 @@ private fun LazyItemScope.ProjectItemRow(
         // Подложка на физическом месте проекта при перетаскивании (placeholder slot)
         if (isDragging) {
             val isDark = isSystemInDarkTheme()
-            val placeholderBgColor = if (isDark) Color(0xFF2C2D32) else Color(0xFFE5E6EB)
+            val placeholderBgColor = if (isDark) ThingsDropPlaceholderDark else ThingsDropPlaceholderLight
             Box(
                 modifier = Modifier
                     .matchParentSize()

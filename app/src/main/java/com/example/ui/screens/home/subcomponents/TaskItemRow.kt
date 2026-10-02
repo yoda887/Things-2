@@ -1,5 +1,14 @@
 package com.example.ui.screens.home.subcomponents
 
+import com.example.ui.theme.ThingsBadgeBackgroundLight
+import com.example.ui.theme.ThingsBadgeTextDark
+import com.example.ui.theme.ThingsBadgeTextLight
+import com.example.ui.theme.ThingsCheckboxBorder
+import com.example.ui.theme.ThingsDropPlaceholderDark
+import com.example.ui.theme.ThingsDropPlaceholderLight
+import com.example.ui.theme.ThingsEveningIndicator
+import com.example.ui.theme.ThingsFieldDark
+import com.example.ui.theme.ThingsMetaGrey
 import androidx.compose.animation.core.animateDpAsState
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.foundation.background
@@ -155,7 +164,7 @@ fun TaskItemRow(
         label = "rowBgColor_${task.id}"
     )
 
-    val fillBgColor = if (androidx.compose.foundation.isSystemInDarkTheme()) Color(0xFF2C2D32) else Color(0xFFE5E6EB)
+    val fillBgColor = if (androidx.compose.foundation.isSystemInDarkTheme()) ThingsDropPlaceholderDark else ThingsDropPlaceholderLight
 
     val isCalendarTask = task.id.startsWith("cal_")
 
@@ -166,7 +175,7 @@ fun TaskItemRow(
             if (task.isTonight) {
                 DateIndicatorResult.IconIndicator(
                     icon = AppIcons.Evening,
-                    color = androidx.compose.ui.graphics.Color(0xFF2196F3),
+                    color = ThingsEveningIndicator,
                     contentDescription = "Tonight"
                 )
             } else {
@@ -232,9 +241,9 @@ fun TaskItemRow(
                     )
                 } else {
                     val checkboxUncheckedColor = if (isHighlighted) {
-                        androidx.compose.ui.graphics.lerp(Color(0xFFC7C7CC), ThingsBlue, 0.45f)
+                        androidx.compose.ui.graphics.lerp(ThingsCheckboxBorder, ThingsBlue, 0.45f)
                     } else {
-                        Color(0xFFC7C7CC)
+                        ThingsCheckboxBorder
                     }
                     ThingsCheckbox(
                         checked = localCompleted || (isSearchLogbookStyle && isCancelledTask),
@@ -490,9 +499,9 @@ fun TaskItemRow(
 
                 if (subtitle != null) {
                     val subtitleColor = if (isHighlighted) {
-                        androidx.compose.ui.graphics.lerp(Color(0xFF8E8E93), ThingsBlue, 0.45f)
+                        androidx.compose.ui.graphics.lerp(ThingsMetaGrey, ThingsBlue, 0.45f)
                     } else {
-                        Color(0xFF8E8E93)
+                        ThingsMetaGrey
                     }
                     Text(
                         text = subtitle,
@@ -519,7 +528,7 @@ fun TaskItemRow(
             val targetBorderColor = when {
                 isSelected -> ThingsBlue
                 isDragSelecting -> ThingsBlue.copy(alpha = 0.5f)
-                else -> Color(0xFFC7C7CC)
+                else -> ThingsCheckboxBorder
             }
             val animatedBorderColor by androidx.compose.animation.animateColorAsState(
                 targetValue = targetBorderColor,
@@ -632,8 +641,8 @@ sealed class DateIndicatorResult {
 @Composable
 private fun DateBadge(text: String) {
     val isSystemDark = androidx.compose.foundation.isSystemInDarkTheme()
-    val badgeTextColor = if (isSystemDark) Color(0xFFE0E0E0) else Color(0xFF5F6368)
-    val badgeBgColor = if (isSystemDark) Color(0xFF2C2C2E) else Color(0xFFECECEC)
+    val badgeTextColor = if (isSystemDark) ThingsBadgeTextDark else ThingsBadgeTextLight
+    val badgeBgColor = if (isSystemDark) ThingsFieldDark else ThingsBadgeBackgroundLight
 
     Text(
         text = text,
@@ -670,7 +679,7 @@ private fun getStartDateIndicator(startDate: Long, isTonight: Boolean): DateIndi
             // Иконка "Вечер" с использованием AppIcons.Evening
             DateIndicatorResult.IconIndicator(
                 icon = AppIcons.Evening,
-                color = androidx.compose.ui.graphics.Color(0xFF2196F3),
+                color = ThingsEveningIndicator,
                 contentDescription = "Tonight"
             )
         } else {

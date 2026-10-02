@@ -1,5 +1,6 @@
 package com.example.ui.screens.home.inlineeditor.dialogs
 
+import com.example.ui.theme.ThingsDialogBackground
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.*
@@ -16,7 +17,7 @@ import androidx.compose.ui.window.Dialog
 import com.example.ui.theme.ThingsUpcomingRed
 import com.example.R
 
-private val DialogBackgroundColor = Color(0xFF22242C)
+private val DialogBackgroundColor = ThingsDialogBackground
 
 /**
  * Диалог подтверждения удаления задачи.

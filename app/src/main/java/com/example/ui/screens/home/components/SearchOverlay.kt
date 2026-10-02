@@ -1,5 +1,10 @@
 package com.example.ui.screens.home.components
 
+import com.example.ui.theme.ThingsFieldDark
+import com.example.ui.theme.ThingsFieldLight
+import com.example.ui.theme.ThingsHairlineLight
+import com.example.ui.theme.ThingsInk
+import com.example.ui.theme.ThingsMetaGrey
 import androidx.activity.compose.BackHandler
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
@@ -397,14 +402,14 @@ fun ThingsSearchOverlay(
     val progress = morphRaw.coerceIn(0f, 1f)
     val contentAlpha = opacityProgress.value.coerceIn(0f, 1f)
 
-    val cardBackground = if (isDark) Color(0xFF1C1C1E) else Color.White
-    val textPrimary = if (isDark) Color.White else Color(0xFF1C1C1E)
-    val textSecondary = if (isDark) Color(0xFF8E8E93) else Color(0xFF8E8E93)
-    val inputNormalBackground = if (isDark) Color(0xFF2C2C2E) else Color(0xFFF2F2F7)
+    val cardBackground = if (isDark) ThingsInk else Color.White
+    val textPrimary = if (isDark) Color.White else ThingsInk
+    val textSecondary = if (isDark) ThingsMetaGrey else ThingsMetaGrey
+    val inputNormalBackground = if (isDark) ThingsFieldDark else ThingsFieldLight
     // Карточка и поле ввода всегда имеют свой итоговый цвет с первого кадра (белая карточка, серый инпут)
     val currentCardBg = cardBackground
     val currentInputBg = inputNormalBackground
-    val closeButtonBackground = if (isDark) Color(0xFF2C2C2E) else Color(0xFFE5E5EA)
+    val closeButtonBackground = if (isDark) ThingsFieldDark else ThingsHairlineLight
 
     // Карточка всегда раскладывается в своём итоговом месте, путь от источника к нему
     // целиком задаётся преобразованием слоя

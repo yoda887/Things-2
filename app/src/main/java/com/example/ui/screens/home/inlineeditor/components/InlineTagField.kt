@@ -1,5 +1,9 @@
 package com.example.ui.screens.home.inlineeditor.components
 
+import com.example.ui.theme.ThingsFieldLight
+import com.example.ui.theme.ThingsInk
+import com.example.ui.theme.ThingsMetaGrey
+import com.example.ui.theme.ThingsTextSecondaryLight
 import androidx.compose.animation.*
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
@@ -32,10 +36,10 @@ fun InlineTagField(
 ) {
     val showPanel = showTagHelper || tagInput.isNotEmpty()
 
-    val textPrimaryColor = Color(0xFF1C1C1E)
-    val textSecondaryColor = Color(0xFF747679)
-    val helperBgColor = Color(0xFFF2F2F7)
-    val helperHintColor = Color(0xFF8E8E93)
+    val textPrimaryColor = ThingsInk
+    val textSecondaryColor = ThingsTextSecondaryLight
+    val helperBgColor = ThingsFieldLight
+    val helperHintColor = ThingsMetaGrey
 
     val tagFontSize = MaterialTheme.typography.bodyMedium.fontSize
 

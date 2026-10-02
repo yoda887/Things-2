@@ -1,5 +1,11 @@
 package com.example.ui.screens.home.inlineeditor.dialogs
 
+import com.example.ui.theme.ThingsBadgeTextLight
+import com.example.ui.theme.ThingsDialogBackground
+import com.example.ui.theme.ThingsDialogCloseButton
+import com.example.ui.theme.ThingsMetaGrey
+import com.example.ui.theme.ThingsWhenClear
+import com.example.ui.theme.ThingsWhenSecondary
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
@@ -98,7 +104,7 @@ private object DialogRippleTheme : RippleTheme {
 }
 
 /** Фон кружка с крестиком: в эталоне он темнее карточки, а не светлее */
-private val CLOSE_BUTTON_BACKGROUND = Color(0xFF181A1D)
+private val CLOSE_BUTTON_BACKGROUND = ThingsDialogCloseButton
 
 /** Отступ внутри строк: попадает в область нажатия, поэтому по пальцу строки стали крупнее */
 private val ROW_VERTICAL_PADDING = 6.dp
@@ -260,7 +266,7 @@ fun ThingsWhenDialog(
         Card(
             shape = RoundedCornerShape(32.dp),
             colors = CardDefaults.cardColors(
-                containerColor = Color(0xFF22242C)
+                containerColor = ThingsDialogBackground
             ),
             modifier = Modifier
                 .offset { IntOffset(0, -centerFixPx) }
@@ -453,7 +459,7 @@ fun ThingsWhenDialog(
                         Text(
                             text = dayName,
                             style = TextStyle(
-                                color = Color(0xFF6C6F7D),
+                                color = ThingsWhenSecondary,
                                 fontSize = 15.sp,
                                 fontWeight = FontWeight.Normal
                             ),
@@ -544,7 +550,7 @@ fun ThingsWhenDialog(
                                         Icon(
                                             imageVector = Icons.Default.ChevronLeft,
                                             contentDescription = "Previous Month",
-                                            tint = Color(0xFF8E8E93),
+                                            tint = ThingsMetaGrey,
                                             modifier = Modifier
                                                 .size(20.dp)
                                                 .clickable {
@@ -556,7 +562,7 @@ fun ThingsWhenDialog(
                                         Icon(
                                             imageVector = Icons.Default.ChevronRight,
                                             contentDescription = "Next Month",
-                                            tint = Color(0xFF8E8E93),
+                                            tint = ThingsMetaGrey,
                                             modifier = Modifier
                                                 .size(20.dp)
                                                 .clickable {
@@ -614,7 +620,7 @@ fun ThingsWhenDialog(
                                                 Icon(
                                                     imageVector = Icons.Filled.Star,
                                                     contentDescription = "Today",
-                                                    tint = Color(0xFF5F6368),
+                                                    tint = ThingsBadgeTextLight,
                                                     modifier = Modifier.size(16.dp)
                                                 )
                                             } else {
@@ -730,14 +736,14 @@ fun ThingsWhenDialog(
                         Icon(
                             imageVector = Icons.Default.Add,
                             contentDescription = null,
-                            tint = Color(0xFF6C6F7D),
+                            tint = ThingsWhenSecondary,
                             modifier = Modifier.size(18.dp)
                         )
                     }
                     Text(
                         text = "Add Reminder",
                         style = TextStyle(
-                            color = Color(0xFF6C6F7D),
+                            color = ThingsWhenSecondary,
                             fontSize = 19.sp,
                             fontWeight = FontWeight.Normal
                         ),
@@ -760,7 +766,7 @@ fun ThingsWhenDialog(
                             requestClose()
                         },
                         colors = ButtonDefaults.buttonColors(
-                            containerColor = Color(0xFFE22D5A),
+                            containerColor = ThingsWhenClear,
                             contentColor = Color.White
                         ),
                         shape = RoundedCornerShape(percent = 50),

@@ -1,5 +1,12 @@
 package com.example.ui.screens.home.inlineeditor.dialogs
 
+import com.example.ui.theme.ThingsCheckboxBorder
+import com.example.ui.theme.ThingsFieldLight
+import com.example.ui.theme.ThingsHairlineLight
+import com.example.ui.theme.ThingsInk
+import com.example.ui.theme.ThingsMetaGrey
+import com.example.ui.theme.ThingsTagChipBackground
+import com.example.ui.theme.ThingsTagChipText
 import androidx.activity.compose.BackHandler
 import androidx.compose.animation.*
 import androidx.compose.animation.core.Animatable
@@ -284,7 +291,7 @@ fun QuickAddDialog(
                                 checked = false,
                                 onCheckedChange = { /* В режиме создания нового чекбокс пассивный */ },
                                 size = MaterialTheme.dimens.mainCheckboxSize,
-                                uncheckedColor = Color(0xFFC7C7CC),
+                                uncheckedColor = ThingsCheckboxBorder,
                                 modifier = Modifier.padding(end = 10.dp, top = 2.dp)
                             )
                             
@@ -313,7 +320,7 @@ fun QuickAddDialog(
                                             textStyle = TextStyle(
                                                 fontSize = MaterialTheme.typography.titleMedium.fontSize,
                                                 fontWeight = FontWeight.Normal,
-                                                color = Color(0xFF1C1C1E)
+                                                color = ThingsInk
                                             ),
                                             singleLine = false,
                                             maxLines = 4,
@@ -375,8 +382,8 @@ fun QuickAddDialog(
 
                         Spacer(modifier = Modifier.height(32.dp))
                         // 4. Панель индикаторов (активные теги, дата, дедлайн) + Панель инструментов (иконки действий)
-                    val textPrimaryColor = Color(0xFF1C1C1E)
-                    val iconInactiveColor = Color(0xFFC7C7CC)
+                    val textPrimaryColor = ThingsInk
+                    val iconInactiveColor = ThingsCheckboxBorder
                     val bodyFontSize = MaterialTheme.typography.taskEditorDate.fontSize
 
                     val hasActiveDate = startDate != null || section == TaskSection.TODAY || section == TaskSection.SOMEDAY
@@ -442,14 +449,14 @@ fun QuickAddDialog(
                                         Box(
                                             modifier = Modifier
                                                 .clip(RoundedCornerShape(10.dp))
-                                                .background(Color(0xFFD1EAE2)) // light-teal background
+                                                .background(ThingsTagChipBackground) // light-teal background
                                                 .clickable { showTagDialog = true }
                                                 .padding(horizontal = 10.dp, vertical = 4.dp)
                                         ) {
                                             Text(
                                                 text = tag,
                                                 style = TextStyle(
-                                                    color = Color(0xFF2C7D64), // dark-teal text
+                                                    color = ThingsTagChipText, // dark-teal text
                                                     fontSize = 12.sp,
                                                     fontWeight = FontWeight.Medium
                                                 )
@@ -550,7 +557,7 @@ fun QuickAddDialog(
                                 }
 
                                 val isOverdueOrToday = delta <= 0
-                                val primaryColor = if (isOverdueOrToday) ThingsUpcomingRed else Color(0xFF1C1C1E)
+                                val primaryColor = if (isOverdueOrToday) ThingsUpcomingRed else ThingsInk
 
                                 Row(
                                     verticalAlignment = Alignment.CenterVertically,
@@ -582,7 +589,7 @@ fun QuickAddDialog(
                                         overflow = TextOverflow.Ellipsis,
                                         style = TextStyle(
                                             fontSize = bodyFontSize,
-                                            color = Color(0xFF8E8E93),
+                                            color = ThingsMetaGrey,
                                             fontWeight = FontWeight.Normal
                                         )
                                     )
@@ -676,7 +683,7 @@ fun QuickAddDialog(
                     Row(
                         modifier = Modifier
                             .fillMaxWidth()
-                            .background(Color(0xFFF2F2F7))
+                            .background(ThingsFieldLight)
                             .padding(start = 22.dp, end = 18.dp, top = 8.dp, bottom = 10.dp),
                         horizontalArrangement = Arrangement.SpaceBetween,
                         verticalAlignment = Alignment.CenterVertically
@@ -692,14 +699,14 @@ fun QuickAddDialog(
                             Icon(
                                 imageVector = AppIcons.Inbox,
                                 contentDescription = "Destination",
-                                tint = Color(0xFF8E8E93),
+                                tint = ThingsMetaGrey,
                                 modifier = Modifier.size(20.dp)
                             )
                             Spacer(modifier = Modifier.width(6.dp))
                             Text(
                                 text = destinationName,
                                 style = TextStyle(
-                                    color = Color(0xFF8E8E93),
+                                    color = ThingsMetaGrey,
                                     fontSize = 17.sp,
                                     fontWeight = FontWeight.Medium
                                 )
@@ -735,14 +742,14 @@ fun QuickAddDialog(
                         .padding(top = 16.dp, end = 16.dp)
                         .size(36.dp)
                         .clip(CircleShape)
-                        .background(Color(0xFFE5E5EA))
+                        .background(ThingsHairlineLight)
                         .clickable { handleDismiss() },
                     contentAlignment = Alignment.Center
                 ) {
                     Icon(
                         imageVector = Icons.Default.Close,
                         contentDescription = "Cancel",
-                        tint = Color(0xFF8E8E93),
+                        tint = ThingsMetaGrey,
                         modifier = Modifier.size(18.dp)
                     )
                 }

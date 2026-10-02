@@ -1,5 +1,6 @@
 package com.example.ui.screens.home.subcomponents
 
+import com.example.ui.theme.ThingsDialogBackground
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
@@ -294,7 +295,7 @@ fun MainCategoryHeader(
                             DropdownMenu(
                                 expanded = showOptionsMenu,
                                 onDismissRequest = { showOptionsMenu = false },
-                                modifier = Modifier.background(Color(0xFF22242C))
+                                modifier = Modifier.background(ThingsDialogBackground)
                             ) {
                                 DropdownMenuItem(
                                     text = {
@@ -400,7 +401,7 @@ fun MainCategoryHeader(
                             DropdownMenu(
                                 expanded = showAreaOptionsMenu,
                                 onDismissRequest = { showAreaOptionsMenu = false },
-                                modifier = Modifier.background(Color(0xFF22242C))
+                                modifier = Modifier.background(ThingsDialogBackground)
                             ) {
                                 DropdownMenuItem(
                                     leadingIcon = {

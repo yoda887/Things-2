@@ -1,5 +1,12 @@
 package com.example.ui.screens.home.subcomponents
 
+import com.example.ui.theme.ThingsBackgroundLight
+import com.example.ui.theme.ThingsDropPlaceholderDark
+import com.example.ui.theme.ThingsDropPlaceholderLight
+import com.example.ui.theme.ThingsHairlineDark
+import com.example.ui.theme.ThingsHairlineLight
+import com.example.ui.theme.ThingsMetaGrey
+import com.example.ui.theme.ThingsStackCardDark
 import androidx.compose.animation.animateContentSize
 import androidx.compose.animation.core.animateDpAsState
 import androidx.compose.animation.core.animateFloatAsState
@@ -401,8 +408,8 @@ fun AnimatedTaskItem(
                 // Каскадный эффект стопки карточек под ведущей задачей при групповом перетаскивании
                 if (isDragTask && dragDropState.hasStackedItems) {
                 val isDark = isSystemInDarkTheme()
-                val stackCardBg = if (isDark) Color(0xFF252629) else Color(0xFFFFFFFF)
-                val stackBorderColor = if (isDark) Color(0xFF38393D) else Color(0xFFE5E5EA)
+                val stackCardBg = if (isDark) ThingsStackCardDark else ThingsBackgroundLight
+                val stackBorderColor = if (isDark) ThingsHairlineDark else ThingsHairlineLight
 
                 // 3-й слой стопки (если в пачке 3 или более задач)
                 if (dragDropState.stackedDragKeys.size >= 3) {
@@ -449,7 +456,7 @@ fun AnimatedTaskItem(
 
             if (isDragTask) {
                 val isDark = isSystemInDarkTheme()
-                val placeholderBgColor = if (isDark) Color(0xFF2C2D32) else Color(0xFFE5E6EB)
+                val placeholderBgColor = if (isDark) ThingsDropPlaceholderDark else ThingsDropPlaceholderLight
                 Box(
                     modifier = Modifier
                         .matchParentSize()
@@ -724,7 +731,7 @@ fun AnimatedTaskItem(
                     val completedCount = progress?.completed ?: 0
                     val totalCount = progress?.total ?: 0
 
-                    val pillContentColor = Color(0xFF8E8E93)
+                    val pillContentColor = ThingsMetaGrey
                     Row(
                         modifier = Modifier
                             .fillMaxWidth()

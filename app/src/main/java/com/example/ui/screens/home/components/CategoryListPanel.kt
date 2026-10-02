@@ -1,5 +1,13 @@
 package com.example.ui.screens.home.components
 
+import com.example.ui.theme.ThingsDropPlaceholderDark
+import com.example.ui.theme.ThingsDropPlaceholderLight
+import com.example.ui.theme.ThingsHairlineDark
+import com.example.ui.theme.ThingsHairlineLight
+import com.example.ui.theme.ThingsListDimDark
+import com.example.ui.theme.ThingsListDimLight
+import com.example.ui.theme.ThingsNewHeadingLine
+import com.example.ui.theme.ThingsNewHeadingText
 import androidx.compose.runtime.withFrameNanos
 import androidx.compose.foundation.gestures.scrollBy
 import com.example.ui.components.fabdrag.FabDropTarget
@@ -741,7 +749,7 @@ fun ThingsCategoryListPanel(
 
     val bkgColor by animateColorAsState(
         targetValue = if (anyExpanded) {
-            if (isDark) Color(0xFF151618) else Color(0xFFF4F4F6)
+            if (isDark) ThingsListDimDark else ThingsListDimLight
         } else {
             if (isDark) ThingsBackgroundDark else ThingsBackgroundLight
         },
@@ -1077,7 +1085,7 @@ fun ThingsCategoryListPanel(
                                 if (isDragged && dragDropState.isInteracting) {
                                     // Место, куда встанет заголовок с задачами, — та же серая плашка, что
                                     // остаётся на месте задачи при её перетаскивании (см. AnimatedTaskItem)
-                                    val placeholderColor = if (androidx.compose.foundation.isSystemInDarkTheme()) Color(0xFF2C2D32) else Color(0xFFE5E6EB)
+                                    val placeholderColor = if (androidx.compose.foundation.isSystemInDarkTheme()) ThingsDropPlaceholderDark else ThingsDropPlaceholderLight
                                     Box(
                                         modifier = Modifier
                                             .matchParentSize()
@@ -1089,7 +1097,7 @@ fun ThingsCategoryListPanel(
                                     // Заголовок едет вместе со своими задачами — под ним стопка карточек,
                                     // как у группы задач в режиме выбора: слой на каждую задачу, не больше двух
                                     val headingTaskCount = localTasksList.count { it.item.headingId == heading.id }
-                                    val stackBorder = if (androidx.compose.foundation.isSystemInDarkTheme()) Color(0xFF38393D) else Color(0xFFE5E5EA)
+                                    val stackBorder = if (androidx.compose.foundation.isSystemInDarkTheme()) ThingsHairlineDark else ThingsHairlineLight
                                     for (layer in minOf(headingTaskCount, 2) downTo 1) {
                                         Box(
                                             modifier = Modifier
@@ -1695,7 +1703,7 @@ private fun FabGapRow(asHeading: Boolean, extraPx: () -> Float, modifier: Modifi
         ) {
             androidx.compose.foundation.Canvas(modifier = Modifier.fillMaxWidth().height(2.dp)) {
                 drawLine(
-                    color = Color(0xFFC9CBD1),
+                    color = ThingsNewHeadingLine,
                     start = androidx.compose.ui.geometry.Offset(0f, size.height / 2f),
                     end = androidx.compose.ui.geometry.Offset(size.width, size.height / 2f),
                     strokeWidth = size.height,
@@ -1707,7 +1715,7 @@ private fun FabGapRow(asHeading: Boolean, extraPx: () -> Float, modifier: Modifi
                 fontSize = 12.sp,
                 fontWeight = FontWeight.SemiBold,
                 letterSpacing = 1.sp,
-                color = Color(0xFFB4B6BC),
+                color = ThingsNewHeadingText,
                 modifier = Modifier
                     .background(ThingsBackgroundLight)
                     .padding(horizontal = 10.dp)
@@ -1730,7 +1738,7 @@ private fun FabGapRow(asHeading: Boolean, extraPx: () -> Float, modifier: Modifi
             // Та же серая плашка, что остаётся на месте задачи при обычном перетаскивании
             // (см. AnimatedTaskItem): тот же цвет, полупрозрачность и скругление
             val isDark = androidx.compose.foundation.isSystemInDarkTheme()
-            val plateColor = if (isDark) Color(0xFF2C2D32) else Color(0xFFE5E6EB)
+            val plateColor = if (isDark) ThingsDropPlaceholderDark else ThingsDropPlaceholderLight
             Box(
                 modifier = Modifier
                     .fillMaxWidth()

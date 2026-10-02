@@ -1,5 +1,7 @@
 package com.example.ui.screens.home
 
+import com.example.ui.theme.ThingsMenuBackground
+import com.example.ui.theme.ThingsTextSecondaryDark
 import android.Manifest
 import android.content.pm.PackageManager
 import androidx.activity.compose.rememberLauncherForActivityResult
@@ -933,7 +935,7 @@ fun ThingsHomeScreen(viewModel: ThingsViewModel = hiltViewModel()) {
                         Column(
                             modifier = Modifier
                                 .fillMaxWidth()
-                                .background(Color(0xFF23252E), shape = RoundedCornerShape(16.dp))
+                                .background(ThingsMenuBackground, shape = RoundedCornerShape(16.dp))
                                 .border(1.dp, Color.White.copy(alpha = 0.08f), RoundedCornerShape(16.dp))
                                 .padding(vertical = 4.dp)
                         ) {
@@ -976,7 +978,7 @@ fun ThingsHomeScreen(viewModel: ThingsViewModel = hiltViewModel()) {
                                         text = "Quickly add a to-do to your inbox.",
                                         style = TextStyle(
                                             fontSize = 13.sp,
-                                            color = Color(0xFF8B8C8E)
+                                            color = ThingsTextSecondaryDark
                                         )
                                     )
                                 }
@@ -1037,7 +1039,7 @@ fun ThingsHomeScreen(viewModel: ThingsViewModel = hiltViewModel()) {
                                         text = "Define a goal, then work towards it one to-do at a time.",
                                         style = TextStyle(
                                             fontSize = 13.sp,
-                                            color = Color(0xFF8B8C8E)
+                                            color = ThingsTextSecondaryDark
                                         )
                                     )
                                 }
@@ -1096,7 +1098,7 @@ fun ThingsHomeScreen(viewModel: ThingsViewModel = hiltViewModel()) {
                                         text = "Group projects and to-dos based on different responsibilities, such as Family or Work.",
                                         style = TextStyle(
                                             fontSize = 13.sp,
-                                            color = Color(0xFF8B8C8E)
+                                            color = ThingsTextSecondaryDark
                                         )
                                     )
                                 }

@@ -1,5 +1,7 @@
 package com.example.ui.screens
 
+import com.example.ui.theme.ThingsCheckboxBorder
+import com.example.ui.theme.ThingsMutedGreyDark
 import androidx.compose.animation.*
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
@@ -242,7 +244,7 @@ fun ThingsTaskDetailsSheet(
                                 }
                             },
                             size = 18.dp,
-                            uncheckedColor = if (isDark) Color(0xFF48484A) else Color(0xFFC7C7CC)
+                            uncheckedColor = if (isDark) ThingsMutedGreyDark else ThingsCheckboxBorder
                         )
 
                         Spacer(modifier = Modifier.width(10.dp))

@@ -1,5 +1,6 @@
 package com.example.ui.screens.home.subcomponents
 
+import com.example.ui.theme.ThingsDialogBackground
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.interaction.MutableInteractionSource
@@ -46,7 +47,7 @@ import com.example.ui.theme.ThingsBlue
 import com.example.ui.theme.ThingsDeepBlue
 import com.example.ui.theme.ThingsUpcomingRed
 
-private val HeadingMenuBackground = Color(0xFF22242C)
+private val HeadingMenuBackground = ThingsDialogBackground
 // Тот же размер, что у остальных подзаголовков экранов («Вечер», «Планы», «Когда-нибудь»)
 private val HeadingTitleStyle = TextStyle(fontSize = 19.sp, fontWeight = FontWeight.SemiBold, color = ThingsDeepBlue)
 

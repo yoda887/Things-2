@@ -1,5 +1,8 @@
 package com.example.ui.screens.home.inlineeditor.dialogs
 
+import com.example.ui.theme.ThingsDialogBackground
+import com.example.ui.theme.ThingsDialogButton
+import com.example.ui.theme.ThingsMetaGrey
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
@@ -67,9 +70,9 @@ import com.example.ui.theme.ThingsUpcomingRed
 import kotlinx.coroutines.delay
 
 // Private Theme Color Constants inside the file to avoid hardcoding inline
-private val DialogBackgroundColor = Color(0xFF22242C)
-private val ItemMutedColor = Color(0xFF8E8E93)
-private val DarkButtonBgColor = Color(0xFF2C2E38)
+private val DialogBackgroundColor = ThingsDialogBackground
+private val ItemMutedColor = ThingsMetaGrey
+private val DarkButtonBgColor = ThingsDialogButton
 private val DeleteButtonBgColor = ThingsUpcomingRed
 
 // Private Dimensions

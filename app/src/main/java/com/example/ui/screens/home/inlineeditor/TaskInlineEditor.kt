@@ -1,5 +1,10 @@
 package com.example.ui.screens.home.inlineeditor
 
+import com.example.ui.theme.ThingsEditorIconInactive
+import com.example.ui.theme.ThingsInk
+import com.example.ui.theme.ThingsMetaGrey
+import com.example.ui.theme.ThingsTagChipBackground
+import com.example.ui.theme.ThingsTagChipText
 import androidx.compose.animation.*
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
@@ -397,9 +402,9 @@ fun ThingsTaskInlineEditor(
             Spacer(modifier = Modifier.height(MaterialTheme.dimens.taskEditorChecklistToToolbarSpacer))
 
             // Bottom Actions & Toolbar matching the image closely
-            val textPrimaryColor = Color(0xFF1C1C1E)
+            val textPrimaryColor = ThingsInk
             // Серые иконки нижней строки (теги, флажок и т. п.) — цвет как в Things 3
-            val iconInactiveColor = Color(0xFFA9A9A9)
+            val iconInactiveColor = ThingsEditorIconInactive
             val bodyFontSize = MaterialTheme.typography.taskEditorDate.fontSize
 
             val hasActiveDate = startDate != null || section == TaskSection.TODAY || section == TaskSection.SOMEDAY
@@ -464,7 +469,7 @@ fun ThingsTaskInlineEditor(
                                 Box(
                                     modifier = Modifier
                                         .clip(RoundedCornerShape(10.dp))
-                                        .background(Color(0xFFD1EAE2)) // light-teal background
+                                        .background(ThingsTagChipBackground) // light-teal background
                                         .clickable {
                                             view.performHapticFeedback(HapticFeedbackConstants.CLOCK_TICK)
                                             showTagDialog = true
@@ -474,7 +479,7 @@ fun ThingsTaskInlineEditor(
                                     Text(
                                         text = tag,
                                         style = TextStyle(
-                                            color = Color(0xFF2C7D64), // dark-teal text
+                                            color = ThingsTagChipText, // dark-teal text
                                             fontSize = 12.sp,
                                             fontWeight = FontWeight.Medium
                                         )
@@ -583,8 +588,8 @@ fun ThingsTaskInlineEditor(
                         }
 
                         val isOverdueOrToday = delta <= 0
-                        val primaryColor = if (isOverdueOrToday) ThingsUpcomingRed else Color(0xFF1C1C1E)
-                        val relativeColor = Color(0xFF8E8E93)
+                        val primaryColor = if (isOverdueOrToday) ThingsUpcomingRed else ThingsInk
+                        val relativeColor = ThingsMetaGrey
 
                         Row(
                             verticalAlignment = Alignment.CenterVertically,

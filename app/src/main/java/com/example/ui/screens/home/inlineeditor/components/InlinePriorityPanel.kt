@@ -1,5 +1,9 @@
 package com.example.ui.screens.home.inlineeditor.components
 
+import com.example.ui.theme.ThingsFieldLight
+import com.example.ui.theme.ThingsInk
+import com.example.ui.theme.ThingsMetaGrey
+import com.example.ui.theme.ThingsTextSecondaryLight
 import androidx.compose.animation.*
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
@@ -31,9 +35,9 @@ fun InlinePriorityPanel(
 ) {
     val showPanel = showPriorityHelper || priority > 0
 
-    val textPrimaryColor = Color(0xFF1C1C1E) // blackish font
-    val textSecondaryColor = Color(0xFF747679) // dark grey font
-    val helperBgColor = Color(0xFFF2F2F7) // light grey panel background
+    val textPrimaryColor = ThingsInk // blackish font
+    val textSecondaryColor = ThingsTextSecondaryLight // dark grey font
+    val helperBgColor = ThingsFieldLight // light grey panel background
 
     val smallFontSize = MaterialTheme.typography.labelMedium.fontSize
     val tinyFontSize = MaterialTheme.typography.labelSmall.fontSize
@@ -49,7 +53,7 @@ fun InlinePriorityPanel(
         3 -> ThingsUpcomingRed
         2 -> ThingsTodayStar
         1 -> ThingsAnytimeTeal
-        else -> Color(0xFF8E8E93)
+        else -> ThingsMetaGrey
     }
 
     AnimatedVisibility(

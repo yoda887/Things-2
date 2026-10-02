@@ -1,5 +1,7 @@
 package com.example.ui.screens.home.components
 
+import com.example.ui.theme.ThingsDialogBackground
+import com.example.ui.theme.ThingsToolbarBackground
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
@@ -79,7 +81,7 @@ fun FloatingBottomCapsuleToolbar(
             modifier = Modifier
                 .height(MaterialTheme.dimens.floatingToolbarHeight)
                 .clip(RoundedCornerShape(MaterialTheme.dimens.floatingToolbarCornerRadius))
-                .background(Color(0xFF232329))
+                .background(ThingsToolbarBackground)
                 .padding(horizontal = 16.dp),
             contentAlignment = Alignment.Center
         ) {
@@ -156,7 +158,7 @@ fun FloatingBottomCapsuleToolbar(
                     DropdownMenu(
                         expanded = expandedDotsMenu,
                         onDismissRequest = { expandedDotsMenu = false },
-                        modifier = Modifier.background(Color(0xFF22242C))
+                        modifier = Modifier.background(ThingsDialogBackground)
                     ) {
                         DropdownMenuItem(
                             leadingIcon = {

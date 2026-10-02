@@ -1,5 +1,10 @@
 package com.example.ui.screens.home.components
 
+import com.example.ui.theme.ThingsCalendarDefaultGreen
+import com.example.ui.theme.ThingsFieldDark
+import com.example.ui.theme.ThingsFieldLight
+import com.example.ui.theme.ThingsMutedGreyDark
+import com.example.ui.theme.ThingsMutedGreyLight
 import androidx.compose.foundation.background
 import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.foundation.layout.*
@@ -51,7 +56,7 @@ fun CalendarEventsWidget(
     val systemDark = isSystemInDarkTheme() || isDark
     
     // Вычисляем фоновый цвет карточки в соответствии с текущей темой
-    val cardBackground = if (systemDark) MaterialTheme.colorScheme.surfaceVariant else Color(0xFFF2F2F7)
+    val cardBackground = if (systemDark) MaterialTheme.colorScheme.surfaceVariant else ThingsFieldLight
 
     // КЭШИРОВАНИЕ SimpleDateFormat: Создается один раз при инициализации виджета.
     // Это предотвращает лавинообразную нагрузку на сборщик мусора (Garbage Collector) при частых рекомпозициях.
@@ -104,23 +109,23 @@ fun CalendarEventsWidget(
 
                 // Адаптация цвета разделительного маркера: прошедшие события приглушаются
                 val markerColor = if (isPastEvent) {
-                    if (systemDark) Color(0xFF48484A) else Color(0xFFD1D1D6)
+                    if (systemDark) ThingsMutedGreyDark else ThingsMutedGreyLight
                 } else {
                     baseColor
                 }
 
                 // Адаптация цвета метки времени
                 val timeColor = if (isPastEvent) {
-                    if (systemDark) Color(0xFF48484A) else Color(0xFFD1D1D6)
+                    if (systemDark) ThingsMutedGreyDark else ThingsMutedGreyLight
                 } else {
                     baseColor
                 }
 
                 // Адаптация цвета заголовка события (приглушаем серым цветом для завершенных/прошедших событий)
                 val titleColor = if (isPastEvent) {
-                     if (systemDark) Color(0xFF48484A) else Color(0xFFD1D1D6)
+                     if (systemDark) ThingsMutedGreyDark else ThingsMutedGreyLight
                 } else {
-                    if (systemDark) Color(0xFFD1D1D6) else Color(0xFF2C2C2E)
+                    if (systemDark) ThingsMutedGreyLight else ThingsFieldDark
                 }
 
                 Row(
@@ -214,7 +219,7 @@ fun UpcomingCalendarEventRow(
         if (rawColor != null) {
             Color(rawColor)
         } else {
-            Color(0xFF63C655) // Приятный зеленый цвет, соответствующий iOS стилю
+            ThingsCalendarDefaultGreen // Приятный зеленый цвет, соответствующий iOS стилю
         }
     }
     

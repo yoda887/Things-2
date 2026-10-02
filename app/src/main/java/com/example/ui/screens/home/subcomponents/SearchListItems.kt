@@ -1,5 +1,7 @@
 package com.example.ui.screens.home.subcomponents
 
+import com.example.ui.theme.ThingsFieldDark
+import com.example.ui.theme.ThingsFieldLight
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.isSystemInDarkTheme
@@ -62,7 +64,7 @@ fun SearchQueryField(
     onAutoFocused: () -> Unit = {}
 ) {
     val isDark = isSystemInDarkTheme()
-    val fieldBackground = if (isDark) Color(0xFF2C2C2E) else Color(0xFFF2F2F7)
+    val fieldBackground = if (isDark) ThingsFieldDark else ThingsFieldLight
     val focusRequester = remember { FocusRequester() }
     var textFieldValue by remember {
         mutableStateOf(TextFieldValue(text = query, selection = TextRange(query.length)))

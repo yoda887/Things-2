@@ -1,5 +1,11 @@
 package com.example.ui.components
 
+import com.example.ui.theme.ThingsBlue
+import com.example.ui.theme.ThingsFieldDark
+import com.example.ui.theme.ThingsPullArrowDark
+import com.example.ui.theme.ThingsPullArrowLight
+import com.example.ui.theme.ThingsPullArrowSelectedDark
+import com.example.ui.theme.ThingsPullIndicatorLight
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.animation.animateColorAsState
@@ -66,7 +72,7 @@ fun PullToSearchIndicator(
     val isTriggered = pullOffset >= thresholdPx
 
     // Цвета с дискретным переключением темы (_selected) строго на пороге с коротким кроссфейдом 100 мс
-    val bgNormal = if (isDark) Color(0xFF2C2C2E) else Color(0xFF8E929C)
+    val bgNormal = if (isDark) ThingsFieldDark else ThingsPullIndicatorLight
     val circleColor by animateColorAsState(
         targetValue = if (isTriggered) ThingsBlue else bgNormal,
         animationSpec = tween(durationMillis = 100, easing = LinearEasing),
@@ -77,8 +83,8 @@ fun PullToSearchIndicator(
 
     // Цвета темы quickFind.sourceListSearchBar.arrow: #000b1b50 (светлая) / #e7f1ff4b (тёмная);
     // после порога (_selected): #5b9aff (светлая) / #3f85f4 (тёмная)
-    val arrowNormalColor = if (isDark) Color(0x4BE7F1FF) else Color(0x50000B1B)
-    val arrowSelectedColor = if (isDark) Color(0xFF3F85F4) else Color(0xFF5B9AFF)
+    val arrowNormalColor = if (isDark) ThingsPullArrowDark else ThingsPullArrowLight
+    val arrowSelectedColor = if (isDark) ThingsPullArrowSelectedDark else ThingsBlue
     val arrowColor by animateColorAsState(
         targetValue = if (isTriggered) arrowSelectedColor else arrowNormalColor,
         animationSpec = tween(durationMillis = 100, easing = LinearEasing),
