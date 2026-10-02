@@ -43,10 +43,11 @@ import com.example.data.model.Item
 import com.example.ui.components.HideTextSelectionHandles
 import com.example.ui.components.hideSoftKeyboardThen
 import com.example.ui.theme.ThingsBlue
+import com.example.ui.theme.ThingsDeepBlue
 import com.example.ui.theme.ThingsUpcomingRed
 
 private val HeadingMenuBackground = Color(0xFF22242C)
-private val HeadingTitleStyle = TextStyle(fontSize = 17.sp, fontWeight = FontWeight.SemiBold, color = ThingsBlue)
+private val HeadingTitleStyle = TextStyle(fontSize = 17.sp, fontWeight = FontWeight.SemiBold, color = ThingsDeepBlue)
 
 /**
  * Заголовок внутри проекта, как в Things: голубое название, «•••» с меню и линия под ним.
@@ -96,7 +97,7 @@ fun ProjectHeadingRow(
                 Icon(
                     imageVector = Icons.Default.MoreHoriz,
                     contentDescription = "Heading Options",
-                    tint = ThingsBlue,
+                    tint = ThingsDeepBlue,
                     modifier = Modifier
                         .size(26.dp)
                         .clickable(
@@ -168,7 +169,7 @@ private fun HeadingTitleField(heading: Item, onCommit: (String) -> Unit) {
             decorationBox = { inner ->
                 Box {
                     if (text.isEmpty()) {
-                        Text("New Heading", style = HeadingTitleStyle.copy(color = ThingsBlue.copy(alpha = 0.4f)))
+                        Text("New Heading", style = HeadingTitleStyle.copy(color = ThingsDeepBlue.copy(alpha = 0.4f)))
                     }
                     inner()
                 }

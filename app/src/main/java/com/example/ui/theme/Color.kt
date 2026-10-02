@@ -6,6 +6,8 @@ import androidx.compose.ui.graphics.Color
 
 // Things iOS dynamic palette
 val ThingsBlue = Color(0xFF5B9AFF)
+// Глубокий синий: подзаголовки проектов и их меню, иконки проектов
+val ThingsDeepBlue = Color(0xFF2A62D9)
 val ThingsInboxBlue = Color(0xFF1B80FA)
 val ThingsTodayStar = Color(0xFFE9AC10)
 val ThingsUpcomingRed = Color(0xFFF35F50)

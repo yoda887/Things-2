@@ -34,6 +34,7 @@ import com.example.ui.components.ProjectProgressArc
 import com.example.ui.screens.home.components.TaskListKeys
 import com.example.ui.screens.home.ActiveScreen
 import com.example.ui.theme.*
+import com.example.ui.theme.ThingsDeepBlue
 
 /**
  * Компонент основного заголовка категории (Inbox, Today, Upcoming и т.д.).
@@ -247,7 +248,7 @@ fun MainCategoryHeader(
                 ProjectProgressArc(
                     completed = completedCount,
                     total = totalCount,
-                    color = ThingsBlue,
+                    color = ThingsDeepBlue,
                     modifier = Modifier
                         .size((26 * scaleFactor).dp)
                         .align(Alignment.Top)

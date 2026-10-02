@@ -77,6 +77,7 @@ import com.example.data.model.ItemWithChecklist
 import com.example.data.model.Tag
 import com.example.ui.screens.home.ActiveScreen
 import com.example.ui.theme.AppIcons
+import com.example.ui.theme.ThingsDeepBlue
 import com.example.ui.screens.home.subcomponents.TaskItemRow
 import com.example.ui.components.ProjectProgressArc
 import com.example.ui.components.HideTextSelectionHandles
@@ -984,7 +985,7 @@ fun SearchResultRow(
             val totalCount = allTasks.count { it.item.projectId == result.project.id && it.item.type == 0 }
             val completedCount = allTasks.count { it.item.projectId == result.project.id && it.item.type == 0 && it.item.isCompleted }
             val isSomeday = result.project.isSomeday
-            val baseArcColor = if (isSomeday) ThingsSomedayGrey else ThingsInboxBlue
+            val baseArcColor = if (isSomeday) ThingsSomedayGrey else ThingsDeepBlue
             val arcColor = if (isHighlighted) androidx.compose.ui.graphics.lerp(baseArcColor, ThingsBlue, 0.45f) else baseArcColor
             val rowBg = if (isHighlighted) ThingsBlue.copy(alpha = 0.12f) else Color.Transparent
 

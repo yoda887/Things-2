@@ -79,6 +79,7 @@ import com.example.ui.components.dragdrop.rememberGenericDragDropState
 import com.example.ui.screens.home.ActiveScreen
 import com.example.ui.screens.home.subcomponents.TaskItemRow
 import com.example.ui.theme.ThingsUpcomingRed
+import com.example.ui.theme.ThingsDeepBlue
 import com.example.ui.screens.home.subcomponents.ProjectHeadingRow
 import com.example.ui.screens.home.inlineeditor.ThingsTaskInlineEditor
 import com.example.ui.screens.home.inlineeditor.dialogs.ThingsMoveDialog
@@ -1637,7 +1638,7 @@ private fun SearchSectionIcon(
             ProjectProgressArc(
                 completed = progress?.completed ?: 0,
                 total = progress?.total ?: 0,
-                color = ThingsBlue,
+                color = ThingsDeepBlue,
                 modifier = iconModifier
             )
         }

@@ -24,6 +24,7 @@ import com.example.data.model.Item
 import com.example.data.model.ItemWithChecklist
 import com.example.ui.components.ProjectProgressArc
 import com.example.ui.theme.ThingsBlue
+import com.example.ui.theme.ThingsDeepBlue
 import com.example.ui.theme.dimens
 
 /**
@@ -73,7 +74,7 @@ fun ProjectItemRow(
             ProjectProgressArc(
                 completed = completedCount,
                 total = totalCount,
-                color = ThingsBlue,
+                color = ThingsDeepBlue,
                 modifier = Modifier.requiredSize(20.dp)
             )
         }

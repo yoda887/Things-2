@@ -28,6 +28,7 @@ import com.example.data.model.Tag
 import androidx.compose.material.icons.outlined.LocalOffer
 import com.example.ui.screens.home.ActiveScreen
 import com.example.ui.theme.AppIcons
+import com.example.ui.theme.ThingsDeepBlue
 import com.example.ui.theme.ThingsBlue
 import com.example.ui.theme.ThingsAreaGreen
 import com.example.ui.theme.ThingsBackgroundDark
@@ -367,7 +368,7 @@ private fun CategoryTopAppBarTitleContent(
                 com.example.ui.components.ProjectProgressArc(
                     completed = completedCount,
                     total = totalCount,
-                    color = ThingsBlue,
+                    color = ThingsDeepBlue,
                     modifier = Modifier.size(PROJECT_PROGRESS_ARC_SIZE)
                 )
                 Spacer(modifier = Modifier.width(TOP_APP_BAR_SPACING))
