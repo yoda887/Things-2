@@ -166,14 +166,22 @@ fun ThingsTaskInlineEditor(
     val currentIsDeletedExternally by rememberUpdatedState(isDeletedExternally)
     val currentProjectId by rememberUpdatedState(task.item.projectId)
 
-    // Synchronize inline editor state with external updates (e.g. from Move Dialog)
+    // Внешние изменения задачи (например, перенос в проект кнопкой Move, пока редактор открыт)
+    // принимаются только в тех полях, которые в редакторе ещё не правили. Перенос записывает в базу
+    // задачу в прежнем виде с новым проектом, и раньше редактор подхватывал её целиком — несохранённые
+    // дата, раздел, теги и приоритет пропадали.
+    var lastSeenItem by remember(task.item.id) { mutableStateOf(task.item) }
     LaunchedEffect(task.item) {
-        section = task.item.section
-        isTonight = task.item.isTonight
-        startDate = task.item.startDate
-        dueDate = task.item.dueDate
-        tagInput = task.item.tags.joinToString(", ")
-        priority = task.item.priority
+        val prev = lastSeenItem
+        val now = task.item
+        if (now.section != prev.section && section == prev.section) section = now.section
+        if (now.isTonight != prev.isTonight && isTonight == prev.isTonight) isTonight = now.isTonight
+        if (now.startDate != prev.startDate && startDate == prev.startDate) startDate = now.startDate
+        if (now.dueDate != prev.dueDate && dueDate == prev.dueDate) dueDate = now.dueDate
+        val prevTags = prev.tags.joinToString(", ")
+        if (now.tags != prev.tags && tagInput == prevTags) tagInput = now.tags.joinToString(", ")
+        if (now.priority != prev.priority && priority == prev.priority) priority = now.priority
+        lastSeenItem = now
     }
 
     LaunchedEffect(task.checklist) {
