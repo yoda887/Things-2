@@ -340,6 +340,15 @@ fun ThingsTaskInlineEditor(
                     showCursor = isExpanded && outsideTouch?.hideHandles != true,
                     checklistBelow = showChecklistHelper || checklist.isNotEmpty(),
                     autoFocusTitle = autoFocusTitle,
+                    // «Done» на клавиатуре у новой задачи — как тап вне редактора: клавиатура уходит в этом же
+                    // кадре, редактор сворачивается, задача сохраняется (или удаляется, если пустая)
+                    onTitleDone = if (autoFocusTitle) {
+                        {
+                            outsideTouch?.onCollapseRequested()
+                            view.hideSoftKeyboardNow()
+                            currentOnDone()
+                        }
+                    } else null,
                     onCheckboxClick = {
                         val newCompleted = !isCompleted
                         isCompleted = newCompleted

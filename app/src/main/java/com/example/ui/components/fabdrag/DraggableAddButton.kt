@@ -151,6 +151,7 @@ private fun BoxScope.FabBody(
                 val coords = homeCoordinates()
                 val l = lift()
                 var settleScale = 1f
+                var shadowFactor = 1f
                 if (controller.isSettling && coords != null) {
                     val t = controller.settleProgress
                     // Полёт — быстрый старт и мягкая посадка; уменьшение ровное по времени, чтобы
@@ -161,6 +162,8 @@ private fun BoxScope.FabBody(
                     translationX = target.x - center.x
                     translationY = target.y - center.y
                     settleScale = (1f - t).coerceAtLeast(0f)
+                    // Как в Things: кнопка сначала «ложится» — тень уходит в первую треть приземления
+                    shadowFactor = (1f - t / 0.35f).coerceIn(0f, 1f)
                     alpha = (1f - t * t * t).coerceIn(0f, 1f)
                 } else if (controller.hiddenAfterSettle) {
                     alpha = 0f
@@ -174,7 +177,7 @@ private fun BoxScope.FabBody(
                 scaleX = scale
                 scaleY = scale
                 // Подъём: тень растёт вместе с увеличением; на отскоке не уходит в минус
-                shadowElevation = (6f + 12f * l).coerceAtLeast(2f).dp.toPx()
+                shadowElevation = ((6f + 12f * l).coerceAtLeast(2f) * shadowFactor).dp.toPx()
                 shape = CircleShape
                 clip = false
             }

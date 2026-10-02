@@ -230,8 +230,10 @@ private fun View.hideImeWithControlledAnimation(onHidden: (() -> Unit)?): Boolea
 
             override fun onCancelled(controller: WindowInsetsAnimationController?) {
                 // Управление не выдали или его перехватили — прячем штатным путём,
-                // иначе клавиатура могла бы вернуться в показанное состояние
-                hideImeViaInputMethodManager()
+                // иначе клавиатура могла бы вернуться в показанное состояние. Не прямо здесь: отмену
+                // вызывает чужой запрос анимации клавиатуры (например, show), и новый hide внутри неё
+                // система не принимает — IllegalStateException «existing ime is being cancelled»
+                post { hideImeViaInputMethodManager() }
                 if (generation == imeHideGeneration) finishImeHide()
             }
         }

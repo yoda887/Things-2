@@ -154,8 +154,16 @@ fun AnimatedTaskItem(
     // из центра этого места. Строка сразу полной высоты — соседи второй раз не двигаются.
     val fabController = com.example.ui.components.fabdrag.LocalFabDragController.current
     val isFreshFromFab = fabController?.freshTaskId == task.id
-    // Решается один раз, когда строка появилась: freshTaskId сбросится после раскрытия
-    val focusTitleOnOpen = remember(task.id) { isFreshFromFab }
+    // Решается один раз, когда строка появилась: freshTaskId сбросится после раскрытия. Только на первое
+    // раскрытие — строка остаётся в композиции, и повторное открытие тапом должно идти как обычно
+    var focusTitleOnOpen by remember(task.id) { mutableStateOf(isFreshFromFab) }
+    // Сбрасывается, только когда редактор ушёл совсем: пока он открыт или сворачивается, настройки поля
+    // (кнопка «Done» у клавиатуры) не должны меняться — иначе Compose перезапускает ввод и снова
+    // показывает клавиатуру прямо во время её скрытия
+    var wasExpandedOnce by remember(task.id) { mutableStateOf(false) }
+    LaunchedEffect(isExpanded) {
+        if (isExpanded) wasExpandedOnce = true
+    }
     val reveal = remember(task.id) {
         androidx.compose.animation.core.Animatable(if (isFreshFromFab) 0f else 1f)
     }
@@ -189,6 +197,9 @@ fun AnimatedTaskItem(
         derivedStateOf { expansionProgressState.value > 0f }
     }
     val showEditor = isExpanded || isExpansionVisible
+    LaunchedEffect(showEditor) {
+        if (!showEditor && wasExpandedOnce) focusTitleOnOpen = false
+    }
 
     val density = androidx.compose.ui.platform.LocalDensity.current
     val verticalGapLimit = MaterialTheme.dimens.taskExpandedVerticalGap

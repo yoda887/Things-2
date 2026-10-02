@@ -58,7 +58,9 @@ fun InlineMainInputRow(
     // Под заметкой показана панель чек-листа — поле заметки в одну строку с зазором до неё, как в Things 3
     checklistBelow: Boolean = false,
     // Новая задача: курсор встаёт в название, клавиатура выезжает вместе с раскрытием редактора
-    autoFocusTitle: Boolean = false
+    autoFocusTitle: Boolean = false,
+    // Не null — у названия кнопка «Done» на клавиатуре, по ней ввод заканчивается (новая задача сворачивается)
+    onTitleDone: (() -> Unit)? = null
 ) {
     HideTextSelectionHandles(hidden = !showCursor) {
         InlineMainInputRowContent(
@@ -72,7 +74,8 @@ fun InlineMainInputRow(
             subtitleText = subtitleText,
             cursorBrush = SolidColor(if (showCursor) ThingsBlue else Color.Unspecified),
             checklistBelow = checklistBelow,
-            autoFocusTitle = autoFocusTitle
+            autoFocusTitle = autoFocusTitle,
+            onTitleDone = onTitleDone
         )
     }
 }
@@ -89,7 +92,8 @@ private fun InlineMainInputRowContent(
     subtitleText: String?,
     cursorBrush: Brush,
     checklistBelow: Boolean,
-    autoFocusTitle: Boolean
+    autoFocusTitle: Boolean,
+    onTitleDone: (() -> Unit)?
 ) {
     val titleFocusRequester = androidx.compose.runtime.remember { androidx.compose.ui.focus.FocusRequester() }
     androidx.compose.runtime.LaunchedEffect(Unit) {
@@ -150,6 +154,9 @@ private fun InlineMainInputRowContent(
                         color = textPrimaryColor
                     ),
                     cursorBrush = cursorBrush,
+                    keyboardOptions = if (onTitleDone != null) androidx.compose.foundation.text.KeyboardOptions(imeAction = androidx.compose.ui.text.input.ImeAction.Done)
+                    else androidx.compose.foundation.text.KeyboardOptions.Default,
+                    keyboardActions = androidx.compose.foundation.text.KeyboardActions(onDone = { onTitleDone?.invoke() }),
                     modifier = Modifier
                         .fillMaxWidth()
                         .focusRequester(titleFocusRequester)
