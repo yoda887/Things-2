@@ -1069,6 +1069,44 @@ fun ThingsCategoryListPanel(
                                     .then(if (!isLifted) Modifier.animateItem(placementSpec = placementSpec) else Modifier)
                                     .padding(top = 22.dp, bottom = 4.dp)
                             ) {
+                                if (isDragged && dragDropState.isInteracting) {
+                                    // Место, куда встанет заголовок с задачами, — та же серая плашка, что
+                                    // остаётся на месте задачи при её перетаскивании (см. AnimatedTaskItem)
+                                    val placeholderColor = if (androidx.compose.foundation.isSystemInDarkTheme()) Color(0xFF2C2D32) else Color(0xFFE5E6EB)
+                                    Box(
+                                        modifier = Modifier
+                                            .matchParentSize()
+                                            .graphicsLayer { alpha = 0.5f }
+                                            .background(placeholderColor, RoundedCornerShape(10.dp))
+                                    )
+                                }
+                                if (isLifted) {
+                                    // Заголовок едет вместе со своими задачами — под ним стопка карточек,
+                                    // как у группы задач в режиме выбора: слой на каждую задачу, не больше двух
+                                    val headingTaskCount = localTasksList.count { it.item.headingId == heading.id }
+                                    val stackBorder = if (androidx.compose.foundation.isSystemInDarkTheme()) Color(0xFF38393D) else Color(0xFFE5E5EA)
+                                    for (layer in minOf(headingTaskCount, 2) downTo 1) {
+                                        Box(
+                                            modifier = Modifier
+                                                .matchParentSize()
+                                                .graphicsLayer {
+                                                    val offset = if (isDragged) dragDropState.visualDragOffsetY(item.key) else 0f
+                                                    val scale = 1f + 0.03f * lift
+                                                    translationX = (4 * layer).dp.toPx() * lift
+                                                    translationY = offset + (4 * layer).dp.toPx() * lift
+                                                    scaleX = scale
+                                                    scaleY = scale
+                                                    rotationZ = 1.6f * layer * lift
+                                                    alpha = lift.coerceIn(0f, 1f)
+                                                    shadowElevation = (8 - 2 * layer).dp.toPx() * lift
+                                                    shape = RoundedCornerShape(10.dp)
+                                                    clip = true
+                                                }
+                                                .background(bkgColor, RoundedCornerShape(10.dp))
+                                                .border(0.5.dp, stackBorder, RoundedCornerShape(10.dp))
+                                        )
+                                    }
+                                }
                                 ProjectHeadingRow(
                                     heading = heading,
                                     isEditing = editingHeadingId == heading.id,

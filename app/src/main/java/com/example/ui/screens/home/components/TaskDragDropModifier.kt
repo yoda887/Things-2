@@ -122,11 +122,17 @@ fun Modifier.taskDragAndDrop(
                     val leadingTask = remainingList[leadingIdx]
                     val targetTonight = leadingTask.item.isTonight
                     val targetStartDate = leadingTask.item.startDate
+                    // В проекте вся группа встаёт под подзаголовок ведущей задачи. На других экранах
+                    // задачи группы могут быть из разных проектов — их подзаголовки не трогаем
+                    val targetHeadingId = leadingTask.item.headingId
 
                     val orderedOtherBatch = batchKeys.drop(1).mapNotNull { key ->
                         localTasksList.firstOrNull { it.item.id == key }
                     }.map { wrapper ->
                         var updated = wrapper
+                        if (screen == ActiveScreen.PROJECT_DETAIL && updated.item.headingId != targetHeadingId) {
+                            updated = updated.copy(item = updated.item.copy(headingId = targetHeadingId))
+                        }
                         if (updated.item.isTonight != targetTonight) {
                             updated = updated.copyWithTonight(targetTonight)
                         }
