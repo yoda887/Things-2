@@ -170,4 +170,20 @@ class FabInsertionTest {
         // Без поправки на высоту выбирается ближайшая граница
         assertEquals(2, FabInsertion.slotAt(160f, rows, false)!!.index)
     }
+
+    @Test
+    fun taskPlacement_rightAboveHeading_isLastInSection() {
+        // В общем списке задачи секций вперемешку: d1 e1 d2 — d2 последняя дневная, e1 вечерняя.
+        // Промежуток сразу над «Вечером» — после d2, а не перед e1 (между d1 и d2)
+        val d1 = task("d1"); val d2 = task("d2"); val e1 = task("e1", tonight = true)
+        val today: List<Any> = listOf(d1, d2, TaskListKeys.EVENING_HEADER, e1)
+        val p = FabInsertion.taskPlacement(today, 2, listOf(d1, e1, d2))
+        assertEquals(3, p.taskIndex)
+        assertFalse(p.isTonight)
+        // Пустая секция под заголовком — ориентир из соседней
+        val empty: List<Any> = listOf(d1, TaskListKeys.EVENING_HEADER)
+        assertEquals(1, FabInsertion.taskPlacement(empty, 2, listOf(d1)).taskIndex)
+        // В проекте над заголовком B — после a2, последней задачи группы A
+        assertEquals(3, FabInsertion.taskPlacement(project, 4, tasks).taskIndex)
+    }
 }

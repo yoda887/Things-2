@@ -47,6 +47,9 @@ data class FabHeadingPlacement(val headingIndex: Int, val movedTaskIds: List<Str
 object FabInsertion {
 
     /** Строки, между которыми может раскрыться промежуток: задачи, заголовки проекта, «Вечер» */
+    /** Подзаголовок, разделяющий секции списка: всё, что можно пометить промежутком, кроме задач */
+    private fun isSectionBoundary(element: Any): Boolean = element !is ItemWithChecklist && isAnchor(element)
+
     fun isAnchor(element: Any): Boolean =
         element is ItemWithChecklist || element is ProjectHeadingItem || element == TaskListKeys.EVENING_HEADER ||
             element is UpcomingHeaderItem || element is UpcomingMonthHeaderItem ||
@@ -85,12 +88,22 @@ object FabInsertion {
         val above = flattened.subList(0, slotIndex.coerceIn(0, flattened.size))
         val headingId = (above.lastOrNull { it is ProjectHeadingItem } as? ProjectHeadingItem)?.heading?.id
         val isTonight = above.any { it == TaskListKeys.EVENING_HEADER }
-        // Перед первой задачей ниже промежутка; задач ниже нет — после последней задачи выше
-        val nextTask = flattened.drop(slotIndex).firstOrNull { it is ItemWithChecklist } as? ItemWithChecklist
-        val prevTask = above.lastOrNull { it is ItemWithChecklist } as? ItemWithChecklist
+        // Соседи — только из той же секции: подзаголовок (заголовок проекта, «Вечер», день, месяц, раздел
+        // области) — граница, за которую поиск не заходит. Задачи всех секций лежат в [tasks] вперемешку,
+        // и ориентир «первая задача ниже» за подзаголовком — это задача чужой секции: новая задача вставала
+        // перед ней, то есть в произвольное место своей секции, а не прямо над подзаголовком.
+        val below = flattened.drop(slotIndex.coerceIn(0, flattened.size))
+        val nextTask = below.takeWhile { !isSectionBoundary(it) }.firstOrNull { it is ItemWithChecklist } as? ItemWithChecklist
+        val prevTask = above.takeLastWhile { !isSectionBoundary(it) }.lastOrNull { it is ItemWithChecklist } as? ItemWithChecklist
+        // Секция пуста — ориентир из соседней: последняя задача выше или первая ниже
+        val prevAny = above.lastOrNull { it is ItemWithChecklist } as? ItemWithChecklist
+        val nextAny = below.firstOrNull { it is ItemWithChecklist } as? ItemWithChecklist
+        fun indexOf(task: ItemWithChecklist) = tasks.indexOfFirst { it.item.id == task.item.id }.takeIf { it != -1 }
         val taskIndex = when {
-            nextTask != null -> tasks.indexOfFirst { it.item.id == nextTask.item.id }.takeIf { it != -1 }
-            prevTask != null -> tasks.indexOfFirst { it.item.id == prevTask.item.id }.takeIf { it != -1 }?.plus(1)
+            nextTask != null -> indexOf(nextTask)
+            prevTask != null -> indexOf(prevTask)?.plus(1)
+            prevAny != null -> indexOf(prevAny)?.plus(1)
+            nextAny != null -> indexOf(nextAny)
             else -> null
         } ?: tasks.size
         // Секции экрана области задаются свойствами задачи, поэтому место промежутка — это секция,
