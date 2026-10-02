@@ -46,6 +46,10 @@ val SEARCH_ROW_ICON_SIZE = 20.dp
 
 /**
  * Строка запроса экрана поиска. При первом показе забирает фокус и поднимает клавиатуру.
+ *
+ * @param autoFocus забрать фокус при появлении. Поле — строка списка: прокрученное за край, оно
+ *   уходит из композиции и при возврате создаётся заново, поэтому решение «фокус уже ставили» хранит
+ *   экран (см. [onAutoFocused]), иначе клавиатура выезжала бы при каждой прокрутке к началу списка.
  */
 @Composable
 fun SearchQueryField(
@@ -53,7 +57,9 @@ fun SearchQueryField(
     onQueryChange: (String) -> Unit,
     textPrimaryColor: Color,
     textSecondaryColor: Color,
-    modifier: Modifier = Modifier
+    modifier: Modifier = Modifier,
+    autoFocus: Boolean = true,
+    onAutoFocused: () -> Unit = {}
 ) {
     val isDark = isSystemInDarkTheme()
     val fieldBackground = if (isDark) Color(0xFF2C2C2E) else Color(0xFFF2F2F7)
@@ -68,7 +74,10 @@ fun SearchQueryField(
         }
     }
     LaunchedEffect(Unit) {
-        focusRequester.requestFocus()
+        if (autoFocus) {
+            focusRequester.requestFocus()
+            onAutoFocused()
+        }
     }
 
     Row(

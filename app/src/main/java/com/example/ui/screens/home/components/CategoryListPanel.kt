@@ -237,6 +237,8 @@ fun ThingsCategoryListPanel(
     val view = androidx.compose.ui.platform.LocalView.current
 
     var showMoveDialog by remember { mutableStateOf(false) }
+    // Поле поиска забирает фокус один раз за показ экрана, а не при каждом возвращении в видимую часть списка
+    var searchFieldAutoFocused by rememberSaveable(screen) { mutableStateOf(false) }
     var showDeleteConfirm by remember { mutableStateOf(false) }
     var isWhenDialogOpen by remember { mutableStateOf(false) }
     var swipeWhenTask by remember { mutableStateOf<ItemWithChecklist?>(null) }
@@ -808,6 +810,8 @@ fun ThingsCategoryListPanel(
             if (screen == ActiveScreen.SEARCH) {
                 item(key = "search_field") {
                     SearchQueryField(
+                        autoFocus = !searchFieldAutoFocused,
+                        onAutoFocused = { searchFieldAutoFocused = true },
                         query = state.searchQuery,
                         onQueryChange = { onEvent(ThingsCategoryListEvent.ChangeSearchQuery(it)) },
                         textPrimaryColor = textPrimaryColor,
