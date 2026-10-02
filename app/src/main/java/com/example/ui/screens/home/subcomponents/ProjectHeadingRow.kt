@@ -47,7 +47,8 @@ import com.example.ui.theme.ThingsDeepBlue
 import com.example.ui.theme.ThingsUpcomingRed
 
 private val HeadingMenuBackground = Color(0xFF22242C)
-private val HeadingTitleStyle = TextStyle(fontSize = 17.sp, fontWeight = FontWeight.SemiBold, color = ThingsDeepBlue)
+// Тот же размер, что у остальных подзаголовков экранов («Вечер», «Планы», «Когда-нибудь»)
+private val HeadingTitleStyle = TextStyle(fontSize = 19.sp, fontWeight = FontWeight.SemiBold, color = ThingsDeepBlue)
 
 /**
  * Заголовок внутри проекта, как в Things: голубое название, «•••» с меню и линия под ним.
