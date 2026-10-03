@@ -1,11 +1,8 @@
 package com.example.ui.screens.home.inlineeditor.dialogs
 
 import com.example.ui.theme.ThingsBadgeTextLight
-import com.example.ui.theme.ThingsDialogBackground
-import com.example.ui.theme.ThingsDialogCloseButton
-import com.example.ui.theme.ThingsMetaGrey
+import com.example.ui.theme.ThingsTheme
 import com.example.ui.theme.ThingsWhenClear
-import com.example.ui.theme.ThingsWhenSecondary
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
@@ -49,7 +46,6 @@ import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogWindowProvider
 import androidx.compose.ui.window.DialogProperties
 import com.example.data.model.TaskSection
-import com.example.ui.theme.ThingsBlue
 import com.example.ui.theme.ThingsUpcomingRed
 import com.example.ui.theme.AppIcons
 import com.example.ui.screens.home.inlineeditor.utils.isPastDate
@@ -104,7 +100,6 @@ private object DialogRippleTheme : RippleTheme {
 }
 
 /** Фон кружка с крестиком: в эталоне он темнее карточки, а не светлее */
-private val CLOSE_BUTTON_BACKGROUND = ThingsDialogCloseButton
 
 /** Отступ внутри строк: попадает в область нажатия, поэтому по пальцу строки стали крупнее */
 private val ROW_VERTICAL_PADDING = 6.dp
@@ -264,9 +259,9 @@ fun ThingsWhenDialog(
         CompositionLocalProvider(LocalRippleTheme provides DialogRippleTheme) {
         Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
         Card(
-            shape = RoundedCornerShape(32.dp),
+            shape = ThingsTheme.shapes.dialogShape,
             colors = CardDefaults.cardColors(
-                containerColor = ThingsDialogBackground
+                containerColor = ThingsTheme.colors.overlaySurface
             ),
             modifier = Modifier
                 .offset { IntOffset(0, -centerFixPx) }
@@ -309,11 +304,7 @@ fun ThingsWhenDialog(
                     ) {
                         Text(
                             text = "When?",
-                            style = TextStyle(
-                                color = Color.White,
-                                fontSize = 20.sp,
-                                fontWeight = FontWeight.Bold
-                            )
+                            style = ThingsTheme.type.dialogTitle.copy(color = ThingsTheme.colors.overlayContent)
                         )
                     }
                     Box(
@@ -324,7 +315,7 @@ fun ThingsWhenDialog(
                             modifier = Modifier
                                 .size(36.dp)
                                 .clip(CircleShape)
-                                .background(CLOSE_BUTTON_BACKGROUND)
+                                .background(ThingsTheme.colors.overlayControl)
                                 .clickable { requestClose() },
                             contentAlignment = Alignment.Center
                         ) {
@@ -344,7 +335,7 @@ fun ThingsWhenDialog(
                 Row(
                     modifier = Modifier
                         .fillMaxWidth()
-                        .clip(RoundedCornerShape(8.dp))
+                        .clip(ThingsTheme.shapes.rowShape)
                         .clickable {
                             view.performHapticFeedback(HapticFeedbackConstants.CLOCK_TICK)
                             onStartDateChange(System.currentTimeMillis())
@@ -371,11 +362,7 @@ fun ThingsWhenDialog(
                     }
                     Text(
                         text = androidx.compose.ui.res.stringResource(com.example.R.string.category_today),
-                        style = TextStyle(
-                            color = Color.White,
-                            fontSize = 19.sp,
-                            fontWeight = FontWeight.Normal
-                        ),
+                        style = ThingsTheme.type.dialogRow.copy(color = ThingsTheme.colors.overlayContent),
                         modifier = Modifier.weight(5f)
                     )
                     Box(modifier = Modifier.weight(1f), contentAlignment = Alignment.Center) {
@@ -383,7 +370,7 @@ fun ThingsWhenDialog(
                             Icon(
                                 imageVector = Icons.Default.Check,
                                 contentDescription = "Active Today",
-                                tint = ThingsBlue,
+                                tint = ThingsTheme.colors.accent,
                                 modifier = Modifier.size(18.dp)
                             )
                         }
@@ -396,7 +383,7 @@ fun ThingsWhenDialog(
                 Row(
                     modifier = Modifier
                         .fillMaxWidth()
-                        .clip(RoundedCornerShape(8.dp))
+                        .clip(ThingsTheme.shapes.rowShape)
                         .clickable {
                             view.performHapticFeedback(HapticFeedbackConstants.CLOCK_TICK)
                             onStartDateChange(System.currentTimeMillis())
@@ -423,11 +410,7 @@ fun ThingsWhenDialog(
                     }
                     Text(
                         text = androidx.compose.ui.res.stringResource(com.example.R.string.category_this_evening),
-                        style = TextStyle(
-                            color = Color.White,
-                            fontSize = 19.sp,
-                            fontWeight = FontWeight.Normal
-                        ),
+                        style = ThingsTheme.type.dialogRow.copy(color = ThingsTheme.colors.overlayContent),
                         modifier = Modifier.weight(5f)
                     )
                     Box(modifier = Modifier.weight(1f), contentAlignment = Alignment.Center) {
@@ -435,7 +418,7 @@ fun ThingsWhenDialog(
                             Icon(
                                 imageVector = Icons.Default.Check,
                                 contentDescription = "Active This Evening",
-                                tint = ThingsBlue,
+                                tint = ThingsTheme.colors.accent,
                                 modifier = Modifier.size(18.dp)
                             )
                         }
@@ -459,7 +442,7 @@ fun ThingsWhenDialog(
                         Text(
                             text = dayName,
                             style = TextStyle(
-                                color = ThingsWhenSecondary,
+                                color = ThingsTheme.colors.overlayContentSecondary,
                                 fontSize = 15.sp,
                                 fontWeight = FontWeight.Normal
                             ),
@@ -550,7 +533,7 @@ fun ThingsWhenDialog(
                                         Icon(
                                             imageVector = Icons.Default.ChevronLeft,
                                             contentDescription = "Previous Month",
-                                            tint = ThingsMetaGrey,
+                                            tint = ThingsTheme.colors.overlayContentSecondary,
                                             modifier = Modifier
                                                 .size(20.dp)
                                                 .clickable {
@@ -562,7 +545,7 @@ fun ThingsWhenDialog(
                                         Icon(
                                             imageVector = Icons.Default.ChevronRight,
                                             contentDescription = "Next Month",
-                                            tint = ThingsMetaGrey,
+                                            tint = ThingsTheme.colors.overlayContentSecondary,
                                             modifier = Modifier
                                                 .size(20.dp)
                                                 .clickable {
@@ -578,7 +561,7 @@ fun ThingsWhenDialog(
                                                 .clip(RoundedCornerShape(6.dp))
                                                 .then(
                                                     if (isSelected) {
-                                                        Modifier.border(1.5.dp, ThingsBlue, RoundedCornerShape(6.dp))
+                                                        Modifier.border(1.5.dp, ThingsTheme.colors.accent, RoundedCornerShape(6.dp))
                                                     } else {
                                                         Modifier
                                                     }
@@ -672,7 +655,7 @@ fun ThingsWhenDialog(
                 Row(
                     modifier = Modifier
                         .fillMaxWidth()
-                        .clip(RoundedCornerShape(8.dp))
+                        .clip(ThingsTheme.shapes.rowShape)
                         .clickable {
                             view.performHapticFeedback(HapticFeedbackConstants.CLOCK_TICK)
                             onStartDateChange(null)
@@ -699,11 +682,7 @@ fun ThingsWhenDialog(
                     }
                     Text(
                         text = androidx.compose.ui.res.stringResource(com.example.R.string.category_someday),
-                        style = TextStyle(
-                            color = Color.White,
-                            fontSize = 19.sp,
-                            fontWeight = FontWeight.Normal
-                        ),
+                        style = ThingsTheme.type.dialogRow.copy(color = ThingsTheme.colors.overlayContent),
                         modifier = Modifier.weight(5f)
                     )
                     Box(modifier = Modifier.weight(1f), contentAlignment = Alignment.Center) {
@@ -711,7 +690,7 @@ fun ThingsWhenDialog(
                             Icon(
                                 imageVector = Icons.Default.Check,
                                 contentDescription = "Active Someday",
-                                tint = ThingsBlue,
+                                tint = ThingsTheme.colors.accent,
                                 modifier = Modifier.size(18.dp)
                             )
                         }
@@ -736,17 +715,13 @@ fun ThingsWhenDialog(
                         Icon(
                             imageVector = Icons.Default.Add,
                             contentDescription = null,
-                            tint = ThingsWhenSecondary,
+                            tint = ThingsTheme.colors.overlayContentSecondary,
                             modifier = Modifier.size(18.dp)
                         )
                     }
                     Text(
                         text = "Add Reminder",
-                        style = TextStyle(
-                            color = ThingsWhenSecondary,
-                            fontSize = 19.sp,
-                            fontWeight = FontWeight.Normal
-                        ),
+                        style = ThingsTheme.type.dialogRow.copy(color = ThingsTheme.colors.overlayContentSecondary),
                         modifier = Modifier.weight(5f)
                     )
                     Box(modifier = Modifier.weight(1f))
@@ -776,8 +751,7 @@ fun ThingsWhenDialog(
                     ) {
                         Text(
                             text = "Clear",
-                            fontSize = 19.sp,
-                            fontWeight = FontWeight.Normal
+                            style = ThingsTheme.type.dialogButton
                         )
                     }
                 }

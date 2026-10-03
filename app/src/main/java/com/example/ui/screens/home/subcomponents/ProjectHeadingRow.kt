@@ -1,6 +1,6 @@
 package com.example.ui.screens.home.subcomponents
 
-import com.example.ui.theme.ThingsDialogBackground
+import com.example.ui.theme.ThingsTheme
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.interaction.MutableInteractionSource
@@ -47,7 +47,6 @@ import com.example.ui.theme.ThingsBlue
 import com.example.ui.theme.ThingsDeepBlue
 import com.example.ui.theme.ThingsUpcomingRed
 
-private val HeadingMenuBackground = ThingsDialogBackground
 // Тот же размер, что у остальных подзаголовков экранов («Вечер», «Планы», «Когда-нибудь»)
 private val HeadingTitleStyle = TextStyle(fontSize = 19.sp, fontWeight = FontWeight.SemiBold, color = ThingsDeepBlue)
 
@@ -110,18 +109,18 @@ fun ProjectHeadingRow(
                 DropdownMenu(
                     expanded = showMenu,
                     onDismissRequest = { showMenu = false },
-                    modifier = Modifier.background(HeadingMenuBackground)
+                    modifier = Modifier.background(ThingsTheme.colors.overlaySurface)
                 ) {
                     DropdownMenuItem(
-                        text = { Text("Rename", color = Color.White, fontSize = 17.sp) },
+                        text = { Text("Rename", color = ThingsTheme.colors.overlayContent, style = ThingsTheme.type.menuItem) },
                         onClick = { showMenu = false; onStartEditing() }
                     )
                     DropdownMenuItem(
-                        text = { Text("Archive", color = Color.White, fontSize = 17.sp) },
+                        text = { Text("Archive", color = ThingsTheme.colors.overlayContent, style = ThingsTheme.type.menuItem) },
                         onClick = { showMenu = false; onArchive() }
                     )
                     DropdownMenuItem(
-                        text = { Text("Delete", color = ThingsUpcomingRed, fontSize = 17.sp) },
+                        text = { Text("Delete", color = ThingsTheme.colors.danger, style = ThingsTheme.type.menuItem) },
                         onClick = { showMenu = false; onDelete() }
                     )
                 }

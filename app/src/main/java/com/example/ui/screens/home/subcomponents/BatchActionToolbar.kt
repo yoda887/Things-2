@@ -1,7 +1,6 @@
 package com.example.ui.screens.home.subcomponents
 
-import com.example.ui.theme.ThingsDialogBackground
-import com.example.ui.theme.ThingsToolbarBackground
+import com.example.ui.theme.ThingsTheme
 import android.view.HapticFeedbackConstants
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.fadeIn
@@ -83,7 +82,7 @@ fun BatchActionToolbar(
             modifier = Modifier
                 .height(MaterialTheme.dimens.floatingToolbarHeight)
                 .clip(RoundedCornerShape(MaterialTheme.dimens.floatingToolbarCornerRadius))
-                .background(ThingsToolbarBackground)
+                .background(ThingsTheme.colors.overlaySurface)
                 .padding(horizontal = 16.dp),
             contentAlignment = Alignment.Center
         ) {
@@ -139,10 +138,10 @@ fun BatchActionToolbar(
                     DropdownMenu(
                         expanded = isMoreMenuExpanded,
                         onDismissRequest = { isMoreMenuExpanded = false },
-                        modifier = Modifier.background(ThingsDialogBackground)
+                        modifier = Modifier.background(ThingsTheme.colors.overlaySurface)
                     ) {
                         DropdownMenuItem(
-                            text = { Text(stringResource(R.string.batch_action_complete), color = Color.White) },
+                            text = { Text(stringResource(R.string.batch_action_complete), color = Color.White, style = ThingsTheme.type.menuItem) },
                             leadingIcon = {
                                 Icon(
                                     imageVector = Icons.Outlined.CheckCircleOutline,
@@ -159,7 +158,7 @@ fun BatchActionToolbar(
                         )
 
                         DropdownMenuItem(
-                            text = { Text(stringResource(R.string.batch_action_set_tags), color = Color.White) },
+                            text = { Text(stringResource(R.string.batch_action_set_tags), color = Color.White, style = ThingsTheme.type.menuItem) },
                             leadingIcon = {
                                 Icon(
                                     imageVector = AppIcons.Tag,
@@ -176,7 +175,7 @@ fun BatchActionToolbar(
                         )
 
                         DropdownMenuItem(
-                            text = { Text(stringResource(R.string.batch_action_set_deadline), color = Color.White) },
+                            text = { Text(stringResource(R.string.batch_action_set_deadline), color = Color.White, style = ThingsTheme.type.menuItem) },
                             leadingIcon = {
                                 Icon(
                                     imageVector = AppIcons.Deadline,
@@ -193,7 +192,7 @@ fun BatchActionToolbar(
                         )
 
                         DropdownMenuItem(
-                            text = { Text(stringResource(R.string.batch_action_duplicate), color = Color.White) },
+                            text = { Text(stringResource(R.string.batch_action_duplicate), color = Color.White, style = ThingsTheme.type.menuItem) },
                             leadingIcon = {
                                 Icon(
                                     imageVector = Icons.Outlined.ContentCopy,
@@ -210,7 +209,7 @@ fun BatchActionToolbar(
                         )
 
                         DropdownMenuItem(
-                            text = { Text(stringResource(R.string.batch_action_share), color = Color.White) },
+                            text = { Text(stringResource(R.string.batch_action_share), color = Color.White, style = ThingsTheme.type.menuItem) },
                             leadingIcon = {
                                 Icon(
                                     imageVector = Icons.Outlined.Share,

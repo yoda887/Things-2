@@ -51,6 +51,8 @@ fun MyApplicationTheme(
 
   val typography = rememberThingsTypography()
   CompositionLocalProvider(LocalAppDimens provides AppDimens()) {
-    MaterialTheme(colorScheme = colorScheme, typography = typography, content = content)
+    ProvideThingsTheme {
+      MaterialTheme(colorScheme = colorScheme, typography = typography, content = content)
+    }
   }
 }

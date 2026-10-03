@@ -1,5 +1,6 @@
 package com.example.ui.screens.home.inlineeditor.dialogs
 
+import com.example.ui.theme.ThingsTheme
 import com.example.ui.theme.ThingsCheckboxBorder
 import com.example.ui.theme.ThingsFieldLight
 import com.example.ui.theme.ThingsHairlineLight
@@ -258,7 +259,7 @@ fun QuickAddDialog(
         contentAlignment = Alignment.TopCenter
     ) {
         Card(
-            shape = RoundedCornerShape(30.dp),
+            shape = ThingsTheme.shapes.floatingCardShape,
             colors = CardDefaults.cardColors(containerColor = Color.White),
             elevation = CardDefaults.cardElevation(defaultElevation = 8.dp),
             modifier = Modifier

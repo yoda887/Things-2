@@ -20,7 +20,7 @@ data class AppDimens(
     val mainHeaderPaddingTop: Dp = 24.dp,
     val dialogWidth: Dp = 320.dp,
     val dialogHeight: Dp = 480.dp,
-    val dialogRoundedCornerSize: Dp = 16.dp,
+    val dialogRoundedCornerSize: Dp = 32.dp,
     val dialogInnerContentPadding: Dp = 16.dp,
     val floatingToolbarHeight: Dp = 50.dp,
     val floatingToolbarBottomPadding: Dp = 24.dp,

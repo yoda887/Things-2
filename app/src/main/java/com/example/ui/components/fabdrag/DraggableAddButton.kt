@@ -1,6 +1,6 @@
 package com.example.ui.components.fabdrag
 
-import com.example.ui.theme.ThingsFabActionButton
+import com.example.ui.theme.ThingsTheme
 import android.view.HapticFeedbackConstants
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.core.animateFloatAsState
@@ -53,7 +53,6 @@ import androidx.compose.ui.platform.LocalView
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.zIndex
 
-private val ActionButtonColor = ThingsFabActionButton
 
 /** Насколько близко к кнопке действия нужно поднести палец, чтобы она сработала */
 private const val ACTION_HIT_SLOP_FACTOR = 1.4f
@@ -283,7 +282,7 @@ private fun FabActionButton(
             modifier = Modifier
                 .size(44.dp)
                 .onGloballyPositioned { onBounds(it.boundsInRoot()) }
-                .background(ActionButtonColor, CircleShape),
+                .background(ThingsTheme.colors.overlaySurface, CircleShape),
             contentAlignment = Alignment.Center
         ) { icon() }
     }

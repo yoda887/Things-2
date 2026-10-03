@@ -1,6 +1,6 @@
 package com.example.ui.screens.home.inlineeditor.dialogs
 
-import com.example.ui.theme.ThingsDialogBackground
+import com.example.ui.theme.ThingsTheme
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.*
@@ -14,10 +14,7 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.window.Dialog
-import com.example.ui.theme.ThingsUpcomingRed
 import com.example.R
-
-private val DialogBackgroundColor = ThingsDialogBackground
 
 /**
  * Диалог подтверждения удаления задачи.
@@ -30,8 +27,8 @@ fun DeleteConfirmDialog(
 ) {
     Dialog(onDismissRequest = onDismissRequest) {
         Card(
-            shape = RoundedCornerShape(16.dp),
-            colors = CardDefaults.cardColors(containerColor = DialogBackgroundColor),
+            shape = ThingsTheme.shapes.dialogShape,
+            colors = CardDefaults.cardColors(containerColor = ThingsTheme.colors.overlaySurface),
             modifier = Modifier
                 .width(300.dp)
                 .padding(16.dp)
@@ -44,16 +41,15 @@ fun DeleteConfirmDialog(
             ) {
                 Text(
                     text = stringResource(id = R.string.delete_task_confirm_title),
-                    color = Color.White,
-                    fontSize = 18.sp,
-                    fontWeight = FontWeight.Bold,
+                    color = ThingsTheme.colors.overlayContent,
+                    style = ThingsTheme.type.dialogTitle,
                     textAlign = TextAlign.Center
                 )
                 Spacer(modifier = Modifier.height(12.dp))
                 Text(
                     text = stringResource(id = R.string.delete_task_confirm_message),
-                    color = Color.LightGray,
-                    fontSize = 14.sp,
+                    color = ThingsTheme.colors.overlayContentSecondary,
+                    style = ThingsTheme.type.dialogBody,
                     textAlign = TextAlign.Center
                 )
                 Spacer(modifier = Modifier.height(20.dp))
@@ -66,16 +62,18 @@ fun DeleteConfirmDialog(
                     ) {
                         Text(
                             text = stringResource(id = R.string.delete_task_confirm_cancel),
-                            color = Color.White
+                            color = ThingsTheme.colors.overlayContent,
+                            style = ThingsTheme.type.dialogButton
                         )
                     }
                     Button(
                         onClick = onConfirmDelete,
-                        colors = ButtonDefaults.buttonColors(containerColor = ThingsUpcomingRed)
+                        colors = ButtonDefaults.buttonColors(containerColor = ThingsTheme.colors.danger)
                     ) {
                         Text(
                             text = stringResource(id = R.string.delete_task_confirm_delete),
-                            color = Color.White
+                            color = ThingsTheme.colors.overlayContent,
+                            style = ThingsTheme.type.dialogButton
                         )
                     }
                 }

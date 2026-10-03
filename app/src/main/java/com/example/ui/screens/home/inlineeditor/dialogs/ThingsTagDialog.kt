@@ -1,8 +1,5 @@
 package com.example.ui.screens.home.inlineeditor.dialogs
 
-import com.example.ui.theme.ThingsDialogBackground
-import com.example.ui.theme.ThingsDialogButton
-import com.example.ui.theme.ThingsMetaGrey
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
@@ -65,20 +62,18 @@ import com.example.domain.tag.TagTitles
 
 import com.example.R
 import com.example.data.model.Tag
-import com.example.ui.theme.ThingsBlue
-import com.example.ui.theme.ThingsUpcomingRed
+import com.example.ui.theme.ThingsTheme
 import kotlinx.coroutines.delay
 
-// Private Theme Color Constants inside the file to avoid hardcoding inline
-private val DialogBackgroundColor = ThingsDialogBackground
-private val ItemMutedColor = ThingsMetaGrey
-private val DarkButtonBgColor = ThingsDialogButton
-private val DeleteButtonBgColor = ThingsUpcomingRed
+// Цвета диалога — роли темы (ThingsTheme)
+private val DialogBackgroundColor @Composable get() = ThingsTheme.colors.overlaySurface
+private val ItemMutedColor @Composable get() = ThingsTheme.colors.overlayContentSecondary
+private val DarkButtonBgColor @Composable get() = ThingsTheme.colors.overlayControl
+private val DeleteButtonBgColor @Composable get() = ThingsTheme.colors.danger
 
 // Private Dimensions
 private val DialogWidth = 320.dp
 private val DialogHeight = 480.dp
-private val RoundedCornerSize = 16.dp
 private val InnerContentPadding = 16.dp
 private val RowPaddingStartNormal = 4.dp
 private val RowPaddingStartChild = 28.dp
@@ -88,7 +83,6 @@ private val RowPaddingBottom = 8.dp
 private val ButtonIconSize = 16.dp
 private val EditButtonSize = 28.dp
 private val DeleteButtonSize = 28.dp
-private val TextButtonFontSize = 16.sp
 
 /**
  * Screen states for the ThingsTagDialog options.
@@ -284,12 +278,19 @@ fun ThingsTagDialog(
                     
                     tagToDeleteWithChildren = null
                 }) {
-                    Text(stringResource(id = R.string.tag_dialog_delete), color = ThingsUpcomingRed)
+                    Text(
+                        text = stringResource(id = R.string.tag_dialog_delete),
+                        color = ThingsTheme.colors.danger,
+                        style = ThingsTheme.type.dialogButton
+                    )
                 }
             },
             dismissButton = {
                 TextButton(onClick = { tagToDeleteWithChildren = null }) {
-                    Text(stringResource(id = R.string.tag_dialog_cancel))
+                    Text(
+                        text = stringResource(id = R.string.tag_dialog_cancel),
+                        style = ThingsTheme.type.dialogButton
+                    )
                 }
             }
         )
@@ -373,7 +374,7 @@ fun ThingsTagDialog(
             contentAlignment = Alignment.Center
         ) {
             Card(
-                shape = RoundedCornerShape(RoundedCornerSize),
+                shape = ThingsTheme.shapes.dialogShape,
                 colors = CardDefaults.cardColors(
                     containerColor = DialogBackgroundColor
                 ),
@@ -412,11 +413,7 @@ fun ThingsTagDialog(
 
                             Text(
                                 text = stringResource(id = R.string.tag_dialog_title),
-                                style = TextStyle(
-                                    color = Color.White,
-                                    fontSize = 20.sp,
-                                    fontWeight = FontWeight.Bold
-                                ),
+                                style = ThingsTheme.type.dialogTitle.copy(color = ThingsTheme.colors.overlayContent),
                                 textAlign = TextAlign.Center
                             )
 
@@ -424,7 +421,7 @@ fun ThingsTagDialog(
                                 modifier = Modifier
                                     .size(36.dp)
                                     .clip(androidx.compose.foundation.shape.CircleShape)
-                                    .background(if (hasChanges) ThingsBlue else DarkButtonBgColor)
+                                    .background(if (hasChanges) ThingsTheme.colors.accent else DarkButtonBgColor)
                                     .clickable {
                                         if (hasChanges) {
                                             onTagsSelected(selectedTags.toList())
@@ -436,7 +433,7 @@ fun ThingsTagDialog(
                                 Icon(
                                     imageVector = if (hasChanges) Icons.Default.Check else Icons.Default.Close,
                                     contentDescription = if (hasChanges) "Save" else "Cancel",
-                                    tint = Color.White,
+                                    tint = ThingsTheme.colors.overlayContent,
                                     modifier = Modifier.size(18.dp)
                                 )
                             }
@@ -457,7 +454,7 @@ fun ThingsTagDialog(
                                     modifier = Modifier
                                         .fillMaxWidth()
                                         .animateItem()
-                                        .clip(RoundedCornerShape(8.dp))
+                                        .clip(ThingsTheme.shapes.rowShape)
                                         .clickable {
                                             selectedTags = if (isSelected) {
                                                 selectedTags - tag.title
@@ -476,7 +473,7 @@ fun ThingsTagDialog(
                                     Icon(
                                         imageVector = if (isSelected) AppIcons.TagFilled else AppIcons.Tag,
                                         contentDescription = null,
-                                        tint = if (isSelected) ThingsBlue else ItemMutedColor,
+                                        tint = if (isSelected) ThingsTheme.colors.accent else ItemMutedColor,
                                         modifier = Modifier.size(18.dp)
                                     )
 
@@ -484,8 +481,8 @@ fun ThingsTagDialog(
 
                                     Text(
                                         text = tag.title,
-                                        style = MaterialTheme.typography.labelLarge.copy(
-                                            color = Color.White,
+                                        style = ThingsTheme.type.dialogRow.copy(
+                                            color = ThingsTheme.colors.overlayContent,
                                             fontWeight = if (isSelected) FontWeight.SemiBold else FontWeight.Normal
                                         ),
                                         modifier = Modifier.weight(1f)
@@ -495,7 +492,7 @@ fun ThingsTagDialog(
                                         Icon(
                                             imageVector = Icons.Default.Check,
                                             contentDescription = "Selected",
-                                            tint = ThingsBlue,
+                                            tint = ThingsTheme.colors.accent,
                                             modifier = Modifier.size(18.dp)
                                         )
                                     }
@@ -514,15 +511,15 @@ fun ThingsTagDialog(
                                 onClick = { currentScreen = DialogScreen.MANAGE },
                                 colors = ButtonDefaults.buttonColors(
                                     containerColor = DarkButtonBgColor,
-                                    contentColor = Color.White
+                                    contentColor = ThingsTheme.colors.overlayContent
                                 ),
-                                shape = RoundedCornerShape(8.dp),
+                                shape = ThingsTheme.shapes.rowShape,
                                 modifier = Modifier.weight(1f),
                                 contentPadding = PaddingValues(vertical = 10.dp)
                             ) {
                                 Text(
                                     text = stringResource(id = R.string.tag_dialog_manage_tags),
-                                    style = MaterialTheme.typography.labelLarge.copy(fontWeight = FontWeight.Medium)
+                                    style = ThingsTheme.type.dialogButton
                                 )
                             }
 
@@ -535,15 +532,15 @@ fun ThingsTagDialog(
                                 },
                                 colors = ButtonDefaults.buttonColors(
                                     containerColor = DarkButtonBgColor,
-                                    contentColor = Color.White
+                                    contentColor = ThingsTheme.colors.overlayContent
                                 ),
-                                shape = RoundedCornerShape(8.dp),
+                                shape = ThingsTheme.shapes.rowShape,
                                 modifier = Modifier.weight(1f),
                                 contentPadding = PaddingValues(vertical = 10.dp)
                             ) {
                                 Text(
                                     text = stringResource(id = R.string.tag_dialog_new_tag),
-                                    style = MaterialTheme.typography.labelLarge.copy(fontWeight = FontWeight.Medium)
+                                    style = ThingsTheme.type.dialogButton
                                 )
                             }
                         }
@@ -592,18 +589,14 @@ fun ThingsTagDialog(
                                 Icon(
                                     imageVector = Icons.Default.Close,
                                     contentDescription = "Cancel",
-                                    tint = Color.White,
+                                    tint = ThingsTheme.colors.overlayContent,
                                     modifier = Modifier.size(18.dp)
                                 )
                             }
 
                             Text(
                                 text = stringResource(id = R.string.tag_dialog_new_tag),
-                                style = TextStyle(
-                                    color = Color.White,
-                                    fontSize = 20.sp,
-                                    fontWeight = FontWeight.Bold
-                                ),
+                                style = ThingsTheme.type.dialogTitle.copy(color = ThingsTheme.colors.overlayContent),
                                 textAlign = TextAlign.Center
                             )
 
@@ -611,14 +604,14 @@ fun ThingsTagDialog(
                                 modifier = Modifier
                                     .size(36.dp)
                                     .clip(androidx.compose.foundation.shape.CircleShape)
-                                    .background(if (isSaveEnabled) ThingsBlue else DarkButtonBgColor)
+                                    .background(if (isSaveEnabled) ThingsTheme.colors.accent else DarkButtonBgColor)
                                     .clickable(enabled = isSaveEnabled) { saveNewTag() },
                                 contentAlignment = Alignment.Center
                             ) {
                                 Icon(
                                     imageVector = Icons.Default.Check,
                                     contentDescription = "Save",
-                                    tint = if (isSaveEnabled) Color.White else ItemMutedColor,
+                                    tint = if (isSaveEnabled) ThingsTheme.colors.overlayContent else ItemMutedColor,
                                     modifier = Modifier.size(18.dp)
                                 )
                             }
@@ -640,13 +633,13 @@ fun ThingsTagDialog(
                                     focusedContainerColor = DarkButtonBgColor,
                                     unfocusedContainerColor = DarkButtonBgColor,
                                     disabledContainerColor = DarkButtonBgColor,
-                                    focusedTextColor = Color.White,
-                                    unfocusedTextColor = Color.White,
-                                    focusedBorderColor = ThingsBlue,
+                                    focusedTextColor = ThingsTheme.colors.overlayContent,
+                                    unfocusedTextColor = ThingsTheme.colors.overlayContent,
+                                    focusedBorderColor = ThingsTheme.colors.accent,
                                     unfocusedBorderColor = Color.Transparent,
-                                    cursorColor = if (leaving) Color.Transparent else ThingsBlue
+                                    cursorColor = if (leaving) Color.Transparent else ThingsTheme.colors.accent
                                 ),
-                                shape = RoundedCornerShape(8.dp),
+                                shape = ThingsTheme.shapes.rowShape,
                                 modifier = Modifier
                                     .fillMaxWidth()
                                     .focusRequester(focusRequester)
@@ -657,7 +650,7 @@ fun ThingsTagDialog(
                         Row(
                             modifier = Modifier
                                 .fillMaxWidth()
-                                .clip(RoundedCornerShape(8.dp))
+                                .clip(ThingsTheme.shapes.rowShape)
                                 .clickable {
                                     dialogView.hideSoftKeyboardNow()
                                     groupSelectionTargetScreen = DialogScreen.CREATE
@@ -669,11 +662,7 @@ fun ThingsTagDialog(
                         ) {
                             Text(
                                 text = stringResource(id = R.string.tag_dialog_group),
-                                style = TextStyle(
-                                    color = Color.White,
-                                    fontSize = 16.sp,
-                                    fontWeight = FontWeight.Normal
-                                )
+                                style = ThingsTheme.type.dialogRow.copy(color = ThingsTheme.colors.overlayContent, fontWeight = FontWeight.Normal)
                             )
                             Row(
                                 verticalAlignment = Alignment.CenterVertically,
@@ -681,16 +670,12 @@ fun ThingsTagDialog(
                             ) {
                                 Text(
                                     text = selectedGroup?.title ?: stringResource(id = R.string.tag_dialog_no_tag),
-                                    style = TextStyle(
-                                        color = ThingsBlue,
-                                        fontSize = 16.sp,
-                                        fontWeight = FontWeight.Medium
-                                    )
+                                    style = ThingsTheme.type.dialogRow.copy(color = ThingsTheme.colors.accent, fontWeight = FontWeight.Medium)
                                 )
                                 Icon(
                                     imageVector = Icons.Default.KeyboardArrowRight,
                                     contentDescription = null,
-                                    tint = ThingsBlue,
+                                    tint = ThingsTheme.colors.accent,
                                     modifier = Modifier.size(18.dp)
                                 )
                             }
@@ -740,18 +725,14 @@ fun ThingsTagDialog(
                                 Icon(
                                     imageVector = Icons.Default.KeyboardArrowLeft,
                                     contentDescription = "Back",
-                                    tint = Color.White,
+                                    tint = ThingsTheme.colors.overlayContent,
                                     modifier = Modifier.size(18.dp)
                                 )
                             }
 
                             Text(
                                 text = stringResource(id = R.string.tag_dialog_select_group),
-                                style = TextStyle(
-                                    color = Color.White,
-                                    fontSize = 20.sp,
-                                    fontWeight = FontWeight.Bold
-                                ),
+                                style = ThingsTheme.type.dialogTitle.copy(color = ThingsTheme.colors.overlayContent),
                                 textAlign = TextAlign.Center
                             )
 
@@ -776,7 +757,7 @@ fun ThingsTagDialog(
                                 Row(
                                     modifier = Modifier
                                         .fillMaxWidth()
-                                        .clip(RoundedCornerShape(8.dp))
+                                        .clip(ThingsTheme.shapes.rowShape)
                                         .clickable {
                                             selectedGroup = if (option.id == "No Tag") null else option
                                             currentScreen = groupSelectionTargetScreen
@@ -786,8 +767,8 @@ fun ThingsTagDialog(
                                 ) {
                                     Text(
                                         text = if (option.id == "No Tag") stringResource(id = R.string.tag_dialog_no_tag) else option.title,
-                                        style = MaterialTheme.typography.labelLarge.copy(
-                                            color = Color.White,
+                                        style = ThingsTheme.type.dialogRow.copy(
+                                            color = ThingsTheme.colors.overlayContent,
                                             fontWeight = if (isSelected) FontWeight.SemiBold else FontWeight.Normal
                                         ),
                                         modifier = Modifier.weight(1f)
@@ -796,7 +777,7 @@ fun ThingsTagDialog(
                                         Icon(
                                             imageVector = Icons.Default.Check,
                                             contentDescription = "Selected",
-                                            tint = ThingsBlue,
+                                            tint = ThingsTheme.colors.accent,
                                             modifier = Modifier.size(18.dp)
                                         )
                                     }
@@ -837,11 +818,7 @@ fun ThingsTagDialog(
 
                             Text(
                                 text = stringResource(id = R.string.tag_dialog_manage_tags),
-                                style = TextStyle(
-                                    color = Color.White,
-                                    fontSize = 20.sp,
-                                    fontWeight = FontWeight.Bold
-                                ),
+                                style = ThingsTheme.type.dialogTitle.copy(color = ThingsTheme.colors.overlayContent),
                                 textAlign = TextAlign.Center
                             )
 
@@ -858,7 +835,7 @@ fun ThingsTagDialog(
                                 Icon(
                                     imageVector = Icons.Default.Close,
                                     contentDescription = "Done",
-                                    tint = Color.White,
+                                    tint = ThingsTheme.colors.overlayContent,
                                     modifier = Modifier.size(18.dp)
                                 )
                             }
@@ -891,6 +868,7 @@ fun ThingsTagDialog(
                                     val isLifted = isDragged || lift > 0f
                                     // Фон непрозрачный: поднятая строка проходит над соседними, и они не должны просвечивать
                                     val rowBg = if (isLifted) DarkButtonBgColor else Color.Transparent
+                                    val liftShape = ThingsTheme.shapes.rowShape
 
                                     Row(
                                         modifier = Modifier
@@ -903,7 +881,7 @@ fun ThingsTagDialog(
                                                 scaleX = scale
                                                 scaleY = scale
                                                 shadowElevation = 8.dp.toPx() * lift
-                                                shape = RoundedCornerShape(8.dp)
+                                                shape = liftShape
                                                 clip = false
                                             }
                                             .tagDragAndDrop(
@@ -914,7 +892,7 @@ fun ThingsTagDialog(
                                                 onRowsChange = { localManageTags = it },
                                                 onDragEnd = { saveManageOrder() }
                                             )
-                                            .background(rowBg, RoundedCornerShape(8.dp))
+                                            .background(rowBg, ThingsTheme.shapes.rowShape)
                                             .padding(
                                                 start = if (isChild) RowPaddingStartChild else RowPaddingStartNormal,
                                                 end = RowPaddingEnd,
@@ -947,7 +925,7 @@ fun ThingsTagDialog(
                                             Icon(
                                                 imageVector = Icons.Default.Delete,
                                                 contentDescription = "Delete",
-                                                tint = Color.White,
+                                                tint = ThingsTheme.colors.overlayContent,
                                                 modifier = Modifier.size(ButtonIconSize)
                                             )
                                         }
@@ -957,8 +935,8 @@ fun ThingsTagDialog(
                                         // Tag Title
                                         Text(
                                             text = tag.title,
-                                            style = MaterialTheme.typography.labelLarge.copy(
-                                                color = Color.White,
+                                            style = ThingsTheme.type.dialogRow.copy(
+                                                color = ThingsTheme.colors.overlayContent,
                                                 fontWeight = FontWeight.Normal
                                             ),
                                             modifier = Modifier.weight(1f)
@@ -969,7 +947,7 @@ fun ThingsTagDialog(
                                             modifier = Modifier
                                                 .size(EditButtonSize)
                                                 .clip(androidx.compose.foundation.shape.CircleShape)
-                                                .background(ThingsBlue)
+                                                .background(ThingsTheme.colors.accent)
                                                 .clickable {
                                                     editingTag = tag
                                                     editTagName = tag.title
@@ -981,7 +959,7 @@ fun ThingsTagDialog(
                                             Icon(
                                                 imageVector = Icons.Default.Edit,
                                                 contentDescription = "Edit",
-                                                tint = Color.White,
+                                                tint = ThingsTheme.colors.overlayContent,
                                                 modifier = Modifier.size(ButtonIconSize)
                                             )
                                         }
@@ -1000,15 +978,15 @@ fun ThingsTagDialog(
                             },
                             colors = ButtonDefaults.buttonColors(
                                 containerColor = DarkButtonBgColor,
-                                contentColor = Color.White
+                                contentColor = ThingsTheme.colors.overlayContent
                             ),
-                            shape = RoundedCornerShape(8.dp),
+                            shape = ThingsTheme.shapes.rowShape,
                             modifier = Modifier.fillMaxWidth(),
                             contentPadding = PaddingValues(vertical = 10.dp)
                         ) {
                             Text(
                                 text = stringResource(id = R.string.tag_dialog_new_tag),
-                                style = MaterialTheme.typography.labelLarge.copy(fontWeight = FontWeight.Medium)
+                                style = ThingsTheme.type.dialogButton
                             )
                         }
                     }
@@ -1056,18 +1034,14 @@ fun ThingsTagDialog(
                                 Icon(
                                     imageVector = Icons.Default.Close,
                                     contentDescription = "Cancel",
-                                    tint = Color.White,
+                                    tint = ThingsTheme.colors.overlayContent,
                                     modifier = Modifier.size(18.dp)
                                 )
                             }
 
                             Text(
                                 text = stringResource(id = R.string.tag_dialog_edit_tag),
-                                style = TextStyle(
-                                    color = Color.White,
-                                    fontSize = 20.sp,
-                                    fontWeight = FontWeight.Bold
-                                ),
+                                style = ThingsTheme.type.dialogTitle.copy(color = ThingsTheme.colors.overlayContent),
                                 textAlign = TextAlign.Center
                             )
 
@@ -1075,14 +1049,14 @@ fun ThingsTagDialog(
                                 modifier = Modifier
                                     .size(36.dp)
                                     .clip(androidx.compose.foundation.shape.CircleShape)
-                                    .background(if (isSaveEnabled) ThingsBlue else DarkButtonBgColor)
+                                    .background(if (isSaveEnabled) ThingsTheme.colors.accent else DarkButtonBgColor)
                                     .clickable(enabled = isSaveEnabled) { saveEditedTag() },
                                 contentAlignment = Alignment.Center
                             ) {
                                 Icon(
                                     imageVector = Icons.Default.Check,
                                     contentDescription = "Save",
-                                    tint = if (isSaveEnabled) Color.White else ItemMutedColor,
+                                    tint = if (isSaveEnabled) ThingsTheme.colors.overlayContent else ItemMutedColor,
                                     modifier = Modifier.size(18.dp)
                                 )
                             }
@@ -1104,11 +1078,11 @@ fun ThingsTagDialog(
                                     focusedContainerColor = DarkButtonBgColor,
                                     unfocusedContainerColor = DarkButtonBgColor,
                                     disabledContainerColor = DarkButtonBgColor,
-                                    focusedTextColor = Color.White,
-                                    unfocusedTextColor = Color.White,
-                                    focusedBorderColor = ThingsBlue,
+                                    focusedTextColor = ThingsTheme.colors.overlayContent,
+                                    unfocusedTextColor = ThingsTheme.colors.overlayContent,
+                                    focusedBorderColor = ThingsTheme.colors.accent,
                                     unfocusedBorderColor = Color.Transparent,
-                                    cursorColor = if (leaving) Color.Transparent else ThingsBlue
+                                    cursorColor = if (leaving) Color.Transparent else ThingsTheme.colors.accent
                                 ),
                                 trailingIcon = {
                                     if (editTagName.isNotEmpty()) {
@@ -1121,7 +1095,7 @@ fun ThingsTagDialog(
                                         }
                                     }
                                 },
-                                shape = RoundedCornerShape(8.dp),
+                                shape = ThingsTheme.shapes.rowShape,
                                 modifier = Modifier
                                     .fillMaxWidth()
                                     .focusRequester(focusRequester)
@@ -1132,7 +1106,7 @@ fun ThingsTagDialog(
                         Row(
                             modifier = Modifier
                                 .fillMaxWidth()
-                                .clip(RoundedCornerShape(8.dp))
+                                .clip(ThingsTheme.shapes.rowShape)
                                 .clickable {
                                     dialogView.hideSoftKeyboardNow()
                                     groupSelectionTargetScreen = DialogScreen.EDIT
@@ -1144,11 +1118,7 @@ fun ThingsTagDialog(
                         ) {
                             Text(
                                 text = stringResource(id = R.string.tag_dialog_group),
-                                style = TextStyle(
-                                    color = Color.White,
-                                    fontSize = 16.sp,
-                                    fontWeight = FontWeight.Normal
-                                )
+                                style = ThingsTheme.type.dialogRow.copy(color = ThingsTheme.colors.overlayContent, fontWeight = FontWeight.Normal)
                             )
                             Row(
                                 verticalAlignment = Alignment.CenterVertically,
@@ -1156,16 +1126,12 @@ fun ThingsTagDialog(
                             ) {
                                 Text(
                                     text = selectedGroup?.title ?: stringResource(id = R.string.tag_dialog_no_tag),
-                                    style = TextStyle(
-                                        color = ThingsBlue,
-                                        fontSize = 16.sp,
-                                        fontWeight = FontWeight.Medium
-                                    )
+                                    style = ThingsTheme.type.dialogRow.copy(color = ThingsTheme.colors.accent, fontWeight = FontWeight.Medium)
                                 )
                                 Icon(
                                     imageVector = Icons.Default.KeyboardArrowRight,
                                     contentDescription = null,
-                                    tint = ThingsBlue,
+                                    tint = ThingsTheme.colors.accent,
                                     modifier = Modifier.size(18.dp)
                                 )
                             }

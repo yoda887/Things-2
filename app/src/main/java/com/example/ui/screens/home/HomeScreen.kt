@@ -1,6 +1,6 @@
 package com.example.ui.screens.home
 
-import com.example.ui.theme.ThingsMenuBackground
+import com.example.ui.theme.ThingsTheme
 import com.example.ui.theme.ThingsTextSecondaryDark
 import android.Manifest
 import android.content.pm.PackageManager
@@ -935,8 +935,8 @@ fun ThingsHomeScreen(viewModel: ThingsViewModel = hiltViewModel()) {
                         Column(
                             modifier = Modifier
                                 .fillMaxWidth()
-                                .background(ThingsMenuBackground, shape = RoundedCornerShape(16.dp))
-                                .border(1.dp, Color.White.copy(alpha = 0.08f), RoundedCornerShape(16.dp))
+                                .background(ThingsTheme.colors.overlaySurface, shape = ThingsTheme.shapes.menuShape)
+                                .border(1.dp, Color.White.copy(alpha = 0.08f), ThingsTheme.shapes.menuShape)
                                 .padding(vertical = 4.dp)
                         ) {
                             // 1. New To-Do
@@ -967,11 +967,7 @@ fun ThingsHomeScreen(viewModel: ThingsViewModel = hiltViewModel()) {
                                 Column {
                                     Text(
                                         text = "New To-Do",
-                                        style = TextStyle(
-                                            fontSize = 17.sp,
-                                            fontWeight = FontWeight.Bold,
-                                            color = Color.White
-                                        )
+                                        style = ThingsTheme.type.menuItem.copy(color = ThingsTheme.colors.overlayContent)
                                     )
                                     Spacer(modifier = Modifier.height(2.dp))
                                     Text(
@@ -1028,11 +1024,7 @@ fun ThingsHomeScreen(viewModel: ThingsViewModel = hiltViewModel()) {
                                 Column {
                                     Text(
                                         text = "New Project",
-                                        style = TextStyle(
-                                            fontSize = 17.sp,
-                                            fontWeight = FontWeight.Bold,
-                                            color = Color.White
-                                        )
+                                        style = ThingsTheme.type.menuItem.copy(color = ThingsTheme.colors.overlayContent)
                                     )
                                     Spacer(modifier = Modifier.height(2.dp))
                                     Text(
@@ -1087,11 +1079,7 @@ fun ThingsHomeScreen(viewModel: ThingsViewModel = hiltViewModel()) {
                                 Column {
                                     Text(
                                         text = "New Area",
-                                        style = TextStyle(
-                                            fontSize = 17.sp,
-                                            fontWeight = FontWeight.Bold,
-                                            color = Color.White
-                                        )
+                                        style = ThingsTheme.type.menuItem.copy(color = ThingsTheme.colors.overlayContent)
                                     )
                                     Spacer(modifier = Modifier.height(2.dp))
                                     Text(

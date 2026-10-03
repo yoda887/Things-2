@@ -1,5 +1,6 @@
 package com.example.ui.screens.home.inlineeditor.dialogs
 
+import com.example.ui.theme.ThingsTheme
 import com.example.ui.theme.ThingsDialogBackground
 import com.example.ui.theme.ThingsDialogButton
 import com.example.ui.theme.ThingsDialogRowSelected
@@ -47,11 +48,6 @@ import com.example.ui.theme.ThingsAreaGreen
 import androidx.compose.material.icons.outlined.Layers
 import com.example.ui.theme.dimens
 
-// Dialog Color Constants to match ThingsTagDialog perfectly
-private val DialogBackgroundColor = ThingsDialogBackground
-private val DarkButtonBgColor = ThingsDialogButton
-private val DividerColor = ThingsDividerDark
-private val TextMutedColor = ThingsMetaGrey
 
 // Custom area icon adapted from vector drawable
 private val CustomAreaIcon: ImageVector by lazy {
@@ -129,9 +125,9 @@ fun ThingsMoveDialog(
             contentAlignment = Alignment.Center
         ) {
             Card(
-                shape = RoundedCornerShape(MaterialTheme.dimens.dialogRoundedCornerSize),
+                shape = ThingsTheme.shapes.dialogShape,
                 colors = CardDefaults.cardColors(
-                    containerColor = DialogBackgroundColor
+                    containerColor = ThingsTheme.colors.overlaySurface
                 ),
                 modifier = Modifier
                     .width(MaterialTheme.dimens.dialogWidth)
@@ -167,9 +163,8 @@ fun ThingsMoveDialog(
 
                         Text(
                             text = "Move",
-                            color = Color.White,
-                            fontSize = 20.sp,
-                            fontWeight = FontWeight.Bold,
+                            color = ThingsTheme.colors.overlayContent,
+                            style = ThingsTheme.type.dialogTitle,
                             textAlign = TextAlign.Center,
                             modifier = Modifier.weight(1f)
                         )
@@ -179,14 +174,14 @@ fun ThingsMoveDialog(
                             modifier = Modifier
                                 .size(36.dp)
                                 .clip(CircleShape)
-                                .background(DarkButtonBgColor)
+                                .background(ThingsTheme.colors.overlayControl)
                                 .clickable { onDismissRequest() },
                             contentAlignment = Alignment.Center
                         ) {
                             Icon(
                                 imageVector = Icons.Default.Close,
                                 contentDescription = "Cancel",
-                                tint = Color.White,
+                                tint = ThingsTheme.colors.overlayContent,
                                 modifier = Modifier.size(18.dp)
                             )
                         }
@@ -221,7 +216,7 @@ fun ThingsMoveDialog(
                             MoveDialogRow(
                                 title = "No Project",
                                 icon = Icons.Default.Block,
-                                iconColor = TextMutedColor,
+                                iconColor = ThingsTheme.colors.overlayContentSecondary,
                                 isSelected = isSelected,
                                 onClick = {
                                     onMove(null, null, false)
@@ -233,7 +228,7 @@ fun ThingsMoveDialog(
                         item {
                             HorizontalDivider(
                                 modifier = Modifier.padding(vertical = 8.dp),
-                                color = DividerColor,
+                                color = ThingsTheme.colors.overlayDivider,
                                 thickness = 1.dp
                             )
                         }
@@ -270,7 +265,7 @@ fun ThingsMoveDialog(
                             item(key = "divider_${area.id}") {
                                 HorizontalDivider(
                                     modifier = Modifier.padding(top = 12.dp, bottom = 4.dp, start = 12.dp, end = 12.dp),
-                                    color = DividerColor,
+                                    color = ThingsTheme.colors.overlayDivider,
                                     thickness = 1.dp
                                 )
                             }
@@ -338,8 +333,8 @@ private fun MoveDialogRow(
         modifier = Modifier
             .fillMaxWidth()
             .padding(start = indentation)
-            .clip(RoundedCornerShape(8.dp))
-            .background(if (isSelected) ThingsDialogRowSelected else Color.Transparent)
+            .clip(ThingsTheme.shapes.rowShape)
+            .background(if (isSelected) ThingsTheme.colors.overlayRowSelected else Color.Transparent)
             .clickable { onClick() }
             .padding(horizontal = 12.dp, vertical = 10.dp),
         verticalAlignment = Alignment.CenterVertically
@@ -367,9 +362,9 @@ private fun MoveDialogRow(
         }
         Text(
             text = title,
-            color = if (isAreaHeader) Color.White else ThingsTextPrimaryDark,
+            color = ThingsTheme.colors.overlayContent,
+            style = ThingsTheme.type.dialogRow,
             fontWeight = if (isAreaHeader) FontWeight.Bold else FontWeight.Normal,
-            fontSize = 18.sp,
             maxLines = 1,
             overflow = TextOverflow.Ellipsis,
             modifier = Modifier.weight(1f)
@@ -378,7 +373,7 @@ private fun MoveDialogRow(
             Icon(
                 imageVector = Icons.Default.Check,
                 contentDescription = "Selected",
-                tint = ThingsBlue,
+                tint = ThingsTheme.colors.accent,
                 modifier = Modifier.size(16.dp)
             )
         }

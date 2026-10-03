@@ -1,7 +1,6 @@
 package com.example.ui.screens.home.components
 
-import com.example.ui.theme.ThingsDialogBackground
-import com.example.ui.theme.ThingsToolbarBackground
+import com.example.ui.theme.ThingsTheme
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
@@ -81,7 +80,7 @@ fun FloatingBottomCapsuleToolbar(
             modifier = Modifier
                 .height(MaterialTheme.dimens.floatingToolbarHeight)
                 .clip(RoundedCornerShape(MaterialTheme.dimens.floatingToolbarCornerRadius))
-                .background(ThingsToolbarBackground)
+                .background(ThingsTheme.colors.overlaySurface)
                 .padding(horizontal = 16.dp),
             contentAlignment = Alignment.Center
         ) {
@@ -158,7 +157,7 @@ fun FloatingBottomCapsuleToolbar(
                     DropdownMenu(
                         expanded = expandedDotsMenu,
                         onDismissRequest = { expandedDotsMenu = false },
-                        modifier = Modifier.background(ThingsDialogBackground)
+                        modifier = Modifier.background(ThingsTheme.colors.overlaySurface)
                     ) {
                         DropdownMenuItem(
                             leadingIcon = {
@@ -168,7 +167,7 @@ fun FloatingBottomCapsuleToolbar(
                                     tint = Color.White
                                 )
                             },
-                            text = { Text("Duplicate", color = Color.White, fontWeight = FontWeight.Normal) },
+                            text = { Text("Duplicate", color = Color.White, fontWeight = FontWeight.Normal, style = ThingsTheme.type.menuItem) },
                             onClick = {
                                 view.performHapticFeedback(HapticFeedbackConstants.CLOCK_TICK)
                                 onDuplicateClick()
@@ -183,7 +182,7 @@ fun FloatingBottomCapsuleToolbar(
                                     tint = Color.Gray
                                 )
                             },
-                            text = { Text("Repeat", color = Color.Gray, fontWeight = FontWeight.Normal) },
+                            text = { Text("Repeat", color = Color.Gray, fontWeight = FontWeight.Normal, style = ThingsTheme.type.menuItem) },
                             onClick = {
                                 expandedDotsMenu = false
                             }
@@ -196,7 +195,7 @@ fun FloatingBottomCapsuleToolbar(
                                     tint = Color.Gray
                                 )
                             },
-                            text = { Text("Convert", color = Color.Gray, fontWeight = FontWeight.Normal) },
+                            text = { Text("Convert", color = Color.Gray, fontWeight = FontWeight.Normal, style = ThingsTheme.type.menuItem) },
                             onClick = {
                                 expandedDotsMenu = false
                             }
@@ -209,7 +208,7 @@ fun FloatingBottomCapsuleToolbar(
                                     tint = Color.Gray
                                 )
                             },
-                            text = { Text("Share", color = Color.Gray, fontWeight = FontWeight.Normal) },
+                            text = { Text("Share", color = Color.Gray, fontWeight = FontWeight.Normal, style = ThingsTheme.type.menuItem) },
                             onClick = {
                                 expandedDotsMenu = false
                             }

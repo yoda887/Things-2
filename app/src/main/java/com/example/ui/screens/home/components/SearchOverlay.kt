@@ -99,7 +99,8 @@ private const val MORPH_FALLBACK_SCALE = 0.55f
 // Карточка стартует полупрозрачной и становится непрозрачной с самого начала роста
 private const val MORPH_START_ALPHA = 0.55f
 private const val MORPH_FADE_IN_FRACTION = 0.6f
-private val MORPH_FINAL_CORNER_RADIUS = 28.dp
+// Радиус плавающей карточки — роль темы (ThingsShapes.floatingCard), общая с Quick Add
+private val MORPH_FINAL_CORNER_RADIUS = com.example.ui.theme.ThingsShapes().floatingCard
 
 /**
  * Точная кривая пружины затухания, соответствующая оригинальному

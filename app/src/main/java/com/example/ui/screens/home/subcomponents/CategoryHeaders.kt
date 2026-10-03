@@ -1,5 +1,6 @@
 package com.example.ui.screens.home.subcomponents
 
+import com.example.ui.theme.ThingsTheme
 import com.example.ui.theme.ThingsDialogBackground
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
@@ -295,15 +296,14 @@ fun MainCategoryHeader(
                             DropdownMenu(
                                 expanded = showOptionsMenu,
                                 onDismissRequest = { showOptionsMenu = false },
-                                modifier = Modifier.background(ThingsDialogBackground)
+                                modifier = Modifier.background(ThingsTheme.colors.overlaySurface)
                             ) {
                                 DropdownMenuItem(
                                     text = {
                                         Text(
                                             text = "Add Heading",
-                                            color = Color.White,
-                                            fontWeight = FontWeight.Normal,
-                                            fontSize = 17.sp
+                                            color = ThingsTheme.colors.overlayContent,
+                                            style = ThingsTheme.type.menuItem
                                         )
                                     },
                                     onClick = {
@@ -316,16 +316,15 @@ fun MainCategoryHeader(
                                         Icon(
                                             imageVector = Icons.Default.Delete,
                                             contentDescription = "Delete",
-                                            tint = ThingsUpcomingRed,
+                                            tint = ThingsTheme.colors.danger,
                                             modifier = Modifier.size(24.dp)
                                         )
                                     },
                                     text = {
                                         Text(
                                             text = "Delete Project",
-                                            color = ThingsUpcomingRed,
-                                            fontWeight = FontWeight.Normal,
-                                            fontSize = 17.sp
+                                            color = ThingsTheme.colors.danger,
+                                            style = ThingsTheme.type.menuItem
                                         )
                                     },
                                     onClick = {
@@ -401,23 +400,22 @@ fun MainCategoryHeader(
                             DropdownMenu(
                                 expanded = showAreaOptionsMenu,
                                 onDismissRequest = { showAreaOptionsMenu = false },
-                                modifier = Modifier.background(ThingsDialogBackground)
+                                modifier = Modifier.background(ThingsTheme.colors.overlaySurface)
                             ) {
                                 DropdownMenuItem(
                                     leadingIcon = {
                                         Icon(
                                             imageVector = Icons.Default.Delete,
                                             contentDescription = "Delete",
-                                            tint = ThingsUpcomingRed,
+                                            tint = ThingsTheme.colors.danger,
                                             modifier = Modifier.size(24.dp)
                                         )
                                     },
                                     text = {
                                         Text(
                                             text = "Delete Area",
-                                            color = ThingsUpcomingRed,
-                                            fontWeight = FontWeight.Normal,
-                                            fontSize = 17.sp
+                                            color = ThingsTheme.colors.danger,
+                                            style = ThingsTheme.type.menuItem
                                         )
                                     },
                                     onClick = {
