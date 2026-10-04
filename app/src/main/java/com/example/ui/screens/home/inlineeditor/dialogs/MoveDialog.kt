@@ -1,19 +1,12 @@
 package com.example.ui.screens.home.inlineeditor.dialogs
 
 import com.example.ui.theme.ThingsTheme
-import com.example.ui.theme.ThingsDialogBackground
-import com.example.ui.theme.ThingsDialogButton
-import com.example.ui.theme.ThingsDialogRowSelected
-import com.example.ui.theme.ThingsDividerDark
-import com.example.ui.theme.ThingsMetaGrey
-import com.example.ui.theme.ThingsTextPrimaryDark
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.CircleShape
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.Inbox

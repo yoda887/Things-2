@@ -1,14 +1,11 @@
 package com.example.ui.screens.home.inlineeditor.dialogs
 
-import com.example.ui.theme.ThingsBadgeTextLight
 import com.example.ui.theme.ThingsTheme
-import com.example.ui.theme.ThingsWhenClear
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.CircleShape
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Check
@@ -26,7 +23,6 @@ import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
 import androidx.compose.ui.graphics.TransformOrigin
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.animation.core.animateFloatAsState
@@ -441,10 +437,8 @@ fun ThingsWhenDialog(
                     weekdays.forEach { dayName ->
                         Text(
                             text = dayName,
-                            style = TextStyle(
-                                color = ThingsTheme.colors.overlayContentSecondary,
-                                fontSize = 15.sp,
-                                fontWeight = FontWeight.Normal
+                            style = ThingsTheme.type.subhead.copy(
+                                color = ThingsTheme.colors.overlayContentSecondary
                             ),
                             modifier = Modifier.weight(1f),
                             textAlign = TextAlign.Center
@@ -558,10 +552,10 @@ fun ThingsWhenDialog(
                                         Box(
                                             modifier = Modifier
                                                 .fillMaxSize()
-                                                .clip(RoundedCornerShape(6.dp))
+                                                .clip(ThingsTheme.shapes.smallShape)
                                                 .then(
                                                     if (isSelected) {
-                                                        Modifier.border(1.5.dp, ThingsTheme.colors.accent, RoundedCornerShape(6.dp))
+                                                        Modifier.border(1.5.dp, ThingsTheme.colors.accent, ThingsTheme.shapes.smallShape)
                                                     } else {
                                                         Modifier
                                                     }
@@ -584,26 +578,18 @@ fun ThingsWhenDialog(
                                                     val monthLabel = SimpleDateFormat("MMM", Locale.US).format(Date(cell.timestamp))
                                                     Text(
                                                         text = monthLabel,
-                                                        style = TextStyle(
-                                                            color = Color.White,
-                                                            fontSize = 13.sp,
-                                                            fontWeight = FontWeight.Normal
-                                                        )
+                                                        style = ThingsTheme.type.bodySmall.copy(color = Color.White)
                                                     )
                                                     Text(
                                                         text = cell.day.toString(),
-                                                        style = TextStyle(
-                                                            color = Color.White,
-                                                            fontSize = 13.sp,
-                                                            fontWeight = FontWeight.Normal
-                                                        )
+                                                        style = ThingsTheme.type.bodySmall.copy(color = Color.White)
                                                     )
                                                 }
                                             } else if (cell.isToday) {
                                                 Icon(
                                                     imageVector = Icons.Filled.Star,
                                                     contentDescription = "Today",
-                                                    tint = ThingsBadgeTextLight,
+                                                    tint = ThingsTheme.colors.badgeText,
                                                     modifier = Modifier.size(16.dp)
                                                 )
                                             } else {
@@ -614,29 +600,17 @@ fun ThingsWhenDialog(
                                                     ) {
                                                         Text(
                                                             text = cell.monthLabel,
-                                                            style = TextStyle(
-                                                                color = Color.White,
-                                                                fontSize = 13.sp,
-                                                                fontWeight = FontWeight.Normal
-                                                            )
+                                                            style = ThingsTheme.type.bodySmall.copy(color = Color.White)
                                                         )
                                                         Text(
                                                             text = cell.day.toString(),
-                                                            style = TextStyle(
-                                                                color = Color.White,
-                                                                fontSize = 13.sp,
-                                                                fontWeight = FontWeight.Normal
-                                                            )
+                                                            style = ThingsTheme.type.bodySmall.copy(color = Color.White)
                                                         )
                                                     }
                                                 } else {
                                                     Text(
                                                         text = cell.day.toString(),
-                                                        style = TextStyle(
-                                                            color = Color.White,
-                                                            fontSize = 19.sp,
-                                                            fontWeight = FontWeight.Normal
-                                                        )
+                                                        style = ThingsTheme.type.dialogRow.copy(color = Color.White)
                                                     )
                                                 }
                                             }
@@ -741,10 +715,10 @@ fun ThingsWhenDialog(
                             requestClose()
                         },
                         colors = ButtonDefaults.buttonColors(
-                            containerColor = ThingsWhenClear,
+                            containerColor = ThingsTheme.colors.danger,
                             contentColor = Color.White
                         ),
-                        shape = RoundedCornerShape(percent = 50),
+                        shape = ThingsTheme.shapes.capsuleShape,
                         modifier = Modifier
                             .fillMaxWidth()
                             .height(CLEAR_BUTTON_HEIGHT)

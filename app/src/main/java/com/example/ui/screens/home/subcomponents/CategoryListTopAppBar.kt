@@ -31,8 +31,6 @@ import com.example.ui.theme.AppIcons
 import com.example.ui.theme.ThingsDeepBlue
 import com.example.ui.theme.ThingsBlue
 import com.example.ui.theme.ThingsAreaGreen
-import com.example.ui.theme.ThingsBackgroundDark
-import com.example.ui.theme.ThingsBackgroundLight
 import com.example.ui.theme.ThingsTheme
 import com.example.ui.theme.topAppBarTitle
 

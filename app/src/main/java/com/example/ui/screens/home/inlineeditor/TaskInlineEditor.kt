@@ -1,11 +1,6 @@
 package com.example.ui.screens.home.inlineeditor
 
 import com.example.ui.theme.ThingsTheme
-import com.example.ui.theme.ThingsEditorIconInactive
-import com.example.ui.theme.ThingsInk
-import com.example.ui.theme.ThingsMetaGrey
-import com.example.ui.theme.ThingsTagChipBackground
-import com.example.ui.theme.ThingsTagChipText
 import androidx.compose.animation.*
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
@@ -405,7 +400,7 @@ fun ThingsTaskInlineEditor(
             // Bottom Actions & Toolbar matching the image closely
             val textPrimaryColor = ThingsTheme.colors.editorText
             // Серые иконки нижней строки (теги, флажок и т. п.) — цвет как в Things 3
-            val iconInactiveColor = ThingsEditorIconInactive
+            val iconInactiveColor = ThingsTheme.colors.editorIconInactive
             val bodyFontSize = ThingsTheme.type.editorDate.fontSize
 
             val hasActiveDate = startDate != null || section == TaskSection.TODAY || section == TaskSection.SOMEDAY

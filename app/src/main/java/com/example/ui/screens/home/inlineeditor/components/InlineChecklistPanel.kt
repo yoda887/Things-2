@@ -10,9 +10,6 @@ import com.example.ui.theme.ThingsChecklistDrag
 import com.example.ui.theme.ThingsChecklistFocus
 import com.example.ui.theme.ThingsChecklistHandle
 import com.example.ui.theme.ThingsChecklistHighlight
-import com.example.ui.theme.ThingsInk
-import com.example.ui.theme.ThingsTextPrimaryLight
-import com.example.ui.theme.ThingsTextSecondaryLight
 import android.view.HapticFeedbackConstants
 import androidx.compose.animation.*
 import androidx.compose.animation.core.Animatable
@@ -104,7 +101,6 @@ private val ChecklistHandleColor = ThingsChecklistHandle
 private val ChecklistDeleteColor = ThingsChecklistDelete
 private val ChecklistDividerColor = ThingsChecklistDivider
 private val ChecklistHighlightColor = ThingsChecklistHighlight
-private val ChecklistTextColor = ThingsTextPrimaryLight
 private val ChecklistCompletedTextColor = ThingsChecklistCompletedText
 // Строка, которую правят (текст в фокусе), и строка, которую тащат за ≡ (видео 5-checklists-iphone)
 private val ChecklistFocusColor = ThingsChecklistFocus

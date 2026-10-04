@@ -39,7 +39,6 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.input.KeyboardCapitalization
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
 import com.example.data.model.Item
 import com.example.ui.components.HideTextSelectionHandles
 import com.example.ui.components.hideSoftKeyboardThen
@@ -48,7 +47,8 @@ import com.example.ui.theme.ThingsDeepBlue
 import com.example.ui.theme.ThingsUpcomingRed
 
 // Тот же размер, что у остальных подзаголовков экранов («Вечер», «Планы», «Когда-нибудь»)
-private val HeadingTitleStyle = TextStyle(fontSize = 19.sp, fontWeight = FontWeight.SemiBold, color = ThingsDeepBlue)
+private val headingTitleStyle: TextStyle
+    @Composable get() = ThingsTheme.type.sectionHeader.copy(color = ThingsDeepBlue, fontWeight = FontWeight.SemiBold)
 
 /**
  * Заголовок внутри проекта, как в Things: голубое название, «•••» с меню и линия под ним.
@@ -90,7 +90,7 @@ fun ProjectHeadingRow(
                 if (isEditing) {
                     HeadingTitleField(heading = heading, onCommit = onTitleCommit)
                 } else {
-                    Text(text = heading.title, style = HeadingTitleStyle, maxLines = 1)
+                    Text(text = heading.title, style = headingTitleStyle, maxLines = 1)
                 }
             }
 
@@ -149,7 +149,7 @@ private fun HeadingTitleField(heading: Item, onCommit: (String) -> Unit) {
         BasicTextField(
             value = text,
             onValueChange = { text = it },
-            textStyle = HeadingTitleStyle,
+            textStyle = headingTitleStyle,
             cursorBrush = SolidColor(if (isFinishing) Color.Unspecified else ThingsBlue),
             singleLine = true,
             keyboardOptions = KeyboardOptions(
@@ -170,7 +170,7 @@ private fun HeadingTitleField(heading: Item, onCommit: (String) -> Unit) {
             decorationBox = { inner ->
                 Box {
                     if (text.isEmpty()) {
-                        Text("New Heading", style = HeadingTitleStyle.copy(color = ThingsDeepBlue.copy(alpha = 0.4f)))
+                        Text("New Heading", style = headingTitleStyle.copy(color = ThingsDeepBlue.copy(alpha = 0.4f)))
                     }
                     inner()
                 }

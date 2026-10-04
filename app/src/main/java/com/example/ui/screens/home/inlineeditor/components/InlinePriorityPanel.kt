@@ -1,16 +1,10 @@
 package com.example.ui.screens.home.inlineeditor.components
 
 import com.example.ui.theme.ThingsTheme
-import androidx.compose.ui.unit.sp
-import com.example.ui.theme.ThingsFieldLight
-import com.example.ui.theme.ThingsInk
-import com.example.ui.theme.ThingsMetaGrey
-import com.example.ui.theme.ThingsTextSecondaryLight
 import androidx.compose.animation.*
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.Flag
@@ -39,10 +33,7 @@ fun InlinePriorityPanel(
 
     val textPrimaryColor = ThingsTheme.colors.editorText // blackish font
     val textSecondaryColor = ThingsTheme.colors.textSecondary // dark grey font
-    val helperBgColor = ThingsFieldLight // light grey panel background
-
-    val smallFontSize = ThingsTheme.type.caption.fontSize
-    val tinyFontSize = (ThingsTheme.type.caption.fontSize.value - 1f).sp
+    val helperBgColor = ThingsTheme.colors.searchField // panel background
 
     val priorityName = when (priority) {
         3 -> "High Priority"
@@ -55,7 +46,7 @@ fun InlinePriorityPanel(
         3 -> ThingsUpcomingRed
         2 -> ThingsTodayStar
         1 -> ThingsAnytimeTeal
-        else -> ThingsMetaGrey
+        else -> ThingsTheme.colors.textSecondary
     }
 
     AnimatedVisibility(
@@ -67,7 +58,7 @@ fun InlinePriorityPanel(
             modifier = Modifier
                 .fillMaxWidth()
                 .padding(start = 28.dp, top = 10.dp)
-                .clip(RoundedCornerShape(6.dp))
+                .clip(ThingsTheme.shapes.smallShape)
                 .background(helperBgColor)
                 .padding(horizontal = 8.dp, vertical = 6.dp),
             verticalAlignment = Alignment.CenterVertically
@@ -92,8 +83,7 @@ fun InlinePriorityPanel(
             ) {
                 Text(
                     text = "No",
-                    style = ThingsTheme.type.caption.copy(
-                        fontSize = tinyFontSize,
+                    style = ThingsTheme.type.badge.copy(
                         color = if (priority == 0) ThingsTheme.colors.accent else ThingsSomedayGrey,
                         fontWeight = FontWeight.Bold
                     ),
@@ -103,8 +93,7 @@ fun InlinePriorityPanel(
                 )
                 Text(
                     text = "Low",
-                    style = TextStyle(
-                        fontSize = tinyFontSize,
+                    style = ThingsTheme.type.badge.copy(
                         color = if (priority == 1) ThingsAnytimeTeal else ThingsSomedayGrey,
                         fontWeight = FontWeight.Bold
                     ),
@@ -114,8 +103,7 @@ fun InlinePriorityPanel(
                 )
                 Text(
                     text = "Med",
-                    style = TextStyle(
-                        fontSize = tinyFontSize,
+                    style = ThingsTheme.type.badge.copy(
                         color = if (priority == 2) ThingsTodayStar else ThingsSomedayGrey,
                         fontWeight = FontWeight.Bold
                     ),
@@ -125,8 +113,7 @@ fun InlinePriorityPanel(
                 )
                 Text(
                     text = "High",
-                    style = TextStyle(
-                        fontSize = tinyFontSize,
+                    style = ThingsTheme.type.badge.copy(
                         color = if (priority == 3) ThingsUpcomingRed else ThingsSomedayGrey,
                         fontWeight = FontWeight.Bold
                     ),

@@ -1,14 +1,7 @@
 package com.example.ui.screens.home.components
 
-import com.example.ui.theme.ThingsCalendarDefaultGreen
-import com.example.ui.theme.ThingsFieldDark
-import com.example.ui.theme.ThingsFieldLight
-import com.example.ui.theme.ThingsMutedGreyDark
-import com.example.ui.theme.ThingsMutedGreyLight
 import androidx.compose.foundation.background
-import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.foundation.layout.*
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.MaterialTheme
@@ -135,7 +128,7 @@ fun CalendarEventsWidget(
                             modifier = Modifier
                                 .width(3.dp)
                                 .height(11.dp)
-                                .clip(RoundedCornerShape(1.5.dp))
+                                .clip(ThingsTheme.shapes.indicatorShape)
                                 // Используем markerColor вместо baseColor, чтобы прошедшие события тускнели
                                 .background(baseColor) 
                         )
@@ -150,11 +143,7 @@ fun CalendarEventsWidget(
                         val timeString = remember(eventStart) { timeFormatter.format(Date(eventStart)) }
                         Text(
                             text = timeString,
-                            style = TextStyle(
-                                fontSize = 15.sp,
-                                color = timeColor,
-                                fontWeight = FontWeight.Normal
-                            ),
+                            style = ThingsTheme.type.subhead.copy(color = timeColor),
                         )
                     } 
                     Spacer(modifier = Modifier.width(4.dp))
@@ -162,11 +151,7 @@ fun CalendarEventsWidget(
                     // Заголовок события с длинным текстом обрезается троеточием во избежание разрывов разметки
                     Text(
                         text = event.title,
-                        style = TextStyle(
-                            fontSize = 15.sp,
-                            color = titleColor,
-                            fontWeight = FontWeight.Normal
-                        ),
+                        style = ThingsTheme.type.subhead.copy(color = titleColor),
                         maxLines = 1,
                         overflow = TextOverflow.Ellipsis,
                         modifier = Modifier.weight(1f)
@@ -231,20 +216,12 @@ fun UpcomingCalendarEventRow(
         ) {
             Text(
                 text = datePrefix,
-                style = TextStyle(
-                    fontSize = 15.sp,
-                    fontWeight = FontWeight.Normal,
-                    color = baseColor
-                ),
+                style = ThingsTheme.type.subhead.copy(color = baseColor),
                 modifier = Modifier.padding(end = 8.dp)
             )
             Text(
                 text = event.title,
-                style = TextStyle(
-                    fontSize = 15.sp,
-                    fontWeight = FontWeight.Normal,
-                    color = textPrimaryColor
-                ),
+                style = ThingsTheme.type.subhead.copy(color = textPrimaryColor),
                 maxLines = 1,
                 overflow = TextOverflow.Ellipsis,
                 modifier = Modifier.weight(1f)
@@ -265,21 +242,13 @@ fun UpcomingCalendarEventRow(
             }
             Text(
                 text = timeString,
-                style = TextStyle(
-                    fontSize = 15.sp,
-                    fontWeight = FontWeight.Normal,
-                    color = baseColor
-                ),
+                style = ThingsTheme.type.subhead.copy(color = baseColor),
                 modifier = Modifier.width(72.dp)
             )
             Spacer(modifier = Modifier.width(4.dp))
             Text(
                 text = event.title,
-                style = TextStyle(
-                    fontSize = 15.sp,
-                    fontWeight = FontWeight.Normal,
-                    color = textPrimaryColor
-                ),
+                style = ThingsTheme.type.subhead.copy(color = textPrimaryColor),
                 maxLines = 1,
                 overflow = TextOverflow.Ellipsis,
                 modifier = Modifier.weight(1f)
@@ -290,17 +259,13 @@ fun UpcomingCalendarEventRow(
                 modifier = Modifier
                     .width(3.dp)
                     .height(11.dp)
-                    .clip(RoundedCornerShape(1.5.dp))
+                    .clip(ThingsTheme.shapes.indicatorShape)
                     .background(baseColor)
             )
             Spacer(modifier = Modifier.width(8.dp))
             Text(
                 text = event.title,
-                style = TextStyle(
-                    fontSize = 15.sp,
-                    fontWeight = FontWeight.Normal,
-                    color = textPrimaryColor
-                ),
+                style = ThingsTheme.type.subhead.copy(color = textPrimaryColor),
                 maxLines = 1,
                 overflow = TextOverflow.Ellipsis,
                 modifier = Modifier.weight(1f)

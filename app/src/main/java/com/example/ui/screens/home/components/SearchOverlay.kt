@@ -1,10 +1,5 @@
 package com.example.ui.screens.home.components
 
-import com.example.ui.theme.ThingsFieldDark
-import com.example.ui.theme.ThingsFieldLight
-import com.example.ui.theme.ThingsHairlineLight
-import com.example.ui.theme.ThingsInk
-import com.example.ui.theme.ThingsMetaGrey
 import androidx.activity.compose.BackHandler
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
@@ -22,7 +17,6 @@ import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.interaction.MutableInteractionSource
-import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
@@ -567,7 +561,7 @@ fun ThingsSearchOverlay(
                             modifier = Modifier
                                 .weight(1f)
                                 .height(44.dp)
-                                .clip(RoundedCornerShape(22.dp))
+                                .clip(ThingsTheme.shapes.capsuleShape)
                                 .background(currentInputBg)
                                 .padding(horizontal = 14.dp)
                         ) {
@@ -585,8 +579,7 @@ fun ThingsSearchOverlay(
                                     Text(
                                         text = "Quick Find",
                                         color = currentTextTint,
-                                        fontSize = 16.sp,
-                                        fontWeight = FontWeight.Normal
+                                        style = ThingsTheme.type.bodyLarge
                                     )
                                 }
                                 // Пока оверлей закрывается, курсор и его маркер не рисуем: фокус остаётся
@@ -595,10 +588,8 @@ fun ThingsSearchOverlay(
                                     BasicTextField(
                                         value = searchQuery,
                                         onValueChange = onSearchQueryChange,
-                                        textStyle = TextStyle(
-                                            color = textPrimary,
-                                            fontSize = 16.sp,
-                                            fontWeight = FontWeight.Normal
+                                        textStyle = ThingsTheme.type.bodyLarge.copy(
+                                            color = textPrimary
                                         ),
                                         singleLine = true,
                                         keyboardOptions = KeyboardOptions(imeAction = ImeAction.Search),
@@ -715,8 +706,7 @@ fun ThingsSearchOverlay(
                             Text(
                                 text = "Recent",
                                 color = textSecondary,
-                                fontSize = 15.sp,
-                                fontWeight = FontWeight.SemiBold,
+                                style = ThingsTheme.type.subheadMedium,
                                 modifier = Modifier.padding(start = 4.dp, bottom = 6.dp)
                             )
                             HorizontalDivider(
@@ -767,11 +757,9 @@ fun ThingsSearchOverlay(
                         Text(
                             text = "Quickly switch lists, find to-dos,\nsearch for tags...",
                             color = textSecondary.copy(alpha = 0.8f),
-                            fontSize = 15.5.sp,
-                            fontWeight = FontWeight.Normal,
+                            style = ThingsTheme.type.subhead,
                             fontStyle = FontStyle.Normal,
                             textAlign = TextAlign.Center,
-                            lineHeight = 22.sp,
                             modifier = Modifier
                                 .fillMaxWidth()
                                 .padding(bottom = 20.dp)
@@ -867,7 +855,7 @@ fun ContinueSearchTaskRow(
         modifier = modifier
             .fillMaxWidth()
             .height(44.dp)
-            .clip(RoundedCornerShape(22.dp))
+            .clip(ThingsTheme.shapes.capsuleShape)
             .clickable(onClick = onClick)
             .padding(start = 8.dp, end = 4.dp)
     ) {
@@ -909,7 +897,7 @@ fun RecentRow(
         modifier = Modifier
             .fillMaxWidth()
             .height(44.dp)
-            .clip(RoundedCornerShape(22.dp))
+            .clip(ThingsTheme.shapes.capsuleShape)
             .clickable(onClick = onClick)
             .padding(start = 8.dp, end = 12.dp)
     ) {
@@ -1000,7 +988,7 @@ fun SearchResultRow(
                 modifier = Modifier
                     .fillMaxWidth()
                     .height(44.dp)
-                    .clip(RoundedCornerShape(22.dp))
+                    .clip(ThingsTheme.shapes.capsuleShape)
                     .background(rowBg)
                     .clickable { onProjectClick(result.project) }
                     .padding(start = 8.dp, end = 12.dp),
@@ -1054,7 +1042,7 @@ fun SearchResultRow(
                 modifier = Modifier
                     .fillMaxWidth()
                     .height(44.dp)
-                    .clip(RoundedCornerShape(22.dp))
+                    .clip(ThingsTheme.shapes.capsuleShape)
                     .background(rowBg)
                     .clickable {
                         when (result) {

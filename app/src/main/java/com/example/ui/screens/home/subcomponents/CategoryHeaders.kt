@@ -1,14 +1,12 @@
 package com.example.ui.screens.home.subcomponents
 
 import com.example.ui.theme.ThingsTheme
-import com.example.ui.theme.ThingsDialogBackground
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.CircleShape
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.InlineTextContent
 import androidx.compose.foundation.text.appendInlineContent
 import androidx.compose.material.icons.Icons
@@ -77,7 +75,7 @@ fun MainCategoryHeader(
                         "Вы действительно хотите удалить проект \"${project.name}\"?"
                     },
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    fontSize = 14.sp
+                    style = ThingsTheme.type.bodyMedium
                 )
             },
             confirmButton = {
@@ -106,7 +104,7 @@ fun MainCategoryHeader(
                 Text(
                     "Вы действительно хотите удалить область \"${area.title}\"?",
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    fontSize = 14.sp
+                    style = ThingsTheme.type.bodyMedium
                 )
             },
             confirmButton = {
@@ -505,8 +503,7 @@ fun SubCategoryHeader(
         ) {
             Text(
                 text = "PROJECTS",
-                style = TextStyle(
-                    fontSize = 11.sp,
+                style = ThingsTheme.type.badge.copy(
                     fontWeight = FontWeight.Bold,
                     color = textSecondaryColor.copy(alpha = 0.5f),
                     letterSpacing = 1.sp
@@ -529,8 +526,7 @@ fun SubCategoryHeader(
         ) {
             Text(
                 text = "TASKS",
-                style = TextStyle(
-                    fontSize = 11.sp,
+                style = ThingsTheme.type.badge.copy(
                     fontWeight = FontWeight.Bold,
                     color = textSecondaryColor.copy(alpha = 0.5f),
                     letterSpacing = 1.sp
@@ -571,9 +567,7 @@ fun SubCategoryHeader(
                 Spacer(modifier = Modifier.width(MaterialTheme.dimens.taskSpacingToTextDefault))
                 Text(
                     text = androidx.compose.ui.res.stringResource(com.example.R.string.area_upcoming_heading),
-                    style = TextStyle(
-                        fontSize = 19.sp,
-                        fontWeight = FontWeight.Medium,
+                    style = ThingsTheme.type.sectionHeader.copy(
                         color = textPrimaryColor
                     )
                 )
@@ -614,9 +608,7 @@ fun SubCategoryHeader(
                 Spacer(modifier = Modifier.width(MaterialTheme.dimens.taskSpacingToTextDefault))
                 Text(
                     text = androidx.compose.ui.res.stringResource(com.example.R.string.area_someday_heading),
-                    style = TextStyle(
-                        fontSize = 19.sp,
-                        fontWeight = FontWeight.Medium,
+                    style = ThingsTheme.type.sectionHeader.copy(
                         color = textPrimaryColor
                     )
                 )
@@ -643,9 +635,7 @@ fun SubCategoryHeader(
                 text = androidx.compose.ui.res.stringResource(
                     if (isLaterItemsHidden) com.example.R.string.area_show_later_items else com.example.R.string.area_hide_later_items
                 ),
-                style = TextStyle(
-                    fontSize = 14.sp,
-                    fontWeight = FontWeight.Normal,
+                style = ThingsTheme.type.bodyMedium.copy(
                     color = textSecondaryColor.copy(alpha = 0.6f)
                 ),
                 modifier = Modifier
@@ -681,9 +671,7 @@ fun SubCategoryHeader(
                 )
                 Text(
                     text = androidx.compose.ui.res.stringResource(com.example.R.string.category_this_evening),
-                    style = TextStyle(
-                        fontSize = 19.sp,
-                        fontWeight = FontWeight.Medium,
+                    style = ThingsTheme.type.sectionHeader.copy(
                         color = textPrimaryColor
                     )
                 )
@@ -720,8 +708,7 @@ fun UpcomingDateHeader(
     ) {
         Text(
             text = dayOfMonth,
-            style = TextStyle(
-                fontSize = 32.sp,
+            style = ThingsTheme.type.largeTitle.copy(
                 fontWeight = FontWeight.Bold,
                 color = textPrimaryColor
             )
@@ -742,8 +729,7 @@ fun UpcomingDateHeader(
             Spacer(modifier = Modifier.height(4.dp))
             Text(
                 text = dayOfWeekLabel,
-                style = TextStyle(
-                    fontSize = 16.sp,
+                style = ThingsTheme.type.headline.copy(
                     fontWeight = FontWeight.Bold,
                     color = textSecondaryColor.copy(alpha = 0.5f)
                 )
@@ -776,8 +762,7 @@ fun UpcomingMonthHeader(
         Spacer(modifier = Modifier.height(6.dp))
         Text(
             text = monthLabel,
-            style = TextStyle(
-                fontSize = 16.sp,
+            style = ThingsTheme.type.headline.copy(
                 fontWeight = FontWeight.Bold,
                 color = textPrimaryColor
             )

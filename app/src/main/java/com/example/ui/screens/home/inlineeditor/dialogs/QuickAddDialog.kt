@@ -1,13 +1,6 @@
 package com.example.ui.screens.home.inlineeditor.dialogs
 
 import com.example.ui.theme.ThingsTheme
-import com.example.ui.theme.ThingsCheckboxBorder
-import com.example.ui.theme.ThingsFieldLight
-import com.example.ui.theme.ThingsHairlineLight
-import com.example.ui.theme.ThingsInk
-import com.example.ui.theme.ThingsMetaGrey
-import com.example.ui.theme.ThingsTagChipBackground
-import com.example.ui.theme.ThingsTagChipText
 import androidx.activity.compose.BackHandler
 import androidx.compose.animation.*
 import androidx.compose.animation.core.Animatable
@@ -22,7 +15,6 @@ import androidx.compose.foundation.clickable
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.CircleShape
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.BasicTextField
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.ui.text.input.KeyboardCapitalization
@@ -49,7 +41,6 @@ import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
 import androidx.compose.ui.zIndex
 import com.example.data.model.Area
 import com.example.data.model.ChecklistItem
@@ -292,7 +283,7 @@ fun QuickAddDialog(
                                 checked = false,
                                 onCheckedChange = { /* В режиме создания нового чекбокс пассивный */ },
                                 size = MaterialTheme.dimens.mainCheckboxSize,
-                                uncheckedColor = ThingsCheckboxBorder,
+                                uncheckedColor = ThingsTheme.colors.checkboxBorder,
                                 modifier = Modifier.padding(end = 10.dp, top = 2.dp)
                             )
                             
@@ -308,7 +299,7 @@ fun QuickAddDialog(
                                             style = TextStyle(
                                                 fontSize = MaterialTheme.typography.titleMedium.fontSize,
                                                 fontWeight = FontWeight.Normal,
-                                                color = ThingsTextNotesLight.copy(alpha = 0.5f)
+                                                color = ThingsTheme.colors.textNotes.copy(alpha = 0.5f)
                                             )
                                         )
                                     }
@@ -321,12 +312,12 @@ fun QuickAddDialog(
                                             textStyle = TextStyle(
                                                 fontSize = MaterialTheme.typography.titleMedium.fontSize,
                                                 fontWeight = FontWeight.Normal,
-                                                color = ThingsInk
+                                                color = ThingsTheme.colors.editorText
                                             ),
                                             singleLine = false,
                                             maxLines = 4,
                                             keyboardOptions = KeyboardOptions(capitalization = KeyboardCapitalization.Sentences),
-                                            cursorBrush = SolidColor(if (isClosing) Color.Unspecified else ThingsBlue),
+                                            cursorBrush = SolidColor(if (isClosing) Color.Unspecified else ThingsTheme.colors.accent),
                                             modifier = Modifier
                                                 .fillMaxWidth()
                                                 .focusRequester(titleFocusRequester)
@@ -344,7 +335,7 @@ fun QuickAddDialog(
                                             style = TextStyle(
                                                 fontSize = MaterialTheme.typography.taskEditorNotes.fontSize,
                                                 fontWeight = FontWeight.Normal,
-                                                color = ThingsTextNotesLight.copy(alpha = 0.5f)
+                                                color = ThingsTheme.colors.textNotes.copy(alpha = 0.5f)
                                             )
                                         )
                                     }
@@ -356,9 +347,9 @@ fun QuickAddDialog(
                                             textStyle = TextStyle(
                                                 fontSize = MaterialTheme.typography.taskEditorNotes.fontSize,
                                                 fontWeight = FontWeight.Normal,
-                                                color = ThingsTextNotesLight
+                                                color = ThingsTheme.colors.textNotes
                                             ),
-                                            cursorBrush = SolidColor(if (isClosing) Color.Unspecified else ThingsBlue),
+                                            cursorBrush = SolidColor(if (isClosing) Color.Unspecified else ThingsTheme.colors.accent),
                                             modifier = Modifier.fillMaxWidth()
                                         )
                                     }
@@ -383,8 +374,8 @@ fun QuickAddDialog(
 
                         Spacer(modifier = Modifier.height(32.dp))
                         // 4. Панель индикаторов (активные теги, дата, дедлайн) + Панель инструментов (иконки действий)
-                    val textPrimaryColor = ThingsInk
-                    val iconInactiveColor = ThingsCheckboxBorder
+                    val textPrimaryColor = ThingsTheme.colors.textPrimary
+                    val iconInactiveColor = ThingsTheme.colors.checkboxBorder
                     val bodyFontSize = MaterialTheme.typography.taskEditorDate.fontSize
 
                     val hasActiveDate = startDate != null || section == TaskSection.TODAY || section == TaskSection.SOMEDAY
@@ -449,17 +440,15 @@ fun QuickAddDialog(
                                     activeTags.forEach { tag ->
                                         Box(
                                             modifier = Modifier
-                                                .clip(RoundedCornerShape(10.dp))
-                                                .background(ThingsTagChipBackground) // light-teal background
+                                                .clip(ThingsTheme.shapes.chipShape)
+                                                .background(ThingsTheme.colors.tagChipBackground) // light-teal background
                                                 .clickable { showTagDialog = true }
                                                 .padding(horizontal = 10.dp, vertical = 4.dp)
                                         ) {
                                             Text(
                                                 text = tag,
-                                                style = TextStyle(
-                                                    color = ThingsTagChipText, // dark-teal text
-                                                    fontSize = 12.sp,
-                                                    fontWeight = FontWeight.Medium
+                                                style = ThingsTheme.type.caption.copy(
+                                                    color = ThingsTheme.colors.tagChipText
                                                 )
                                             )
                                         }
@@ -558,7 +547,7 @@ fun QuickAddDialog(
                                 }
 
                                 val isOverdueOrToday = delta <= 0
-                                val primaryColor = if (isOverdueOrToday) ThingsUpcomingRed else ThingsInk
+                                val primaryColor = if (isOverdueOrToday) ThingsUpcomingRed else ThingsTheme.colors.textPrimary
 
                                 Row(
                                     verticalAlignment = Alignment.CenterVertically,
@@ -590,7 +579,7 @@ fun QuickAddDialog(
                                         overflow = TextOverflow.Ellipsis,
                                         style = TextStyle(
                                             fontSize = bodyFontSize,
-                                            color = ThingsMetaGrey,
+                                            color = ThingsTheme.colors.textSecondary,
                                             fontWeight = FontWeight.Normal
                                         )
                                     )
@@ -684,7 +673,7 @@ fun QuickAddDialog(
                     Row(
                         modifier = Modifier
                             .fillMaxWidth()
-                            .background(ThingsFieldLight)
+                            .background(ThingsTheme.colors.surface)
                             .padding(start = 22.dp, end = 18.dp, top = 8.dp, bottom = 10.dp),
                         horizontalArrangement = Arrangement.SpaceBetween,
                         verticalAlignment = Alignment.CenterVertically
@@ -692,7 +681,7 @@ fun QuickAddDialog(
                         // Кнопка выбора назначения
                         Row(
                             modifier = Modifier
-                                .clip(RoundedCornerShape(8.dp))
+                                .clip(ThingsTheme.shapes.rowShape)
                                 .clickable { showMoveDialog = true }
                                 .padding(horizontal = 6.dp, vertical = 6.dp),
                             verticalAlignment = Alignment.CenterVertically
@@ -700,16 +689,14 @@ fun QuickAddDialog(
                             Icon(
                                 imageVector = AppIcons.Inbox,
                                 contentDescription = "Destination",
-                                tint = ThingsMetaGrey,
+                                tint = ThingsTheme.colors.textSecondary,
                                 modifier = Modifier.size(20.dp)
                             )
                             Spacer(modifier = Modifier.width(6.dp))
                             Text(
                                 text = destinationName,
-                                style = TextStyle(
-                                    color = ThingsMetaGrey,
-                                    fontSize = 17.sp,
-                                    fontWeight = FontWeight.Medium
+                                style = ThingsTheme.type.editorChecklist.copy(
+                                    color = ThingsTheme.colors.textSecondary
                                 )
                             )
                         }
@@ -718,19 +705,16 @@ fun QuickAddDialog(
                         Button(
                             onClick = { handleSave() },
                             colors = ButtonDefaults.buttonColors(
-                                containerColor = ThingsBlue,
+                                containerColor = ThingsTheme.colors.accent,
                                 contentColor = Color.White
                             ),
-                            shape = RoundedCornerShape(percent = 50),
+                            shape = ThingsTheme.shapes.capsuleShape,
                             contentPadding = PaddingValues(horizontal = 24.dp, vertical = 6.dp),
                             modifier = Modifier.height(36.dp)
                         ) {
                             Text(
                                 text = "Save",
-                                style = TextStyle(
-                                    fontSize = 17.sp,
-                                    fontWeight = FontWeight.SemiBold
-                                )
+                                style = ThingsTheme.type.button
                             )
                         }
                     }
@@ -743,14 +727,14 @@ fun QuickAddDialog(
                         .padding(top = 16.dp, end = 16.dp)
                         .size(36.dp)
                         .clip(CircleShape)
-                        .background(ThingsHairlineLight)
+                        .background(ThingsTheme.colors.divider)
                         .clickable { handleDismiss() },
                     contentAlignment = Alignment.Center
                 ) {
                     Icon(
                         imageVector = Icons.Default.Close,
                         contentDescription = "Cancel",
-                        tint = ThingsMetaGrey,
+                        tint = ThingsTheme.colors.textSecondary,
                         modifier = Modifier.size(18.dp)
                     )
                 }

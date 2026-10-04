@@ -4,7 +4,6 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.CircleShape
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.BasicTextField
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.KeyboardArrowRight
@@ -30,7 +29,6 @@ import androidx.compose.ui.text.input.TextFieldValue
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
 import com.example.ui.theme.ThingsTheme
 import com.example.ui.theme.dimens
 
@@ -82,7 +80,7 @@ fun SearchQueryField(
         modifier = modifier
             .fillMaxWidth()
             .height(SEARCH_FIELD_HEIGHT)
-            .clip(RoundedCornerShape(SEARCH_FIELD_HEIGHT / 2))
+            .clip(ThingsTheme.shapes.capsuleShape)
             .background(fieldBackground)
             .padding(horizontal = 14.dp)
     ) {
@@ -98,7 +96,7 @@ fun SearchQueryField(
                 Text(
                     text = "Search",
                     color = textSecondaryColor.copy(alpha = 0.6f),
-                    fontSize = 16.sp
+                    style = ThingsTheme.type.bodyLarge
                 )
             }
             BasicTextField(
@@ -107,7 +105,7 @@ fun SearchQueryField(
                     textFieldValue = newValue
                     if (newValue.text != query) onQueryChange(newValue.text)
                 },
-                textStyle = TextStyle(color = textPrimaryColor, fontSize = 16.sp),
+                textStyle = ThingsTheme.type.bodyLarge.copy(color = textPrimaryColor),
                 cursorBrush = SolidColor(ThingsTheme.colors.accent),
                 singleLine = true,
                 modifier = Modifier
@@ -285,8 +283,7 @@ fun SearchEmptyState(
             Text(
                 text = text,
                 color = textSecondaryColor,
-                fontSize = 14.sp,
-                lineHeight = 20.sp,
+                style = ThingsTheme.type.bodyMedium,
                 textAlign = TextAlign.Center
             )
         }

@@ -1,8 +1,6 @@
 package com.example.ui.screens.home.components
 
 import com.example.ui.theme.ThingsTheme
-import com.example.ui.theme.ThingsListDimDark
-import com.example.ui.theme.ThingsListDimLight
 import com.example.ui.theme.ThingsNewHeadingLine
 import com.example.ui.theme.ThingsNewHeadingText
 import androidx.compose.runtime.withFrameNanos
@@ -34,7 +32,6 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.rememberLazyListState
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.*
@@ -91,9 +88,6 @@ import com.example.ui.screens.home.inlineeditor.dialogs.ThingsMoveDialog
 import com.example.ui.screens.home.inlineeditor.dialogs.DeleteConfirmDialog
 import com.example.ui.screens.home.inlineeditor.dialogs.ThingsWhenDialog
 import com.example.ui.theme.*
-import com.example.ui.theme.ThingsBackgroundDark
-import com.example.ui.theme.ThingsBackgroundLight
-import androidx.compose.foundation.isSystemInDarkTheme
 import com.example.data.model.ChecklistItem
 import java.util.Calendar
 import java.util.Locale
@@ -741,14 +735,14 @@ fun ThingsCategoryListPanel(
         derivedStateOf { ramp(HEADER_FADE_START_FRACTION, TOOLBAR_TITLE_END_FRACTION) }
     }
 
-    val isDark = textPrimaryColor == ThingsTextPrimaryDark
+    val isDark = ThingsTheme.colors.isDark
     val topPaddingTotal = TOP_APP_BAR_HEIGHT
 
     val bkgColor by animateColorAsState(
         targetValue = if (anyExpanded) {
-            if (isDark) ThingsListDimDark else ThingsListDimLight
+            ThingsTheme.colors.listDim
         } else {
-            if (isDark) ThingsBackgroundDark else ThingsBackgroundLight
+            ThingsTheme.colors.background
         },
         label = "backgroundColor"
     )
@@ -1073,6 +1067,7 @@ fun ThingsCategoryListPanel(
                                 targetValue = if (inlineExpandedTaskId != null) 0.3f else 1f,
                                 label = "dimAlpha_${item.key}"
                             )
+                            val chipShape = ThingsTheme.shapes.chipShape
                             Box(
                                 modifier = Modifier
                                     .zIndex(if (isLifted) 1f else 0f)
@@ -1087,7 +1082,7 @@ fun ThingsCategoryListPanel(
                                         modifier = Modifier
                                             .matchParentSize()
                                             .graphicsLayer { alpha = 0.5f }
-                                            .background(placeholderColor, ThingsTheme.shapes.chipShape)
+                                            .background(placeholderColor, chipShape)
                                     )
                                 }
                                 if (isLifted) {
@@ -1109,11 +1104,11 @@ fun ThingsCategoryListPanel(
                                                     rotationZ = 1.6f * layer * lift
                                                     alpha = lift.coerceIn(0f, 1f)
                                                     shadowElevation = (8 - 2 * layer).dp.toPx() * lift
-                                                    shape = RoundedCornerShape(10.dp)
+                                                    shape = chipShape
                                                     clip = true
                                                 }
-                                                .background(bkgColor, RoundedCornerShape(10.dp))
-                                                .border(0.5.dp, stackBorder, RoundedCornerShape(10.dp))
+                                                .background(bkgColor, chipShape)
+                                                .border(0.5.dp, stackBorder, chipShape)
                                         )
                                     }
                                 }
@@ -1146,10 +1141,10 @@ fun ThingsCategoryListPanel(
                                             scaleX = scale
                                             scaleY = scale
                                             shadowElevation = 8.dp.toPx() * lift
-                                            shape = RoundedCornerShape(10.dp)
+                                            shape = chipShape
                                             clip = false
                                         }
-                                        .background(if (isLifted) bkgColor else Color.Transparent, RoundedCornerShape(10.dp))
+                                        .background(if (isLifted) bkgColor else Color.Transparent, chipShape)
                                         .then(
                                             if (editingHeadingId == heading.id) Modifier
                                             else Modifier.headingDragAndDrop(
@@ -1709,12 +1704,13 @@ private fun FabGapRow(asHeading: Boolean, extraPx: () -> Float, modifier: Modifi
             }
             Text(
                 text = "NEW HEADING",
-                fontSize = 12.sp,
-                fontWeight = FontWeight.SemiBold,
-                letterSpacing = 1.sp,
-                color = ThingsNewHeadingText,
+                style = ThingsTheme.type.caption.copy(
+                    fontWeight = FontWeight.SemiBold,
+                    letterSpacing = 1.sp,
+                    color = ThingsNewHeadingText
+                ),
                 modifier = Modifier
-                    .background(ThingsBackgroundLight)
+                    .background(ThingsTheme.colors.background)
                     .padding(horizontal = 10.dp)
             )
         }

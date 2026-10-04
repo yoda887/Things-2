@@ -17,6 +17,8 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 
+import com.example.ui.theme.ThingsTheme
+
 /**
  * TSmartListRow: Supports localized smart category row item metrics with flexible 
  * counter badging.
@@ -36,7 +38,7 @@ fun SmartListRow(
     Row(
         modifier = Modifier
             .fillMaxWidth()
-            .clip(RoundedCornerShape(10.dp))
+            .clip(ThingsTheme.shapes.chipShape)
             .clickable { onClick() }
             .padding(vertical = 6.dp, horizontal = 6.dp),
         verticalAlignment = Alignment.CenterVertically
@@ -55,7 +57,7 @@ fun SmartListRow(
             } else {
                 Box(
                     modifier = Modifier
-                        .clip(RoundedCornerShape(10.dp))
+                        .clip(ThingsTheme.shapes.chipShape)
                         .background(iconColor.copy(alpha = 0.15f))
                         .padding(horizontal = 8.dp, vertical = 2.dp)
                 ) {

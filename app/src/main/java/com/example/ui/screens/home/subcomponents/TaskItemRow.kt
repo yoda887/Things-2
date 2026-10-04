@@ -1,14 +1,6 @@
 package com.example.ui.screens.home.subcomponents
 
-import com.example.ui.theme.ThingsBadgeBackgroundLight
-import com.example.ui.theme.ThingsBadgeTextDark
-import com.example.ui.theme.ThingsBadgeTextLight
-import com.example.ui.theme.ThingsCheckboxBorder
-import com.example.ui.theme.ThingsDropPlaceholderDark
-import com.example.ui.theme.ThingsDropPlaceholderLight
 import com.example.ui.theme.ThingsEveningIndicator
-import com.example.ui.theme.ThingsFieldDark
-import com.example.ui.theme.ThingsMetaGrey
 import androidx.compose.animation.core.animateDpAsState
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.foundation.background
@@ -16,7 +8,6 @@ import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.CircleShape
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.Flag
@@ -197,9 +188,9 @@ fun TaskItemRow(
                 scaleX = scale * cardScale
                 scaleY = scale * cardScale
             }
-            .shadow(elevation, RoundedCornerShape(8.dp))
-            .background(animatedRowBgColor, RoundedCornerShape(8.dp))
-            .clip(RoundedCornerShape(8.dp))
+            .shadow(elevation, ThingsTheme.shapes.rowShape)
+            .background(animatedRowBgColor, ThingsTheme.shapes.rowShape)
+            .clip(ThingsTheme.shapes.rowShape)
             .drawBehind {
                 if (localCompleted && completionFillProgress > 0f && !isSearchLogbookStyle) {
                     val centerX = (10.dp + leftColumnWidth / 2f).toPx()
@@ -630,21 +621,15 @@ sealed class DateIndicatorResult {
 /** Серая плашка с датой у строки задачи: число и месяц в месячных разделах, дата — на экранах проекта и сферы */
 @Composable
 private fun DateBadge(text: String) {
-    val isSystemDark = androidx.compose.foundation.isSystemInDarkTheme()
-    val badgeTextColor = if (isSystemDark) ThingsBadgeTextDark else ThingsBadgeTextLight
-    val badgeBgColor = if (isSystemDark) ThingsFieldDark else ThingsBadgeBackgroundLight
-
     Text(
         text = text,
-        style = TextStyle(
-            fontSize = 11.sp,
-            fontWeight = FontWeight.Medium,
-            color = badgeTextColor
+        style = ThingsTheme.type.badge.copy(
+            color = ThingsTheme.colors.badgeText
         ),
         modifier = Modifier
             .background(
-                color = badgeBgColor,
-                shape = RoundedCornerShape(4.dp)
+                color = ThingsTheme.colors.badgeBackground,
+                shape = ThingsTheme.shapes.badgeShape
             )
             .padding(horizontal = 6.dp, vertical = 2.dp)
     )

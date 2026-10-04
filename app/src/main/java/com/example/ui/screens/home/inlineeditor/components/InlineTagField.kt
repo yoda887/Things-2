@@ -1,15 +1,10 @@
 package com.example.ui.screens.home.inlineeditor.components
 
 import com.example.ui.theme.ThingsTheme
-import com.example.ui.theme.ThingsFieldLight
-import com.example.ui.theme.ThingsInk
-import com.example.ui.theme.ThingsMetaGrey
-import com.example.ui.theme.ThingsTextSecondaryLight
 import androidx.compose.animation.*
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.BasicTextField
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Close
@@ -39,10 +34,8 @@ fun InlineTagField(
 
     val textPrimaryColor = ThingsTheme.colors.editorText
     val textSecondaryColor = ThingsTheme.colors.textSecondary
-    val helperBgColor = ThingsFieldLight
+    val helperBgColor = ThingsTheme.colors.searchField
     val helperHintColor = ThingsTheme.colors.textSecondary
-
-    val tagFontSize = ThingsTheme.type.dialogBody.fontSize
 
     AnimatedVisibility(
         visible = showPanel,
@@ -53,7 +46,7 @@ fun InlineTagField(
             modifier = Modifier
                 .fillMaxWidth()
                 .padding(start = 28.dp, top = 10.dp)
-                .clip(RoundedCornerShape(6.dp))
+                .clip(ThingsTheme.shapes.smallShape)
                 .background(helperBgColor)
                 .padding(horizontal = 8.dp, vertical = 4.dp),
             verticalAlignment = Alignment.CenterVertically

@@ -43,7 +43,6 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
 import android.view.HapticFeedbackConstants
 import androidx.compose.ui.platform.LocalView
 import com.example.ui.theme.dimens
@@ -92,7 +91,7 @@ fun FloatingBottomCapsuleToolbar(
                 Row(
                     modifier = Modifier
                         .sizeIn(minWidth = 48.dp, minHeight = 48.dp)
-                        .clip(RoundedCornerShape(8.dp))
+                        .clip(ThingsTheme.shapes.rowShape)
                         .clickable {
                             view.performHapticFeedback(HapticFeedbackConstants.CLOCK_TICK)
                             onMoveClick()
@@ -110,8 +109,7 @@ fun FloatingBottomCapsuleToolbar(
                     Text(
                         text = "Move",
                         color = Color.White,
-                        fontWeight = FontWeight.Bold,
-                        fontSize = 18.sp
+                        style = ThingsTheme.type.dialogButton.copy(fontWeight = FontWeight.Bold)
                     )
                 }
 

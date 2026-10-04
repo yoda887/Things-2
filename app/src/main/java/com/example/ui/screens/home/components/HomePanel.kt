@@ -1,14 +1,6 @@
 package com.example.ui.screens.home.components
 
 import com.example.ui.theme.ThingsBlue
-import com.example.ui.theme.ThingsDropPlaceholderDark
-import com.example.ui.theme.ThingsDropPlaceholderLight
-import com.example.ui.theme.ThingsFieldDark
-import com.example.ui.theme.ThingsFieldLight
-import com.example.ui.theme.ThingsHomeDropPlaceholder
-import com.example.ui.theme.ThingsPullArrowDark
-import com.example.ui.theme.ThingsPullArrowLight
-import com.example.ui.theme.ThingsPullArrowSelectedDark
 import kotlinx.coroutines.launch
 
 import androidx.compose.animation.AnimatedVisibility
@@ -21,7 +13,6 @@ import androidx.compose.foundation.gestures.Orientation
 import androidx.compose.foundation.gestures.draggable
 import androidx.compose.foundation.gestures.rememberDraggableState
 import androidx.compose.foundation.gestures.scrollBy
-import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.foundation.border
 import androidx.compose.foundation.background
 import androidx.compose.foundation.Canvas
@@ -45,7 +36,6 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyItemScope
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.rememberLazyListState
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.*
 import androidx.compose.material.icons.outlined.*
@@ -90,7 +80,6 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.Velocity
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
 import com.example.data.model.Area
 import com.example.data.model.Item
 import com.example.data.model.ItemWithChecklist
@@ -100,9 +89,6 @@ import com.example.ui.components.AreaIconAnimated
 import com.example.ui.screens.home.ActiveScreen
 import com.example.ui.screens.home.subcomponents.SmartListRow
 import com.example.ui.theme.*
-import com.example.ui.theme.ThingsBackgroundDark
-import com.example.ui.theme.ThingsBackgroundLight
-import androidx.compose.foundation.isSystemInDarkTheme
 
 /**
  * Элементы плоского дерева проектов и областей на главном экране.
@@ -246,7 +232,7 @@ fun ThingsHomePanel(
                 Text(
                     "Вы действительно хотите удалить проект \"${proj.title}\"? Проект удалится вместе с $taskCountInProj задачами.",
                     color = textSecondaryColor,
-                    fontSize = 14.sp
+                    style = ThingsTheme.type.bodyMedium
                 )
             },
             confirmButton = {
@@ -641,7 +627,7 @@ fun ThingsHomePanel(
                             .fillMaxWidth()
                             .height(46.dp)
                             .padding(vertical = 4.dp)
-                            .background(ThingsHomeDropPlaceholder, RoundedCornerShape(10.dp))
+                            .background(ThingsTheme.colors.dropPlaceholder, ThingsTheme.shapes.chipShape)
                     )
                 }
                 is HomeTreeItem.ProjectItem -> {
@@ -714,6 +700,7 @@ fun ThingsHomePanel(
                         }
 
                         // Title block for Area
+                        val areaChipShape = ThingsTheme.shapes.chipShape
                         Box(
                             modifier = Modifier.fillMaxWidth()
                         ) {
@@ -724,7 +711,7 @@ fun ThingsHomePanel(
                                     modifier = Modifier
                                         .matchParentSize()
                                         .alpha(0.5f)
-                                        .background(placeholderBgColor, ThingsTheme.shapes.chipShape)
+                                        .background(placeholderBgColor, areaChipShape)
                                 )
                             }
 
@@ -736,12 +723,12 @@ fun ThingsHomePanel(
                                         scaleX = areaDragScale
                                         scaleY = areaDragScale
                                         shadowElevation = areaDragElev.toPx()
-                                        shape = RoundedCornerShape(10.dp)
+                                        shape = areaChipShape
                                         this.clip = false
                                     }
                                     .fillMaxWidth()
                                     .height(46.dp)
-                                    .clip(RoundedCornerShape(10.dp))
+                                    .clip(areaChipShape)
                                     .background(
                                         if (isAreaDragging || areaDragElev > 0.dp) cardSurfaceColor
                                         else if (isAreaEditing) ThingsBlue.copy(alpha = 0.15f)
@@ -882,7 +869,7 @@ fun ThingsHomePanel(
                     .fillMaxWidth()
                     .padding(top = 18.dp, bottom = 32.dp),
                 colors = CardDefaults.cardColors(containerColor = cardSurfaceColor),
-                shape = RoundedCornerShape(14.dp)
+                shape = ThingsTheme.shapes.cardShape
             ) {
                 Column(modifier = Modifier.padding(16.dp)) {
                     Row(
@@ -900,7 +887,7 @@ fun ThingsHomePanel(
                         Row(verticalAlignment = Alignment.CenterVertically) {
                             Icon(Icons.Default.CloudSync, contentDescription = "Google Sync", tint = ThingsInboxBlue, modifier = Modifier.size(22.dp))
                             Spacer(modifier = Modifier.width(10.dp))
-                            Text("Google Tasks Sync Settings", fontWeight = FontWeight.SemiBold, fontSize = 14.sp, color = textPrimaryColor)
+                            Text("Google Tasks Sync Settings", style = ThingsTheme.type.bodyMedium.copy(fontWeight = FontWeight.SemiBold, color = textPrimaryColor))
                         }
                         Icon(
                             imageVector = if (isSyncConfigExpanded) Icons.Default.ExpandLess else Icons.Default.ExpandMore,
@@ -913,23 +900,21 @@ fun ThingsHomePanel(
                         Column(modifier = Modifier.padding(top = 12.dp)) {
                             Text(
                                 "Enter an OAuth access token to bidirectionally synchronize local tasks and projects directly with Google Tasks.",
-                                fontSize = 12.sp,
-                                color = textSecondaryColor,
-                                lineHeight = 16.sp
+                                style = ThingsTheme.type.caption.copy(color = textSecondaryColor)
                             )
                             Spacer(modifier = Modifier.height(10.dp))
 
                             OutlinedTextField(
                                 value = rawTokenInput,
                                 onValueChange = { rawTokenInput = it },
-                                label = { Text("Google Access Token", fontSize = 12.sp) },
+                                label = { Text("Google Access Token", style = ThingsTheme.type.caption) },
                                 singleLine = true,
                                 modifier = Modifier
                                     .fillMaxWidth()
                                     .onFocusChanged { isTokenFieldFocused = it.isFocused }
                                     .testTag("google_token_input"),
-                                shape = RoundedCornerShape(8.dp),
-                                textStyle = TextStyle(fontSize = 12.sp, color = textPrimaryColor),
+                                shape = ThingsTheme.shapes.rowShape,
+                                textStyle = ThingsTheme.type.caption.copy(color = textPrimaryColor),
                                 colors = OutlinedTextFieldDefaults.colors(
                                     focusedBorderColor = ThingsBlue,
                                     unfocusedBorderColor = dividerColor
@@ -942,8 +927,7 @@ fun ThingsHomePanel(
                                 Text(
                                     "Error: $syncError",
                                     color = ThingsUpcomingRed,
-                                    fontSize = 12.sp,
-                                    fontWeight = FontWeight.Medium,
+                                    style = ThingsTheme.type.caption.copy(fontWeight = FontWeight.Medium),
                                     modifier = Modifier.padding(bottom = 8.dp)
                                 )
                             }
@@ -953,8 +937,8 @@ fun ThingsHomePanel(
                                 modifier = Modifier
                                     .fillMaxWidth()
                                     .testTag("execute_sync_button"),
-                                colors = ButtonDefaults.buttonColors(containerColor = ThingsBlue),
-                                shape = RoundedCornerShape(10.dp),
+                                colors = ButtonDefaults.buttonColors(containerColor = ThingsTheme.colors.accent),
+                                shape = ThingsTheme.shapes.chipShape,
                                 enabled = !isSyncing
                             ) {
                                 if (isSyncing) {
@@ -1042,7 +1026,7 @@ fun ThingsHomePanel(
                 .fillMaxWidth()
                 .padding(horizontal = 6.dp, vertical = 4.dp)
                 .height(44.dp)
-                .clip(RoundedCornerShape(22.dp))
+                .clip(ThingsTheme.shapes.capsuleShape)
                 .background(inputBackground)
                 .draggable(
                     enabled = !isSearchOverlayActive,
@@ -1090,8 +1074,7 @@ fun ThingsHomePanel(
                 Text(
                     text = "Quick Find",
                     color = textTint,
-                    fontSize = 16.sp,
-                    fontWeight = FontWeight.Normal
+                    style = ThingsTheme.type.bodyLarge
                 )
             }
         }
@@ -1205,13 +1188,14 @@ private fun LazyItemScope.ProjectItemRow(
             .fillMaxWidth()
     ) {
         // Подложка на физическом месте проекта при перетаскивании (placeholder slot)
+        val projectChipShape = ThingsTheme.shapes.chipShape
         if (isDragging) {
             val placeholderBgColor = ThingsTheme.colors.dropPlaceholder
             Box(
                 modifier = Modifier
                     .matchParentSize()
                     .alpha(0.5f)
-                    .clip(ThingsTheme.shapes.chipShape)
+                    .clip(projectChipShape)
                     .background(placeholderBgColor)
             )
         }
@@ -1224,12 +1208,12 @@ private fun LazyItemScope.ProjectItemRow(
                     this.scaleX = dragScale
                     this.scaleY = dragScale
                     this.shadowElevation = dragElev.toPx()
-                    this.shape = RoundedCornerShape(10.dp)
+                    this.shape = projectChipShape
                     this.clip = false
                 }
                 .fillMaxWidth()
                 .height(46.dp)
-                .clip(RoundedCornerShape(10.dp))
+                .clip(projectChipShape)
                 .background(
                     if (isDragging || dragElev > 0.dp) cardSurfaceColor
                     else if (isEditing) ThingsBlue.copy(alpha = 0.15f)

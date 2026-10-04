@@ -1,14 +1,10 @@
 package com.example.ui.screens.home.inlineeditor.components
 
 import com.example.ui.theme.ThingsTheme
-import com.example.ui.theme.ThingsCheckboxBorder
-import com.example.ui.theme.ThingsInk
-import com.example.ui.theme.ThingsMetaGrey
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.BasicTextField
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Check

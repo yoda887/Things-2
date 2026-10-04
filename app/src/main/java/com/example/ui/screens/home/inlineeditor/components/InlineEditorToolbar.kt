@@ -1,11 +1,8 @@
 package com.example.ui.screens.home.inlineeditor.components
 
 import com.example.ui.theme.ThingsTheme
-import com.example.ui.theme.ThingsCheckboxBorder
-import com.example.ui.theme.ThingsInk
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Star
 import androidx.compose.material.icons.outlined.*
@@ -88,7 +85,7 @@ fun InlineEditorToolbar(
             Row(
                 verticalAlignment = Alignment.CenterVertically,
                 modifier = Modifier
-                    .clip(RoundedCornerShape(6.dp))
+                    .clip(ThingsTheme.shapes.smallShape)
                     .clickable {
                         view.performHapticFeedback(HapticFeedbackConstants.CLOCK_TICK)
                         onShowWhenDialogChange(true)

@@ -3,7 +3,7 @@ package com.example.ui.screens.home.subcomponents
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
-import androidx.compose.foundation.shape.RoundedCornerShape
+import com.example.ui.theme.ThingsTheme
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.KeyboardArrowRight
 import androidx.compose.material.icons.outlined.Description
@@ -55,7 +55,7 @@ fun ProjectItemRow(
         modifier = modifier
             .fillMaxWidth()
             .height(46.dp)
-            .clip(RoundedCornerShape(8.dp))
+            .clip(ThingsTheme.shapes.rowShape)
             .clickable { onProjectClick(project) }
             .graphicsLayer { alpha = dimAlpha }
             .padding(

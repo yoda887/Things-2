@@ -1,7 +1,6 @@
 package com.example.ui.screens.home
 
 import com.example.ui.theme.ThingsTheme
-import com.example.ui.theme.ThingsTextSecondaryDark
 import android.Manifest
 import android.content.pm.PackageManager
 import androidx.activity.compose.rememberLauncherForActivityResult
@@ -30,7 +29,6 @@ import androidx.compose.foundation.clickable
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.CircleShape
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
@@ -44,7 +42,6 @@ import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
 import androidx.core.content.ContextCompat
 import com.example.data.model.Item
 import com.example.data.model.ItemWithChecklist
@@ -971,9 +968,8 @@ fun ThingsHomeScreen(viewModel: ThingsViewModel = hiltViewModel()) {
                                     Spacer(modifier = Modifier.height(2.dp))
                                     Text(
                                         text = "Quickly add a to-do to your inbox.",
-                                        style = TextStyle(
-                                            fontSize = 13.sp,
-                                            color = ThingsTextSecondaryDark
+                                        style = ThingsTheme.type.bodySmall.copy(
+                                            color = ThingsTheme.colors.overlayContentSecondary
                                         )
                                     )
                                 }
@@ -1028,9 +1024,8 @@ fun ThingsHomeScreen(viewModel: ThingsViewModel = hiltViewModel()) {
                                     Spacer(modifier = Modifier.height(2.dp))
                                     Text(
                                         text = "Define a goal, then work towards it one to-do at a time.",
-                                        style = TextStyle(
-                                            fontSize = 13.sp,
-                                            color = ThingsTextSecondaryDark
+                                        style = ThingsTheme.type.bodySmall.copy(
+                                            color = ThingsTheme.colors.overlayContentSecondary
                                         )
                                     )
                                 }
@@ -1083,9 +1078,8 @@ fun ThingsHomeScreen(viewModel: ThingsViewModel = hiltViewModel()) {
                                     Spacer(modifier = Modifier.height(2.dp))
                                     Text(
                                         text = "Group projects and to-dos based on different responsibilities, such as Family or Work.",
-                                        style = TextStyle(
-                                            fontSize = 13.sp,
-                                            color = ThingsTextSecondaryDark
+                                        style = ThingsTheme.type.bodySmall.copy(
+                                            color = ThingsTheme.colors.overlayContentSecondary
                                         )
                                     )
                                 }
@@ -1141,7 +1135,7 @@ fun ThingsHomeScreen(viewModel: ThingsViewModel = hiltViewModel()) {
             title = { Text("Create Custom Project", fontWeight = FontWeight.Bold, color = textPrimaryColor) },
             text = {
                 Column {
-                    Text("Projects group tasks and track completion status with visual progress charts.", color = textSecondaryColor, fontSize = 13.sp)
+                    Text("Projects group tasks and track completion status with visual progress charts.", color = textSecondaryColor, style = ThingsTheme.type.bodySmall)
                     Spacer(modifier = Modifier.height(12.dp))
                     OutlinedTextField(
                         value = newProjectName,
@@ -1157,12 +1151,12 @@ fun ThingsHomeScreen(viewModel: ThingsViewModel = hiltViewModel()) {
                         )
                     )
                     Spacer(modifier = Modifier.height(12.dp))
-                    Text("Area of Responsibility:", color = textPrimaryColor, fontWeight = FontWeight.SemiBold, fontSize = 14.sp)
+                    Text("Area of Responsibility:", color = textPrimaryColor, fontWeight = FontWeight.SemiBold, style = ThingsTheme.type.bodyMedium)
                     Spacer(modifier = Modifier.height(4.dp))
                     Box(
                         modifier = Modifier
                             .fillMaxWidth()
-                            .border(1.dp, dividerColor, RoundedCornerShape(4.dp))
+                            .border(1.dp, dividerColor, ThingsTheme.shapes.badgeShape)
                             .clickable { showAreaDropdownInNewProject = true }
                             .padding(12.dp)
                     ) {
@@ -1227,7 +1221,7 @@ fun ThingsHomeScreen(viewModel: ThingsViewModel = hiltViewModel()) {
             title = { Text("Create Responsibility Area", fontWeight = FontWeight.Bold, color = textPrimaryColor) },
             text = {
                 Column {
-                    Text("Areas (Области) organize related activities like Work, Personal Life, or Health, and do not have deadlines.", color = textSecondaryColor, fontSize = 13.sp)
+                    Text("Areas (Области) organize related activities like Work, Personal Life, or Health, and do not have deadlines.", color = textSecondaryColor, style = ThingsTheme.type.bodySmall)
                     Spacer(modifier = Modifier.height(12.dp))
                     OutlinedTextField(
                         value = newAreaName,

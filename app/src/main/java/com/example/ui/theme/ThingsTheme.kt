@@ -105,6 +105,12 @@ data class ThingsColors(
     val calendarCard: Color,
     /** Приглушённые прошедшие события и разделители календаря */
     val calendarMuted: Color,
+    /** Фон бейджа даты */
+    val badgeBackground: Color,
+    /** Текст бейджа даты */
+    val badgeText: Color,
+    /** Неактивные иконки в строке инструментов редактора */
+    val editorIconInactive: Color,
 )
 
 private val LightThingsColors = ThingsColors(
@@ -147,6 +153,9 @@ private val LightThingsColors = ThingsColors(
     pullArrowSelected = ThingsBlue,
     calendarCard = ThingsFieldLight,
     calendarMuted = ThingsMutedGreyLight,
+    badgeBackground = ThingsBadgeBackgroundLight,
+    badgeText = ThingsBadgeTextLight,
+    editorIconInactive = ThingsEditorIconInactive,
 )
 
 private val DarkThingsColors = LightThingsColors.copy(
@@ -169,6 +178,8 @@ private val DarkThingsColors = LightThingsColors.copy(
     pullArrowSelected = ThingsPullArrowSelectedDark,
     calendarCard = ThingsSurfaceDark,
     calendarMuted = ThingsMutedGreyDark,
+    badgeBackground = ThingsFieldDark,
+    badgeText = ThingsBadgeTextDark,
 )
 
 /** Стили текста по ролям. На экранах шире 600 dp размеры умножаются на 1.25 — здесь, один раз. */
@@ -200,6 +211,24 @@ data class ThingsTypography(
     val topAppBarTitle: TextStyle,
     /** Мелкие метки и бейджи */
     val caption: TextStyle,
+    /** Текст бейджа даты */
+    val badge: TextStyle,
+    /** Мелкий пояснительный текст (13 sp) */
+    val bodySmall: TextStyle,
+    /** Стандартный вспомогательный текст (14 sp) */
+    val bodyMedium: TextStyle,
+    /** Основной текст (16 sp) */
+    val bodyLarge: TextStyle,
+    /** Подзаголовок средней жирности (16 sp SemiBold) */
+    val headline: TextStyle,
+    /** Вспомогательный подзаголовок (15 sp) */
+    val subhead: TextStyle,
+    /** Вспомогательный подзаголовок средней жирности (15 sp Medium) */
+    val subheadMedium: TextStyle,
+    /** Крупный заголовок экрана (32 sp) */
+    val largeTitle: TextStyle,
+    /** Кнопка подтверждения / действия (17 sp SemiBold) */
+    val button: TextStyle,
 )
 
 private fun thingsTypography(scale: Float) = ThingsTypography(
@@ -216,27 +245,57 @@ private fun thingsTypography(scale: Float) = ThingsTypography(
     sectionHeader = TextStyle(fontFamily = FontFamily.Default, fontWeight = FontWeight.Medium, fontSize = (19 * scale).sp),
     topAppBarTitle = TextStyle(fontFamily = FontFamily.Default, fontWeight = FontWeight.SemiBold, fontSize = (20 * scale).sp),
     caption = TextStyle(fontFamily = FontFamily.Default, fontWeight = FontWeight.Medium, fontSize = (12 * scale).sp),
+    badge = TextStyle(fontFamily = FontFamily.Default, fontWeight = FontWeight.Medium, fontSize = (11 * scale).sp),
+    bodySmall = TextStyle(fontFamily = FontFamily.Default, fontWeight = FontWeight.Normal, fontSize = (13 * scale).sp),
+    bodyMedium = TextStyle(fontFamily = FontFamily.Default, fontWeight = FontWeight.Normal, fontSize = (14 * scale).sp),
+    bodyLarge = TextStyle(fontFamily = FontFamily.Default, fontWeight = FontWeight.Normal, fontSize = (16 * scale).sp),
+    headline = TextStyle(fontFamily = FontFamily.Default, fontWeight = FontWeight.SemiBold, fontSize = (16 * scale).sp),
+    subhead = TextStyle(fontFamily = FontFamily.Default, fontWeight = FontWeight.Normal, fontSize = (15 * scale).sp),
+    subheadMedium = TextStyle(fontFamily = FontFamily.Default, fontWeight = FontWeight.Medium, fontSize = (15 * scale).sp),
+    largeTitle = TextStyle(fontFamily = FontFamily.Default, fontWeight = FontWeight.Bold, fontSize = (32 * scale).sp),
+    button = TextStyle(fontFamily = FontFamily.Default, fontWeight = FontWeight.SemiBold, fontSize = (17 * scale).sp),
 )
 
 /** Скругления по ролям. */
 @Immutable
 data class ThingsShapes(
-    /** Строка списка, строка в диалоге, раскрытый редактор */
+    /** Полоска-индикатор (1.5 dp) */
+    val indicator: Dp = 1.5.dp,
+    /** Ручка перетаскивания шторки (2 dp) */
+    val tiny: Dp = 2.dp,
+    /** Бейдж даты, метка (4 dp) */
+    val badge: Dp = 4.dp,
+    /** Мелкий чип, иконка действия (6 dp) */
+    val small: Dp = 6.dp,
+    /** Строка списка, строка в диалоге, раскрытый редактор (8 dp) */
     val row: Dp = 8.dp,
-    /** Чип, плашка, мелкая карточка */
+    /** Чип, плашка, мелкая карточка (10 dp) */
     val chip: Dp = 10.dp,
-    /** Модальный диалог: Move, теги, When, удаление */
-    val dialog: Dp = 32.dp,
-    /** Всплывающее меню-карточка: меню «+» на главном экране */
+    /** Фильтр тегов, карточка деталей (12 dp) */
+    val tagFilter: Dp = 12.dp,
+    /** Карточка настроек (14 dp) */
+    val card: Dp = 14.dp,
+    /** Всплывающее меню-карточка: меню «+» на главном экране (16 dp) */
     val menu: Dp = 16.dp,
-    /** Плавающая карточка, вырастающая из своего источника: Quick Find, Quick Add */
+    /** Капсула поиска, пилюля (22 dp) */
+    val capsule: Dp = 22.dp,
+    /** Плавающая карточка, вырастающая из своего источника: Quick Find, Quick Add (30 dp) */
     val floatingCard: Dp = 30.dp,
+    /** Модальный диалог: Move, теги, When, удаление (32 dp) */
+    val dialog: Dp = 32.dp,
 ) {
+    val indicatorShape get() = RoundedCornerShape(indicator)
+    val tinyShape get() = RoundedCornerShape(tiny)
+    val badgeShape get() = RoundedCornerShape(badge)
+    val smallShape get() = RoundedCornerShape(small)
     val rowShape get() = RoundedCornerShape(row)
     val chipShape get() = RoundedCornerShape(chip)
-    val dialogShape get() = RoundedCornerShape(dialog)
-    val floatingCardShape get() = RoundedCornerShape(floatingCard)
+    val tagFilterShape get() = RoundedCornerShape(tagFilter)
+    val cardShape get() = RoundedCornerShape(card)
     val menuShape get() = RoundedCornerShape(menu)
+    val capsuleShape get() = RoundedCornerShape(capsule)
+    val floatingCardShape get() = RoundedCornerShape(floatingCard)
+    val dialogShape get() = RoundedCornerShape(dialog)
 }
 
 private val LocalThingsColors = staticCompositionLocalOf { LightThingsColors }

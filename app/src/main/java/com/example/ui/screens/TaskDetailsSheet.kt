@@ -1,16 +1,12 @@
 package com.example.ui.screens
 
-import com.example.ui.theme.ThingsCheckboxBorder
-import com.example.ui.theme.ThingsMutedGreyDark
 import androidx.compose.animation.*
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
-import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.BasicTextField
 import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
@@ -81,11 +77,10 @@ fun ThingsTaskDetailsSheet(
         } ?: "No Date"
     }
 
-    val isDark = false
-    val sheetBackground = if (isDark) ThingsSurfaceDark else Color.White
-    val textPrimaryColor = if (isDark) ThingsTextPrimaryDark else ThingsTextPrimaryLight
-    val textSecondaryColor = if (isDark) ThingsTextSecondaryDark else ThingsTextSecondaryLight
-    val dividerColor = if (isDark) ThingsDividerDark else ThingsDividerLight
+    val sheetBackground = ThingsTheme.colors.surface
+    val textPrimaryColor = ThingsTheme.colors.textPrimary
+    val textSecondaryColor = ThingsTheme.colors.textSecondary
+    val dividerColor = ThingsTheme.colors.divider
 
     val sheetHeaderStyle = androidx.compose.material3.MaterialTheme.typography.titleSmall.copy(fontWeight = FontWeight.SemiBold, color = textSecondaryColor)
     val sheetTitleStyle = androidx.compose.material3.MaterialTheme.typography.headlineMedium.copy(color = textPrimaryColor)
@@ -107,7 +102,7 @@ fun ThingsTaskDetailsSheet(
                     .padding(vertical = 10.dp)
                     .width(40.dp)
                     .height(4.dp)
-                    .background(dividerColor, RoundedCornerShape(2.dp))
+                    .background(dividerColor, ThingsTheme.shapes.tinyShape)
             )
         }
     ) {
@@ -159,8 +154,8 @@ fun ThingsTaskDetailsSheet(
                                 checklist
                             )
                         },
-                        colors = ButtonDefaults.buttonColors(containerColor = ThingsBlue),
-                        shape = RoundedCornerShape(18.dp),
+                        colors = ButtonDefaults.buttonColors(containerColor = ThingsTheme.colors.accent),
+                        shape = ThingsTheme.shapes.menuShape,
                         modifier = Modifier.testTag("save_task_button")
                     ) {
                         Text("Save", color = Color.White, fontWeight = FontWeight.Bold)
@@ -244,7 +239,7 @@ fun ThingsTaskDetailsSheet(
                                 }
                             },
                             size = 18.dp,
-                            uncheckedColor = if (isDark) ThingsMutedGreyDark else ThingsCheckboxBorder
+                            uncheckedColor = ThingsTheme.colors.checkboxBorder
                         )
 
                         Spacer(modifier = Modifier.width(10.dp))
@@ -342,12 +337,12 @@ fun ThingsTaskDetailsSheet(
                             val isSelected = section == sec
                             Box(
                                 modifier = Modifier
-                                    .clip(RoundedCornerShape(12.dp))
+                                    .clip(ThingsTheme.shapes.tagFilterShape)
                                     .background(if (isSelected) ThingsBlue.copy(alpha = 0.15f) else Color.Transparent)
                                     .border(
                                         1.dp,
                                         if (isSelected) ThingsBlue else dividerColor,
-                                        RoundedCornerShape(12.dp)
+                                        ThingsTheme.shapes.tagFilterShape
                                     )
                                     .clickable { section = sec }
                                     .padding(horizontal = 8.dp, vertical = 6.dp)
@@ -397,7 +392,7 @@ fun ThingsTaskDetailsSheet(
                     Row(
                         verticalAlignment = Alignment.CenterVertically,
                         modifier = Modifier
-                            .clip(RoundedCornerShape(12.dp))
+                            .clip(ThingsTheme.shapes.tagFilterShape)
                             .background(if (isTonight) ThingsSomedayGrey.copy(alpha = 0.15f) else Color.Transparent)
                             .clickable { isTonight = !isTonight }
                             .padding(horizontal = 10.dp, vertical = 6.dp)

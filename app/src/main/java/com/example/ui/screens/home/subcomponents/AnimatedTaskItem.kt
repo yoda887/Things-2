@@ -1,13 +1,6 @@
 package com.example.ui.screens.home.subcomponents
 
 import com.example.ui.theme.ThingsTheme
-import com.example.ui.theme.ThingsBackgroundLight
-import com.example.ui.theme.ThingsDropPlaceholderDark
-import com.example.ui.theme.ThingsDropPlaceholderLight
-import com.example.ui.theme.ThingsHairlineDark
-import com.example.ui.theme.ThingsHairlineLight
-import com.example.ui.theme.ThingsMetaGrey
-import com.example.ui.theme.ThingsStackCardDark
 import androidx.compose.animation.animateContentSize
 import androidx.compose.animation.core.animateDpAsState
 import androidx.compose.animation.core.animateFloatAsState
@@ -17,7 +10,6 @@ import androidx.compose.animation.core.tween
 import androidx.compose.animation.core.FastOutSlowInEasing
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
-import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.lazy.LazyListState
@@ -730,7 +722,7 @@ fun AnimatedTaskItem(
                     val completedCount = progress?.completed ?: 0
                     val totalCount = progress?.total ?: 0
 
-                    val pillContentColor = ThingsMetaGrey
+                    val pillContentColor = ThingsTheme.colors.textSecondary
                     Row(
                         modifier = Modifier
                             .fillMaxWidth()
@@ -751,7 +743,7 @@ fun AnimatedTaskItem(
                     ) {
                         Row(
                             modifier = Modifier
-                                .clip(androidx.compose.foundation.shape.RoundedCornerShape(6.dp))
+                                .clip(ThingsTheme.shapes.smallShape)
                                 .clickable {
                                     // Save task automatically and navigate
                                     editorOutsideTouch?.onCollapseRequested()
@@ -783,8 +775,7 @@ fun AnimatedTaskItem(
                             Spacer(modifier = Modifier.width(6.dp))
                             Text(
                                 text = currentProject?.title ?: currentArea?.title ?: "",
-                                style = TextStyle(
-                                    fontSize = 17.sp,
+                                style = ThingsTheme.type.editorChecklist.copy(
                                     color = pillContentColor,
                                     fontWeight = FontWeight.Normal
                                 )

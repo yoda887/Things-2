@@ -10,7 +10,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
+import com.example.ui.theme.ThingsTheme
 
 /**
  * Подкомпонент для отображения пустого состояния списка задач.
@@ -42,7 +42,7 @@ fun EmptyStateView(
             Text(
                 text = "All clear here! Enjoy your day.",
                 color = textSecondaryColor,
-                fontSize = 14.sp
+                style = ThingsTheme.type.bodyMedium
             )
         }
     }
