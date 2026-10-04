@@ -6,8 +6,8 @@
 Пока раскрыт редактор задачи (Move / Delete / More) или включён режим выбора (дата, перенос, удаление, ещё).
 
 ## Размеры
-- Высота 50 dp (`size-toolbar`), радиус `radius-toolbar`, в 24 dp от низа; фон `toolbar-bg` (`ThingsToolbarBackground`), белые иконки и текст `label-large`.
-- Меню «•••» открывается на `dialog-bg`.
+- Высота 50 dp (`size-toolbar`), радиус `ThingsTheme.shapes.capsuleShape` (`radius-toolbar`), в 24 dp от низа; фон `ThingsTheme.colors.overlaySurface` (`dialog-bg`), белые иконки и текст `label-large`.
+- Меню «•••» открывается на `ThingsTheme.colors.overlaySurface` (`dialog-bg`).
 - Иконки 24 dp; нажатие отзывается вибрацией `CLOCK_TICK`.
 
 ## Правила

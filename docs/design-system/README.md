@@ -19,17 +19,23 @@
 
 | Токены | Источник |
 | --- | --- |
-| цвета | `app/src/main/java/com/example/ui/theme/Color.kt` |
-| типографика | `ui/theme/Type.kt` (`rememberThingsTypography`, `topAppBarTitle`, `taskEditorNotes`, `taskEditorChecklist`, `taskEditorDate`) |
+| единая точка правды в UI | `app/src/main/java/com/example/ui/theme/ThingsTheme.kt` (`ThingsTheme.colors`, `ThingsTheme.type`, `ThingsTheme.shapes`) |
+| цвета | `ThingsTheme.colors` (`ThingsColors` в `ThingsTheme.kt`, базовые константы в `Color.kt`) |
+| типографика | `ThingsTheme.type` (`ThingsTypography` в `ThingsTheme.kt`, системные стили в `Type.kt`) |
+| формы и скругления | `ThingsTheme.shapes` (`ThingsShapes` в `ThingsTheme.kt`) |
 | отступы и размеры | `ui/theme/Dimen.kt` (`MaterialTheme.dimens`) и константы компонентов |
 | движение | `ui/theme/AnimationConstants.kt` и константы компонентов |
 | иконки | `ui/theme/AppIcons.kt`, `res/drawable/ic_launcher_*.xml` |
 
 ## Правила для кода
 
-- Цвет в компоненте — только имя из `Color.kt`. Литерал `Color(0x…)` вне `ui/theme/` — ошибка: добавьте цвет в `Color.kt` (с комментарием, где он используется), в `tokens.json` и в `Tokens.md`.
-- Пары для светлой и тёмной темы называются `…Light` / `…Dark` и выбираются по `isSystemInDarkTheme()`.
-- Размеры, которые повторяются в нескольких местах, — в `AppDimens` (`Dimen.kt`), а не числом в компоненте.
+- **Нулевая терпимость к сырым литералам вне `ui/theme/`:**
+  - Цвет в компоненте — только семантическая роль из `ThingsTheme.colors.*`. Литерал `Color(0x…)` вне `ui/theme/` запрещён.
+  - Размеры шрифтов — только семантические стили из `ThingsTheme.type.*`. Литерал `fontSize = …sp` вне `ui/theme/` запрещён.
+  - Скругления углов — только роли из `ThingsTheme.shapes.*`. Вызовы `RoundedCornerShape(…dp)` вне `ui/theme/` запрещены.
+  - Тема приложения — состояние темы получается централизованно через `ThingsTheme.colors.isDark`. Прямой вызов `isSystemInDarkTheme()` внутри UI-компонентов запрещён.
+- Размеры и отступы, которые повторяются в нескольких местах, берутся из `MaterialTheme.dimens` (`Dimen.kt`), а не числом в компоненте.
+- **Автоматизированная валидация:** строгое соблюдение дизайн-системы проверяется unit-тестом `app/src/test/java/com/example/ui/theme/DesignSystemEnforcementTest.kt`. При наличии любых запрещённых литералов сборка проекта блокируется автоматически.
 
 ## Компоненты
 

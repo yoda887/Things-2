@@ -9,9 +9,9 @@
 Обработчики тапа, сброса на список и во «Входящие»; признак, можно ли сейчас тянуть.
 
 ## Размеры
-- 56 dp, `radius-full`, фон `accent`, белый «+»; в 16 dp от правого и нижнего края (`space-fab-edge`).
+- 56 dp, `radius-full` (`CircleShape`), фон `accent` (`ThingsTheme.colors.accent`), белый «+»; в 16 dp от правого и нижнего края (`space-fab-edge`).
 - Тень `elevation-fab` (6 dp); при захвате кнопка вырастает до 1.22 и поднимает тень до `elevation-fab-lifted` (18 dp) — пружина с отскоком.
-- Пока кнопку тянут, на её месте кружок «отмена», слева — «во Входящие»: оба 44 dp, `radius-full`, фон `fab-action` (`ThingsFabActionButton`).
+- Пока кнопку тянут, на её месте кружок «отмена», слева — «во Входящие»: оба 44 dp, `radius-full` (`CircleShape`), фон `overlayControl` (`ThingsTheme.colors.overlayControl`).
 
 ## Правила
 - Кнопка держится за точку захвата, а не прыгает центром под палец.
