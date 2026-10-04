@@ -1,13 +1,6 @@
 package com.example.ui.components
 
-import com.example.ui.theme.ThingsBlue
-import com.example.ui.theme.ThingsFieldDark
-import com.example.ui.theme.ThingsPullArrowDark
-import com.example.ui.theme.ThingsPullArrowLight
-import com.example.ui.theme.ThingsPullArrowSelectedDark
-import com.example.ui.theme.ThingsPullIndicatorLight
 import androidx.compose.foundation.Canvas
-import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.animation.animateColorAsState
 import androidx.compose.animation.core.LinearEasing
 import androidx.compose.animation.core.tween
@@ -26,6 +19,7 @@ import androidx.compose.ui.graphics.drawscope.withTransform
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.unit.Density
 import androidx.compose.ui.unit.dp
+import com.example.ui.theme.ThingsTheme
 import com.example.ui.theme.*
 
 // Круг индикатора: центр внутри холста и радиус. Нужны и для отрисовки,
@@ -64,7 +58,6 @@ fun PullToSearchIndicator(
     thresholdPx: Float,
     modifier: Modifier = Modifier
 ) {
-    val isDark = isSystemInDarkTheme()
     val density = androidx.compose.ui.platform.LocalDensity.current
     val maxOffsetPx = with(density) { 150.dp.toPx() }
 
@@ -72,21 +65,17 @@ fun PullToSearchIndicator(
     val isTriggered = pullOffset >= thresholdPx
 
     // Цвета с дискретным переключением темы (_selected) строго на пороге с коротким кроссфейдом 100 мс
-    val bgNormal = if (isDark) ThingsFieldDark else ThingsPullIndicatorLight
     val circleColor by animateColorAsState(
-        targetValue = if (isTriggered) ThingsBlue else bgNormal,
+        targetValue = if (isTriggered) ThingsTheme.colors.accent else ThingsTheme.colors.pullIndicatorBackground,
         animationSpec = tween(durationMillis = 100, easing = LinearEasing),
         label = "pullCircleColor"
     )
     // В эталоне лупа всегда чисто белая
     val iconColor = Color.White
 
-    // Цвета темы quickFind.sourceListSearchBar.arrow: #000b1b50 (светлая) / #e7f1ff4b (тёмная);
-    // после порога (_selected): #5b9aff (светлая) / #3f85f4 (тёмная)
-    val arrowNormalColor = if (isDark) ThingsPullArrowDark else ThingsPullArrowLight
-    val arrowSelectedColor = if (isDark) ThingsPullArrowSelectedDark else ThingsBlue
+    // Цвета стрелки: normal / selected из ролей темы
     val arrowColor by animateColorAsState(
-        targetValue = if (isTriggered) arrowSelectedColor else arrowNormalColor,
+        targetValue = if (isTriggered) ThingsTheme.colors.pullArrowSelected else ThingsTheme.colors.pullArrow,
         animationSpec = tween(durationMillis = 100, easing = LinearEasing),
         label = "pullArrowColor"
     )

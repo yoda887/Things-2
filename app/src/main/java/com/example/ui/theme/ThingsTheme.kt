@@ -87,6 +87,20 @@ data class ThingsColors(
     val hairline: Color,
     /** Нижние карточки стопки при перетаскивании */
     val stackCard: Color,
+    /** Фон поля поиска (Quick Find и полноэкранный поиск) */
+    val searchField: Color,
+    /** Фон карточки Quick Find */
+    val searchCard: Color,
+    /** Подсветка совпадений в результатах поиска */
+    val searchMatchHighlight: Color,
+    /** Кнопка закрытия ✕ в Quick Find */
+    val searchCloseButton: Color,
+    /** Фон круга индикатора оттяжки поиска */
+    val pullIndicatorBackground: Color,
+    /** Стрелка индикатора оттяжки поиска */
+    val pullArrow: Color,
+    /** Стрелка индикатора оттяжки после порога */
+    val pullArrowSelected: Color,
 )
 
 private val LightThingsColors = ThingsColors(
@@ -120,6 +134,13 @@ private val LightThingsColors = ThingsColors(
     dropPlaceholder = ThingsDropPlaceholderLight,
     hairline = ThingsHairlineLight,
     stackCard = ThingsBackgroundLight,
+    searchField = ThingsFieldLight,
+    searchCard = Color.White,
+    searchMatchHighlight = SearchMatchHighlightLight,
+    searchCloseButton = ThingsHairlineLight,
+    pullIndicatorBackground = ThingsPullIndicatorLight,
+    pullArrow = ThingsPullArrowLight,
+    pullArrowSelected = ThingsBlue,
 )
 
 private val DarkThingsColors = LightThingsColors.copy(
@@ -133,6 +154,13 @@ private val DarkThingsColors = LightThingsColors.copy(
     dropPlaceholder = ThingsDropPlaceholderDark,
     hairline = ThingsHairlineDark,
     stackCard = ThingsStackCardDark,
+    searchField = ThingsFieldDark,
+    searchCard = ThingsInk,
+    searchMatchHighlight = SearchMatchHighlightDark,
+    searchCloseButton = ThingsFieldDark,
+    pullIndicatorBackground = ThingsFieldDark,
+    pullArrow = ThingsPullArrowDark,
+    pullArrowSelected = ThingsPullArrowSelectedDark,
 )
 
 /** Стили текста по ролям. На экранах шире 600 dp размеры умножаются на 1.25 — здесь, один раз. */
@@ -158,6 +186,8 @@ data class ThingsTypography(
     val editorChecklist: TextStyle,
     /** Строка даты и дедлайна в редакторе */
     val editorDate: TextStyle,
+    /** Заголовок секции результатов поиска */
+    val sectionHeader: TextStyle,
     /** Мелкие метки и бейджи */
     val caption: TextStyle,
 )
@@ -173,6 +203,7 @@ private fun thingsTypography(scale: Float) = ThingsTypography(
     editorNotes = TextStyle(fontFamily = FontFamily.Default, fontWeight = FontWeight.Normal, fontSize = (18 * scale).sp),
     editorChecklist = TextStyle(fontFamily = FontFamily.Default, fontWeight = FontWeight.Normal, fontSize = (17.2f * scale).sp),
     editorDate = TextStyle(fontFamily = FontFamily.Default, fontWeight = FontWeight.Normal, fontSize = (18 * scale).sp),
+    sectionHeader = TextStyle(fontFamily = FontFamily.Default, fontWeight = FontWeight.Medium, fontSize = (19 * scale).sp),
     caption = TextStyle(fontFamily = FontFamily.Default, fontWeight = FontWeight.Medium, fontSize = (12 * scale).sp),
 )
 

@@ -1,10 +1,7 @@
 package com.example.ui.screens.home.subcomponents
 
-import com.example.ui.theme.ThingsFieldDark
-import com.example.ui.theme.ThingsFieldLight
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
-import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -34,8 +31,7 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import com.example.ui.theme.ThingsBackgroundDark
-import com.example.ui.theme.ThingsBlue
+import com.example.ui.theme.ThingsTheme
 import com.example.ui.theme.dimens
 
 // Строка поиска — как поле Quick Find на стартовом экране
@@ -63,8 +59,7 @@ fun SearchQueryField(
     autoFocus: Boolean = true,
     onAutoFocused: () -> Unit = {}
 ) {
-    val isDark = isSystemInDarkTheme()
-    val fieldBackground = if (isDark) ThingsFieldDark else ThingsFieldLight
+    val fieldBackground = ThingsTheme.colors.searchField
     val focusRequester = remember { FocusRequester() }
     var textFieldValue by remember {
         mutableStateOf(TextFieldValue(text = query, selection = TextRange(query.length)))
@@ -113,7 +108,7 @@ fun SearchQueryField(
                     if (newValue.text != query) onQueryChange(newValue.text)
                 },
                 textStyle = TextStyle(color = textPrimaryColor, fontSize = 16.sp),
-                cursorBrush = SolidColor(ThingsBlue),
+                cursorBrush = SolidColor(ThingsTheme.colors.accent),
                 singleLine = true,
                 modifier = Modifier
                     .fillMaxWidth()
@@ -136,7 +131,7 @@ fun SearchQueryField(
                 Icon(
                     imageVector = Icons.Default.Close,
                     contentDescription = "Clear",
-                    tint = if (isDark) ThingsBackgroundDark else Color.White,
+                    tint = ThingsTheme.colors.background,
                     modifier = Modifier.size(11.dp)
                 )
             }
@@ -166,7 +161,7 @@ fun SearchSectionHeader(
         Row(
             modifier = Modifier
                 .fillMaxWidth()
-                .clip(RoundedCornerShape(8.dp))
+                .clip(ThingsTheme.shapes.rowShape)
                 .then(if (onClick != null) Modifier.clickable { onClick() } else Modifier)
                 .padding(
                     start = MaterialTheme.dimens.taskRowStartPadding,
@@ -185,11 +180,7 @@ fun SearchSectionHeader(
             Spacer(modifier = Modifier.width(MaterialTheme.dimens.taskSpacingToTextDefault))
             Text(
                 text = title,
-                style = TextStyle(
-                    fontSize = 19.sp,
-                    fontWeight = FontWeight.Medium,
-                    color = textPrimaryColor
-                ),
+                style = ThingsTheme.type.sectionHeader.copy(color = textPrimaryColor),
                 maxLines = 1,
                 overflow = TextOverflow.Ellipsis,
                 modifier = Modifier.weight(1f, fill = false)
@@ -232,7 +223,7 @@ fun SearchEntityRow(
         modifier = modifier
             .fillMaxWidth()
             .height(46.dp)
-            .clip(RoundedCornerShape(8.dp))
+            .clip(ThingsTheme.shapes.rowShape)
             .clickable { onClick() }
             .padding(
                 start = MaterialTheme.dimens.taskRowStartPadding,
@@ -249,7 +240,7 @@ fun SearchEntityRow(
         Spacer(modifier = Modifier.width(MaterialTheme.dimens.taskSpacingToTextDefault))
         Text(
             text = title,
-            style = MaterialTheme.typography.displaySmall.copy(
+            style = ThingsTheme.type.taskTitle.copy(
                 color = textPrimaryColor,
                 fontWeight = FontWeight.Medium
             ),

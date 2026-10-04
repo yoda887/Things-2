@@ -130,7 +130,7 @@ class ThingsSpringEasing(
 fun rememberHighlightedText(
     text: String,
     query: String,
-    highlightColor: Color = SearchMatchHighlight
+    highlightColor: Color = ThingsTheme.colors.searchMatchHighlight
 ): AnnotatedString {
     return remember(text, query, highlightColor) {
         if (query.isBlank() || !text.contains(query, ignoreCase = true)) {
@@ -227,7 +227,6 @@ fun ThingsSearchOverlay(
     // [ИЗМЕНЕНИЕ]: Прогресс синхронного появления капсулы поиска (0f..1f)
     onDismissProgress: ((Float) -> Unit)? = null
 ) {
-    val isDark = isSystemInDarkTheme()
     val coroutineScope = rememberCoroutineScope()
     val transformProgress = remember { Animatable(0f) }
     val opacityProgress = remember { Animatable(0f) }
@@ -403,14 +402,14 @@ fun ThingsSearchOverlay(
     val progress = morphRaw.coerceIn(0f, 1f)
     val contentAlpha = opacityProgress.value.coerceIn(0f, 1f)
 
-    val cardBackground = if (isDark) ThingsInk else Color.White
-    val textPrimary = if (isDark) Color.White else ThingsInk
-    val textSecondary = if (isDark) ThingsMetaGrey else ThingsMetaGrey
-    val inputNormalBackground = if (isDark) ThingsFieldDark else ThingsFieldLight
+    val cardBackground = ThingsTheme.colors.searchCard
+    val textPrimary = textPrimaryColor
+    val textSecondary = textSecondaryColor
+    val inputNormalBackground = ThingsTheme.colors.searchField
     // Карточка и поле ввода всегда имеют свой итоговый цвет с первого кадра (белая карточка, серый инпут)
     val currentCardBg = cardBackground
     val currentInputBg = inputNormalBackground
-    val closeButtonBackground = if (isDark) ThingsFieldDark else ThingsHairlineLight
+    val closeButtonBackground = ThingsTheme.colors.searchCloseButton
 
     // Карточка всегда раскладывается в своём итоговом месте, путь от источника к нему
     // целиком задаётся преобразованием слоя
@@ -603,7 +602,7 @@ fun ThingsSearchOverlay(
                                         ),
                                         singleLine = true,
                                         keyboardOptions = KeyboardOptions(imeAction = ImeAction.Search),
-                                        cursorBrush = SolidColor(if (isMorphClosing || isClosing) Color.Unspecified else ThingsBlue),
+                                        cursorBrush = SolidColor(if (isMorphClosing || isClosing) Color.Unspecified else ThingsTheme.colors.accent),
                                         modifier = Modifier
                                             .fillMaxWidth()
                                             .focusRequester(focusRequester)
@@ -861,7 +860,7 @@ fun ThingsSearchOverlay(
 fun ContinueSearchTaskRow(
     onClick: () -> Unit,
     modifier: Modifier = Modifier,
-    textPrimary: Color = MaterialTheme.colorScheme.onSurface
+    textPrimary: Color = ThingsTheme.colors.textPrimary
 ) {
     Row(
         verticalAlignment = Alignment.CenterVertically,
@@ -886,9 +885,10 @@ fun ContinueSearchTaskRow(
         Spacer(modifier = Modifier.width(MaterialTheme.dimens.searchSpacingToText))
         Text(
             text = "Continue Search",
-            color = textPrimary,
-            fontSize = MaterialTheme.typography.titleMedium.fontSize,
-            fontWeight = FontWeight.SemiBold,
+            style = ThingsTheme.type.taskTitle.copy(
+                color = textPrimary,
+                fontWeight = FontWeight.SemiBold
+            ),
             maxLines = 1,
             overflow = TextOverflow.Ellipsis,
             modifier = Modifier.weight(1f)
@@ -922,7 +922,7 @@ fun RecentRow(
         Spacer(modifier = Modifier.width(MaterialTheme.dimens.searchSpacingToText))
         Text(
             text = title,
-            style = MaterialTheme.typography.displaySmall.copy(
+            style = ThingsTheme.type.taskTitle.copy(
                 color = textPrimary,
                 fontWeight = FontWeight.Medium
             ),
@@ -934,7 +934,7 @@ fun RecentRow(
             Icon(
                 imageVector = Icons.Default.Check,
                 contentDescription = "Current screen",
-                tint = ThingsBlue,
+                tint = ThingsTheme.colors.accent,
                 modifier = Modifier.size(18.dp)
             )
         }
@@ -971,6 +971,7 @@ fun SearchResultRow(
     onSmartListClick: (ActiveScreen) -> Unit,
     onTaskToggle: (ItemWithChecklist) -> Unit = {}
 ) {
+    val accentColor = ThingsTheme.colors.accent
     when (result) {
         is SearchResultItem.TaskResult -> {
             TaskItemRow(
@@ -992,8 +993,8 @@ fun SearchResultRow(
             val completedCount = allTasks.count { it.item.projectId == result.project.id && it.item.type == 0 && it.item.isCompleted }
             val isSomeday = result.project.isSomeday
             val baseArcColor = if (isSomeday) ThingsSomedayGrey else ThingsDeepBlue
-            val arcColor = if (isHighlighted) androidx.compose.ui.graphics.lerp(baseArcColor, ThingsBlue, 0.45f) else baseArcColor
-            val rowBg = if (isHighlighted) ThingsBlue.copy(alpha = 0.12f) else Color.Transparent
+            val arcColor = if (isHighlighted) androidx.compose.ui.graphics.lerp(baseArcColor, accentColor, 0.45f) else baseArcColor
+            val rowBg = if (isHighlighted) accentColor.copy(alpha = 0.12f) else Color.Transparent
 
             Row(
                 modifier = Modifier
@@ -1019,7 +1020,7 @@ fun SearchResultRow(
                 Spacer(modifier = Modifier.width(MaterialTheme.dimens.searchSpacingToText))
                 Text(
                     text = result.project.title,
-                    style = MaterialTheme.typography.displaySmall.copy(
+                    style = ThingsTheme.type.taskTitle.copy(
                         color = textPrimary,
                         fontWeight = FontWeight.Medium
                     ),
@@ -1031,14 +1032,14 @@ fun SearchResultRow(
                     Icon(
                         imageVector = Icons.Default.Check,
                         contentDescription = "Current screen",
-                        tint = ThingsBlue,
+                        tint = accentColor,
                         modifier = Modifier.size(18.dp)
                     )
                 }
             }
         }
         else -> {
-            val rowBg = if (isHighlighted) ThingsBlue.copy(alpha = 0.12f) else Color.Transparent
+            val rowBg = if (isHighlighted) accentColor.copy(alpha = 0.12f) else Color.Transparent
 
             val title = when (result) {
                 is SearchResultItem.SmartListResult -> result.title
@@ -1077,7 +1078,7 @@ fun SearchResultRow(
                                     .graphicsLayer(compositingStrategy = CompositingStrategy.Offscreen)
                                     .drawWithContent {
                                         drawContent()
-                                        drawRect(ThingsBlue.copy(alpha = 0.45f), blendMode = BlendMode.SrcAtop)
+                                        drawRect(accentColor.copy(alpha = 0.45f), blendMode = BlendMode.SrcAtop)
                                     }
                             } else Modifier
                         )
@@ -1132,7 +1133,7 @@ fun SearchResultRow(
 
                 Text(
                     text = title,
-                    style = MaterialTheme.typography.displaySmall.copy(
+                    style = ThingsTheme.type.taskTitle.copy(
                         color = textPrimary,
                         fontWeight = FontWeight.Medium
                     ),
@@ -1145,7 +1146,7 @@ fun SearchResultRow(
                     Icon(
                         imageVector = Icons.Default.Check,
                         contentDescription = "Current screen",
-                        tint = ThingsBlue,
+                        tint = accentColor,
                         modifier = Modifier.size(18.dp)
                     )
                 }
