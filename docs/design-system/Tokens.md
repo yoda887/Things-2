@@ -21,8 +21,8 @@
 | `dialog-button` | `#2c2e38` | `ThingsTheme.colors.overlayControl` | Кнопки и поля внутри тёмных диалогов (Move, теги) на overlaySurface. |
 | `dialog-row-selected` | `#1e2027` | `ThingsTheme.colors.overlayRowSelected` | Подсветка выбранной строки в диалоге Move. |
 | `overlay-divider` | `#28292b` | `ThingsTheme.colors.overlayDivider` | Разделители внутри тёмных диалогов и меню. |
-| `text-notes` | `#424242` | `ThingsTheme.colors.textNotes` | Текст заметок в раскрытом редакторе. Редактор всегда светлый (белая карточка). |
-| `editor-text` | `#1c1c1e` | `ThingsTheme.colors.editorText` | Название задачи и пункты чек-листа в раскрытом редакторе (на белой карточке); карточка Quick Find в светлой теме (ThingsInk). |
+| `text-notes` | `#424242` / `#8b8c8e` | `ThingsTheme.colors.textNotes` | Текст заметок в раскрытом редакторе. Редактор всегда светлый (белая карточка). |
+| `editor-text` | `#1c1c1e` / `#ececed` | `ThingsTheme.colors.editorText` | Название задачи и пункты чек-листа в раскрытом редакторе (на белой карточке); карточка Quick Find в светлой теме (ThingsInk). |
 | `checkbox-border` | `#c7c7cc` | `ThingsTheme.colors.checkboxBorder` | Рамка неотмеченного чекбокса, неактивные иконки панели редактора. |
 | `tag-chip-bg` | `#d1eae2` | `ThingsTheme.colors.tagChipBackground` | Фон чипа тега в редакторе и Quick Add. |
 | `tag-chip-text` | `#2c7d64` | `ThingsTheme.colors.tagChipText` | Текст чипа тега на tagChipBackground. |
@@ -30,8 +30,11 @@
 | `checklist-check` | `#888888` | `ThingsTheme.colors.checklistCheck` | Галочка пункта чек-листа. |
 | `checklist-handle` | `#b5b5b5` | `ThingsTheme.colors.checklistHandle` | Ручка ≡ перетаскивания пункта. |
 | `checklist-delete` | `#ee004e` | `ThingsTheme.colors.checklistDelete` | Удаление пункта свайпом. |
-| `checklist-divider` | `#ebebeb` | `ThingsTheme.colors.checklistDivider` | Разделители пунктов чек-листа. |
-| `checklist-completed` | `#777778` | `ThingsTheme.colors.checklistCompleted` | Текст выполненного пункта. |
+| `checklist-divider` | `#ebebeb` / `#28292b` | `ThingsTheme.colors.checklistDivider` | Разделители пунктов чек-листа. |
+| `checklist-completed` | `#777778` / `#8b8c8e` | `ThingsTheme.colors.checklistCompleted` | Текст выполненного пункта. |
+| `checklist-highlight` | `#f0f1f3` / `#2c2c2e` | `ThingsTheme.colors.checklistHighlight` | Вспышка строки чек-листа при отметке пункта. |
+| `checklist-focus` | `#f7f7f7` / `#252629` | `ThingsTheme.colors.checklistFocus` | Фон пункта чек-листа, текст которого в фокусе. |
+| `checklist-drag` | `#d7e6fd` / `rgba(91, 154, 255, 0.25)` | `ThingsTheme.colors.checklistDrag` | Фон пункта чек-листа, который тащат за ручку ≡. |
 | `accent-selection` | `rgba(91, 154, 255, 0.22)` | `ThingsTheme.colors.accentSelection` | Фон выбранной строки в режиме мультивыбора: accent с прозрачностью 22 %. |
 | `list-dim` | `#f4f4f6` / `#151618` | `ThingsTheme.colors.listDim` | Фон списка, пока раскрыта задача (плавно, вместе с затемнением строк). |
 | `drop-placeholder` | `#e5e6eb` / `#2c2d32` | `ThingsTheme.colors.dropPlaceholder` | Серая плашка места вставки при перетаскивании задачи, подзаголовка и «+»; рисуется с прозрачностью 50 %. |
@@ -48,7 +51,7 @@
 | `muted-grey` | `#d1d1d6` / `#48484a` | `ThingsTheme.colors.calendarMuted` | Приглушённый текст и полоски виджета календаря. |
 | `badge-bg` | `#ececec` / `#2c2c2e` | `ThingsTheme.colors.badgeBackground` | Фон бейджа в строке задачи. |
 | `badge-text` | `#5f6368` / `#e0e0e0` | `ThingsTheme.colors.badgeText` | Текст бейджа в строке задачи; иконка календаря в диалоге When. |
-| `editor-icon-inactive` | `#a9a9a9` | `ThingsTheme.colors.editorIconInactive` | Неактивные иконки нижней строки раскрытого редактора. |
+| `editor-icon-inactive` | `#a9a9a9` / `#8b8c8e` | `ThingsTheme.colors.editorIconInactive` | Неактивные иконки нижней строки раскрытого редактора. |
 | `deep-blue` | `#2a62d9` | `ThingsDeepBlue` | Подзаголовки проекта и их «•••», иконки-прогресс проектов. 5.5:1 на белом. |
 | `inbox-blue` | `#1b80fa` | `ThingsInboxBlue` | Раздел «Входящие». |
 | `today-star` | `#e9ac10` | `ThingsTodayStar` | Раздел «Сегодня»: звезда-маркер в строке задачи и редакторе. |

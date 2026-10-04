@@ -251,7 +251,7 @@ fun QuickAddDialog(
     ) {
         Card(
             shape = ThingsTheme.shapes.floatingCardShape,
-            colors = CardDefaults.cardColors(containerColor = Color.White),
+            colors = CardDefaults.cardColors(containerColor = ThingsTheme.colors.background),
             elevation = CardDefaults.cardElevation(defaultElevation = 8.dp),
             modifier = Modifier
                 .graphicsLayer {
@@ -374,7 +374,7 @@ fun QuickAddDialog(
 
                         Spacer(modifier = Modifier.height(32.dp))
                         // 4. Панель индикаторов (активные теги, дата, дедлайн) + Панель инструментов (иконки действий)
-                    val textPrimaryColor = ThingsTheme.colors.textPrimary
+                    val textPrimaryColor = ThingsTheme.colors.editorText
                     val iconInactiveColor = ThingsTheme.colors.checkboxBorder
                     val bodyFontSize = MaterialTheme.typography.taskEditorDate.fontSize
 

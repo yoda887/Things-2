@@ -39,7 +39,8 @@ private val LightColorScheme =
 
 @Composable
 fun MyApplicationTheme(
-  darkTheme: Boolean = false,
+  // Тема следует системной настройке; один флаг подаётся и в Material, и в ThingsTheme
+  darkTheme: Boolean = isSystemInDarkTheme(),
   dynamicColor: Boolean = false, // Use Things custom precise colors instead of dynamic wallpaper colors
   content: @Composable () -> Unit,
 ) {
@@ -51,7 +52,7 @@ fun MyApplicationTheme(
 
   val typography = rememberThingsTypography()
   CompositionLocalProvider(LocalAppDimens provides AppDimens()) {
-    ProvideThingsTheme {
+    ProvideThingsTheme(darkTheme = darkTheme) {
       MaterialTheme(colorScheme = colorScheme, typography = typography, content = content)
     }
   }

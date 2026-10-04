@@ -5,11 +5,7 @@ import com.example.ui.theme.ThingsChecklistCheck
 import com.example.ui.theme.ThingsChecklistCircle
 import com.example.ui.theme.ThingsChecklistCompletedText
 import com.example.ui.theme.ThingsChecklistDelete
-import com.example.ui.theme.ThingsChecklistDivider
-import com.example.ui.theme.ThingsChecklistDrag
-import com.example.ui.theme.ThingsChecklistFocus
 import com.example.ui.theme.ThingsChecklistHandle
-import com.example.ui.theme.ThingsChecklistHighlight
 import android.view.HapticFeedbackConstants
 import androidx.compose.animation.*
 import androidx.compose.animation.core.Animatable
@@ -99,12 +95,8 @@ private val ChecklistCircleColor = ThingsChecklistCircle
 private val ChecklistCheckColor = ThingsChecklistCheck
 private val ChecklistHandleColor = ThingsChecklistHandle
 private val ChecklistDeleteColor = ThingsChecklistDelete
-private val ChecklistDividerColor = ThingsChecklistDivider
-private val ChecklistHighlightColor = ThingsChecklistHighlight
 private val ChecklistCompletedTextColor = ThingsChecklistCompletedText
-// Строка, которую правят (текст в фокусе), и строка, которую тащат за ≡ (видео 5-checklists-iphone)
-private val ChecklistFocusColor = ThingsChecklistFocus
-private val ChecklistDragColor = ThingsChecklistDrag
+// Разделитель, вспышка, фон строки в фокусе и перетаскиваемой строки зависят от темы — берутся из ThingsTheme
 private const val CHECKLIST_MARK_TO_FONT = 0.88f
 /** Высота строки текста пункта в долях шрифта (естественная высота строки Roboto) */
 private const val CHECKLIST_LINE_HEIGHT_TO_FONT = 1.17f
@@ -141,6 +133,13 @@ fun InlineChecklistPanel(
 
     val textPrimaryColor = ThingsTheme.colors.editorText
     val textSecondaryColor = ThingsTheme.colors.textSecondary
+    // Цвета строки чек-листа читаем здесь: внутри drawBehind к теме обратиться нельзя.
+    // Подложка строки — цвет фона, на котором лежит редактор (список или карточка QuickAdd)
+    val rowSurfaceColor = ThingsTheme.colors.background
+    val checklistDividerColor = ThingsTheme.colors.checklistDivider
+    val checklistHighlightColor = ThingsTheme.colors.checklistHighlight
+    val checklistFocusColor = ThingsTheme.colors.checklistFocus
+    val checklistDragColor = ThingsTheme.colors.checklistDrag
     val bodyFontSize = ThingsTheme.type.editorChecklist.fontSize
     val density = LocalDensity.current
     val fontDp = with(density) { bodyFontSize.toDp() }
@@ -433,7 +432,7 @@ fun InlineChecklistPanel(
                 // Над строкой, которую правят, разделителя не видно (как в Things 3); место под него остаётся
                 HorizontalDivider(
                     modifier = Modifier.padding(start = highlightMargin, end = clipEnd).then(dividerLeadModifier),
-                    color = if (linesHiddenAround(displayRows.first().id)) Color.Transparent else ChecklistDividerColor,
+                    color = if (linesHiddenAround(displayRows.first().id)) Color.Transparent else checklistDividerColor,
                     thickness = fontDp * CHECKLIST_DIVIDER_TO_FONT
                 )
             }
@@ -499,14 +498,14 @@ fun InlineChecklistPanel(
                                 )
                             }
                             .drawBehind {
-                                drawRoundRect(Color.White, size = Size(size.width - clipExtraPx, size.height), cornerRadius = CornerRadius(cornerPx))
+                                drawRoundRect(rowSurfaceColor, size = Size(size.width - clipExtraPx, size.height), cornerRadius = CornerRadius(cornerPx))
                                 val band = Size(size.width - clipExtraPx, size.height)
-                                if (focusedId == item.id) drawRect(ChecklistFocusColor, size = band)
-                                if (lift > 0f) drawRoundRect(ChecklistDragColor.copy(alpha = lift), size = band, cornerRadius = CornerRadius(cornerPx))
+                                if (focusedId == item.id) drawRect(checklistFocusColor, size = band)
+                                if (lift > 0f) drawRoundRect(checklistDragColor.copy(alpha = lift), size = band, cornerRadius = CornerRadius(cornerPx))
                                 val alpha = highlight.value
                                 if (alpha > 0f) {
                                     drawRect(
-                                        ChecklistHighlightColor.copy(alpha = alpha),
+                                        checklistHighlightColor.copy(alpha = alpha),
                                         size = Size(size.width - clipExtraPx, size.height)
                                     )
                                 }
@@ -702,7 +701,7 @@ fun InlineChecklistPanel(
                             HorizontalDivider(
                                 modifier = dividerLeadModifier,
                                 color = if (linesHiddenAround(item.id) || linesHiddenAround(nextId)) Color.Transparent
-                                else ChecklistDividerColor,
+                                else checklistDividerColor,
                                 thickness = fontDp * CHECKLIST_DIVIDER_TO_FONT
                             )
                         }

@@ -77,6 +77,12 @@ data class ThingsColors(
     val checklistDivider: Color,
     /** Текст выполненного пункта чек-листа */
     val checklistCompleted: Color,
+    /** Вспышка строки чек-листа при отметке пункта */
+    val checklistHighlight: Color,
+    /** Фон пункта чек-листа, текст которого в фокусе */
+    val checklistFocus: Color,
+    /** Фон пункта чек-листа, который тащат за ручку */
+    val checklistDrag: Color,
     /** Фон выделенной строки в режиме мультивыбора */
     val accentSelection: Color,
     /** Фон списка при открытом редакторе */
@@ -139,6 +145,9 @@ internal val LightThingsColors = ThingsColors(
     checklistDelete = ThingsChecklistDelete,
     checklistDivider = ThingsChecklistDivider,
     checklistCompleted = ThingsChecklistCompletedText,
+    checklistHighlight = ThingsChecklistHighlight,
+    checklistFocus = ThingsChecklistFocus,
+    checklistDrag = ThingsChecklistDrag,
     accentSelection = ThingsBlue.copy(alpha = 0.22f),
     listDim = ThingsListDimLight,
     dropPlaceholder = ThingsDropPlaceholderLight,
@@ -165,6 +174,15 @@ internal val DarkThingsColors = LightThingsColors.copy(
     divider = ThingsDividerDark,
     textPrimary = ThingsTextPrimaryDark,
     textSecondary = ThingsTextSecondaryDark,
+    // Редактор задачи лежит на фоне списка, поэтому в тёмной теме его текст и чек-лист тоже светлые
+    editorText = ThingsTextPrimaryDark,
+    textNotes = ThingsTextSecondaryDark,
+    editorIconInactive = ThingsTextSecondaryDark,
+    checklistDivider = ThingsDividerDark,
+    checklistCompleted = ThingsTextSecondaryDark,
+    checklistHighlight = ThingsFieldDark,
+    checklistFocus = ThingsStackCardDark,
+    checklistDrag = ThingsBlue.copy(alpha = 0.25f),
     listDim = ThingsListDimDark,
     dropPlaceholder = ThingsDropPlaceholderDark,
     hairline = ThingsHairlineDark,
@@ -302,13 +320,15 @@ private val LocalThingsColors = staticCompositionLocalOf { LightThingsColors }
 private val LocalThingsTypography = staticCompositionLocalOf { thingsTypography(1f) }
 private val LocalThingsShapes = staticCompositionLocalOf { ThingsShapes() }
 
-/** Подаёт роли всем компонентам под ним. Вызывается из MyApplicationTheme. */
+/**
+ * Подаёт роли всем компонентам под ним. Вызывается из MyApplicationTheme, который передаёт
+ * тот же флаг [darkTheme], что и в MaterialTheme, — так обе темы всегда совпадают.
+ */
 @Composable
-fun ProvideThingsTheme(content: @Composable () -> Unit) {
-    val dark = isSystemInDarkTheme()
+fun ProvideThingsTheme(darkTheme: Boolean = isSystemInDarkTheme(), content: @Composable () -> Unit) {
     val scale = if (LocalConfiguration.current.screenWidthDp >= 600) 1.25f else 1f
     CompositionLocalProvider(
-        LocalThingsColors provides if (dark) DarkThingsColors else LightThingsColors,
+        LocalThingsColors provides if (darkTheme) DarkThingsColors else LightThingsColors,
         LocalThingsTypography provides thingsTypography(scale),
         LocalThingsShapes provides ThingsShapes(),
         content = content
