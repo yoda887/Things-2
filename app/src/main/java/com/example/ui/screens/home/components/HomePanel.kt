@@ -37,6 +37,7 @@ import androidx.compose.foundation.lazy.LazyItemScope
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.KeyboardArrowRight
 import androidx.compose.material.icons.filled.*
 import androidx.compose.material.icons.outlined.*
 import androidx.compose.material3.*
@@ -844,7 +845,7 @@ fun ThingsHomePanel(
                                     modifier = Modifier.size(44.dp)
                                 ) {
                                     Icon(
-                                        imageVector = Icons.Default.KeyboardArrowRight,
+                                        imageVector = Icons.AutoMirrored.Filled.KeyboardArrowRight,
                                         contentDescription = "Toggle Area",
                                         tint = textSecondaryColor,
                                         modifier = Modifier

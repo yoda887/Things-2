@@ -28,8 +28,8 @@ import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.Close
-import androidx.compose.material.icons.filled.KeyboardArrowLeft
-import androidx.compose.material.icons.filled.KeyboardArrowRight
+import androidx.compose.material.icons.automirrored.filled.KeyboardArrowLeft
+import androidx.compose.material.icons.automirrored.filled.KeyboardArrowRight
 import com.example.ui.theme.AppIcons
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
@@ -673,7 +673,7 @@ fun ThingsTagDialog(
                                     style = ThingsTheme.type.dialogRow.copy(color = ThingsTheme.colors.accent, fontWeight = FontWeight.Medium)
                                 )
                                 Icon(
-                                    imageVector = Icons.Default.KeyboardArrowRight,
+                                    imageVector = Icons.AutoMirrored.Filled.KeyboardArrowRight,
                                     contentDescription = null,
                                     tint = ThingsTheme.colors.accent,
                                     modifier = Modifier.size(18.dp)
@@ -723,7 +723,7 @@ fun ThingsTagDialog(
                                 contentAlignment = Alignment.Center
                             ) {
                                 Icon(
-                                    imageVector = Icons.Default.KeyboardArrowLeft,
+                                    imageVector = Icons.AutoMirrored.Filled.KeyboardArrowLeft,
                                     contentDescription = "Back",
                                     tint = ThingsTheme.colors.overlayContent,
                                     modifier = Modifier.size(18.dp)
@@ -1129,7 +1129,7 @@ fun ThingsTagDialog(
                                     style = ThingsTheme.type.dialogRow.copy(color = ThingsTheme.colors.accent, fontWeight = FontWeight.Medium)
                                 )
                                 Icon(
-                                    imageVector = Icons.Default.KeyboardArrowRight,
+                                    imageVector = Icons.AutoMirrored.Filled.KeyboardArrowRight,
                                     contentDescription = null,
                                     tint = ThingsTheme.colors.accent,
                                     modifier = Modifier.size(18.dp)
