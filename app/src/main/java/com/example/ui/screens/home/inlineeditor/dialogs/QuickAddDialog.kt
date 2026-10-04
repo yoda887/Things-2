@@ -296,9 +296,7 @@ fun QuickAddDialog(
                                     if (title.isEmpty()) {
                                         Text(
                                             text = "New To-Do",
-                                            style = TextStyle(
-                                                fontSize = MaterialTheme.typography.titleMedium.fontSize,
-                                                fontWeight = FontWeight.Normal,
+                                            style = ThingsTheme.type.taskTitle.copy(
                                                 color = ThingsTheme.colors.textNotes.copy(alpha = 0.5f)
                                             )
                                         )
@@ -309,9 +307,7 @@ fun QuickAddDialog(
                                         BasicTextField(
                                             value = title,
                                             onValueChange = { title = it },
-                                            textStyle = TextStyle(
-                                                fontSize = MaterialTheme.typography.titleMedium.fontSize,
-                                                fontWeight = FontWeight.Normal,
+                                            textStyle = ThingsTheme.type.taskTitle.copy(
                                                 color = ThingsTheme.colors.editorText
                                             ),
                                             singleLine = false,
@@ -332,9 +328,7 @@ fun QuickAddDialog(
                                     if (notes.isEmpty()) {
                                         Text(
                                             text = "Notes",
-                                            style = TextStyle(
-                                                fontSize = MaterialTheme.typography.taskEditorNotes.fontSize,
-                                                fontWeight = FontWeight.Normal,
+                                            style = ThingsTheme.type.editorNotes.copy(
                                                 color = ThingsTheme.colors.textNotes.copy(alpha = 0.5f)
                                             )
                                         )
@@ -344,9 +338,7 @@ fun QuickAddDialog(
                                             value = notes,
                                             onValueChange = { notes = it },
                                             minLines = 4,
-                                            textStyle = TextStyle(
-                                                fontSize = MaterialTheme.typography.taskEditorNotes.fontSize,
-                                                fontWeight = FontWeight.Normal,
+                                            textStyle = ThingsTheme.type.editorNotes.copy(
                                                 color = ThingsTheme.colors.textNotes
                                             ),
                                             cursorBrush = SolidColor(if (isClosing) Color.Unspecified else ThingsTheme.colors.accent),
@@ -376,7 +368,6 @@ fun QuickAddDialog(
                         // 4. Панель индикаторов (активные теги, дата, дедлайн) + Панель инструментов (иконки действий)
                     val textPrimaryColor = ThingsTheme.colors.editorText
                     val iconInactiveColor = ThingsTheme.colors.checkboxBorder
-                    val bodyFontSize = MaterialTheme.typography.taskEditorDate.fontSize
 
                     val hasActiveDate = startDate != null || section == TaskSection.TODAY || section == TaskSection.SOMEDAY
 
@@ -475,8 +466,7 @@ fun QuickAddDialog(
                                         text = activeDateLabel,
                                         maxLines = 1,
                                         overflow = TextOverflow.Ellipsis,
-                                        style = TextStyle(
-                                            fontSize = bodyFontSize,
+                                        style = ThingsTheme.type.editorDate.copy(
                                             color = textPrimaryColor,
                                             fontWeight = FontWeight.Medium
                                         )
@@ -547,7 +537,7 @@ fun QuickAddDialog(
                                 }
 
                                 val isOverdueOrToday = delta <= 0
-                                val primaryColor = if (isOverdueOrToday) ThingsUpcomingRed else ThingsTheme.colors.textPrimary
+                                val primaryColor = if (isOverdueOrToday) ThingsTheme.colors.danger else ThingsTheme.colors.editorText
 
                                 Row(
                                     verticalAlignment = Alignment.CenterVertically,
@@ -566,8 +556,7 @@ fun QuickAddDialog(
                                         text = dateText,
                                         maxLines = 1,
                                         overflow = TextOverflow.Ellipsis,
-                                        style = TextStyle(
-                                            fontSize = bodyFontSize,
+                                        style = ThingsTheme.type.editorDate.copy(
                                             color = primaryColor,
                                             fontWeight = FontWeight.Medium
                                         )
@@ -577,8 +566,7 @@ fun QuickAddDialog(
                                         text = relativeText,
                                         maxLines = 1,
                                         overflow = TextOverflow.Ellipsis,
-                                        style = TextStyle(
-                                            fontSize = bodyFontSize,
+                                        style = ThingsTheme.type.editorDate.copy(
                                             color = ThingsTheme.colors.textSecondary,
                                             fontWeight = FontWeight.Normal
                                         )

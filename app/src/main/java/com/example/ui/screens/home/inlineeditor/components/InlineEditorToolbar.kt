@@ -14,21 +14,16 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import com.example.data.model.ChecklistItem
 import com.example.data.model.TaskSection
-import com.example.ui.theme.ThingsBlue
 import com.example.ui.theme.ThingsTodayStar
 import com.example.ui.theme.ThingsSomedayGrey
 import com.example.ui.theme.AppIcons
 import com.example.ui.theme.dimens
-import com.example.ui.screens.home.inlineeditor.utils.isTodayDate
 import com.example.ui.screens.home.inlineeditor.utils.isTodayDateOrPast
-import java.text.SimpleDateFormat
-import java.util.*
 import android.view.HapticFeedbackConstants
 import androidx.compose.ui.platform.LocalView
 
@@ -49,7 +44,6 @@ fun InlineEditorToolbar(
 ) {
     val textPrimaryColor = ThingsTheme.colors.editorText
     val iconInactiveColor = ThingsTheme.colors.checkboxBorder
-    val bodyFontSize = ThingsTheme.type.editorDate.fontSize
     val view = LocalView.current
 
     Row(

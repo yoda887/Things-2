@@ -13,7 +13,6 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
-import com.example.ui.theme.ThingsBlue
 import com.example.ui.theme.ThingsTheme
 
 /**
@@ -39,8 +38,8 @@ fun TagFilterRow(
             Box(
                 modifier = Modifier
                     .clip(ThingsTheme.shapes.tagFilterShape)
-                    .background(if (isAllSelected) ThingsBlue else Color.Transparent)
-                    .border(1.dp, if (isAllSelected) ThingsBlue else dividerColor, ThingsTheme.shapes.tagFilterShape)
+                    .background(if (isAllSelected) ThingsTheme.colors.accent else Color.Transparent)
+                    .border(1.dp, if (isAllSelected) ThingsTheme.colors.accent else dividerColor, ThingsTheme.shapes.tagFilterShape)
                     .clickable { onTagSelect(null) }
                     .padding(horizontal = 10.dp, vertical = 5.dp)
             ) {
@@ -57,8 +56,8 @@ fun TagFilterRow(
             Box(
                 modifier = Modifier
                     .clip(ThingsTheme.shapes.tagFilterShape)
-                    .background(if (isSelected) ThingsBlue else Color.Transparent)
-                    .border(1.dp, if (isSelected) ThingsBlue else dividerColor, ThingsTheme.shapes.tagFilterShape)
+                    .background(if (isSelected) ThingsTheme.colors.accent else Color.Transparent)
+                    .border(1.dp, if (isSelected) ThingsTheme.colors.accent else dividerColor, ThingsTheme.shapes.tagFilterShape)
                     .clickable { onTagSelect(if (isSelected) null else tag) }
                     .padding(horizontal = 10.dp, vertical = 5.dp)
             ) {

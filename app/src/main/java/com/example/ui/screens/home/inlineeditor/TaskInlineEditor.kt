@@ -30,8 +30,6 @@ import com.example.data.model.Item
 import com.example.data.model.ItemWithChecklist
 import com.example.data.model.Tag
 import com.example.data.model.TaskSection
-import com.example.ui.theme.ThingsBlue
-import com.example.ui.theme.ThingsUpcomingRed
 import androidx.compose.material.icons.filled.Star
 import androidx.compose.material.icons.outlined.CalendarToday
 import androidx.compose.material.icons.outlined.LocalOffer
@@ -401,7 +399,6 @@ fun ThingsTaskInlineEditor(
             val textPrimaryColor = ThingsTheme.colors.editorText
             // Серые иконки нижней строки (теги, флажок и т. п.) — цвет как в Things 3
             val iconInactiveColor = ThingsTheme.colors.editorIconInactive
-            val bodyFontSize = ThingsTheme.type.editorDate.fontSize
 
             val hasActiveDate = startDate != null || section == TaskSection.TODAY || section == TaskSection.SOMEDAY
 
@@ -778,7 +775,7 @@ fun DeadlineDatePickerDialog(
                     onDismiss()
                 }
             ) {
-                Text("OK", color = ThingsBlue)
+                Text("OK", color = ThingsTheme.colors.accent)
             }
         },
         dismissButton = {
@@ -789,7 +786,7 @@ fun DeadlineDatePickerDialog(
                         onDismiss()
                     }
                 ) {
-                    Text("Clear", color = ThingsUpcomingRed)
+                    Text("Clear", color = ThingsTheme.colors.danger)
                 }
                 Spacer(modifier = Modifier.width(8.dp))
                 TextButton(

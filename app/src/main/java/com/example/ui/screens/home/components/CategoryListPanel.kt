@@ -828,7 +828,6 @@ fun ThingsCategoryListPanel(
                     CalendarEventsWidget(
                         events = todayCalendarEvents,
                         textSecondaryColor = textSecondaryColor,
-                        isDark = false,
                         modifier = Modifier
                             .padding(horizontal = 8.dp)
                             .graphicsLayer { alpha = globalDimAlpha }
@@ -1281,7 +1280,6 @@ fun ThingsCategoryListPanel(
             screen = screen,
             onBackClick = { onEvent(ThingsCategoryListEvent.ClickBack) },
             modifier = Modifier.graphicsLayer { translationY = toolbarOffsetY },
-            isDark = isDark,
             textPrimaryColor = textPrimaryColor,
             textSecondaryColor = textSecondaryColor,
             project = project,

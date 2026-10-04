@@ -1,6 +1,5 @@
 package com.example.ui.screens.home.components
 
-import com.example.ui.theme.ThingsBlue
 import kotlinx.coroutines.launch
 
 import androidx.compose.animation.AnimatedVisibility
@@ -732,7 +731,7 @@ fun ThingsHomePanel(
                                     .clip(areaChipShape)
                                     .background(
                                         if (isAreaDragging || areaDragElev > 0.dp) cardSurfaceColor
-                                        else if (isAreaEditing) ThingsBlue.copy(alpha = 0.15f)
+                                        else if (isAreaEditing) ThingsTheme.colors.accent.copy(alpha = 0.15f)
                                         else Color.Transparent
                                     )
                                     .areaDragAndDrop(
@@ -768,7 +767,7 @@ fun ThingsHomePanel(
                                     textStyle = MaterialTheme.typography.displaySmall.copy(
                                         color = textPrimaryColor
                                     ),
-                                    cursorBrush = SolidColor(if (isFinishing) Color.Unspecified else ThingsBlue),
+                                    cursorBrush = SolidColor(if (isFinishing) Color.Unspecified else ThingsTheme.colors.accent),
                                     modifier = Modifier
                                         .weight(1f)
                                         .focusRequester(focusRequester)
@@ -917,7 +916,7 @@ fun ThingsHomePanel(
                                 shape = ThingsTheme.shapes.rowShape,
                                 textStyle = ThingsTheme.type.caption.copy(color = textPrimaryColor),
                                 colors = OutlinedTextFieldDefaults.colors(
-                                    focusedBorderColor = ThingsBlue,
+                                    focusedBorderColor = ThingsTheme.colors.accent,
                                     unfocusedBorderColor = dividerColor
                                 )
                             )
@@ -978,7 +977,7 @@ fun ThingsHomePanel(
 
         // Дискретное переключение темы цвета (_selected) строго на пороге с коротким кроссфейдом 100 мс
         val inputBackground by animateColorAsState(
-            targetValue = if (isPastThreshold) ThingsBlue else inputNormalBackground,
+            targetValue = if (isPastThreshold) ThingsTheme.colors.accent else inputNormalBackground,
             animationSpec = tween(durationMillis = 100, easing = LinearEasing),
             label = "homeSearchInputBg"
         )
@@ -1217,7 +1216,7 @@ private fun LazyItemScope.ProjectItemRow(
                 .clip(projectChipShape)
                 .background(
                     if (isDragging || dragElev > 0.dp) cardSurfaceColor
-                    else if (isEditing) ThingsBlue.copy(alpha = 0.15f)
+                    else if (isEditing) ThingsTheme.colors.accent.copy(alpha = 0.15f)
                     else Color.Transparent
                 )
                 .projectDragAndDrop(
@@ -1260,7 +1259,7 @@ private fun LazyItemScope.ProjectItemRow(
                         color = textPrimaryColor,
                         fontWeight = FontWeight.Normal
                     ),
-                    cursorBrush = SolidColor(if (isFinishing) Color.Unspecified else ThingsBlue),
+                    cursorBrush = SolidColor(if (isFinishing) Color.Unspecified else ThingsTheme.colors.accent),
                     modifier = Modifier
                         .weight(1f)
                         .focusRequester(focusRequester)

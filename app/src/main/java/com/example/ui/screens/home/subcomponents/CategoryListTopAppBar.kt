@@ -72,7 +72,6 @@ data class TopAppBarSelectionState(
  * @param screen Текущий активный экран для вывода заголовка/иконки.
  * @param onBackClick Обработчик нажатия на кнопку "Назад".
  * @param modifier Модификатор для внешнего контейнера.
- * @param isDark Флаг темной темы для установки цвета контейнера.
  * @param textPrimaryColor Основной цвет текста названия экрана.
  * @param textSecondaryColor Цвет текста и границ элементов управления.
  * @param project Объект проекта (для экрана PROJECT_DETAIL).
@@ -92,7 +91,6 @@ fun CategoryListTopAppBar(
     screen: ActiveScreen,
     onBackClick: () -> Unit,
     modifier: Modifier = Modifier,
-    isDark: Boolean = false,
     textPrimaryColor: Color = Color.Unspecified,
     textSecondaryColor: Color = Color.Unspecified,
     project: Item? = null,

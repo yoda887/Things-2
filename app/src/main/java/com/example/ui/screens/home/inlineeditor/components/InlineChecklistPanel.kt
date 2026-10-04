@@ -3,7 +3,6 @@ package com.example.ui.screens.home.inlineeditor.components
 import com.example.ui.theme.ThingsTheme
 import com.example.ui.theme.ThingsChecklistCheck
 import com.example.ui.theme.ThingsChecklistCircle
-import com.example.ui.theme.ThingsChecklistCompletedText
 import com.example.ui.theme.ThingsChecklistDelete
 import com.example.ui.theme.ThingsChecklistHandle
 import android.view.HapticFeedbackConstants
@@ -95,7 +94,6 @@ private val ChecklistCircleColor = ThingsChecklistCircle
 private val ChecklistCheckColor = ThingsChecklistCheck
 private val ChecklistHandleColor = ThingsChecklistHandle
 private val ChecklistDeleteColor = ThingsChecklistDelete
-private val ChecklistCompletedTextColor = ThingsChecklistCompletedText
 // Разделитель, вспышка, фон строки в фокусе и перетаскиваемой строки зависят от темы — берутся из ThingsTheme
 private const val CHECKLIST_MARK_TO_FONT = 0.88f
 /** Высота строки текста пункта в долях шрифта (естественная высота строки Roboto) */

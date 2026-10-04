@@ -170,7 +170,7 @@ fun ThingsTaskDetailsSheet(
                 value = title,
                 onValueChange = { title = it },
                 textStyle = sheetTitleStyle,
-                cursorBrush = SolidColor(ThingsBlue),
+                cursorBrush = SolidColor(ThingsTheme.colors.accent),
                 modifier = Modifier
                     .fillMaxWidth()
                     .testTag("task_title_input"),
@@ -191,7 +191,7 @@ fun ThingsTaskDetailsSheet(
                 value = notes,
                 onValueChange = { notes = it },
                 textStyle = sheetNotesStyle,
-                cursorBrush = SolidColor(ThingsBlue),
+                cursorBrush = SolidColor(ThingsTheme.colors.accent),
                 modifier = Modifier
                     .fillMaxWidth()
                     .heightIn(min = 60.dp)
@@ -278,7 +278,7 @@ fun ThingsTaskDetailsSheet(
                         Icon(
                             imageVector = Icons.Default.Add,
                             contentDescription = "Add Checklist",
-                            tint = ThingsBlue,
+                            tint = ThingsTheme.colors.accent,
                             modifier = Modifier.size(20.dp)
                         )
 
@@ -288,7 +288,7 @@ fun ThingsTaskDetailsSheet(
                             value = newChecklistItemTitle,
                             onValueChange = { newChecklistItemTitle = it },
                             textStyle = sheetHeaderStyle.copy(fontWeight = FontWeight.Normal, color = textPrimaryColor),
-                            cursorBrush = SolidColor(ThingsBlue),
+                            cursorBrush = SolidColor(ThingsTheme.colors.accent),
                             keyboardOptions = KeyboardOptions(imeAction = ImeAction.Done),
                             keyboardActions = KeyboardActions(onDone = {
                                 if (newChecklistItemTitle.isNotBlank()) {
@@ -338,10 +338,10 @@ fun ThingsTaskDetailsSheet(
                             Box(
                                 modifier = Modifier
                                     .clip(ThingsTheme.shapes.tagFilterShape)
-                                    .background(if (isSelected) ThingsBlue.copy(alpha = 0.15f) else Color.Transparent)
+                                    .background(if (isSelected) ThingsTheme.colors.accent.copy(alpha = 0.15f) else Color.Transparent)
                                     .border(
                                         1.dp,
-                                        if (isSelected) ThingsBlue else dividerColor,
+                                        if (isSelected) ThingsTheme.colors.accent else dividerColor,
                                         ThingsTheme.shapes.tagFilterShape
                                     )
                                     .clickable { section = sec }
@@ -351,7 +351,7 @@ fun ThingsTaskDetailsSheet(
                                     text = sec.name.lowercase().capitalize(),
                                     style = sheetTinyStyle.copy(
                                         fontWeight = FontWeight.Medium,
-                                        color = if (isSelected) ThingsBlue else textPrimaryColor
+                                        color = if (isSelected) ThingsTheme.colors.accent else textPrimaryColor
                                     )
                                 )
                             }
@@ -409,7 +409,7 @@ fun ThingsTaskDetailsSheet(
                             "This Evening",
                             style = sheetSmallStyle.copy(
                                 fontWeight = FontWeight.Medium,
-                                color = if (isTonight) ThingsBlue else textPrimaryColor
+                                color = if (isTonight) ThingsTheme.colors.accent else textPrimaryColor
                             )
                         )
                     }
@@ -488,7 +488,7 @@ fun ThingsTaskDetailsSheet(
                     value = tagInput,
                     onValueChange = { tagInput = it },
                     textStyle = sheetBodyStyle,
-                    cursorBrush = SolidColor(ThingsBlue),
+                    cursorBrush = SolidColor(ThingsTheme.colors.accent),
                     modifier = Modifier.weight(1f),
                     decorationBox = { innerTextField ->
                         if (tagInput.isEmpty()) {

@@ -38,7 +38,6 @@ import kotlin.math.abs
 fun CalendarEventsWidget(
     events: List<Item>, // Список событий, полученных из календаря
     textSecondaryColor: Color = Color.Unspecified, // Запасной цвет для вторичного текста
-    isDark: Boolean = false, // Явный флаг темной темы (если передан)
     modifier: Modifier = Modifier,
     currentTimeMillis: Long = remember { System.currentTimeMillis() } // Текущее системное время для вычисления прошедших событий
 ) {
