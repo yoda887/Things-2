@@ -95,7 +95,8 @@ object DesignSystemDocGenerator {
         ColorToken("muted-grey", "calendarMuted", { it.calendarMuted }, { it.calendarMuted }, "Приглушённый текст и полоски виджета календаря."),
         ColorToken("badge-bg", "badgeBackground", { it.badgeBackground }, { it.badgeBackground }, "Фон бейджа в строке задачи."),
         ColorToken("badge-text", "badgeText", { it.badgeText }, { it.badgeText }, "Текст бейджа в строке задачи; иконка календаря в диалоге When."),
-        ColorToken("editor-icon-inactive", "editorIconInactive", { it.editorIconInactive }, { it.editorIconInactive }, "Неактивные иконки нижней строки раскрытого редактора.")
+        ColorToken("editor-icon-inactive", "editorIconInactive", { it.editorIconInactive }, { it.editorIconInactive }, "Неактивные иконки нижней строки раскрытого редактора."),
+        ColorToken("clear-action", "clearAction", { it.clearAction }, { it.clearAction }, "Кнопка «Clear» в диалоге When (ThingsWhenClear).")
     )
 
     val staticPaletteTokens: List<StaticColorToken> = listOf(
@@ -158,6 +159,7 @@ object DesignSystemDocGenerator {
         ShapeToken("radius-tag-filter", "tagFilter", { it.tagFilter }, "tagFilterShape", "Фильтр тегов вверху экрана, карточка деталей."),
         ShapeToken("radius-card", "card", { it.card }, "cardShape", "Карточка настроек, карточка деталей проекта."),
         ShapeToken("radius-menu", "menu", { it.menu }, "menuShape", "Всплывающее меню-карточка: меню «+» на главном экране."),
+        ShapeToken("radius-button", "button", { it.button }, "buttonShape", "Кнопки действий (Save в шторке задачи)."),
         ShapeToken("radius-capsule", "capsule", { it.capsule }, "capsuleShape", "Капсула поиска (Quick Find), пилюля ввода, плавающее поле."),
         ShapeToken("radius-floating-card", "floatingCard", { it.floatingCard }, "floatingCardShape", "Плавающие карточки: Quick Add, карточка быстрого поиска."),
         ShapeToken("radius-dialog", "dialog", { it.dialog }, "dialogShape", "Модальные диалоги: When, Move, диалог тегов, подтверждение удаления.")

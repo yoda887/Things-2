@@ -117,6 +117,8 @@ data class ThingsColors(
     val badgeText: Color,
     /** Неактивные иконки в строке инструментов редактора */
     val editorIconInactive: Color,
+    /** Кнопка «Clear» в диалоге When */
+    val clearAction: Color,
 )
 
 internal val LightThingsColors = ThingsColors(
@@ -165,6 +167,7 @@ internal val LightThingsColors = ThingsColors(
     badgeBackground = ThingsBadgeBackgroundLight,
     badgeText = ThingsBadgeTextLight,
     editorIconInactive = ThingsEditorIconInactive,
+    clearAction = ThingsWhenClear,
 )
 
 internal val DarkThingsColors = LightThingsColors.copy(
@@ -295,6 +298,8 @@ data class ThingsShapes(
     val card: Dp = 14.dp,
     /** Всплывающее меню-карточка: меню «+» на главном экране (16 dp) */
     val menu: Dp = 16.dp,
+    /** Кнопка действия (18 dp) */
+    val button: Dp = 18.dp,
     /** Капсула поиска, пилюля (22 dp) */
     val capsule: Dp = 22.dp,
     /** Плавающая карточка, вырастающая из своего источника: Quick Find, Quick Add (30 dp) */
@@ -311,6 +316,7 @@ data class ThingsShapes(
     val tagFilterShape get() = RoundedCornerShape(tagFilter)
     val cardShape get() = RoundedCornerShape(card)
     val menuShape get() = RoundedCornerShape(menu)
+    val buttonShape get() = RoundedCornerShape(button)
     val capsuleShape get() = RoundedCornerShape(capsule)
     val floatingCardShape get() = RoundedCornerShape(floatingCard)
     val dialogShape get() = RoundedCornerShape(dialog)

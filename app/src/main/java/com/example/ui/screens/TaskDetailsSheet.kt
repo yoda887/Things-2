@@ -155,7 +155,7 @@ fun ThingsTaskDetailsSheet(
                             )
                         },
                         colors = ButtonDefaults.buttonColors(containerColor = ThingsTheme.colors.accent),
-                        shape = ThingsTheme.shapes.menuShape,
+                        shape = ThingsTheme.shapes.buttonShape,
                         modifier = Modifier.testTag("save_task_button")
                     ) {
                         Text("Save", color = Color.White, fontWeight = FontWeight.Bold)

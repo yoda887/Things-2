@@ -715,7 +715,7 @@ fun ThingsWhenDialog(
                             requestClose()
                         },
                         colors = ButtonDefaults.buttonColors(
-                            containerColor = ThingsTheme.colors.danger,
+                            containerColor = ThingsTheme.colors.clearAction,
                             contentColor = Color.White
                         ),
                         shape = ThingsTheme.shapes.capsuleShape,

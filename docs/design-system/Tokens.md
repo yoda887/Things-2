@@ -52,6 +52,7 @@
 | `badge-bg` | `#ececec` / `#2c2c2e` | `ThingsTheme.colors.badgeBackground` | Фон бейджа в строке задачи. |
 | `badge-text` | `#5f6368` / `#e0e0e0` | `ThingsTheme.colors.badgeText` | Текст бейджа в строке задачи; иконка календаря в диалоге When. |
 | `editor-icon-inactive` | `#a9a9a9` / `#8b8c8e` | `ThingsTheme.colors.editorIconInactive` | Неактивные иконки нижней строки раскрытого редактора. |
+| `clear-action` | `#e22d5a` | `ThingsTheme.colors.clearAction` | Кнопка «Clear» в диалоге When (ThingsWhenClear). |
 | `deep-blue` | `#2a62d9` | `ThingsDeepBlue` | Подзаголовки проекта и их «•••», иконки-прогресс проектов. 5.5:1 на белом. |
 | `inbox-blue` | `#1b80fa` | `ThingsInboxBlue` | Раздел «Входящие». |
 | `today-star` | `#e9ac10` | `ThingsTodayStar` | Раздел «Сегодня»: звезда-маркер в строке задачи и редакторе. |
@@ -120,6 +121,7 @@
 | `radius-tag-filter` | `12.0 dp` | `ThingsTheme.shapes.tagFilterShape` | Фильтр тегов вверху экрана, карточка деталей. |
 | `radius-card` | `14.0 dp` | `ThingsTheme.shapes.cardShape` | Карточка настроек, карточка деталей проекта. |
 | `radius-menu` | `16.0 dp` | `ThingsTheme.shapes.menuShape` | Всплывающее меню-карточка: меню «+» на главном экране. |
+| `radius-button` | `18.0 dp` | `ThingsTheme.shapes.buttonShape` | Кнопки действий (Save в шторке задачи). |
 | `radius-capsule` | `22.0 dp` | `ThingsTheme.shapes.capsuleShape` | Капсула поиска (Quick Find), пилюля ввода, плавающее поле. |
 | `radius-floating-card` | `30.0 dp` | `ThingsTheme.shapes.floatingCardShape` | Плавающие карточки: Quick Add, карточка быстрого поиска. |
 | `radius-dialog` | `32.0 dp` | `ThingsTheme.shapes.dialogShape` | Модальные диалоги: When, Move, диалог тегов, подтверждение удаления. |
