@@ -1,5 +1,6 @@
 package com.example.ui.screens.home.subcomponents
 
+import com.example.ui.theme.ThingsTheme
 import com.example.ui.theme.ThingsBackgroundLight
 import com.example.ui.theme.ThingsDropPlaceholderDark
 import com.example.ui.theme.ThingsDropPlaceholderLight
@@ -371,7 +372,7 @@ fun AnimatedTaskItem(
     }
     val zIndexValToUse = if (isDragTask) 100f else (if (showEditor) 1f else 0f)
 
-    val containerBgColor = if (showEditor || isDragTask || hasElevation) MaterialTheme.colorScheme.background else Color.Transparent
+    val containerBgColor = if (showEditor || isDragTask || hasElevation) ThingsTheme.colors.background else Color.Transparent
 
     val collapsedRadius = MaterialTheme.dimens.taskCollapsedCornerRadius
     val expandedRadius = MaterialTheme.dimens.taskExpandedCornerRadius
@@ -407,9 +408,8 @@ fun AnimatedTaskItem(
             Box {
                 // Каскадный эффект стопки карточек под ведущей задачей при групповом перетаскивании
                 if (isDragTask && dragDropState.hasStackedItems) {
-                val isDark = isSystemInDarkTheme()
-                val stackCardBg = if (isDark) ThingsStackCardDark else ThingsBackgroundLight
-                val stackBorderColor = if (isDark) ThingsHairlineDark else ThingsHairlineLight
+                val stackCardBg = ThingsTheme.colors.stackCard
+                val stackBorderColor = ThingsTheme.colors.hairline
 
                 // 3-й слой стопки (если в пачке 3 или более задач)
                 if (dragDropState.stackedDragKeys.size >= 3) {
@@ -455,8 +455,7 @@ fun AnimatedTaskItem(
             }
 
             if (isDragTask) {
-                val isDark = isSystemInDarkTheme()
-                val placeholderBgColor = if (isDark) ThingsDropPlaceholderDark else ThingsDropPlaceholderLight
+                val placeholderBgColor = ThingsTheme.colors.dropPlaceholder
                 Box(
                     modifier = Modifier
                         .matchParentSize()

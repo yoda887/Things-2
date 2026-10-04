@@ -1,6 +1,6 @@
 package com.example.ui.components
 
-import com.example.ui.theme.ThingsCheckboxBorder
+import com.example.ui.theme.ThingsTheme
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.spring
 import androidx.compose.animation.core.Spring
@@ -20,7 +20,6 @@ import androidx.compose.ui.graphics.PathMeasure
 import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
-import com.example.ui.theme.ThingsBlue
 import android.view.HapticFeedbackConstants
 import androidx.compose.ui.platform.LocalView
 
@@ -34,8 +33,8 @@ fun ThingsCheckbox(
     onCheckedChange: () -> Unit,
     modifier: Modifier = Modifier,
     size: Dp = 22.dp,
-    checkedColor: Color = ThingsBlue,
-    uncheckedColor: Color = ThingsCheckboxBorder,
+    checkedColor: Color = ThingsTheme.colors.accent,
+    uncheckedColor: Color = ThingsTheme.colors.checkboxBorder,
     isDashed: Boolean = false,
     // Отменённая задача: вместо галочки в заполненном квадрате рисуется крестик
     isCancelled: Boolean = false

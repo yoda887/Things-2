@@ -1,5 +1,6 @@
 package com.example.ui.screens.home.inlineeditor.components
 
+import com.example.ui.theme.ThingsTheme
 import com.example.ui.theme.ThingsCheckboxBorder
 import com.example.ui.theme.ThingsInk
 import com.example.ui.theme.ThingsMetaGrey
@@ -102,13 +103,13 @@ private fun InlineMainInputRowContent(
     androidx.compose.runtime.LaunchedEffect(Unit) {
         if (autoFocusTitle) titleFocusRequester.requestFocus()
     }
-    val textPrimaryColor = ThingsInk // blackish font
-    val textSecondaryColor = com.example.ui.theme.ThingsTextNotesLight
+    val textPrimaryColor = ThingsTheme.colors.editorText // blackish font
+    val textSecondaryColor = ThingsTheme.colors.textNotes
 
-    // Размер шрифта в заголовке статически равен MaterialTheme.typography.titleMedium.fontSize
-    val titleFontSize = MaterialTheme.typography.titleMedium.fontSize
-    val notesFontSize = MaterialTheme.typography.taskEditorNotes.fontSize
-    val subFontSize = MaterialTheme.typography.bodySmall.fontSize
+    // Размер шрифта в заголовке статически равен ThingsTheme.type.taskTitle.fontSize
+    val titleFontSize = ThingsTheme.type.taskTitle.fontSize
+    val notesFontSize = ThingsTheme.type.editorNotes.fontSize
+    val subFontSize = ThingsTheme.type.taskSubtitle.fontSize
 
     val titleSpacing = 8.dp
     val configuration = androidx.compose.ui.platform.LocalConfiguration.current
@@ -134,7 +135,7 @@ private fun InlineMainInputRowContent(
             checked = isCompleted,
             onCheckedChange = { onCheckboxClick() },
             size = MaterialTheme.dimens.mainCheckboxSize,
-            uncheckedColor = ThingsCheckboxBorder,
+            uncheckedColor = ThingsTheme.colors.checkboxBorder,
             modifier = Modifier.padding(end = titleSpacing, top = 2.dp)
         )
 
@@ -151,9 +152,7 @@ private fun InlineMainInputRowContent(
                 BasicTextField(
                     value = title,
                     onValueChange = onTitleChange,
-                    textStyle = TextStyle(
-                        fontSize = titleFontSize,
-                        fontWeight = FontWeight.Normal,
+                    textStyle = ThingsTheme.type.taskTitle.copy(
                         color = textPrimaryColor
                     ),
                     cursorBrush = cursorBrush,
@@ -168,9 +167,7 @@ private fun InlineMainInputRowContent(
                         if (title.isEmpty()) {
                             Text(
                                 "New To-Do",
-                                style = TextStyle(
-                                    fontSize = titleFontSize,
-                                    fontWeight = FontWeight.Normal,
+                                style = ThingsTheme.type.taskTitle.copy(
                                     color = textSecondaryColor.copy(alpha = 0.5f)
                                 )
                             )
@@ -182,10 +179,8 @@ private fun InlineMainInputRowContent(
                 if (!subtitleText.isNullOrBlank()) {
                     Text(
                         text = subtitleText,
-                        style = TextStyle(
-                            fontSize = subFontSize,
-                            color = ThingsMetaGrey,
-                            fontWeight = FontWeight.Normal
+                        style = ThingsTheme.type.taskSubtitle.copy(
+                            color = ThingsTheme.colors.textSecondary
                         ),
                         maxLines = 1,
                         overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis,
@@ -196,9 +191,7 @@ private fun InlineMainInputRowContent(
                 // Dummy text to measure exactly one line height for the title
                 Text(
                     text = "A",
-                    style = TextStyle(
-                        fontSize = titleFontSize,
-                        fontWeight = FontWeight.Normal,
+                    style = ThingsTheme.type.taskTitle.copy(
                         color = textPrimaryColor
                     ),
                     maxLines = 1
@@ -239,9 +232,7 @@ private fun InlineMainInputRowContent(
                     // minLines менял высоту мгновенно, и при удалении последнего пункта карточка сначала
                     // подрастала на строку и лишь потом сжималась вместе с уходящей панелью чек-листа
                     minLines = 1,
-                    textStyle = TextStyle(
-                        fontSize = notesFontSize,
-                        fontWeight = FontWeight.Normal,
+                    textStyle = ThingsTheme.type.editorNotes.copy(
                         color = textSecondaryColor
                     ),
                     cursorBrush = cursorBrush,
@@ -260,9 +251,7 @@ private fun InlineMainInputRowContent(
                         if (notes.isEmpty()) {
                             Text(
                                 "Notes",
-                                style = TextStyle(
-                                    fontSize = notesFontSize,
-                                    fontWeight = FontWeight.Normal,
+                                style = ThingsTheme.type.editorNotes.copy(
                                     color = textSecondaryColor.copy(alpha = 0.5f)
                                 )
                             )

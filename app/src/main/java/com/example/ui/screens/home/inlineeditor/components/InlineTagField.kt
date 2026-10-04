@@ -1,5 +1,6 @@
 package com.example.ui.screens.home.inlineeditor.components
 
+import com.example.ui.theme.ThingsTheme
 import com.example.ui.theme.ThingsFieldLight
 import com.example.ui.theme.ThingsInk
 import com.example.ui.theme.ThingsMetaGrey
@@ -36,12 +37,12 @@ fun InlineTagField(
 ) {
     val showPanel = showTagHelper || tagInput.isNotEmpty()
 
-    val textPrimaryColor = ThingsInk
-    val textSecondaryColor = ThingsTextSecondaryLight
+    val textPrimaryColor = ThingsTheme.colors.editorText
+    val textSecondaryColor = ThingsTheme.colors.textSecondary
     val helperBgColor = ThingsFieldLight
-    val helperHintColor = ThingsMetaGrey
+    val helperHintColor = ThingsTheme.colors.textSecondary
 
-    val tagFontSize = MaterialTheme.typography.bodyMedium.fontSize
+    val tagFontSize = ThingsTheme.type.dialogBody.fontSize
 
     AnimatedVisibility(
         visible = showPanel,
@@ -67,14 +68,14 @@ fun InlineTagField(
             BasicTextField(
                 value = tagInput,
                 onValueChange = onTagInputChange,
-                textStyle = TextStyle(fontSize = tagFontSize, color = textPrimaryColor),
-                cursorBrush = SolidColor(ThingsBlue),
+                textStyle = ThingsTheme.type.dialogBody.copy(color = textPrimaryColor),
+                cursorBrush = SolidColor(ThingsTheme.colors.accent),
                 modifier = Modifier.weight(1f),
                 decorationBox = { innerTextField ->
                     if (tagInput.isEmpty()) {
                         Text(
                             "Tags (e.g., Work, Home)",
-                            style = TextStyle(fontSize = tagFontSize, color = helperHintColor)
+                            style = ThingsTheme.type.dialogBody.copy(color = helperHintColor)
                         )
                     }
                     innerTextField()

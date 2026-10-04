@@ -87,10 +87,6 @@ fun TaskItemRow(
     areas: List<com.example.data.model.Area> = emptyList(),
     dateBadge: String? = null
 ) {
-    val isDark = false
-    val titleFontSize = androidx.compose.material3.MaterialTheme.typography.titleMedium.fontSize
-    val subFontSize = androidx.compose.material3.MaterialTheme.typography.bodySmall.fontSize
-
     val scope = rememberCoroutineScope()
     var localCompleted by remember(task.isCompleted) { mutableStateOf(task.isCompleted) }
     var completionJob by remember { mutableStateOf<kotlinx.coroutines.Job?>(null) }
@@ -149,22 +145,22 @@ fun TaskItemRow(
     val elevation by androidx.compose.animation.core.animateDpAsState(if (isDragging) 6.dp else 0.dp)
 
     val highlightColor = if (isHighlighted) {
-        ThingsBlue.copy(alpha = 0.15f)
+        ThingsTheme.colors.accent.copy(alpha = 0.15f)
     } else {
         Color.Transparent
     }
 
     val animatedRowBgColor by androidx.compose.animation.animateColorAsState(
         targetValue = when {
-            isDragging -> MaterialTheme.colorScheme.surface
-            isSelected -> ThingsBlue.copy(alpha = 0.22f)
+            isDragging -> ThingsTheme.colors.surface
+            isSelected -> ThingsTheme.colors.accentSelection
             else -> highlightColor
         },
         animationSpec = androidx.compose.animation.core.tween(durationMillis = 200),
         label = "rowBgColor_${task.id}"
     )
 
-    val fillBgColor = if (androidx.compose.foundation.isSystemInDarkTheme()) ThingsDropPlaceholderDark else ThingsDropPlaceholderLight
+    val fillBgColor = ThingsTheme.colors.dropPlaceholder
 
     val isCalendarTask = task.id.startsWith("cal_")
 
@@ -241,9 +237,9 @@ fun TaskItemRow(
                     )
                 } else {
                     val checkboxUncheckedColor = if (isHighlighted) {
-                        androidx.compose.ui.graphics.lerp(ThingsCheckboxBorder, ThingsBlue, 0.45f)
+                        androidx.compose.ui.graphics.lerp(ThingsTheme.colors.checkboxBorder, ThingsTheme.colors.accent, 0.45f)
                     } else {
-                        ThingsCheckboxBorder
+                        ThingsTheme.colors.checkboxBorder
                     }
                     ThingsCheckbox(
                         checked = localCompleted || (isSearchLogbookStyle && isCancelledTask),
@@ -323,8 +319,8 @@ fun TaskItemRow(
                     val dateText = remember(completedAt) { formatSearchLogbookDate(completedAt) }
                     Text(
                         text = dateText,
-                        style = TextStyle(
-                            fontSize = titleFontSize * 0.9f,
+                        style = ThingsTheme.type.taskSubtitle.copy(
+                            fontSize = ThingsTheme.type.taskTitle.fontSize * 0.9f,
                             fontWeight = FontWeight.SemiBold,
                             color = searchLogbookDateColor()
                         ),
@@ -370,9 +366,7 @@ fun TaskItemRow(
 
                             Text(
                                 text = task.title,
-                                style = TextStyle(
-                                    fontSize = titleFontSize,
-                                    fontWeight = FontWeight.Normal,
+                                style = ThingsTheme.type.taskTitle.copy(
                                     color = animatedTitleColor,
                                     textDecoration = if (isSearchLogbookStyle && isCancelledTask) {
                                         androidx.compose.ui.text.style.TextDecoration.LineThrough
@@ -487,10 +481,8 @@ fun TaskItemRow(
                             Spacer(modifier = Modifier.width(4.dp))
                             Text(
                                 text = relativeText,
-                                style = TextStyle(
-                                    fontSize = subFontSize,
-                                    color = color,
-                                    fontWeight = FontWeight.Normal
+                                style = ThingsTheme.type.taskSubtitle.copy(
+                                    color = color
                                 )
                             )
                         }
@@ -499,16 +491,14 @@ fun TaskItemRow(
 
                 if (subtitle != null) {
                     val subtitleColor = if (isHighlighted) {
-                        androidx.compose.ui.graphics.lerp(ThingsMetaGrey, ThingsBlue, 0.45f)
+                        androidx.compose.ui.graphics.lerp(ThingsTheme.colors.textSecondary, ThingsTheme.colors.accent, 0.45f)
                     } else {
-                        ThingsMetaGrey
+                        ThingsTheme.colors.textSecondary
                     }
                     Text(
                         text = subtitle,
-                        style = TextStyle(
-                            fontSize = subFontSize,
-                            color = subtitleColor,
-                            fontWeight = FontWeight.Normal
+                        style = ThingsTheme.type.taskSubtitle.copy(
+                            color = subtitleColor
                         )
                     )
                 }
@@ -526,9 +516,9 @@ fun TaskItemRow(
             exit = androidx.compose.animation.scaleOut() + androidx.compose.animation.fadeOut() + androidx.compose.animation.shrinkHorizontally()
         ) {
             val targetBorderColor = when {
-                isSelected -> ThingsBlue
-                isDragSelecting -> ThingsBlue.copy(alpha = 0.5f)
-                else -> ThingsCheckboxBorder
+                isSelected -> ThingsTheme.colors.accent
+                isDragSelecting -> ThingsTheme.colors.accent.copy(alpha = 0.5f)
+                else -> ThingsTheme.colors.checkboxBorder
             }
             val animatedBorderColor by androidx.compose.animation.animateColorAsState(
                 targetValue = targetBorderColor,

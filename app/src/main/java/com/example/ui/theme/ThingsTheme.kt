@@ -31,6 +31,10 @@ data class ThingsColors(
     val isDark: Boolean,
     /** Фон экрана и списка */
     val background: Color,
+    /** Поверхности: Material surface, карточки */
+    val surface: Color,
+    /** Разделители строк */
+    val divider: Color,
     /** Основной текст на `background` */
     val textPrimary: Color,
     /** Вторичный текст: подписи, даты, пояснения на `background` */
@@ -51,11 +55,45 @@ data class ThingsColors(
     val overlayRowSelected: Color,
     /** Разделители на `overlaySurface` */
     val overlayDivider: Color,
+    /** Текст заметок в редакторе задачи */
+    val textNotes: Color,
+    /** Текст задачи и чек-листа в редакторе */
+    val editorText: Color,
+    /** Рамка неотмеченного чекбокса */
+    val checkboxBorder: Color,
+    /** Фон чипа тега */
+    val tagChipBackground: Color,
+    /** Текст чипа тега */
+    val tagChipText: Color,
+    /** Кружок чек-листа */
+    val checklistCircle: Color,
+    /** Галочка чек-листа */
+    val checklistCheck: Color,
+    /** Ручка перетаскивания пункта чек-листа */
+    val checklistHandle: Color,
+    /** Удаление пункта свайпом */
+    val checklistDelete: Color,
+    /** Разделитель пунктов чек-листа */
+    val checklistDivider: Color,
+    /** Текст выполненного пункта чек-листа */
+    val checklistCompleted: Color,
+    /** Фон выделенной строки в режиме мультивыбора */
+    val accentSelection: Color,
+    /** Фон списка при открытом редакторе */
+    val listDim: Color,
+    /** Плашка места вставки при перетаскивании */
+    val dropPlaceholder: Color,
+    /** Тонкая обводка карточек стопки и разделителей */
+    val hairline: Color,
+    /** Нижние карточки стопки при перетаскивании */
+    val stackCard: Color,
 )
 
 private val LightThingsColors = ThingsColors(
     isDark = false,
     background = ThingsBackgroundLight,
+    surface = ThingsSurfaceLight,
+    divider = ThingsDividerLight,
     textPrimary = ThingsTextPrimaryLight,
     textSecondary = ThingsTextSecondaryLight,
     accent = ThingsBlue,
@@ -66,13 +104,35 @@ private val LightThingsColors = ThingsColors(
     overlayControl = ThingsDialogButton,
     overlayRowSelected = ThingsDialogRowSelected,
     overlayDivider = ThingsDividerDark,
+    textNotes = ThingsTextNotesLight,
+    editorText = ThingsInk,
+    checkboxBorder = ThingsCheckboxBorder,
+    tagChipBackground = ThingsTagChipBackground,
+    tagChipText = ThingsTagChipText,
+    checklistCircle = ThingsChecklistCircle,
+    checklistCheck = ThingsChecklistCheck,
+    checklistHandle = ThingsChecklistHandle,
+    checklistDelete = ThingsChecklistDelete,
+    checklistDivider = ThingsChecklistDivider,
+    checklistCompleted = ThingsChecklistCompletedText,
+    accentSelection = ThingsBlue.copy(alpha = 0.22f),
+    listDim = ThingsListDimLight,
+    dropPlaceholder = ThingsDropPlaceholderLight,
+    hairline = ThingsHairlineLight,
+    stackCard = ThingsBackgroundLight,
 )
 
 private val DarkThingsColors = LightThingsColors.copy(
     isDark = true,
     background = ThingsBackgroundDark,
+    surface = ThingsSurfaceDark,
+    divider = ThingsDividerDark,
     textPrimary = ThingsTextPrimaryDark,
     textSecondary = ThingsTextSecondaryDark,
+    listDim = ThingsListDimDark,
+    dropPlaceholder = ThingsDropPlaceholderDark,
+    hairline = ThingsHairlineDark,
+    stackCard = ThingsStackCardDark,
 )
 
 /** Стили текста по ролям. На экранах шире 600 dp размеры умножаются на 1.25 — здесь, один раз. */
@@ -88,6 +148,18 @@ data class ThingsTypography(
     val dialogButton: TextStyle,
     /** Пункт выпадающего меню: «New To-Do», «Delete Project», меню подзаголовка */
     val menuItem: TextStyle,
+    /** Название задачи в строке списка и в редакторе */
+    val taskTitle: TextStyle,
+    /** Подпись под задачей (проект, дата) */
+    val taskSubtitle: TextStyle,
+    /** Заметки в раскрытом редакторе */
+    val editorNotes: TextStyle,
+    /** Пункты чек-листа в раскрытом редакторе */
+    val editorChecklist: TextStyle,
+    /** Строка даты и дедлайна в редакторе */
+    val editorDate: TextStyle,
+    /** Мелкие метки и бейджи */
+    val caption: TextStyle,
 )
 
 private fun thingsTypography(scale: Float) = ThingsTypography(
@@ -96,6 +168,12 @@ private fun thingsTypography(scale: Float) = ThingsTypography(
     dialogBody = TextStyle(fontFamily = FontFamily.Default, fontWeight = FontWeight.Normal, fontSize = (15 * scale).sp),
     dialogButton = TextStyle(fontFamily = FontFamily.Default, fontWeight = FontWeight.Normal, fontSize = (18 * scale).sp),
     menuItem = TextStyle(fontFamily = FontFamily.Default, fontWeight = FontWeight.Normal, fontSize = (18 * scale).sp),
+    taskTitle = TextStyle(fontFamily = FontFamily.Default, fontWeight = FontWeight.Normal, fontSize = (19 * scale).sp),
+    taskSubtitle = TextStyle(fontFamily = FontFamily.Default, fontWeight = FontWeight.Normal, fontSize = (15 * scale).sp),
+    editorNotes = TextStyle(fontFamily = FontFamily.Default, fontWeight = FontWeight.Normal, fontSize = (18 * scale).sp),
+    editorChecklist = TextStyle(fontFamily = FontFamily.Default, fontWeight = FontWeight.Normal, fontSize = (17.2f * scale).sp),
+    editorDate = TextStyle(fontFamily = FontFamily.Default, fontWeight = FontWeight.Normal, fontSize = (18 * scale).sp),
+    caption = TextStyle(fontFamily = FontFamily.Default, fontWeight = FontWeight.Medium, fontSize = (12 * scale).sp),
 )
 
 /** Скругления по ролям. */

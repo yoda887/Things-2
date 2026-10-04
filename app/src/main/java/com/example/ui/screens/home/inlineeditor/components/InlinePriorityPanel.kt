@@ -1,5 +1,7 @@
 package com.example.ui.screens.home.inlineeditor.components
 
+import com.example.ui.theme.ThingsTheme
+import androidx.compose.ui.unit.sp
 import com.example.ui.theme.ThingsFieldLight
 import com.example.ui.theme.ThingsInk
 import com.example.ui.theme.ThingsMetaGrey
@@ -35,12 +37,12 @@ fun InlinePriorityPanel(
 ) {
     val showPanel = showPriorityHelper || priority > 0
 
-    val textPrimaryColor = ThingsInk // blackish font
-    val textSecondaryColor = ThingsTextSecondaryLight // dark grey font
+    val textPrimaryColor = ThingsTheme.colors.editorText // blackish font
+    val textSecondaryColor = ThingsTheme.colors.textSecondary // dark grey font
     val helperBgColor = ThingsFieldLight // light grey panel background
 
-    val smallFontSize = MaterialTheme.typography.labelMedium.fontSize
-    val tinyFontSize = MaterialTheme.typography.labelSmall.fontSize
+    val smallFontSize = ThingsTheme.type.caption.fontSize
+    val tinyFontSize = (ThingsTheme.type.caption.fontSize.value - 1f).sp
 
     val priorityName = when (priority) {
         3 -> "High Priority"
@@ -79,7 +81,7 @@ fun InlinePriorityPanel(
             Spacer(modifier = Modifier.width(8.dp))
             Text(
                 text = priorityName,
-                style = TextStyle(fontSize = smallFontSize, color = textPrimaryColor),
+                style = ThingsTheme.type.caption.copy(color = textPrimaryColor),
                 modifier = Modifier.weight(1f)
             )
             
@@ -90,9 +92,9 @@ fun InlinePriorityPanel(
             ) {
                 Text(
                     text = "No",
-                    style = TextStyle(
+                    style = ThingsTheme.type.caption.copy(
                         fontSize = tinyFontSize,
-                        color = if (priority == 0) ThingsBlue else ThingsSomedayGrey,
+                        color = if (priority == 0) ThingsTheme.colors.accent else ThingsSomedayGrey,
                         fontWeight = FontWeight.Bold
                     ),
                     modifier = Modifier

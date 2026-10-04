@@ -1,5 +1,6 @@
 package com.example.ui.screens.home.inlineeditor
 
+import com.example.ui.theme.ThingsTheme
 import com.example.ui.theme.ThingsEditorIconInactive
 import com.example.ui.theme.ThingsInk
 import com.example.ui.theme.ThingsMetaGrey
@@ -278,7 +279,7 @@ fun ThingsTaskInlineEditor(
 
     // Force strict light theme for the expanded inline editor (white background & black fonts)
     val editorBackground = Color.White
-    val buttonFontSize = MaterialTheme.typography.labelLarge.fontSize
+    val buttonFontSize = ThingsTheme.type.dialogButton.fontSize
     val focusManager = LocalFocusManager.current
 
     Card(
@@ -294,7 +295,7 @@ fun ThingsTaskInlineEditor(
                     }
                 )
             }
-            .clip(RoundedCornerShape(8.dp))
+            .clip(ThingsTheme.shapes.rowShape)
             .layout { measurable, constraints ->
                 val placeable = measurable.measure(constraints)
                 val fullHeight = placeable.height
@@ -305,7 +306,7 @@ fun ThingsTaskInlineEditor(
                     placeable.place(0, 0)
                 }
             },
-        shape = RoundedCornerShape(8.dp),
+        shape = ThingsTheme.shapes.rowShape,
         colors = CardDefaults.cardColors(containerColor = Color.Transparent),
         elevation = CardDefaults.cardElevation(defaultElevation = 0.dp)
     ) {
@@ -402,10 +403,10 @@ fun ThingsTaskInlineEditor(
             Spacer(modifier = Modifier.height(MaterialTheme.dimens.taskEditorChecklistToToolbarSpacer))
 
             // Bottom Actions & Toolbar matching the image closely
-            val textPrimaryColor = ThingsInk
+            val textPrimaryColor = ThingsTheme.colors.editorText
             // Серые иконки нижней строки (теги, флажок и т. п.) — цвет как в Things 3
             val iconInactiveColor = ThingsEditorIconInactive
-            val bodyFontSize = MaterialTheme.typography.taskEditorDate.fontSize
+            val bodyFontSize = ThingsTheme.type.editorDate.fontSize
 
             val hasActiveDate = startDate != null || section == TaskSection.TODAY || section == TaskSection.SOMEDAY
 
@@ -468,8 +469,8 @@ fun ThingsTaskInlineEditor(
                             activeTags.forEach { tag ->
                                 Box(
                                     modifier = Modifier
-                                        .clip(RoundedCornerShape(10.dp))
-                                        .background(ThingsTagChipBackground) // light-teal background
+                                        .clip(ThingsTheme.shapes.chipShape)
+                                        .background(ThingsTheme.colors.tagChipBackground) // light-teal background
                                         .clickable {
                                             view.performHapticFeedback(HapticFeedbackConstants.CLOCK_TICK)
                                             showTagDialog = true
@@ -478,10 +479,8 @@ fun ThingsTaskInlineEditor(
                                 ) {
                                     Text(
                                         text = tag,
-                                        style = TextStyle(
-                                            color = ThingsTagChipText, // dark-teal text
-                                            fontSize = 12.sp,
-                                            fontWeight = FontWeight.Medium
+                                        style = ThingsTheme.type.caption.copy(
+                                            color = ThingsTheme.colors.tagChipText
                                         )
                                     )
                                 }
@@ -515,8 +514,7 @@ fun ThingsTaskInlineEditor(
                                 text = activeDateLabel,
                                 maxLines = 1,
                                 overflow = TextOverflow.Ellipsis,
-                                style = TextStyle(
-                                    fontSize = bodyFontSize,
+                                style = ThingsTheme.type.editorDate.copy(
                                     color = textPrimaryColor,
                                     fontWeight = FontWeight.Medium
                                 )
@@ -588,8 +586,8 @@ fun ThingsTaskInlineEditor(
                         }
 
                         val isOverdueOrToday = delta <= 0
-                        val primaryColor = if (isOverdueOrToday) ThingsUpcomingRed else ThingsInk
-                        val relativeColor = ThingsMetaGrey
+                        val primaryColor = if (isOverdueOrToday) ThingsTheme.colors.danger else ThingsTheme.colors.editorText
+                        val relativeColor = ThingsTheme.colors.textSecondary
 
                         Row(
                             verticalAlignment = Alignment.CenterVertically,
@@ -611,8 +609,7 @@ fun ThingsTaskInlineEditor(
                                 text = dateText,
                                 maxLines = 1,
                                 overflow = TextOverflow.Ellipsis,
-                                style = TextStyle(
-                                    fontSize = bodyFontSize,
+                                style = ThingsTheme.type.editorDate.copy(
                                     color = primaryColor,
                                     fontWeight = FontWeight.Medium
                                 )
@@ -622,10 +619,8 @@ fun ThingsTaskInlineEditor(
                                 text = relativeText,
                                 maxLines = 1,
                                 overflow = TextOverflow.Ellipsis,
-                                style = TextStyle(
-                                    fontSize = bodyFontSize,
-                                    color = relativeColor,
-                                    fontWeight = FontWeight.Normal
+                                style = ThingsTheme.type.editorDate.copy(
+                                    color = relativeColor
                                 )
                             )
                         }

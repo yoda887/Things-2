@@ -1,5 +1,6 @@
 package com.example.ui.screens.home.inlineeditor.components
 
+import com.example.ui.theme.ThingsTheme
 import com.example.ui.theme.ThingsCheckboxBorder
 import com.example.ui.theme.ThingsInk
 import androidx.compose.foundation.clickable
@@ -49,9 +50,9 @@ fun InlineEditorToolbar(
     dueDate: Long?,
     onShowDatePickerChange: (Boolean) -> Unit
 ) {
-    val textPrimaryColor = ThingsInk
-    val iconInactiveColor = ThingsCheckboxBorder
-    val bodyFontSize = MaterialTheme.typography.bodyLarge.fontSize
+    val textPrimaryColor = ThingsTheme.colors.editorText
+    val iconInactiveColor = ThingsTheme.colors.checkboxBorder
+    val bodyFontSize = ThingsTheme.type.editorDate.fontSize
     val view = LocalView.current
 
     Row(
@@ -105,8 +106,7 @@ fun InlineEditorToolbar(
                     text = activeDateLabel,
                     maxLines = 1,
                     overflow = TextOverflow.Ellipsis,
-                    style = TextStyle(
-                        fontSize = bodyFontSize,
+                    style = ThingsTheme.type.editorDate.copy(
                         color = textPrimaryColor,
                         fontWeight = FontWeight.Medium
                     )

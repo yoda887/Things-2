@@ -1,5 +1,6 @@
 package com.example.ui.screens.home.inlineeditor.components
 
+import com.example.ui.theme.ThingsTheme
 import com.example.ui.theme.ThingsChecklistCheck
 import com.example.ui.theme.ThingsChecklistCircle
 import com.example.ui.theme.ThingsChecklistCompletedText
@@ -142,9 +143,9 @@ fun InlineChecklistPanel(
 ) {
     val showPanel = showChecklistHelper || checklist.isNotEmpty()
 
-    val textPrimaryColor = ThingsInk
-    val textSecondaryColor = ThingsTextSecondaryLight
-    val bodyFontSize = MaterialTheme.typography.taskEditorChecklist.fontSize
+    val textPrimaryColor = ThingsTheme.colors.editorText
+    val textSecondaryColor = ThingsTheme.colors.textSecondary
+    val bodyFontSize = ThingsTheme.type.editorChecklist.fontSize
     val density = LocalDensity.current
     val fontDp = with(density) { bodyFontSize.toDp() }
     val fontPx = with(density) { bodyFontSize.toPx() }
@@ -653,12 +654,11 @@ fun InlineChecklistPanel(
                                             }
                                         }
                                     },
-                                    textStyle = TextStyle(
-                                        fontSize = bodyFontSize,
-                                        color = if (item.isCompleted) ChecklistCompletedTextColor else ChecklistTextColor
+                                    textStyle = ThingsTheme.type.editorChecklist.copy(
+                                        color = if (item.isCompleted) ThingsTheme.colors.checklistCompleted else ThingsTheme.colors.editorText
                                     ),
                                     keyboardOptions = KeyboardOptions(capitalization = KeyboardCapitalization.Sentences),
-                                    cursorBrush = SolidColor(ThingsBlue),
+                                    cursorBrush = SolidColor(ThingsTheme.colors.accent),
                                     onTextLayout = { textLayoutResult ->
                                         if (isMultiLine != (textLayoutResult.lineCount > 1)) {
                                             isMultiLine = textLayoutResult.lineCount > 1
