@@ -696,7 +696,8 @@ fun QuickAddDialog(
                             Text(
                                 text = destinationName,
                                 style = ThingsTheme.type.editorChecklist.copy(
-                                    color = ThingsTheme.colors.textSecondary
+                                    color = ThingsTheme.colors.textSecondary,
+                                    fontWeight = FontWeight.Medium
                                 )
                             )
                         }

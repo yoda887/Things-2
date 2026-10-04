@@ -61,14 +61,14 @@ fun InlineTagField(
             BasicTextField(
                 value = tagInput,
                 onValueChange = onTagInputChange,
-                textStyle = ThingsTheme.type.dialogBody.copy(color = textPrimaryColor),
+                textStyle = ThingsTheme.type.bodyLarge.copy(color = textPrimaryColor),
                 cursorBrush = SolidColor(ThingsTheme.colors.accent),
                 modifier = Modifier.weight(1f),
                 decorationBox = { innerTextField ->
                     if (tagInput.isEmpty()) {
                         Text(
                             "Tags (e.g., Work, Home)",
-                            style = ThingsTheme.type.dialogBody.copy(color = helperHintColor)
+                            style = ThingsTheme.type.bodyLarge.copy(color = helperHintColor)
                         )
                     }
                     innerTextField()

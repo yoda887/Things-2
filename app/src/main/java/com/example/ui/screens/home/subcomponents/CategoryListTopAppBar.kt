@@ -173,10 +173,11 @@ fun CategoryListTopAppBar(
                     expanded = isOptionsMenuExpanded,
                     onDismissRequest = { isOptionsMenuExpanded = false }
                 ) {
+                    val menuItemStyle = ThingsTheme.type.menuItem.copy(fontWeight = FontWeight.Bold)
                     if (selectionState.isSelectionMode) {
                         if (selectionState.isAllSelected) {
                             DropdownMenuItem(
-                                text = { Text(stringResource(R.string.deselect_all), style = ThingsTheme.type.menuItem) },
+                                text = { Text(stringResource(R.string.deselect_all), style = menuItemStyle) },
                                 onClick = {
                                     isOptionsMenuExpanded = false
                                     selectionState.onDeselectAllClick()
@@ -184,7 +185,7 @@ fun CategoryListTopAppBar(
                             )
                         } else {
                             DropdownMenuItem(
-                                text = { Text(stringResource(R.string.select_all), style = ThingsTheme.type.menuItem) },
+                                text = { Text(stringResource(R.string.select_all), style = menuItemStyle) },
                                 onClick = {
                                     isOptionsMenuExpanded = false
                                     selectionState.onSelectAllClick()
@@ -194,7 +195,7 @@ fun CategoryListTopAppBar(
                     } else {
                         if (onAddHeading != null) {
                             DropdownMenuItem(
-                                text = { Text("Add Heading", style = ThingsTheme.type.menuItem) },
+                                text = { Text("Add Heading", style = menuItemStyle) },
                                 onClick = {
                                     isOptionsMenuExpanded = false
                                     onAddHeading()
@@ -202,7 +203,7 @@ fun CategoryListTopAppBar(
                             )
                         }
                         DropdownMenuItem(
-                            text = { Text(stringResource(R.string.select_items), style = ThingsTheme.type.menuItem) },
+                            text = { Text(stringResource(R.string.select_items), style = menuItemStyle) },
                             onClick = {
                                 isOptionsMenuExpanded = false
                                 selectionState.onEnterSelectionMode()
@@ -215,7 +216,7 @@ fun CategoryListTopAppBar(
                                         stringResource(
                                             if (isTagsFilterVisible) R.string.hide_tags else R.string.show_tags
                                         ),
-                                        style = ThingsTheme.type.menuItem
+                                        style = menuItemStyle
                                     )
                                 },
                                 onClick = {
