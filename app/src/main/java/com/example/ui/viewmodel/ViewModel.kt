@@ -137,103 +137,111 @@ class ThingsViewModel @Inject constructor(
     val allSavedTagObjects: StateFlow<List<Tag>> = queryUseCases.observeAllTags()
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
 
-    private fun computeCategoryListState(
-        screen: ActiveScreen,
-        project: Item?,
-        area: Area?,
-        tag: Tag? = null,
-        expandedTaskId: String?,
-        selectedTag: String?,
-        taskList: List<ItemWithChecklist>,
-        projectList: List<Item>,
-        areaList: List<Area>,
-        calEvents: List<Item>,
-        savedTags: List<String>,
-        savedTagObjs: List<Tag>,
-        allTagsSet: Set<String>,
-        highlighted: String?,
-        query: String = "",
-        headingList: List<Item> = emptyList()
-    ): ThingsCategoryListState {
-        // Границы дня считаем один раз на весь список, а не в геттерах каждой задачи
-        val bounds = DayBounds.now()
+    companion object {
+        /**
+         * Чистое вычисление состояния экрана категории по снимку входных данных.
+         *
+         * Вынесено в companion и открыто как `internal`, чтобы его можно было покрыть
+         * модульными тестами без создания ViewModel, Hilt-зависимостей и корутин.
+         */
+        internal fun computeCategoryListState(
+            screen: ActiveScreen,
+            project: Item?,
+            area: Area?,
+            tag: Tag? = null,
+            expandedTaskId: String?,
+            selectedTag: String?,
+            taskList: List<ItemWithChecklist>,
+            projectList: List<Item>,
+            areaList: List<Area>,
+            calEvents: List<Item>,
+            savedTags: List<String>,
+            savedTagObjs: List<Tag>,
+            allTagsSet: Set<String>,
+            highlighted: String?,
+            query: String = "",
+            headingList: List<Item> = emptyList()
+        ): ThingsCategoryListState {
+            // Границы дня считаем один раз на весь список, а не в геттерах каждой задачи
+            val bounds = DayBounds.now()
 
-        val listTasks = taskList.filter { wrapper ->
-            val task = wrapper.item
-            if (task.id == expandedTaskId) {
-                true
-            } else {
-                when (screen) {
-                    ActiveScreen.INBOX -> task.isInbox && !task.isCompleted
-                    ActiveScreen.TODAY -> bounds.isToday(task)
-                    ActiveScreen.UPCOMING -> bounds.isUpcoming(task)
-                    ActiveScreen.ANYTIME -> bounds.isAnytime(task)
-                    ActiveScreen.SOMEDAY -> bounds.isSomeday(task)
-                    ActiveScreen.LOGBOOK -> task.isCompleted
-                    ActiveScreen.PROJECT_DETAIL -> task.projectId == project?.id && !task.isCompleted
-                    ActiveScreen.AREA_DETAIL -> task.areaId == area?.id && task.type == 0 && !task.isCompleted
-                    ActiveScreen.TAG_DETAIL -> task.type == 0 && tag != null && task.tags.contains(tag.title) && !task.isCompleted
-                    // Поиск: задачи (открытые, выполненные и отменённые) по названию, заметкам и чек-листу
-                    ActiveScreen.SEARCH -> {
-                        val q = query.trim()
-                        q.isNotEmpty() && task.type == 0 && !task.trashed && (
-                            task.title.contains(q, ignoreCase = true) ||
-                                task.notes.contains(q, ignoreCase = true) ||
-                                wrapper.checklist.any { it.title.contains(q, ignoreCase = true) }
-                            )
+            val listTasks = taskList.filter { wrapper ->
+                val task = wrapper.item
+                if (task.id == expandedTaskId) {
+                    true
+                } else {
+                    when (screen) {
+                        ActiveScreen.INBOX -> task.isInbox && !task.isCompleted
+                        ActiveScreen.TODAY -> bounds.isToday(task)
+                        ActiveScreen.UPCOMING -> bounds.isUpcoming(task)
+                        ActiveScreen.ANYTIME -> bounds.isAnytime(task)
+                        ActiveScreen.SOMEDAY -> bounds.isSomeday(task)
+                        ActiveScreen.LOGBOOK -> task.isCompleted
+                        ActiveScreen.PROJECT_DETAIL -> task.projectId == project?.id && !task.isCompleted
+                        ActiveScreen.AREA_DETAIL -> task.areaId == area?.id && task.type == 0 && !task.isCompleted
+                        ActiveScreen.TAG_DETAIL -> task.type == 0 && tag != null && task.tags.contains(tag.title) && !task.isCompleted
+                        // Поиск: задачи (открытые, выполненные и отменённые) по названию, заметкам и чек-листу
+                        ActiveScreen.SEARCH -> {
+                            val q = query.trim()
+                            q.isNotEmpty() && task.type == 0 && !task.trashed && (
+                                task.title.contains(q, ignoreCase = true) ||
+                                    task.notes.contains(q, ignoreCase = true) ||
+                                    wrapper.checklist.any { it.title.contains(q, ignoreCase = true) }
+                                )
+                        }
+                        else -> false
                     }
-                    else -> false
                 }
+            }.sortedBy { it.item.sortOrder }
+
+            // Экран проекта: активные заголовки проекта, задачи — в порядке экрана, по заголовкам
+            val projectHeadings = if (screen == ActiveScreen.PROJECT_DETAIL && project != null) {
+                headingList.filter { it.projectId == project.id && it.status == 0 && !it.trashed }
+                    .sortedBy { it.sortOrder }
+            } else {
+                emptyList()
             }
-        }.sortedBy { it.item.sortOrder }
-
-        // Экран проекта: активные заголовки проекта, задачи — в порядке экрана, по заголовкам
-        val projectHeadings = if (screen == ActiveScreen.PROJECT_DETAIL && project != null) {
-            headingList.filter { it.projectId == project.id && it.status == 0 && !it.trashed }
-                .sortedBy { it.sortOrder }
-        } else {
-            emptyList()
-        }
-        val orderedTasks = if (projectHeadings.isEmpty()) listTasks else {
-            ProjectHeadings.orderByHeading(listTasks, projectHeadings.map { it.id }) { it.item }
-        }
-
-        val displayTasks = if (selectedTag == null) {
-            orderedTasks
-        } else {
-            orderedTasks.filter { it.item.tags.contains(selectedTag) || it.item.id == expandedTaskId }
-        }
-
-        val projectProgressMap = taskList
-            .filter { !it.item.projectId.isNullOrEmpty() }
-            .groupBy { it.item.projectId!! }
-            .mapValues { (_, tasks) ->
-                ProjectProgress(
-                    completed = tasks.count { it.item.isCompleted },
-                    total = tasks.size
-                )
+            val orderedTasks = if (projectHeadings.isEmpty()) listTasks else {
+                ProjectHeadings.orderByHeading(listTasks, projectHeadings.map { it.id }) { it.item }
             }
 
-        return ThingsCategoryListState(
-            screen = screen,
-            project = project,
-            area = area,
-            tag = tag,
-            inlineExpandedTaskId = expandedTaskId,
-            selectedTagFilter = selectedTag,
-            allTags = allTagsSet,
-            displayTasks = displayTasks,
-            calendarEvents = calEvents,
-            allSavedTags = savedTags,
-            allSavedTagObjects = savedTagObjs,
-            areas = areaList,
-            projects = projectList,
-            highlightedTaskId = highlighted,
-            allTasks = taskList,
-            projectProgressMap = projectProgressMap,
-            searchQuery = query,
-            headings = projectHeadings
-        )
+            val displayTasks = if (selectedTag == null) {
+                orderedTasks
+            } else {
+                orderedTasks.filter { it.item.tags.contains(selectedTag) || it.item.id == expandedTaskId }
+            }
+
+            val projectProgressMap = taskList
+                .filter { !it.item.projectId.isNullOrEmpty() }
+                .groupBy { it.item.projectId!! }
+                .mapValues { (_, tasks) ->
+                    ProjectProgress(
+                        completed = tasks.count { it.item.isCompleted },
+                        total = tasks.size
+                    )
+                }
+
+            return ThingsCategoryListState(
+                screen = screen,
+                project = project,
+                area = area,
+                tag = tag,
+                inlineExpandedTaskId = expandedTaskId,
+                selectedTagFilter = selectedTag,
+                allTags = allTagsSet,
+                displayTasks = displayTasks,
+                calendarEvents = calEvents,
+                allSavedTags = savedTags,
+                allSavedTagObjects = savedTagObjs,
+                areas = areaList,
+                projects = projectList,
+                highlightedTaskId = highlighted,
+                allTasks = taskList,
+                projectProgressMap = projectProgressMap,
+                searchQuery = query,
+                headings = projectHeadings
+            )
+        }
     }
 
     /**
