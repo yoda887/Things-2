@@ -113,7 +113,7 @@ data class ThingsColors(
     val editorIconInactive: Color,
 )
 
-private val LightThingsColors = ThingsColors(
+internal val LightThingsColors = ThingsColors(
     isDark = false,
     background = ThingsBackgroundLight,
     surface = ThingsSurfaceLight,
@@ -158,7 +158,7 @@ private val LightThingsColors = ThingsColors(
     editorIconInactive = ThingsEditorIconInactive,
 )
 
-private val DarkThingsColors = LightThingsColors.copy(
+internal val DarkThingsColors = LightThingsColors.copy(
     isDark = true,
     background = ThingsBackgroundDark,
     surface = ThingsSurfaceDark,
@@ -231,7 +231,7 @@ data class ThingsTypography(
     val button: TextStyle,
 )
 
-private fun thingsTypography(scale: Float) = ThingsTypography(
+internal fun thingsTypography(scale: Float = 1f) = ThingsTypography(
     dialogTitle = TextStyle(fontFamily = FontFamily.Default, fontWeight = FontWeight.Bold, fontSize = (20 * scale).sp),
     dialogRow = TextStyle(fontFamily = FontFamily.Default, fontWeight = FontWeight.Normal, fontSize = (19 * scale).sp),
     dialogBody = TextStyle(fontFamily = FontFamily.Default, fontWeight = FontWeight.Normal, fontSize = (15 * scale).sp),
