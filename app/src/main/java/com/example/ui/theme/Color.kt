@@ -13,7 +13,6 @@ val ThingsTodayStar = Color(0xFFE9AC10)
 val ThingsUpcomingRed = Color(0xFFF35F50)
 val ThingsAnytimeTeal = Color(0xFF2EB7CD)
 val ThingsSomedayGrey = Color(0xFF8F93A3)
-val ThingsLogbookGreen = Color(0xFF2EC275)
 val ThingsAreaGreenLight = Color(0xFF269C6E)
 val ThingsAreaGreenDark = Color(0xFF7AD0A7)
 val ThingsAreaGreen: Color
@@ -24,9 +23,6 @@ val ThingsSwipeWhenYellow = Color(0xFFFFD401)
 // Quick Find search match highlight (themes-ios.json)
 val SearchMatchHighlightLight = Color(0xFFFFE692)
 val SearchMatchHighlightDark = Color(0xFF6E5D01)
-val SearchMatchHighlight: Color
-    @Composable
-    get() = if (isSystemInDarkTheme()) SearchMatchHighlightDark else SearchMatchHighlightLight
 
 // Light Mode Theme
 val ThingsBackgroundLight = Color(0xFFFFFFFF)
@@ -88,16 +84,6 @@ val ThingsDialogBackground = Color(0xFF22242C)
 val ThingsDialogButton = Color(0xFF2C2E38)
 /** Подсветка выбранной строки в диалоге Move */
 val ThingsDialogRowSelected = Color(0xFF1E2027)
-/** Кнопка закрытия диалога When */
-val ThingsDialogCloseButton = Color(0xFF181A1D)
-/** Выпадающее меню главного экрана (новая задача / проект / область) */
-val ThingsMenuBackground = Color(0xFF23252E)
-/** Плавающая панель действий для раскрытой задачи и для выбранных */
-val ThingsToolbarBackground = Color(0xFF232329)
-/** Кружки «отмена» и «во Входящие» при перетаскивании «+» */
-val ThingsFabActionButton = Color(0xFF3A3B40)
-/** Вторичный текст и иконки диалога When */
-val ThingsWhenSecondary = Color(0xFF6C6F7D)
 /** Кнопка «Clear» диалога When */
 val ThingsWhenClear = Color(0xFFE22D5A)
 
