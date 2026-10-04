@@ -52,11 +52,8 @@ fun CalendarEventsWidget(
     // Если событий нет, компонент ничего не рендерит и освобождает ресурсы Compose
     if (events.isEmpty()) return
 
-    // Определяем, используется ли темная тема (берется системная либо переданный из параметров флаг)
-    val systemDark = isSystemInDarkTheme() || isDark
-    
-    // Вычисляем фоновый цвет карточки в соответствии с текущей темой
-    val cardBackground = if (systemDark) MaterialTheme.colorScheme.surfaceVariant else ThingsFieldLight
+    // Фоновый цвет карточки в соответствии с текущей темой
+    val cardBackground = ThingsTheme.colors.calendarCard
 
     // КЭШИРОВАНИЕ SimpleDateFormat: Создается один раз при инициализации виджета.
     // Это предотвращает лавинообразную нагрузку на сборщик мусора (Garbage Collector) при частых рекомпозициях.
@@ -78,7 +75,7 @@ fun CalendarEventsWidget(
 
     Card(
         modifier = modifier.fillMaxWidth(),
-        shape = RoundedCornerShape(10.dp),
+        shape = ThingsTheme.shapes.chipShape,
         colors = CardDefaults.cardColors(containerColor = cardBackground),
         elevation = CardDefaults.cardElevation(defaultElevation = 0.dp)
     ) {
@@ -109,23 +106,23 @@ fun CalendarEventsWidget(
 
                 // Адаптация цвета разделительного маркера: прошедшие события приглушаются
                 val markerColor = if (isPastEvent) {
-                    if (systemDark) ThingsMutedGreyDark else ThingsMutedGreyLight
+                    ThingsTheme.colors.calendarMuted
                 } else {
                     baseColor
                 }
 
                 // Адаптация цвета метки времени
                 val timeColor = if (isPastEvent) {
-                    if (systemDark) ThingsMutedGreyDark else ThingsMutedGreyLight
+                    ThingsTheme.colors.calendarMuted
                 } else {
                     baseColor
                 }
 
                 // Адаптация цвета заголовка события (приглушаем серым цветом для завершенных/прошедших событий)
                 val titleColor = if (isPastEvent) {
-                     if (systemDark) ThingsMutedGreyDark else ThingsMutedGreyLight
+                    ThingsTheme.colors.calendarMuted
                 } else {
-                    if (systemDark) ThingsMutedGreyLight else ThingsFieldDark
+                    ThingsTheme.colors.textPrimary
                 }
 
                 Row(

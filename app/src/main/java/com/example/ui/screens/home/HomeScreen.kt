@@ -259,14 +259,13 @@ fun ThingsHomeScreen(viewModel: ThingsViewModel = hiltViewModel()) {
     var showAreaDropdownInNewProject by remember { mutableStateOf(false) }
     
     val scope = rememberCoroutineScope()
-    val isDark = false
     
-    // Palette assignment
-    val backgroundColor = if (isDark) ThingsBackgroundDark else ThingsBackgroundLight
-    val cardSurfaceColor = if (isDark) ThingsSurfaceDark else ThingsSurfaceLight
-    val textPrimaryColor = if (isDark) ThingsTextPrimaryDark else ThingsTextPrimaryLight
-    val textSecondaryColor = if (isDark) ThingsTextSecondaryDark else ThingsTextSecondaryLight
-    val dividerColor = if (isDark) ThingsDividerDark else ThingsDividerLight
+    // Palette assignment from ThingsTheme
+    val backgroundColor = ThingsTheme.colors.background
+    val cardSurfaceColor = ThingsTheme.colors.surface
+    val textPrimaryColor = ThingsTheme.colors.textPrimary
+    val textSecondaryColor = ThingsTheme.colors.textSecondary
+    val dividerColor = ThingsTheme.colors.divider
 
     LaunchedEffect(activeScreen) {
         isSelectionMode = false

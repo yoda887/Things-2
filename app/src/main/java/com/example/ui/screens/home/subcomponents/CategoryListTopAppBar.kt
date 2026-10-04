@@ -33,6 +33,7 @@ import com.example.ui.theme.ThingsBlue
 import com.example.ui.theme.ThingsAreaGreen
 import com.example.ui.theme.ThingsBackgroundDark
 import com.example.ui.theme.ThingsBackgroundLight
+import com.example.ui.theme.ThingsTheme
 import com.example.ui.theme.topAppBarTitle
 
 private val TOP_APP_BAR_ACTION_ICON_SIZE = 24.dp
@@ -112,7 +113,7 @@ fun CategoryListTopAppBar(
     // Фон и разделитель проявляются вместе с прокруткой, синхронно с растворением заголовка экрана,
     // а не включаются скачком по порогу
     val dividerAlpha = backgroundProgress * 0.2f
-    val baseColor = if (isDark) ThingsBackgroundDark else ThingsBackgroundLight
+    val baseColor = ThingsTheme.colors.background
     val containerColor = baseColor.copy(alpha = backgroundProgress)
     var isOptionsMenuExpanded by remember { mutableStateOf(false) }
 
@@ -177,7 +178,7 @@ fun CategoryListTopAppBar(
                     if (selectionState.isSelectionMode) {
                         if (selectionState.isAllSelected) {
                             DropdownMenuItem(
-                                text = { Text(stringResource(R.string.deselect_all)) },
+                                text = { Text(stringResource(R.string.deselect_all), style = ThingsTheme.type.menuItem) },
                                 onClick = {
                                     isOptionsMenuExpanded = false
                                     selectionState.onDeselectAllClick()
@@ -185,7 +186,7 @@ fun CategoryListTopAppBar(
                             )
                         } else {
                             DropdownMenuItem(
-                                text = { Text(stringResource(R.string.select_all)) },
+                                text = { Text(stringResource(R.string.select_all), style = ThingsTheme.type.menuItem) },
                                 onClick = {
                                     isOptionsMenuExpanded = false
                                     selectionState.onSelectAllClick()
@@ -195,7 +196,7 @@ fun CategoryListTopAppBar(
                     } else {
                         if (onAddHeading != null) {
                             DropdownMenuItem(
-                                text = { Text("Add Heading") },
+                                text = { Text("Add Heading", style = ThingsTheme.type.menuItem) },
                                 onClick = {
                                     isOptionsMenuExpanded = false
                                     onAddHeading()
@@ -203,7 +204,7 @@ fun CategoryListTopAppBar(
                             )
                         }
                         DropdownMenuItem(
-                            text = { Text(stringResource(R.string.select_items)) },
+                            text = { Text(stringResource(R.string.select_items), style = ThingsTheme.type.menuItem) },
                             onClick = {
                                 isOptionsMenuExpanded = false
                                 selectionState.onEnterSelectionMode()
@@ -215,7 +216,8 @@ fun CategoryListTopAppBar(
                                     Text(
                                         stringResource(
                                             if (isTagsFilterVisible) R.string.hide_tags else R.string.show_tags
-                                        )
+                                        ),
+                                        style = ThingsTheme.type.menuItem
                                     )
                                 },
                                 onClick = {
@@ -282,7 +284,7 @@ private fun CategoryTopAppBarTitleContent(
                 Spacer(modifier = Modifier.width(TOP_APP_BAR_SPACING))
                 Text(
                     text = stringResource(R.string.category_today),
-                    style = MaterialTheme.typography.topAppBarTitle,
+                    style = ThingsTheme.type.topAppBarTitle,
                     color = textPrimaryColor,
                     fontWeight = FontWeight.SemiBold
                 )
@@ -297,7 +299,7 @@ private fun CategoryTopAppBarTitleContent(
                 Spacer(modifier = Modifier.width(TOP_APP_BAR_SPACING))
                 Text(
                     text = stringResource(R.string.category_inbox),
-                    style = MaterialTheme.typography.topAppBarTitle,
+                    style = ThingsTheme.type.topAppBarTitle,
                     color = textPrimaryColor,
                     fontWeight = FontWeight.SemiBold
                 )
@@ -312,7 +314,7 @@ private fun CategoryTopAppBarTitleContent(
                 Spacer(modifier = Modifier.width(TOP_APP_BAR_SPACING))
                 Text(
                     text = stringResource(R.string.category_upcoming),
-                    style = MaterialTheme.typography.topAppBarTitle,
+                    style = ThingsTheme.type.topAppBarTitle,
                     color = textPrimaryColor,
                     fontWeight = FontWeight.SemiBold
                 )
@@ -327,7 +329,7 @@ private fun CategoryTopAppBarTitleContent(
                 Spacer(modifier = Modifier.width(TOP_APP_BAR_SPACING))
                 Text(
                     text = stringResource(R.string.category_anytime),
-                    style = MaterialTheme.typography.topAppBarTitle,
+                    style = ThingsTheme.type.topAppBarTitle,
                     color = textPrimaryColor,
                     fontWeight = FontWeight.SemiBold
                 )
@@ -342,7 +344,7 @@ private fun CategoryTopAppBarTitleContent(
                 Spacer(modifier = Modifier.width(TOP_APP_BAR_SPACING))
                 Text(
                     text = stringResource(R.string.category_someday),
-                    style = MaterialTheme.typography.topAppBarTitle,
+                    style = ThingsTheme.type.topAppBarTitle,
                     color = textPrimaryColor,
                     fontWeight = FontWeight.SemiBold
                 )
@@ -357,7 +359,7 @@ private fun CategoryTopAppBarTitleContent(
                 Spacer(modifier = Modifier.width(TOP_APP_BAR_SPACING))
                 Text(
                     text = stringResource(R.string.category_logbook),
-                    style = MaterialTheme.typography.topAppBarTitle,
+                    style = ThingsTheme.type.topAppBarTitle,
                     color = textPrimaryColor,
                     fontWeight = FontWeight.SemiBold
                 )
@@ -374,7 +376,7 @@ private fun CategoryTopAppBarTitleContent(
                 Spacer(modifier = Modifier.width(TOP_APP_BAR_SPACING))
                 Text(
                     text = project?.name ?: "Project",
-                    style = MaterialTheme.typography.topAppBarTitle,
+                    style = ThingsTheme.type.topAppBarTitle,
                     color = textPrimaryColor,
                     fontWeight = FontWeight.SemiBold,
                     maxLines = 1,
@@ -391,7 +393,7 @@ private fun CategoryTopAppBarTitleContent(
                 Spacer(modifier = Modifier.width(TOP_APP_BAR_SPACING))
                 Text(
                     text = area?.title ?: "Responsibility Area",
-                    style = MaterialTheme.typography.topAppBarTitle,
+                    style = ThingsTheme.type.topAppBarTitle,
                     color = textPrimaryColor,
                     fontWeight = FontWeight.SemiBold,
                     maxLines = 1,
@@ -408,7 +410,7 @@ private fun CategoryTopAppBarTitleContent(
                 Spacer(modifier = Modifier.width(TOP_APP_BAR_SPACING))
                 Text(
                     text = tag?.title ?: "Tag",
-                    style = MaterialTheme.typography.topAppBarTitle,
+                    style = ThingsTheme.type.topAppBarTitle,
                     color = textPrimaryColor,
                     fontWeight = FontWeight.SemiBold,
                     maxLines = 1,
@@ -425,7 +427,7 @@ private fun CategoryTopAppBarTitleContent(
                 Spacer(modifier = Modifier.width(TOP_APP_BAR_SPACING))
                 Text(
                     text = "Search",
-                    style = MaterialTheme.typography.topAppBarTitle,
+                    style = ThingsTheme.type.topAppBarTitle,
                     color = textPrimaryColor,
                     fontWeight = FontWeight.SemiBold
                 )

@@ -1,9 +1,6 @@
 package com.example.ui.screens.home.components
 
-import com.example.ui.theme.ThingsDropPlaceholderDark
-import com.example.ui.theme.ThingsDropPlaceholderLight
-import com.example.ui.theme.ThingsHairlineDark
-import com.example.ui.theme.ThingsHairlineLight
+import com.example.ui.theme.ThingsTheme
 import com.example.ui.theme.ThingsListDimDark
 import com.example.ui.theme.ThingsListDimLight
 import com.example.ui.theme.ThingsNewHeadingLine
@@ -1085,19 +1082,19 @@ fun ThingsCategoryListPanel(
                                 if (isDragged && dragDropState.isInteracting) {
                                     // Место, куда встанет заголовок с задачами, — та же серая плашка, что
                                     // остаётся на месте задачи при её перетаскивании (см. AnimatedTaskItem)
-                                    val placeholderColor = if (androidx.compose.foundation.isSystemInDarkTheme()) ThingsDropPlaceholderDark else ThingsDropPlaceholderLight
+                                    val placeholderColor = ThingsTheme.colors.dropPlaceholder
                                     Box(
                                         modifier = Modifier
                                             .matchParentSize()
                                             .graphicsLayer { alpha = 0.5f }
-                                            .background(placeholderColor, RoundedCornerShape(10.dp))
+                                            .background(placeholderColor, ThingsTheme.shapes.chipShape)
                                     )
                                 }
                                 if (isLifted) {
                                     // Заголовок едет вместе со своими задачами — под ним стопка карточек,
                                     // как у группы задач в режиме выбора: слой на каждую задачу, не больше двух
                                     val headingTaskCount = localTasksList.count { it.item.headingId == heading.id }
-                                    val stackBorder = if (androidx.compose.foundation.isSystemInDarkTheme()) ThingsHairlineDark else ThingsHairlineLight
+                                    val stackBorder = ThingsTheme.colors.hairline
                                     for (layer in minOf(headingTaskCount, 2) downTo 1) {
                                         Box(
                                             modifier = Modifier
@@ -1737,15 +1734,14 @@ private fun FabGapRow(asHeading: Boolean, extraPx: () -> Float, modifier: Modifi
         ) {
             // Та же серая плашка, что остаётся на месте задачи при обычном перетаскивании
             // (см. AnimatedTaskItem): тот же цвет, полупрозрачность и скругление
-            val isDark = androidx.compose.foundation.isSystemInDarkTheme()
-            val plateColor = if (isDark) ThingsDropPlaceholderDark else ThingsDropPlaceholderLight
+            val plateColor = ThingsTheme.colors.dropPlaceholder
             Box(
                 modifier = Modifier
                     .fillMaxWidth()
                     .height(44.dp)
                     // Плашка тает по мере раздвигания: на её месте раскроется задача
                     .graphicsLayer { alpha = 0.5f * (1f - extraPx() / (baseHeightPx * 3f)).coerceIn(0f, 1f) }
-                    .background(plateColor, RoundedCornerShape(MaterialTheme.dimens.taskCollapsedCornerRadius))
+                    .background(plateColor, ThingsTheme.shapes.rowShape)
             )
         }
     }

@@ -365,8 +365,7 @@ fun ThingsHomePanel(
         }
     }
 
-    val isDarkTheme = isSystemInDarkTheme()
-    val bkgColor = if (isDarkTheme) ThingsBackgroundDark else ThingsBackgroundLight
+    val bkgColor = ThingsTheme.colors.background
 
     Box(modifier = Modifier.fillMaxSize().background(bkgColor).clipToBounds()) {
 
@@ -720,13 +719,12 @@ fun ThingsHomePanel(
                         ) {
                             // Подложка на физическом месте области при перетаскивании (placeholder slot)
                             if (isAreaDragging) {
-                                val isDark = isSystemInDarkTheme()
-                                val placeholderBgColor = if (isDark) ThingsDropPlaceholderDark else ThingsDropPlaceholderLight
+                                val placeholderBgColor = ThingsTheme.colors.dropPlaceholder
                                 Box(
                                     modifier = Modifier
                                         .matchParentSize()
                                         .alpha(0.5f)
-                                        .background(placeholderBgColor, RoundedCornerShape(10.dp))
+                                        .background(placeholderBgColor, ThingsTheme.shapes.chipShape)
                                 )
                             }
 
@@ -975,8 +973,7 @@ fun ThingsHomePanel(
     // Поле поиска ("Quick Find"), вынесенное на уровень корневого Box для исключения
     // обрезания (clipping) контейнером LazyColumn при оттяжке списка вниз
     if (!isSearchOverlayActive || searchCapsuleAlpha > 0f) {
-        val isDark = isSystemInDarkTheme()
-        val inputNormalBackground = if (isDark) ThingsFieldDark else ThingsFieldLight
+        val inputNormalBackground = ThingsTheme.colors.searchField
 
         // Прогресс оттяжки до порога активации (100dp)
         val pullProgress = if (thresholdPx > 0f) (pullOffset.value / thresholdPx).coerceIn(0f, 1f) else 0f
@@ -1010,10 +1007,9 @@ fun ThingsHomePanel(
             animationSpec = tween(durationMillis = 100, easing = LinearEasing),
             label = "homeSearchTextTint"
         )
-        // Цвета темы quickFind.sourceListSearchBar.arrow: #000b1b50 (светлая) / #e7f1ff4b (тёмная);
-        // после порога (_selected): #5b9aff (светлая) / #3f85f4 (тёмная)
-        val arrowNormalColor = if (isDark) ThingsPullArrowDark else ThingsPullArrowLight
-        val arrowSelectedColor = if (isDark) ThingsPullArrowSelectedDark else ThingsBlue
+        // Цвета темы quickFind.sourceListSearchBar.arrow из ThingsTheme
+        val arrowNormalColor = ThingsTheme.colors.pullArrow
+        val arrowSelectedColor = ThingsTheme.colors.pullArrowSelected
         val arrowColor by animateColorAsState(
             targetValue = if (isPastThreshold) arrowSelectedColor else arrowNormalColor,
             animationSpec = tween(durationMillis = 100, easing = LinearEasing),
@@ -1210,13 +1206,12 @@ private fun LazyItemScope.ProjectItemRow(
     ) {
         // Подложка на физическом месте проекта при перетаскивании (placeholder slot)
         if (isDragging) {
-            val isDark = isSystemInDarkTheme()
-            val placeholderBgColor = if (isDark) ThingsDropPlaceholderDark else ThingsDropPlaceholderLight
+            val placeholderBgColor = ThingsTheme.colors.dropPlaceholder
             Box(
                 modifier = Modifier
                     .matchParentSize()
                     .alpha(0.5f)
-                    .clip(RoundedCornerShape(10.dp))
+                    .clip(ThingsTheme.shapes.chipShape)
                     .background(placeholderBgColor)
             )
         }

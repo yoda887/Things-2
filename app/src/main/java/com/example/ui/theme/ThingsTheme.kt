@@ -101,6 +101,10 @@ data class ThingsColors(
     val pullArrow: Color,
     /** Стрелка индикатора оттяжки после порога */
     val pullArrowSelected: Color,
+    /** Карточка виджета календаря */
+    val calendarCard: Color,
+    /** Приглушённые прошедшие события и разделители календаря */
+    val calendarMuted: Color,
 )
 
 private val LightThingsColors = ThingsColors(
@@ -141,6 +145,8 @@ private val LightThingsColors = ThingsColors(
     pullIndicatorBackground = ThingsPullIndicatorLight,
     pullArrow = ThingsPullArrowLight,
     pullArrowSelected = ThingsBlue,
+    calendarCard = ThingsFieldLight,
+    calendarMuted = ThingsMutedGreyLight,
 )
 
 private val DarkThingsColors = LightThingsColors.copy(
@@ -161,6 +167,8 @@ private val DarkThingsColors = LightThingsColors.copy(
     pullIndicatorBackground = ThingsFieldDark,
     pullArrow = ThingsPullArrowDark,
     pullArrowSelected = ThingsPullArrowSelectedDark,
+    calendarCard = ThingsSurfaceDark,
+    calendarMuted = ThingsMutedGreyDark,
 )
 
 /** Стили текста по ролям. На экранах шире 600 dp размеры умножаются на 1.25 — здесь, один раз. */
@@ -188,6 +196,8 @@ data class ThingsTypography(
     val editorDate: TextStyle,
     /** Заголовок секции результатов поиска */
     val sectionHeader: TextStyle,
+    /** Заголовок верхней панели навигации (TopAppBar) */
+    val topAppBarTitle: TextStyle,
     /** Мелкие метки и бейджи */
     val caption: TextStyle,
 )
@@ -204,6 +214,7 @@ private fun thingsTypography(scale: Float) = ThingsTypography(
     editorChecklist = TextStyle(fontFamily = FontFamily.Default, fontWeight = FontWeight.Normal, fontSize = (17.2f * scale).sp),
     editorDate = TextStyle(fontFamily = FontFamily.Default, fontWeight = FontWeight.Normal, fontSize = (18 * scale).sp),
     sectionHeader = TextStyle(fontFamily = FontFamily.Default, fontWeight = FontWeight.Medium, fontSize = (19 * scale).sp),
+    topAppBarTitle = TextStyle(fontFamily = FontFamily.Default, fontWeight = FontWeight.SemiBold, fontSize = (20 * scale).sp),
     caption = TextStyle(fontFamily = FontFamily.Default, fontWeight = FontWeight.Medium, fontSize = (12 * scale).sp),
 )
 
