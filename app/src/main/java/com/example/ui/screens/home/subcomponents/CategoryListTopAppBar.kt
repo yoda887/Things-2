@@ -15,6 +15,10 @@ import androidx.compose.material.icons.filled.Search
 import androidx.compose.material.icons.outlined.Layers
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
+import androidx.compose.foundation.clickable
+import androidx.compose.foundation.interaction.MutableInteractionSource
+import androidx.compose.ui.layout.boundsInRoot
+import androidx.compose.ui.layout.onGloballyPositioned
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
@@ -87,6 +91,8 @@ data class TopAppBarSelectionState(
  * @param hasTags Флаг наличия тегов в текущем списке.
  * @param isTagsFilterVisible Флаг отображения строки фильтрации по тегам.
  * @param onToggleTagsFilter Обработчик переключения видимости фильтра по тегам.
+ * @param onTitleClick Нажатие на компактный заголовок (список прокручен) — открыть Quick Find;
+ *   передаются границы заголовка на экране, из них вырастает окно поиска.
  */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -107,7 +113,8 @@ fun CategoryListTopAppBar(
     isTagsFilterVisible: Boolean = false,
     onToggleTagsFilter: () -> Unit = {},
     // Экран проекта: пункт «Add Heading»
-    onAddHeading: (() -> Unit)? = null
+    onAddHeading: (() -> Unit)? = null,
+    onTitleClick: ((androidx.compose.ui.geometry.Rect?) -> Unit)? = null
 ) {
     // Фон и разделитель проявляются вместе с прокруткой, синхронно с растворением заголовка экрана,
     // а не включаются скачком по порогу
@@ -120,11 +127,20 @@ fun CategoryListTopAppBar(
         title = {
             // Компактный заголовок проступает и выезжает снизу вместе с прокруткой, подхватывая заголовок
             // экрана в тот момент, когда тот уже почти растворился
+            var titleBounds by remember { mutableStateOf<androidx.compose.ui.geometry.Rect?>(null) }
             Box(
-                modifier = Modifier.graphicsLayer {
-                    alpha = titleProgress
-                    translationY = (1f - titleProgress) * size.height
-                }
+                modifier = Modifier
+                    .graphicsLayer {
+                        alpha = titleProgress
+                        translationY = (1f - titleProgress) * size.height
+                    }
+                    .onGloballyPositioned { titleBounds = it.boundsInRoot() }
+                    // Нажимается, только когда заголовок уже проступил: пока он прозрачный, его не видно
+                    .clickable(
+                        enabled = onTitleClick != null && titleProgress > 0.5f,
+                        interactionSource = remember { MutableInteractionSource() },
+                        indication = null
+                    ) { onTitleClick?.invoke(titleBounds) }
             ) {
                 CategoryTopAppBarTitleContent(
                     screen = screen,

@@ -1304,6 +1304,7 @@ fun ThingsCategoryListPanel(
             ),
             hasTags = allTags.isNotEmpty(),
             isTagsFilterVisible = isTagsFilterVisible,
+            onTitleClick = { bounds -> onEvent(ThingsCategoryListEvent.ClickSearch(bounds)) },
             onToggleTagsFilter = {
                 val newVisible = !isTagsFilterVisible
                 isTagsFilterVisible = newVisible
