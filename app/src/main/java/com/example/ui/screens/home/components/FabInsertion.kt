@@ -65,19 +65,10 @@ object FabInsertion {
      * [rows] — видимые строки-якоря, геометрия без промежутка (его высота уже вычтена у строк ниже),
      * поэтому место не дёргается от того, что промежуток сам сдвигает строки. Ниже всех — после
      * последней видимой строки-якоря.
-     *
-     * [anchorOffset] — где внутри промежутка его видимая часть, которая должна сидеть на линии кнопки
-     * (по умолчанию середина). У нового заголовка надпись и пунктир — в нижней части промежутка.
      */
-    fun slotAt(
-        y: Float,
-        rows: List<FabRow>,
-        asHeading: Boolean,
-        gapHeight: Float = 0f,
-        anchorOffset: Float = gapHeight / 2f
-    ): FabSlot? {
+    fun slotAt(y: Float, rows: List<FabRow>, asHeading: Boolean, gapHeight: Float = 0f): FabSlot? {
         if (rows.isEmpty()) return null
-        val target = y - anchorOffset
+        val target = y - gapHeight / 2f
         var bestIndex = rows.first().index
         var bestDistance = kotlin.math.abs(rows.first().top - target)
         for (row in rows) {
