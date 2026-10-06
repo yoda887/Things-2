@@ -823,7 +823,8 @@ fun ThingsHomeScreen(viewModel: ThingsViewModel = hiltViewModel()) {
                         // [ИЗМЕНЕНИЕ]: Кликнутая задача более не разворачивается для редактирования, а кратковременно подсвечивается
                         viewModel.setHighlightedTaskId(task.item.id)
                         scope.launch {
-                            kotlinx.coroutines.delay(1500)
+                            // Подсветка начинается после паузы — время считается от её начала
+                            kotlinx.coroutines.delay(com.example.ui.screens.home.subcomponents.FOUND_HIGHLIGHT_DELAY_MS + 1500)
                             // Снимаем подсветку только если за это время не подсветили другую задачу
                             if (viewModel.highlightedTaskId.value == task.item.id) {
                                 viewModel.setHighlightedTaskId(null)

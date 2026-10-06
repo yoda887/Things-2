@@ -696,7 +696,7 @@ fun AnimatedTaskItem(
                             isDragging = false,
                             dragOffsetY = 0f,
                             dragModifier = Modifier,
-                            isHighlighted = task.id == highlightedTaskId,
+                            isFound = task.id == highlightedTaskId,
                             isDimmed = shouldDim,
                             isBeingDeleted = isBeingDeleted,
                             isSelectionMode = isSelectionMode,

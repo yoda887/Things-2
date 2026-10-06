@@ -45,12 +45,16 @@ import com.example.ui.theme.*
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 
+/** Пауза перед подсветкой найденной задачи: экран успевает открыться и докрутить до неё */
+const val FOUND_HIGHLIGHT_DELAY_MS = 450L
+
 /**
  * TaskItemRow: Renders the complete, highly responsive checklist item with custom 
  * elevation feedback transitions, note flags, and tag chips..
  */
 
 // [ИЗМЕНЕНИЕ]: Добавлен параметр isHighlighted для кратковременной подсветки задачи при клике из поиска
+
 @Composable
 fun TaskItemRow(
     modifier: Modifier = Modifier,
@@ -66,6 +70,8 @@ fun TaskItemRow(
     dragOffsetY: Float = 0f,
     dragModifier: Modifier = Modifier,
     isHighlighted: Boolean = false,
+    // Задача, к которой перешли из Quick Find (см. FOUND_HIGHLIGHT_DELAY_MS)
+    isFound: Boolean = false,
     isDimmed: Boolean = false,
     isBeingDeleted: Boolean = false,
     isSelectionMode: Boolean = false,
@@ -135,10 +141,26 @@ fun TaskItemRow(
     val scale by androidx.compose.animation.core.animateFloatAsState(if (isDragging) 1.04f else 1.0f)
     val elevation by androidx.compose.animation.core.animateDpAsState(if (isDragging) 6.dp else 0.dp)
 
-    val highlightColor = if (isHighlighted) {
-        ThingsTheme.colors.accent.copy(alpha = 0.15f)
-    } else {
-        Color.Transparent
+    // Найденная в Quick Find задача: после паузы (переход на экран и прокрутка к ней) строка
+    // окрашивается в светло-жёлтый и коротко увеличивается вместе со всем содержимым
+    var foundGlow by remember { mutableStateOf(false) }
+    val foundScale = remember { androidx.compose.animation.core.Animatable(1f) }
+    LaunchedEffect(isFound) {
+        if (isFound) {
+            delay(FOUND_HIGHLIGHT_DELAY_MS)
+            foundGlow = true
+            foundScale.animateTo(1.04f, androidx.compose.animation.core.tween(180, easing = androidx.compose.animation.core.FastOutSlowInEasing))
+            foundScale.animateTo(1f, androidx.compose.animation.core.spring(dampingRatio = 0.6f, stiffness = androidx.compose.animation.core.Spring.StiffnessMediumLow))
+        } else {
+            foundGlow = false
+            foundScale.snapTo(1f)
+        }
+    }
+
+    val highlightColor = when {
+        isHighlighted -> ThingsTheme.colors.accent.copy(alpha = 0.15f)
+        foundGlow -> ThingsTheme.colors.searchMatchHighlight.copy(alpha = 0.6f)
+        else -> Color.Transparent
     }
 
     val animatedRowBgColor by androidx.compose.animation.animateColorAsState(
@@ -186,8 +208,8 @@ fun TaskItemRow(
             .height(46.dp)
             .graphicsLayer {
                 translationY = dragOffsetY
-                scaleX = scale * cardScale
-                scaleY = scale * cardScale
+                scaleX = scale * cardScale * foundScale.value
+                scaleY = scale * cardScale * foundScale.value
             }
             .shadow(elevation, ThingsTheme.shapes.rowShape)
             .background(animatedRowBgColor, ThingsTheme.shapes.rowShape)
