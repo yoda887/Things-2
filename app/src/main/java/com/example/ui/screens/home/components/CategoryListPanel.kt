@@ -321,6 +321,9 @@ fun ThingsCategoryListPanel(
     val acceptsFabDrop = screen in FAB_DROP_SCREENS && !state.isSelectionMode
     // Высота промежутка до его появления — по ней первый раз выбирается место
     val fabDefaultGapPx = with(androidx.compose.ui.platform.LocalDensity.current) { 44.dp.toPx() }
+    // Середина между надписью «NEW HEADING» и пунктиром от верха промежутка (см. FabGapRow):
+    // на линии кнопки — они, а не середина всего промежутка с отступом 22 dp сверху
+    val fabHeadingAnchorPx = with(androidx.compose.ui.platform.LocalDensity.current) { 52.dp.toPx() }
     var listCoordinates by remember { mutableStateOf<androidx.compose.ui.layout.LayoutCoordinates?>(null) }
     var fabSlot by remember { mutableStateOf<FabSlot?>(null) }
     // Раздвигание после сброса: промежуток вырастает до высоты раскрытой задачи, и только потом создаётся задача
@@ -508,7 +511,12 @@ fun ThingsCategoryListPanel(
                 // Пустой список: промежуток в начале
                 if (flat.none { FabInsertion.isAnchor(it) }) FabSlot(flat.size, asHeading) else fabSlot
             } else {
-                FabInsertion.slotAt(y, rows, asHeading, gapHeight = if (gapSize > 0) gapSize.toFloat() else fabDefaultGapPx)
+                val gapHeight = if (gapSize > 0) gapSize.toFloat() else fabDefaultGapPx
+                FabInsertion.slotAt(
+                    y, rows, asHeading, gapHeight,
+                    anchorOffset = if (asHeading) fabHeadingAnchorPx else gapHeight / 2f
+                )
+                    ?.let { FabInsertion.normalizeSlot(flat, it) }
             }
             // Автопрокрутка, когда палец у края списка
             val zone = height * FAB_SCROLL_ZONE_FRACTION
@@ -1681,29 +1689,34 @@ private fun listItemKey(element: Any): Any? = when (element) {
 private fun FabGapRow(asHeading: Boolean, extraPx: () -> Float, modifier: Modifier = Modifier) {
     if (asHeading) {
         val lineColor = ThingsTheme.colors.newHeadingLine
-        Box(
+        // Повторяет раскладку ProjectHeadingRow в списке (отступ 22 dp, строка 40 dp, линия, 4 dp):
+        // надпись — на месте названия, пунктир — на месте линии под ним, и при сбросе ничего не сдвигается
+        Column(
             modifier = modifier
                 .fillMaxWidth()
-                .height(40.dp)
-                .padding(horizontal = 8.dp),
-            contentAlignment = Alignment.Center
+                .padding(top = 22.dp, bottom = 4.dp)
+                .padding(horizontal = 8.dp)
         ) {
-            androidx.compose.foundation.Canvas(modifier = Modifier.fillMaxWidth().height(2.dp)) {
+            Box(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(40.dp),
+                contentAlignment = Alignment.Center
+            ) {
+                Text(
+                    text = "NEW HEADING",
+                    style = ThingsTheme.type.overline.copy(color = ThingsTheme.colors.newHeadingText)
+                )
+            }
+            androidx.compose.foundation.Canvas(modifier = Modifier.fillMaxWidth().height(1.dp)) {
                 drawLine(
                     color = lineColor,
                     start = androidx.compose.ui.geometry.Offset(0f, size.height / 2f),
                     end = androidx.compose.ui.geometry.Offset(size.width, size.height / 2f),
-                    strokeWidth = size.height,
+                    strokeWidth = 2.dp.toPx(),
                     pathEffect = androidx.compose.ui.graphics.PathEffect.dashPathEffect(floatArrayOf(18f, 12f))
                 )
             }
-            Text(
-                text = "NEW HEADING",
-                style = ThingsTheme.type.overline.copy(color = ThingsTheme.colors.newHeadingText),
-                modifier = Modifier
-                    .background(ThingsTheme.colors.background)
-                    .padding(horizontal = 10.dp)
-            )
         }
     } else {
         val density = androidx.compose.ui.platform.LocalDensity.current

@@ -65,10 +65,19 @@ object FabInsertion {
      * [rows] — видимые строки-якоря, геометрия без промежутка (его высота уже вычтена у строк ниже),
      * поэтому место не дёргается от того, что промежуток сам сдвигает строки. Ниже всех — после
      * последней видимой строки-якоря.
+     *
+     * [anchorOffset] — где внутри промежутка его видимая часть, которая должна сидеть на линии кнопки
+     * (по умолчанию середина). У нового заголовка надпись и пунктир — в нижней части промежутка.
      */
-    fun slotAt(y: Float, rows: List<FabRow>, asHeading: Boolean, gapHeight: Float = 0f): FabSlot? {
+    fun slotAt(
+        y: Float,
+        rows: List<FabRow>,
+        asHeading: Boolean,
+        gapHeight: Float = 0f,
+        anchorOffset: Float = gapHeight / 2f
+    ): FabSlot? {
         if (rows.isEmpty()) return null
-        val target = y - gapHeight / 2f
+        val target = y - anchorOffset
         var bestIndex = rows.first().index
         var bestDistance = kotlin.math.abs(rows.first().top - target)
         for (row in rows) {
@@ -78,6 +87,19 @@ object FabInsertion {
         val last = rows.last()
         if (kotlin.math.abs(last.top + last.size - target) < bestDistance) bestIndex = last.index + 1
         return FabSlot(bestIndex, asHeading)
+    }
+
+    /**
+     * «Предстоящие»: промежуток стоит только внутри раздела дня или месяца — не выше первого заголовка
+     * и не между заголовком и его событиями календаря. Такой промежуток переносится сразу за события
+     * своего раздела. На других экранах заголовков дней нет, и [slot] не меняется.
+     */
+    fun normalizeSlot(flattened: List<Any>, slot: FabSlot): FabSlot {
+        var index = slot.index.coerceIn(0, flattened.size)
+        val firstHeader = flattened.indexOfFirst { it is UpcomingHeaderItem || it is UpcomingMonthHeaderItem }
+        if (firstHeader != -1 && index <= firstHeader) index = firstHeader + 1
+        while (index < flattened.size && flattened[index] is UpcomingEventItem) index++
+        return if (index == slot.index) slot else slot.copy(index = index)
     }
 
     /**

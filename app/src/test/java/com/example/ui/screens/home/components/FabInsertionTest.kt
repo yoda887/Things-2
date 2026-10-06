@@ -32,6 +32,35 @@ class FabInsertionTest {
         assertNull(FabInsertion.slotAt(10f, emptyList(), false))
     }
 
+    // «Предстоящие»: день 1 (событие e1, задача u1) | месяц (событие e2, задач нет)
+    private val upDay = UpcomingHeaderItem(1_700_000_000_000L, "1", "Mon")
+    private val upMonth = UpcomingMonthHeaderItem(1_702_000_000_000L, "December")
+    private val upcoming: List<Any> = listOf(
+        upDay, UpcomingEventItem(Item(id = "e1"), upDay.dateMillis), task("u1"),
+        upMonth, UpcomingEventItem(Item(id = "e2"), upMonth.monthMillis)
+    )
+
+    @Test
+    fun normalizeSlot_upcoming_notAboveFirstDateHeader() {
+        // Перед первым заголовком дня — переносится за его события, к задачам дня
+        assertEquals(2, FabInsertion.normalizeSlot(upcoming, FabSlot(0, false)).index)
+    }
+
+    @Test
+    fun normalizeSlot_upcoming_notBetweenHeaderAndItsEvents() {
+        // Сразу под заголовком месяца (в т. ч. «в конце списка», когда у месяца нет задач) — за его события
+        assertEquals(5, FabInsertion.normalizeSlot(upcoming, FabSlot(4, false)).index)
+        assertEquals(2, FabInsertion.normalizeSlot(upcoming, FabSlot(1, false)).index)
+    }
+
+    @Test
+    fun normalizeSlot_keepsValidSlots() {
+        assertEquals(3, FabInsertion.normalizeSlot(upcoming, FabSlot(3, false)).index)
+        assertEquals(5, FabInsertion.normalizeSlot(upcoming, FabSlot(5, false)).index)
+        // Другие экраны (без заголовков дней) не трогаются
+        assertEquals(0, FabInsertion.normalizeSlot(project, FabSlot(0, true)).index)
+    }
+
     @Test
     fun taskPlacement_insideHeadingGroup() {
         // между a1 и a2
