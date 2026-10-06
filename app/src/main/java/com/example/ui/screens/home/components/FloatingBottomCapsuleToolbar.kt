@@ -78,7 +78,7 @@ fun FloatingBottomCapsuleToolbar(
         Box(
             modifier = Modifier
                 .height(MaterialTheme.dimens.floatingToolbarHeight)
-                .clip(RoundedCornerShape(MaterialTheme.dimens.floatingToolbarCornerRadius))
+                .clip(ThingsTheme.shapes.toolbarShape)
                 .background(ThingsTheme.colors.overlaySurface)
                 .padding(horizontal = 16.dp),
             contentAlignment = Alignment.Center
@@ -102,13 +102,13 @@ fun FloatingBottomCapsuleToolbar(
                     Icon(
                         imageVector = Icons.AutoMirrored.Filled.ArrowForward,
                         contentDescription = "Move icon",
-                        tint = Color.White,
+                        tint = ThingsTheme.colors.overlayContent,
                         modifier = Modifier.size(22.dp)
                     )
                     Spacer(modifier = Modifier.width(6.dp))
                     Text(
                         text = "Move",
-                        color = Color.White,
+                        color = ThingsTheme.colors.overlayContent,
                         style = ThingsTheme.type.dialogButton.copy(fontWeight = FontWeight.Bold)
                     )
                 }
@@ -127,7 +127,7 @@ fun FloatingBottomCapsuleToolbar(
                     Icon(
                         imageVector = Icons.Default.Delete,
                         contentDescription = "Delete task",
-                        tint = Color.White,
+                        tint = ThingsTheme.colors.overlayContent,
                         modifier = Modifier.size(24.dp)
                     )
                 }
@@ -147,7 +147,7 @@ fun FloatingBottomCapsuleToolbar(
                         Icon(
                             imageVector = Icons.Default.MoreHoriz,
                             contentDescription = "More options",
-                            tint = Color.White,
+                            tint = ThingsTheme.colors.overlayContent,
                             modifier = Modifier.size(24.dp)
                         )
                     }
@@ -162,10 +162,10 @@ fun FloatingBottomCapsuleToolbar(
                                 Icon(
                                     imageVector = Icons.Default.ContentCopy,
                                     contentDescription = "Duplicate icon",
-                                    tint = Color.White
+                                    tint = ThingsTheme.colors.overlayContent
                                 )
                             },
-                            text = { Text("Duplicate", color = Color.White, fontWeight = FontWeight.Normal, style = ThingsTheme.type.menuItem) },
+                            text = { Text("Duplicate", color = ThingsTheme.colors.overlayContent, fontWeight = FontWeight.Normal, style = ThingsTheme.type.menuItem) },
                             onClick = {
                                 view.performHapticFeedback(HapticFeedbackConstants.CLOCK_TICK)
                                 onDuplicateClick()
@@ -177,10 +177,10 @@ fun FloatingBottomCapsuleToolbar(
                                 Icon(
                                     imageVector = Icons.Default.Refresh,
                                     contentDescription = "Repeat icon",
-                                    tint = Color.Gray
+                                    tint = ThingsTheme.colors.overlayContentSecondary
                                 )
                             },
-                            text = { Text("Repeat", color = Color.Gray, fontWeight = FontWeight.Normal, style = ThingsTheme.type.menuItem) },
+                            text = { Text("Repeat", color = ThingsTheme.colors.overlayContentSecondary, fontWeight = FontWeight.Normal, style = ThingsTheme.type.menuItem) },
                             onClick = {
                                 expandedDotsMenu = false
                             }
@@ -190,10 +190,10 @@ fun FloatingBottomCapsuleToolbar(
                                 Icon(
                                     imageVector = Icons.Default.Transform,
                                     contentDescription = "Convert icon",
-                                    tint = Color.Gray
+                                    tint = ThingsTheme.colors.overlayContentSecondary
                                 )
                             },
-                            text = { Text("Convert", color = Color.Gray, fontWeight = FontWeight.Normal, style = ThingsTheme.type.menuItem) },
+                            text = { Text("Convert", color = ThingsTheme.colors.overlayContentSecondary, fontWeight = FontWeight.Normal, style = ThingsTheme.type.menuItem) },
                             onClick = {
                                 expandedDotsMenu = false
                             }
@@ -203,10 +203,10 @@ fun FloatingBottomCapsuleToolbar(
                                 Icon(
                                     imageVector = Icons.Default.Share,
                                     contentDescription = "Share icon",
-                                    tint = Color.Gray
+                                    tint = ThingsTheme.colors.overlayContentSecondary
                                 )
                             },
-                            text = { Text("Share", color = Color.Gray, fontWeight = FontWeight.Normal, style = ThingsTheme.type.menuItem) },
+                            text = { Text("Share", color = ThingsTheme.colors.overlayContentSecondary, fontWeight = FontWeight.Normal, style = ThingsTheme.type.menuItem) },
                             onClick = {
                                 expandedDotsMenu = false
                             }

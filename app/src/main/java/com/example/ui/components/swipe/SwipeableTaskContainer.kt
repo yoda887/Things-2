@@ -1,5 +1,6 @@
 package com.example.ui.components.swipe
 
+import com.example.ui.theme.ThingsTheme
 import androidx.compose.animation.core.Animatable
 import androidx.compose.animation.core.FastOutSlowInEasing
 import androidx.compose.animation.core.tween
@@ -26,8 +27,6 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.MaterialTheme
 import com.example.ui.theme.AppIcons
-import com.example.ui.theme.ThingsBlue
-import com.example.ui.theme.ThingsSwipeWhenYellow
 import kotlinx.coroutines.launch
 import kotlin.math.abs
 import kotlin.math.sign
@@ -102,8 +101,8 @@ fun SwipeableTaskContainer(
 
     // Цвет и иконка фона в зависимости от зафиксированного направления
     val backgroundColor = when (lockedDirection) {
-        SwipeDirection.LEFT -> ThingsBlue
-        SwipeDirection.RIGHT -> ThingsSwipeWhenYellow
+        SwipeDirection.LEFT -> ThingsTheme.colors.accent
+        SwipeDirection.RIGHT -> ThingsTheme.colors.swipeWhen
         SwipeDirection.NONE -> Color.Transparent
     }
 
@@ -133,7 +132,7 @@ fun SwipeableTaskContainer(
                     Icon(
                         imageVector = AppIcons.Upcoming,
                         contentDescription = "When",
-                        tint = Color.White,
+                        tint = ThingsTheme.colors.onAccent,
                         modifier = Modifier
                             .padding(start = ICON_PADDING_DP.dp)
                             .size(ICON_SIZE_DP.dp)
@@ -149,7 +148,7 @@ fun SwipeableTaskContainer(
                     Icon(
                         imageVector = AppIcons.BulletList,
                         contentDescription = "Select",
-                        tint = Color.White,
+                        tint = ThingsTheme.colors.onAccent,
                         modifier = Modifier
                             .padding(end = ICON_PADDING_DP.dp)
                             .size(ICON_SIZE_DP.dp)
@@ -175,7 +174,7 @@ fun SwipeableTaskContainer(
                     if (lockedDirection != SwipeDirection.NONE) {
                         Modifier.background(
                             color = MaterialTheme.colorScheme.background,
-                            shape = RoundedCornerShape(BACKGROUND_CORNER_RADIUS_DP.dp)
+                            shape = ThingsTheme.shapes.rowShape
                         )
                     } else {
                         Modifier

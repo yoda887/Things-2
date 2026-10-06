@@ -1,5 +1,6 @@
 package com.example.ui.screens.home.components
 
+import com.example.ui.theme.ThingsTheme
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.material3.Card
@@ -53,17 +54,7 @@ fun CalendarEventsWidget(
 
     // КЭШИРОВАНИЕ ПРЕСЕТОВ ЦВЕТОВ: Статический список цветов закеширован в памяти,
     // теперь используются цвета из централизованной темы (Color.kt)
-    val calendarPresets = remember {
-        listOf(
-            CalendarGreen,
-            CalendarBlue,
-            CalendarYellow,
-            CalendarRed,
-            CalendarPurple,
-            CalendarPink,
-            CalendarTeal
-        )
-    }
+    val calendarPresets = ThingsTheme.colors.calendarPresets
 
     Card(
         modifier = modifier.fillMaxWidth(),
@@ -196,11 +187,12 @@ fun UpcomingCalendarEventRow(
     val hasTime = !event.isAllDay && eventStart > 0
     
     val rawColor = event.calendarColor
-    val baseColor = remember(rawColor, event.calendarDisplayName, event.id) {
+    val calendarDefault = ThingsTheme.colors.calendarDefault
+    val baseColor = remember(rawColor, event.calendarDisplayName, event.id, calendarDefault) {
         if (rawColor != null) {
             Color(rawColor)
         } else {
-            ThingsCalendarDefaultGreen // Приятный зеленый цвет, соответствующий iOS стилю
+            calendarDefault // Приятный зеленый цвет, соответствующий iOS стилю
         }
     }
     

@@ -240,7 +240,7 @@ fun QuickAddDialog(
         modifier = Modifier
             .fillMaxSize()
             .zIndex(100f)
-            .background(Color.Black.copy(alpha = scrimAlpha.value))
+            .background(ThingsTheme.colors.scrim.copy(alpha = scrimAlpha.value))
             .clickable(
                 interactionSource = remember { MutableInteractionSource() },
                 indication = null
@@ -391,12 +391,12 @@ fun QuickAddDialog(
                     val activeDateColor = if (hasActiveDate) {
                         when {
                             startDate != null && isTodayDateOrPast(startDate) -> {
-                                if (isTonight) Color.Unspecified else ThingsTodayStar
+                                if (isTonight) Color.Unspecified else ThingsTheme.colors.today
                             }
                             startDate == null && section == TaskSection.TODAY -> {
-                                if (isTonight) Color.Unspecified else ThingsTodayStar
+                                if (isTonight) Color.Unspecified else ThingsTheme.colors.today
                             }
-                            section == TaskSection.SOMEDAY -> ThingsSomedayGrey
+                            section == TaskSection.SOMEDAY -> ThingsTheme.colors.someday
                             else -> Color.Unspecified
                         }
                     } else Color.Unspecified
@@ -695,7 +695,7 @@ fun QuickAddDialog(
                             onClick = { handleSave() },
                             colors = ButtonDefaults.buttonColors(
                                 containerColor = ThingsTheme.colors.accent,
-                                contentColor = Color.White
+                                contentColor = ThingsTheme.colors.onAccent
                             ),
                             shape = ThingsTheme.shapes.capsuleShape,
                             contentPadding = PaddingValues(horizontal = 24.dp, vertical = 6.dp),

@@ -1,10 +1,6 @@
 package com.example.ui.screens.home.inlineeditor.components
 
 import com.example.ui.theme.ThingsTheme
-import com.example.ui.theme.ThingsChecklistCheck
-import com.example.ui.theme.ThingsChecklistCircle
-import com.example.ui.theme.ThingsChecklistDelete
-import com.example.ui.theme.ThingsChecklistHandle
 import android.view.HapticFeedbackConstants
 import androidx.compose.animation.*
 import androidx.compose.animation.core.Animatable
@@ -79,8 +75,6 @@ import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.zIndex
 import com.example.data.model.ChecklistItem
-import com.example.ui.theme.ThingsBlue
-import com.example.ui.theme.taskEditorChecklist
 import kotlinx.coroutines.CoroutineStart
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
@@ -90,10 +84,6 @@ import kotlin.math.abs
 
 // Цвета, пропорции и тайминги сняты с видео Things 3 (пункты чек-листа в карточке задачи).
 // Размеры считаются от размера шрифта пункта (у Roboto высота заглавной ≈ 0,71 размера шрифта).
-private val ChecklistCircleColor = ThingsChecklistCircle
-private val ChecklistCheckColor = ThingsChecklistCheck
-private val ChecklistHandleColor = ThingsChecklistHandle
-private val ChecklistDeleteColor = ThingsChecklistDelete
 // Разделитель, вспышка, фон строки в фокусе и перетаскиваемой строки зависят от темы — берутся из ThingsTheme
 private const val CHECKLIST_MARK_TO_FONT = 0.88f
 /** Высота строки текста пункта в долях шрифта (естественная высота строки Roboto) */
@@ -740,6 +730,8 @@ private fun ChecklistCheckMark(
             },
         contentAlignment = Alignment.CenterStart
     ) {
+        val ChecklistCircleColor = ThingsTheme.colors.checklistCircle
+        val ChecklistCheckColor = ThingsTheme.colors.checklistCheck
         Canvas(modifier = Modifier.size(markSize)) {
             val d = size.minDimension
             if (!checked) {
@@ -819,6 +811,9 @@ private fun ChecklistRowAction(
                 }
             )
     ) {
+        val ChecklistHandleColor = ThingsTheme.colors.checklistHandle
+        val ChecklistDeleteColor = ThingsTheme.colors.checklistDelete
+        val onAccent = ThingsTheme.colors.onAccent
         Canvas(modifier = Modifier.matchParentSize()) {
             val font = fontDp.toPx()
             val halfWidth = font * CHECKLIST_HANDLE_WIDTH_TO_FONT / 2f
@@ -847,8 +842,8 @@ private fun ChecklistRowAction(
                     drawCircle(color = ChecklistDeleteColor, radius = radius, center = center)
                     val arm = radius * 0.5f
                     val stroke = radius * 0.2f
-                    drawLine(Color.White, Offset(center.x - arm, center.y), Offset(center.x + arm, center.y), stroke, StrokeCap.Round)
-                    drawLine(Color.White, Offset(center.x, center.y - arm), Offset(center.x, center.y + arm), stroke, StrokeCap.Round)
+                    drawLine(onAccent, Offset(center.x - arm, center.y), Offset(center.x + arm, center.y), stroke, StrokeCap.Round)
+                    drawLine(onAccent, Offset(center.x, center.y - arm), Offset(center.x, center.y + arm), stroke, StrokeCap.Round)
                 }
             }
         }

@@ -1,6 +1,6 @@
 package com.example.ui.components
 
-import com.example.ui.theme.ThingsAreaIconStroke
+import com.example.ui.theme.ThingsTheme
 import androidx.compose.animation.core.*
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.clickable
@@ -23,8 +23,6 @@ private val OvershootEasing = Easing { t ->
     t1 * t1 * ((tension + 1) * t1 + tension) + 1.0f
 }
 
-private val StrokeColor = ThingsAreaIconStroke
-private val FillColor = Color.White
 
 @Composable
 fun AreaIconAnimated(
@@ -116,6 +114,9 @@ fun AreaIconAnimated(
 
     val interactionSource = remember { MutableInteractionSource() }
 
+    // Контур — цвет иконки области; заливка крышки закрывает линии корпуса под ней, поэтому она цвета фона
+    val StrokeColor = ThingsTheme.colors.areaIconStroke
+    val FillColor = ThingsTheme.colors.background
     Canvas(
         modifier = modifier
             .size(24.dp, 34.dp)

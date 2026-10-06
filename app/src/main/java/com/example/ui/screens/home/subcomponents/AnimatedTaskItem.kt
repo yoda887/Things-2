@@ -366,8 +366,8 @@ fun AnimatedTaskItem(
 
     val containerBgColor = if (showEditor || isDragTask || hasElevation) ThingsTheme.colors.background else Color.Transparent
 
-    val collapsedRadius = MaterialTheme.dimens.taskCollapsedCornerRadius
-    val expandedRadius = MaterialTheme.dimens.taskExpandedCornerRadius
+    val collapsedRadius = ThingsTheme.shapes.row
+    val expandedRadius = ThingsTheme.shapes.row
     // Текущий радиус скругления карточки — только для чтения в лямбдах раскладки и отрисовки.
     val cornerRadius: () -> Dp = { lerp(collapsedRadius, expandedRadius, expansionProgress()) }
     // Форма для слоёв перетаскивания: вне перетаскивания прогресс в композиции не читается,

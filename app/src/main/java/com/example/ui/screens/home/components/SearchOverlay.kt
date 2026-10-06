@@ -1,5 +1,6 @@
 package com.example.ui.screens.home.components
 
+import com.example.ui.theme.ThingsTheme
 import androidx.activity.compose.BackHandler
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
@@ -76,7 +77,6 @@ import com.example.data.model.ItemWithChecklist
 import com.example.data.model.Tag
 import com.example.ui.screens.home.ActiveScreen
 import com.example.ui.theme.AppIcons
-import com.example.ui.theme.ThingsDeepBlue
 import com.example.ui.screens.home.subcomponents.TaskItemRow
 import com.example.ui.components.ProjectProgressArc
 import com.example.ui.components.HideTextSelectionHandles
@@ -93,8 +93,6 @@ private const val MORPH_FALLBACK_SCALE = 0.55f
 // Карточка стартует полупрозрачной и становится непрозрачной с самого начала роста
 private const val MORPH_START_ALPHA = 0.55f
 private const val MORPH_FADE_IN_FRACTION = 0.6f
-// Радиус плавающей карточки — роль темы (ThingsShapes.floatingCard), общая с Quick Add
-private val MORPH_FINAL_CORNER_RADIUS = com.example.ui.theme.ThingsShapes().floatingCard
 
 /**
  * Точная кривая пружины затухания, соответствующая оригинальному
@@ -409,7 +407,9 @@ fun ThingsSearchOverlay(
     // целиком задаётся преобразованием слоя
     val currentHorizontalMargin = 14.dp
     val density = LocalDensity.current
-    val finalRadiusPx = with(density) { MORPH_FINAL_CORNER_RADIUS.toPx() }
+    // Радиус плавающей карточки — общий с Quick Add
+    val morphFinalCornerRadius = ThingsTheme.shapes.floatingCard
+    val finalRadiusPx = with(density) { morphFinalCornerRadius.toPx() }
 
     // Высота шапки (поле ввода и ✕) в раскладке — нужна, чтобы содержимое шло сразу под несжатой шапкой
     var headerHeightPx by remember { mutableStateOf(0) }
@@ -418,7 +418,7 @@ fun ThingsSearchOverlay(
     var layerTranslationY = 0f
     var layerScaleX = 1f
     var layerScaleY = 1f
-    var cardShape: Shape = RoundedCornerShape(MORPH_FINAL_CORNER_RADIUS)
+    var cardShape: Shape = ThingsTheme.shapes.floatingCardShape
     val dst = cardBoundsInRoot
     if (dst != null && dst.width > 0f && dst.height > 0f) {
         val src = morphSource ?: Rect(
@@ -454,7 +454,7 @@ fun ThingsSearchOverlay(
     val finalTranslationY = if (isMorphClosing) dismissVal * dismissSlidePx else layerTranslationY
     val finalScaleX = if (isMorphClosing) 1f else layerScaleX
     val finalScaleY = if (isMorphClosing) 1f else layerScaleY
-    val finalCardShape = if (isMorphClosing) RoundedCornerShape(MORPH_FINAL_CORNER_RADIUS) else cardShape
+    val finalCardShape = if (isMorphClosing) ThingsTheme.shapes.floatingCardShape else cardShape
     val finalCardAlpha = if (!isMorphMeasured) 0f
         else if (isMorphClosing) {
             // Вариант А (Порог задержки): первые 50% пути смещения вниз карточка остаётся 100% непрозрачной (alpha = 1.0f),
@@ -490,7 +490,7 @@ fun ThingsSearchOverlay(
     Box(
         modifier = modifier
             .fillMaxSize()
-            .background(Color.Black.copy(alpha = backdropAlpha))
+            .background(ThingsTheme.colors.scrim.copy(alpha = backdropAlpha))
             .clickable(
                 interactionSource = remember { MutableInteractionSource() },
                 indication = null,
@@ -980,7 +980,7 @@ fun SearchResultRow(
             val totalCount = allTasks.count { it.item.projectId == result.project.id && it.item.type == 0 }
             val completedCount = allTasks.count { it.item.projectId == result.project.id && it.item.type == 0 && it.item.isCompleted }
             val isSomeday = result.project.isSomeday
-            val baseArcColor = if (isSomeday) ThingsSomedayGrey else ThingsDeepBlue
+            val baseArcColor = if (isSomeday) ThingsTheme.colors.someday else ThingsTheme.colors.project
             val arcColor = if (isHighlighted) androidx.compose.ui.graphics.lerp(baseArcColor, accentColor, 0.45f) else baseArcColor
             val rowBg = if (isHighlighted) accentColor.copy(alpha = 0.12f) else Color.Transparent
 
@@ -1080,7 +1080,7 @@ fun SearchResultRow(
                                 ActiveScreen.ANYTIME -> Pair(AppIcons.Anytime, Color.Unspecified)
                                 ActiveScreen.SOMEDAY -> Pair(AppIcons.Someday, Color.Unspecified)
                                 ActiveScreen.LOGBOOK -> Pair(AppIcons.Logbook, Color.Unspecified)
-                                else -> Pair(Icons.Default.Layers, ThingsSomedayGrey)
+                                else -> Pair(Icons.Default.Layers, ThingsTheme.colors.someday)
                             }
                             Icon(
                                 imageVector = info.first,
@@ -1101,7 +1101,7 @@ fun SearchResultRow(
                             Icon(
                                 imageVector = AppIcons.Area,
                                 contentDescription = null,
-                                tint = ThingsAreaGreen,
+                                tint = ThingsTheme.colors.area,
                                 modifier = iconModifier.size(20.dp)
                             )
                         }
@@ -1109,7 +1109,7 @@ fun SearchResultRow(
                             Icon(
                                 imageVector = AppIcons.Tag,
                                 contentDescription = null,
-                                tint = ThingsSomedayGrey,
+                                tint = ThingsTheme.colors.someday,
                                 modifier = iconModifier.size(20.dp)
                             )
                         }

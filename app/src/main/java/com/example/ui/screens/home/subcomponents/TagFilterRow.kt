@@ -45,7 +45,7 @@ fun TagFilterRow(
             ) {
                 Text(
                     text = "All",
-                    color = if (isAllSelected) Color.White else textSecondaryColor,
+                    color = if (isAllSelected) ThingsTheme.colors.onAccent else textSecondaryColor,
                     style = ThingsTheme.type.caption.copy(fontWeight = FontWeight.Bold)
                 )
             }
@@ -63,7 +63,7 @@ fun TagFilterRow(
             ) {
                 Text(
                     text = tag,
-                    color = if (isSelected) Color.White else textSecondaryColor,
+                    color = if (isSelected) ThingsTheme.colors.onAccent else textSecondaryColor,
                     style = ThingsTheme.type.caption
                 )
             }

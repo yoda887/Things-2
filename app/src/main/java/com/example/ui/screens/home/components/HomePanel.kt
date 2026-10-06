@@ -1,5 +1,6 @@
 package com.example.ui.screens.home.components
 
+import com.example.ui.theme.ThingsTheme
 import kotlinx.coroutines.launch
 
 import androidx.compose.animation.AnimatedVisibility
@@ -242,7 +243,7 @@ fun ThingsHomePanel(
                         projectToDelete = null
                     }
                 ) {
-                    Text("Удалить", color = ThingsUpcomingRed, fontWeight = FontWeight.Bold)
+                    Text("Удалить", color = ThingsTheme.colors.danger, fontWeight = FontWeight.Bold)
                 }
             },
             dismissButton = {
@@ -627,7 +628,7 @@ fun ThingsHomePanel(
                             .fillMaxWidth()
                             .height(46.dp)
                             .padding(vertical = 4.dp)
-                            .background(ThingsTheme.colors.dropPlaceholder, ThingsTheme.shapes.chipShape)
+                            .background(ThingsTheme.colors.homeDropPlaceholder, ThingsTheme.shapes.chipShape)
                     )
                 }
                 is HomeTreeItem.ProjectItem -> {
@@ -764,7 +765,7 @@ fun ThingsHomePanel(
                                 BasicTextField(
                                     value = textState,
                                     onValueChange = { textState = it },
-                                    textStyle = MaterialTheme.typography.displaySmall.copy(
+                                    textStyle = ThingsTheme.type.listTitle.copy(
                                         color = textPrimaryColor
                                     ),
                                     cursorBrush = SolidColor(if (isFinishing) Color.Unspecified else ThingsTheme.colors.accent),
@@ -815,7 +816,7 @@ fun ThingsHomePanel(
                                             if (textState.isEmpty()) {
                                                 Text(
                                                     text = "New Area",
-                                                    style = MaterialTheme.typography.displaySmall.copy(
+                                                    style = ThingsTheme.type.listTitle.copy(
                                                         color = textSecondaryColor.copy(alpha = 0.6f)
                                                     )
                                                 )
@@ -831,7 +832,7 @@ fun ThingsHomePanel(
                             } else {
                                 Text(
                                     text = area.title,
-                                    style = MaterialTheme.typography.displaySmall.copy(
+                                    style = ThingsTheme.type.listTitle.copy(
                                         color = textPrimaryColor
                                     ),
                                     modifier = Modifier.weight(1f)
@@ -885,7 +886,7 @@ fun ThingsHomePanel(
                         verticalAlignment = Alignment.CenterVertically
                     ) {
                         Row(verticalAlignment = Alignment.CenterVertically) {
-                            Icon(Icons.Default.CloudSync, contentDescription = "Google Sync", tint = ThingsInboxBlue, modifier = Modifier.size(22.dp))
+                            Icon(Icons.Default.CloudSync, contentDescription = "Google Sync", tint = ThingsTheme.colors.inbox, modifier = Modifier.size(22.dp))
                             Spacer(modifier = Modifier.width(10.dp))
                             Text("Google Tasks Sync Settings", style = ThingsTheme.type.bodyMedium.copy(fontWeight = FontWeight.SemiBold, color = textPrimaryColor))
                         }
@@ -926,7 +927,7 @@ fun ThingsHomePanel(
                             if (syncError != null) {
                                 Text(
                                     "Error: $syncError",
-                                    color = ThingsUpcomingRed,
+                                    color = ThingsTheme.colors.danger,
                                     style = ThingsTheme.type.caption.copy(fontWeight = FontWeight.Medium),
                                     modifier = Modifier.padding(bottom = 8.dp)
                                 )
@@ -942,9 +943,9 @@ fun ThingsHomePanel(
                                 enabled = !isSyncing
                             ) {
                                 if (isSyncing) {
-                                    CircularProgressIndicator(modifier = Modifier.size(18.dp), color = Color.White)
+                                    CircularProgressIndicator(modifier = Modifier.size(18.dp), color = ThingsTheme.colors.onAccent)
                                 } else {
-                                    Text("Sync Tasks Now", color = Color.White, fontWeight = FontWeight.Bold)
+                                    Text("Sync Tasks Now", color = ThingsTheme.colors.onAccent, fontWeight = FontWeight.Bold)
                                 }
                             }
                         }
@@ -982,12 +983,12 @@ fun ThingsHomePanel(
             label = "homeSearchInputBg"
         )
         val iconTint by animateColorAsState(
-            targetValue = if (isPastThreshold) Color.White else textSecondaryColor,
+            targetValue = if (isPastThreshold) ThingsTheme.colors.onAccent else textSecondaryColor,
             animationSpec = tween(durationMillis = 100, easing = LinearEasing),
             label = "homeSearchIconTint"
         )
         val textTint by animateColorAsState(
-            targetValue = if (isPastThreshold) Color.White.copy(alpha = 0.9f) else textSecondaryColor.copy(alpha = 0.6f),
+            targetValue = if (isPastThreshold) ThingsTheme.colors.onAccent.copy(alpha = 0.9f) else textSecondaryColor.copy(alpha = 0.6f),
             animationSpec = tween(durationMillis = 100, easing = LinearEasing),
             label = "homeSearchTextTint"
         )
@@ -1255,7 +1256,7 @@ private fun LazyItemScope.ProjectItemRow(
                 BasicTextField(
                     value = textState,
                     onValueChange = { textState = it },
-                    textStyle = MaterialTheme.typography.displaySmall.copy(
+                    textStyle = ThingsTheme.type.listTitle.copy(
                         color = textPrimaryColor,
                         fontWeight = FontWeight.Normal
                     ),
@@ -1307,7 +1308,7 @@ private fun LazyItemScope.ProjectItemRow(
                             if (textState.isEmpty()) {
                                 Text(
                                     text = "New Project",
-                                    style = MaterialTheme.typography.displaySmall.copy(
+                                    style = ThingsTheme.type.listTitle.copy(
                                         color = textSecondaryColor.copy(alpha = 0.6f),
                                         fontWeight = FontWeight.Normal
                                     )
@@ -1324,7 +1325,7 @@ private fun LazyItemScope.ProjectItemRow(
             } else {
                 Text(
                     text = project.title,
-                    style = MaterialTheme.typography.displaySmall.copy(
+                    style = ThingsTheme.type.listTitle.copy(
                         color = textPrimaryColor,
                         fontWeight = FontWeight.Normal
                     ),

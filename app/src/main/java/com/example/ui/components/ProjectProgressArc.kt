@@ -1,5 +1,6 @@
 package com.example.ui.components
 
+import com.example.ui.theme.ThingsTheme
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.layout.aspectRatio
 import androidx.compose.runtime.Composable
@@ -7,7 +8,6 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.unit.dp
-import com.example.ui.theme.ThingsBlue
 
 /**
  * Круглый индикатор прогресса проекта.
@@ -20,7 +20,7 @@ fun ProjectProgressArc(
     total: Int,
     modifier: Modifier = Modifier,
     // [ИЗМЕНЕНИЕ]: Добавлен параметр цвета, по умолчанию серый, для возможности кастомизации на экране проекта
-    color: Color = Color.Gray.copy(alpha = 0.6f)
+    color: Color = ThingsTheme.colors.textSecondary.copy(alpha = 0.6f)
 ) {
     val progress = if (total > 0) completed.toFloat() / total else 0f
     

@@ -71,7 +71,7 @@ fun PullToSearchIndicator(
         label = "pullCircleColor"
     )
     // В эталоне лупа всегда чисто белая
-    val iconColor = Color.White
+    val iconColor = ThingsTheme.colors.onAccent
 
     // Цвета стрелки: normal / selected из ролей темы
     val arrowColor by animateColorAsState(

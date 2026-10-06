@@ -34,7 +34,6 @@ import com.example.ui.components.ProjectProgressArc
 import com.example.ui.screens.home.components.TaskListKeys
 import com.example.ui.screens.home.ActiveScreen
 import com.example.ui.theme.*
-import com.example.ui.theme.ThingsDeepBlue
 
 /**
  * Компонент основного заголовка категории (Inbox, Today, Upcoming и т.д.).
@@ -54,8 +53,8 @@ fun MainCategoryHeader(
     onAddHeading: () -> Unit = {},
     modifier: Modifier = Modifier
 ) {
-    val headerEmojiFontSize = MaterialTheme.typography.displayMedium.fontSize
-    val headerTitleFontSize = MaterialTheme.typography.displayLarge.fontSize
+    val headerEmojiFontSize = ThingsTheme.type.heroEmoji.fontSize
+    val headerTitleFontSize = ThingsTheme.type.largeTitle.fontSize
 
     var showOptionsMenu by remember { mutableStateOf(false) }
     var showDeleteConfirmDialog by remember { mutableStateOf(false) }
@@ -85,7 +84,7 @@ fun MainCategoryHeader(
                         onDeleteProject(project)
                     }
                 ) {
-                    Text("Удалить", color = ThingsUpcomingRed, fontWeight = FontWeight.Bold)
+                    Text("Удалить", color = ThingsTheme.colors.danger, fontWeight = FontWeight.Bold)
                 }
             },
             dismissButton = {
@@ -114,7 +113,7 @@ fun MainCategoryHeader(
                         onDeleteArea(area)
                     }
                 ) {
-                    Text("Удалить", color = ThingsUpcomingRed, fontWeight = FontWeight.Bold)
+                    Text("Удалить", color = ThingsTheme.colors.danger, fontWeight = FontWeight.Bold)
                 }
             },
             dismissButton = {
@@ -248,7 +247,7 @@ fun MainCategoryHeader(
                 ProjectProgressArc(
                     completed = completedCount,
                     total = totalCount,
-                    color = ThingsDeepBlue,
+                    color = ThingsTheme.colors.project,
                     modifier = Modifier
                         .size((26 * scaleFactor).dp)
                         .align(Alignment.Top)
@@ -350,7 +349,7 @@ fun MainCategoryHeader(
                 Icon(
                     imageVector = AppIcons.Area,
                     contentDescription = null,
-                    tint = ThingsAreaGreen,
+                    tint = ThingsTheme.colors.area,
                     modifier = Modifier
                         .size((30 * scaleFactor).dp)
                         .align(Alignment.Top)
@@ -441,7 +440,7 @@ fun MainCategoryHeader(
                 Icon(
                     imageVector = AppIcons.Tag,
                     contentDescription = null,
-                    tint = ThingsAreaGreen,
+                    tint = ThingsTheme.colors.area,
                     modifier = Modifier
                         .size((30 * scaleFactor).dp)
                         .align(Alignment.Top)
@@ -503,11 +502,7 @@ fun SubCategoryHeader(
         ) {
             Text(
                 text = "PROJECTS",
-                style = ThingsTheme.type.badge.copy(
-                    fontWeight = FontWeight.Bold,
-                    color = textSecondaryColor.copy(alpha = 0.5f),
-                    letterSpacing = 1.sp
-                ),
+                style = ThingsTheme.type.overline.copy(color = textSecondaryColor.copy(alpha = 0.5f)),
                 modifier = Modifier.padding(bottom = 6.dp)
             )
             Box(
@@ -526,11 +521,7 @@ fun SubCategoryHeader(
         ) {
             Text(
                 text = "TASKS",
-                style = ThingsTheme.type.badge.copy(
-                    fontWeight = FontWeight.Bold,
-                    color = textSecondaryColor.copy(alpha = 0.5f),
-                    letterSpacing = 1.sp
-                ),
+                style = ThingsTheme.type.overline.copy(color = textSecondaryColor.copy(alpha = 0.5f)),
                 modifier = Modifier.padding(bottom = 6.dp)
             )
             Box(

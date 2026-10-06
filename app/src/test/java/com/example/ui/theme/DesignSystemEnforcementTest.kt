@@ -9,48 +9,31 @@ import java.io.File
  *
  * Проверяет, что ни один UI-компонент за пределами `ui/theme/` не использует:
  * 1. Сырые шестнадцатеричные цвета: `Color(0x...)`
- * 2. Хардкодные размеры шрифтов: `fontSize = ...sp`
- * 3. Хардкодные скругления углов: `RoundedCornerShape(...dp)`
+ * 2. Числа в sp: `fontSize = 17.sp`, `letterSpacing = 1.sp` и любое `N.sp`
+ * 3. Скругления не из ролей: `RoundedCornerShape(8.dp)`, `RoundedCornerShape(SOME_CONST)`, `RoundedCornerShape(MaterialTheme.dimens…)`
  * 4. Прямые вызовы проверки системной темы: `isSystemInDarkTheme()`
- * 5. Константы сырой палитры из `Color.kt`
+ * 5. Любые константы палитры из `Color.kt` (список читается из самого файла)
+ * 6. Именованные цвета Compose: `Color.White`, `Color.Black`, `Color.Gray` и т. п. (`Transparent` и `Unspecified` разрешены)
+ * 7. Стили `MaterialTheme.typography` в обход `ThingsTheme.type`
  *
  * Все визуальные параметры должны получаться исключительно через роли `ThingsTheme`.
  */
 class DesignSystemEnforcementTest {
 
     private val colorHexRegex = Regex("""Color\s*\(\s*0x[0-9a-fA-F]+""")
-    private val fontSizeRegex = Regex("""fontSize\s*=\s*[0-9]+(?:\.[0-9]+)?\.sp""")
-    private val roundedCornerShapeRegex = Regex("""RoundedCornerShape\s*\(\s*[0-9]+(?:\.[0-9]+)?\.dp\s*\)""")
+    private val fontSizeRegex = Regex("""(?<![\w.)])[0-9]+(?:\.[0-9]+)?f?\.sp\b""")
+    private val roundedCornerShapeRegex = Regex("""RoundedCornerShape\s*\(\s*(?:[0-9]|[A-Z][A-Z0-9_]+\b|MaterialTheme\b)""")
+    private val namedColorRegex = Regex("""\bColor\.(White|Black|Gray|LightGray|DarkGray|Red|Green|Blue|Yellow|Cyan|Magenta)\b""")
+    private val materialTypographyRegex = Regex("""\bMaterialTheme\.typography\b""")
     private val isSystemDarkRegex = Regex("""\bisSystemInDarkTheme\s*\(""")
 
-    private val rawPaletteConstants = listOf(
-        "ThingsBackgroundLight", "ThingsBackgroundDark",
-        "ThingsSurfaceLight", "ThingsSurfaceDark",
-        "ThingsTextPrimaryLight", "ThingsTextPrimaryDark",
-        "ThingsTextSecondaryLight", "ThingsTextSecondaryDark",
-        "ThingsTextNotesLight",
-        "ThingsDividerLight", "ThingsDividerDark",
-        "ThingsInk",
-        "ThingsMetaGrey",
-        "ThingsCheckboxBorder",
-        "ThingsEditorIconInactive",
-        "ThingsFieldLight", "ThingsFieldDark",
-        "ThingsHairlineLight", "ThingsHairlineDark",
-        "ThingsMutedGreyLight", "ThingsMutedGreyDark",
-        "ThingsDropPlaceholderLight", "ThingsDropPlaceholderDark",
-        "ThingsHomeDropPlaceholder",
-        "ThingsStackCardDark",
-        "ThingsDialogBackground", "ThingsDialogButton", "ThingsDialogRowSelected", "ThingsWhenClear",
-        "ThingsTagChipBackground", "ThingsTagChipText",
-        "ThingsBadgeTextLight", "ThingsBadgeTextDark",
-        "ThingsBadgeBackgroundLight", "ThingsBadgeBackgroundDark",
-        "ThingsPullArrowLight", "ThingsPullArrowDark",
-        "ThingsPullArrowSelectedLight", "ThingsPullArrowSelectedDark",
-        "ThingsListDimLight", "ThingsListDimDark",
-        "SearchMatchHighlightLight", "SearchMatchHighlightDark"
-    )
+    /** Все константы палитры Color.kt: компоненты берут цвета только через роли ThingsTheme.colors */
+    private val rawPaletteConstants: List<String> by lazy {
+        val colorKt = File(getUiSourceDirectory(), "theme/Color.kt")
+        Regex("""^val (\w+)""", RegexOption.MULTILINE).findAll(colorKt.readText()).map { it.groupValues[1] }.toList()
+    }
 
-    private val rawPaletteRegex = Regex("""\b(${rawPaletteConstants.joinToString("|")})\b""")
+    private val rawPaletteRegex by lazy { Regex("""\b(${rawPaletteConstants.joinToString("|")})\b""") }
 
     private fun getUiSourceDirectory(): File {
         val candidatePaths = listOf(
@@ -71,6 +54,44 @@ class DesignSystemEnforcementTest {
                 normalizedPath.contains("/ui/theme/")
             }
             .toList()
+    }
+
+    private fun violationsOf(regex: Regex): List<String> {
+        val violations = mutableListOf<String>()
+        getUiFilesToValidate().forEach { file ->
+            file.readLines().forEachIndexed { index, line ->
+                val trimmed = line.trim()
+                if (!trimmed.startsWith("//") && !trimmed.startsWith("*") && !trimmed.startsWith("import ")) {
+                    if (regex.containsMatchIn(line)) violations.add("${file.name}:${index + 1}: $trimmed")
+                }
+            }
+        }
+        return violations
+    }
+
+    @Test
+    fun noNamedComposeColorsInUiComponents() {
+        val violations = violationsOf(namedColorRegex)
+        assertTrue(
+            "Обнаружены именованные цвета Color.White / Color.Black / Color.Gray… в UI компонентах. " +
+                "Используйте роли: onAccent, overlayContent, scrim, textSecondary…:\n" + violations.joinToString("\n"),
+            violations.isEmpty()
+        )
+    }
+
+    @Test
+    fun noMaterialTypographyInUiComponents() {
+        val violations = violationsOf(materialTypographyRegex)
+        assertTrue(
+            "Обнаружены стили MaterialTheme.typography в UI компонентах. Используйте роли ThingsTheme.type.*:\n" +
+                violations.joinToString("\n"),
+            violations.isEmpty()
+        )
+    }
+
+    @Test
+    fun paletteParsedFromColorKt() {
+        assertTrue("Не удалось прочитать константы палитры из Color.kt", rawPaletteConstants.size > 10)
     }
 
     @Test

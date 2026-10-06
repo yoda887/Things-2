@@ -96,32 +96,34 @@ object DesignSystemDocGenerator {
         ColorToken("badge-bg", "badgeBackground", { it.badgeBackground }, { it.badgeBackground }, "Фон бейджа в строке задачи."),
         ColorToken("badge-text", "badgeText", { it.badgeText }, { it.badgeText }, "Текст бейджа в строке задачи; иконка календаря в диалоге When."),
         ColorToken("editor-icon-inactive", "editorIconInactive", { it.editorIconInactive }, { it.editorIconInactive }, "Неактивные иконки нижней строки раскрытого редактора."),
-        ColorToken("clear-action", "clearAction", { it.clearAction }, { it.clearAction }, "Кнопка «Clear» в диалоге When (ThingsWhenClear).")
+        ColorToken("clear-action", "clearAction", { it.clearAction }, { it.clearAction }, "Кнопка «Clear» в диалоге When (ThingsWhenClear)."),
+        ColorToken("on-accent", "onAccent", { it.onAccent }, { it.onAccent }, "Текст и иконки на цветной заливке: «+», отмеченный чекбокс, фон свайпа, выбранный тег, кнопки accent."),
+        ColorToken("scrim", "scrim", { it.scrim }, { it.scrim }, "Затемнение под модальными окнами и при переходах; прозрачность задаёт место использования."),
+        ColorToken("inbox", "inbox", { it.inbox }, { it.inbox }, "Раздел «Входящие»: значок и маркер."),
+        ColorToken("today", "today", { it.today }, { it.today }, "Раздел «Сегодня»: звезда-маркер в строке задачи и редакторе; приоритет «средний»."),
+        ColorToken("upcoming", "upcoming", { it.upcoming }, { it.upcoming }, "Раздел «Предстоящие»; приоритет «высокий»."),
+        ColorToken("anytime", "anytime", { it.anytime }, { it.anytime }, "Раздел «В любое время»; иконка тега в поле тегов редактора; приоритет «низкий»."),
+        ColorToken("someday", "someday", { it.someday }, { it.someday }, "Раздел «Когда-нибудь», иконки тегов в списках и поиске, неактивные уровни приоритета."),
+        ColorToken("area", "area", { it.area }, { it.area }, "Иконка области и её название; в тёмной теме светлее, чтобы читаться на чёрном."),
+        ColorToken("project", "project", { it.project }, { it.project }, "Иконка-прогресс проекта, подзаголовки проекта и их «•••» (ThingsDeepBlue)."),
+        ColorToken("swipe-when", "swipeWhen", { it.swipeWhen }, { it.swipeWhen }, "Фон свайпа вправо (действие «Когда»)."),
+        ColorToken("evening-indicator", "eveningIndicator", { it.eveningIndicator }, { it.eveningIndicator }, "Значок «вечер» в строке задачи."),
+        ColorToken("area-icon-stroke", "areaIconStroke", { it.areaIconStroke }, { it.areaIconStroke }, "Контур анимированной иконки области на главном экране."),
+        ColorToken("new-heading-line", "newHeadingLine", { it.newHeadingLine }, { it.newHeadingLine }, "Пунктир места нового подзаголовка при перетаскивании «+»."),
+        ColorToken("new-heading-text", "newHeadingText", { it.newHeadingText }, { it.newHeadingText }, "Надпись «NEW HEADING» на месте нового подзаголовка."),
+        ColorToken("home-drop-placeholder", "homeDropPlaceholder", { it.homeDropPlaceholder }, { it.homeDropPlaceholder }, "Плашка места вставки нового проекта на главном экране (без прозрачности)."),
+        ColorToken("calendar-default", "calendarDefault", { it.calendarDefault }, { it.calendarDefault }, "Цвет события, если у календаря нет своего.")
     )
 
+    /** Пресеты цветов календарей — роль ThingsColors.calendarPresets (список), здесь по одному */
     val staticPaletteTokens: List<StaticColorToken> = listOf(
-        StaticColorToken("deep-blue", ThingsDeepBlue, "ThingsDeepBlue", "Подзаголовки проекта и их «•••», иконки-прогресс проектов. 5.5:1 на белом."),
-        StaticColorToken("inbox-blue", ThingsInboxBlue, "ThingsInboxBlue", "Раздел «Входящие»."),
-        StaticColorToken("today-star", ThingsTodayStar, "ThingsTodayStar", "Раздел «Сегодня»: звезда-маркер в строке задачи и редакторе."),
-        StaticColorToken("anytime-teal", ThingsAnytimeTeal, "ThingsAnytimeTeal", "Раздел «В любое время»; иконка тега в поле тегов редактора."),
-        StaticColorToken("someday-grey", ThingsSomedayGrey, "ThingsSomedayGrey", "Раздел «Когда-нибудь», иконки тегов в списках и поиске, Material secondary."),
-        StaticColorToken("area-green-light", ThingsAreaGreenLight, "ThingsAreaGreenLight", "Иконка области (Area) и её название в поиске (светлая тема)."),
-        StaticColorToken("area-green-dark", ThingsAreaGreenDark, "ThingsAreaGreenDark", "Иконка области (Area) и её название в поиске (тёмная тема)."),
-        StaticColorToken("when-yellow", ThingsSwipeWhenYellow, "ThingsSwipeWhenYellow", "Фон свайпа вправо (действие «Когда»)."),
-        StaticColorToken("home-drop-placeholder", ThingsHomeDropPlaceholder, "ThingsHomeDropPlaceholder", "Плашка места вставки нового проекта на главном экране."),
-        StaticColorToken("new-heading-line", ThingsNewHeadingLine, "ThingsNewHeadingLine", "Пунктир места нового подзаголовка при перетаскивании «+»."),
-        StaticColorToken("new-heading-text", ThingsNewHeadingText, "ThingsNewHeadingText", "Надпись «NEW HEADING» на месте нового подзаголовка."),
-        StaticColorToken("when-clear", ThingsWhenClear, "ThingsWhenClear", "Кнопка «Clear» диалога When, белый текст."),
-        StaticColorToken("evening-indicator", ThingsEveningIndicator, "ThingsEveningIndicator", "Значок «вечер» в строке задачи."),
-        StaticColorToken("area-icon-stroke", ThingsAreaIconStroke, "ThingsAreaIconStroke", "Контур анимированной иконки области."),
-        StaticColorToken("calendar-default", ThingsCalendarDefaultGreen, "ThingsCalendarDefaultGreen", "Цвет события, если у календаря нет своего."),
-        StaticColorToken("calendar-green", CalendarGreen, "CalendarGreen", "Пресет цвета календаря (Google Зеленый)."),
-        StaticColorToken("calendar-blue", CalendarBlue, "CalendarBlue", "Пресет цвета календаря (Google Синий)."),
-        StaticColorToken("calendar-yellow", CalendarYellow, "CalendarYellow", "Пресет цвета календаря (Google Желтый)."),
-        StaticColorToken("calendar-red", CalendarRed, "CalendarRed", "Пресет цвета календаря (Google Красный)."),
-        StaticColorToken("calendar-purple", CalendarPurple, "CalendarPurple", "Пресет цвета календаря (Фиолетовый)."),
-        StaticColorToken("calendar-pink", CalendarPink, "CalendarPink", "Пресет цвета календаря (Розовый)."),
-        StaticColorToken("calendar-teal", CalendarTeal, "CalendarTeal", "Пресет цвета календаря (Бирюзовый).")
+        StaticColorToken("calendar-green", CalendarGreen, "calendarPresets[0]", "Пресет цвета календаря (Google Зеленый)."),
+        StaticColorToken("calendar-blue", CalendarBlue, "calendarPresets[1]", "Пресет цвета календаря (Google Синий)."),
+        StaticColorToken("calendar-yellow", CalendarYellow, "calendarPresets[2]", "Пресет цвета календаря (Google Желтый)."),
+        StaticColorToken("calendar-red", CalendarRed, "calendarPresets[3]", "Пресет цвета календаря (Google Красный)."),
+        StaticColorToken("calendar-purple", CalendarPurple, "calendarPresets[4]", "Пресет цвета календаря (Фиолетовый)."),
+        StaticColorToken("calendar-pink", CalendarPink, "calendarPresets[5]", "Пресет цвета календаря (Розовый)."),
+        StaticColorToken("calendar-teal", CalendarTeal, "calendarPresets[6]", "Пресет цвета календаря (Бирюзовый).")
     )
 
     val typeTokens: List<TypeToken> = listOf(
@@ -146,7 +148,10 @@ object DesignSystemDocGenerator {
         TypeToken("bodyMedium", { it.bodyMedium }, "Вспомогательный текст, описание проекта, теги.", "Description text"),
         TypeToken("bodySmall", { it.bodySmall }, "Мелкий пояснительный текст, вторичные счётчики.", "Secondary small text"),
         TypeToken("caption", { it.caption }, "Мелкие метки, бейджи, подписи.", "14:00"),
-        TypeToken("badge", { it.badge }, "Компактные бейджи даты и приоритета в строке задачи.", "TODAY")
+        TypeToken("badge", { it.badge }, "Компактные бейджи даты и приоритета в строке задачи.", "TODAY"),
+        TypeToken("listTitle", { it.listTitle }, "Название в строке главного экрана: раздел, проект, область.", "Things 2"),
+        TypeToken("heroEmoji", { it.heroEmoji }, "Эмодзи перед крупным названием проекта или области.", "🎯"),
+        TypeToken("overline", { it.overline }, "Надпись капителью над группой: «PROJECTS», «TASKS», «NEW HEADING».", "PROJECTS")
     )
 
     val shapeTokens: List<ShapeToken> = listOf(
@@ -161,6 +166,7 @@ object DesignSystemDocGenerator {
         ShapeToken("radius-menu", "menu", { it.menu }, "menuShape", "Всплывающее меню-карточка: меню «+» на главном экране."),
         ShapeToken("radius-button", "button", { it.button }, "buttonShape", "Кнопки действий (Save в шторке задачи)."),
         ShapeToken("radius-capsule", "capsule", { it.capsule }, "capsuleShape", "Капсула поиска (Quick Find), пилюля ввода, плавающее поле."),
+        ShapeToken("radius-toolbar", "toolbar", { it.toolbar }, "toolbarShape", "Плавающая панель действий внизу экрана — капсула высотой 50 dp."),
         ShapeToken("radius-floating-card", "floatingCard", { it.floatingCard }, "floatingCardShape", "Плавающие карточки: Quick Add, карточка быстрого поиска."),
         ShapeToken("radius-dialog", "dialog", { it.dialog }, "dialogShape", "Модальные диалоги: When, Move, диалог тегов, подтверждение удаления.")
     )

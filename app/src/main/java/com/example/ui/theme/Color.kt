@@ -1,7 +1,5 @@
 package com.example.ui.theme
 
-import androidx.compose.foundation.isSystemInDarkTheme
-import androidx.compose.runtime.Composable
 import androidx.compose.ui.graphics.Color
 
 // Things iOS dynamic palette
@@ -15,9 +13,6 @@ val ThingsAnytimeTeal = Color(0xFF2EB7CD)
 val ThingsSomedayGrey = Color(0xFF8F93A3)
 val ThingsAreaGreenLight = Color(0xFF269C6E)
 val ThingsAreaGreenDark = Color(0xFF7AD0A7)
-val ThingsAreaGreen: Color
-    @Composable
-    get() = if (isSystemInDarkTheme()) ThingsAreaGreenDark else ThingsAreaGreenLight
 val ThingsSwipeWhenYellow = Color(0xFFFFD401)
 
 // Quick Find search match highlight (themes-ios.json)

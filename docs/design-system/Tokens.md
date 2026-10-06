@@ -53,28 +53,29 @@
 | `badge-text` | `#5f6368` / `#e0e0e0` | `ThingsTheme.colors.badgeText` | Текст бейджа в строке задачи; иконка календаря в диалоге When. |
 | `editor-icon-inactive` | `#a9a9a9` / `#8b8c8e` | `ThingsTheme.colors.editorIconInactive` | Неактивные иконки нижней строки раскрытого редактора. |
 | `clear-action` | `#e22d5a` | `ThingsTheme.colors.clearAction` | Кнопка «Clear» в диалоге When (ThingsWhenClear). |
-| `deep-blue` | `#2a62d9` | `ThingsDeepBlue` | Подзаголовки проекта и их «•••», иконки-прогресс проектов. 5.5:1 на белом. |
-| `inbox-blue` | `#1b80fa` | `ThingsInboxBlue` | Раздел «Входящие». |
-| `today-star` | `#e9ac10` | `ThingsTodayStar` | Раздел «Сегодня»: звезда-маркер в строке задачи и редакторе. |
-| `anytime-teal` | `#2eb7cd` | `ThingsAnytimeTeal` | Раздел «В любое время»; иконка тега в поле тегов редактора. |
-| `someday-grey` | `#8f93a3` | `ThingsSomedayGrey` | Раздел «Когда-нибудь», иконки тегов в списках и поиске, Material secondary. |
-| `area-green-light` | `#269c6e` | `ThingsAreaGreenLight` | Иконка области (Area) и её название в поиске (светлая тема). |
-| `area-green-dark` | `#7ad0a7` | `ThingsAreaGreenDark` | Иконка области (Area) и её название в поиске (тёмная тема). |
-| `when-yellow` | `#ffd401` | `ThingsSwipeWhenYellow` | Фон свайпа вправо (действие «Когда»). |
-| `home-drop-placeholder` | `#e9eaee` | `ThingsHomeDropPlaceholder` | Плашка места вставки нового проекта на главном экране. |
-| `new-heading-line` | `#c9cbd1` | `ThingsNewHeadingLine` | Пунктир места нового подзаголовка при перетаскивании «+». |
-| `new-heading-text` | `#b4b6bc` | `ThingsNewHeadingText` | Надпись «NEW HEADING» на месте нового подзаголовка. |
-| `when-clear` | `#e22d5a` | `ThingsWhenClear` | Кнопка «Clear» диалога When, белый текст. |
-| `evening-indicator` | `#2196f3` | `ThingsEveningIndicator` | Значок «вечер» в строке задачи. |
-| `area-icon-stroke` | `#9c9c9c` | `ThingsAreaIconStroke` | Контур анимированной иконки области. |
-| `calendar-default` | `#63c655` | `ThingsCalendarDefaultGreen` | Цвет события, если у календаря нет своего. |
-| `calendar-green` | `#34a853` | `CalendarGreen` | Пресет цвета календаря (Google Зеленый). |
-| `calendar-blue` | `#4285f4` | `CalendarBlue` | Пресет цвета календаря (Google Синий). |
-| `calendar-yellow` | `#fbbc05` | `CalendarYellow` | Пресет цвета календаря (Google Желтый). |
-| `calendar-red` | `#ea4335` | `CalendarRed` | Пресет цвета календаря (Google Красный). |
-| `calendar-purple` | `#8e24aa` | `CalendarPurple` | Пресет цвета календаря (Фиолетовый). |
-| `calendar-pink` | `#f06292` | `CalendarPink` | Пресет цвета календаря (Розовый). |
-| `calendar-teal` | `#00acc1` | `CalendarTeal` | Пресет цвета календаря (Бирюзовый). |
+| `on-accent` | `#ffffff` | `ThingsTheme.colors.onAccent` | Текст и иконки на цветной заливке: «+», отмеченный чекбокс, фон свайпа, выбранный тег, кнопки accent. |
+| `scrim` | `#000000` | `ThingsTheme.colors.scrim` | Затемнение под модальными окнами и при переходах; прозрачность задаёт место использования. |
+| `inbox` | `#1b80fa` | `ThingsTheme.colors.inbox` | Раздел «Входящие»: значок и маркер. |
+| `today` | `#e9ac10` | `ThingsTheme.colors.today` | Раздел «Сегодня»: звезда-маркер в строке задачи и редакторе; приоритет «средний». |
+| `upcoming` | `#f35f50` | `ThingsTheme.colors.upcoming` | Раздел «Предстоящие»; приоритет «высокий». |
+| `anytime` | `#2eb7cd` | `ThingsTheme.colors.anytime` | Раздел «В любое время»; иконка тега в поле тегов редактора; приоритет «низкий». |
+| `someday` | `#8f93a3` | `ThingsTheme.colors.someday` | Раздел «Когда-нибудь», иконки тегов в списках и поиске, неактивные уровни приоритета. |
+| `area` | `#269c6e` / `#7ad0a7` | `ThingsTheme.colors.area` | Иконка области и её название; в тёмной теме светлее, чтобы читаться на чёрном. |
+| `project` | `#2a62d9` | `ThingsTheme.colors.project` | Иконка-прогресс проекта, подзаголовки проекта и их «•••» (ThingsDeepBlue). |
+| `swipe-when` | `#ffd401` | `ThingsTheme.colors.swipeWhen` | Фон свайпа вправо (действие «Когда»). |
+| `evening-indicator` | `#2196f3` | `ThingsTheme.colors.eveningIndicator` | Значок «вечер» в строке задачи. |
+| `area-icon-stroke` | `#9c9c9c` | `ThingsTheme.colors.areaIconStroke` | Контур анимированной иконки области на главном экране. |
+| `new-heading-line` | `#c9cbd1` | `ThingsTheme.colors.newHeadingLine` | Пунктир места нового подзаголовка при перетаскивании «+». |
+| `new-heading-text` | `#b4b6bc` | `ThingsTheme.colors.newHeadingText` | Надпись «NEW HEADING» на месте нового подзаголовка. |
+| `home-drop-placeholder` | `#e9eaee` | `ThingsTheme.colors.homeDropPlaceholder` | Плашка места вставки нового проекта на главном экране (без прозрачности). |
+| `calendar-default` | `#63c655` | `ThingsTheme.colors.calendarDefault` | Цвет события, если у календаря нет своего. |
+| `calendar-green` | `#34a853` | `calendarPresets[0]` | Пресет цвета календаря (Google Зеленый). |
+| `calendar-blue` | `#4285f4` | `calendarPresets[1]` | Пресет цвета календаря (Google Синий). |
+| `calendar-yellow` | `#fbbc05` | `calendarPresets[2]` | Пресет цвета календаря (Google Желтый). |
+| `calendar-red` | `#ea4335` | `calendarPresets[3]` | Пресет цвета календаря (Google Красный). |
+| `calendar-purple` | `#8e24aa` | `calendarPresets[4]` | Пресет цвета календаря (Фиолетовый). |
+| `calendar-pink` | `#f06292` | `calendarPresets[5]` | Пресет цвета календаря (Розовый). |
+| `calendar-teal` | `#00acc1` | `calendarPresets[6]` | Пресет цвета календаря (Бирюзовый). |
 
 ## Типографика (`ThingsTypography`)
 
@@ -105,6 +106,9 @@
 | `bodySmall` | 13.0 sp | Normal (400) | Мелкий пояснительный текст, вторичные счётчики. |
 | `caption` | 12.0 sp | Medium (500) | Мелкие метки, бейджи, подписи. |
 | `badge` | 11.0 sp | Medium (500) | Компактные бейджи даты и приоритета в строке задачи. |
+| `listTitle` | 19.0 sp | Medium (500) | Название в строке главного экрана: раздел, проект, область. |
+| `heroEmoji` | 30.0 sp | Normal (400) | Эмодзи перед крупным названием проекта или области. |
+| `overline` | 11.0 sp | Bold (700) | Надпись капителью над группой: «PROJECTS», «TASKS», «NEW HEADING». |
 
 ## Радиусы и формы (`ThingsShapes`)
 
@@ -123,6 +127,7 @@
 | `radius-menu` | `16.0 dp` | `ThingsTheme.shapes.menuShape` | Всплывающее меню-карточка: меню «+» на главном экране. |
 | `radius-button` | `18.0 dp` | `ThingsTheme.shapes.buttonShape` | Кнопки действий (Save в шторке задачи). |
 | `radius-capsule` | `22.0 dp` | `ThingsTheme.shapes.capsuleShape` | Капсула поиска (Quick Find), пилюля ввода, плавающее поле. |
+| `radius-toolbar` | `25.0 dp` | `ThingsTheme.shapes.toolbarShape` | Плавающая панель действий внизу экрана — капсула высотой 50 dp. |
 | `radius-floating-card` | `30.0 dp` | `ThingsTheme.shapes.floatingCardShape` | Плавающие карточки: Quick Add, карточка быстрого поиска. |
 | `radius-dialog` | `32.0 dp` | `ThingsTheme.shapes.dialogShape` | Модальные диалоги: When, Move, диалог тегов, подтверждение удаления. |
 | `radius-checkbox` | `23 %` | `RoundedCornerShape(size * 0.23f)` | Скругление чекбокса — 23 % его стороны (3.7 dp у 16 dp чекбокса). |

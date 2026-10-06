@@ -119,6 +119,35 @@ data class ThingsColors(
     val editorIconInactive: Color,
     /** Кнопка «Clear» в диалоге When */
     val clearAction: Color,
+    /** Текст и иконки на цветной заливке: «+», отмеченный чекбокс, фон свайпа, выбранный тег, кнопки `accent` */
+    val onAccent: Color,
+    /** Затемнение под модальными окнами и при переходах (прозрачность задаёт место использования) */
+    val scrim: Color,
+    /** Разделы: значок, маркер и подпись раздела */
+    val inbox: Color,
+    val today: Color,
+    val upcoming: Color,
+    val anytime: Color,
+    val someday: Color,
+    /** Область: значок и название */
+    val area: Color,
+    /** Проект: иконка-прогресс, подзаголовки проекта и их меню */
+    val project: Color,
+    /** Фон свайпа вправо (действие «Когда») */
+    val swipeWhen: Color,
+    /** Значок «вечер» в строке задачи */
+    val eveningIndicator: Color,
+    /** Контур анимированной иконки области на главном экране */
+    val areaIconStroke: Color,
+    /** Место нового подзаголовка при перетаскивании «+»: пунктир и надпись */
+    val newHeadingLine: Color,
+    val newHeadingText: Color,
+    /** Плашка места вставки нового проекта на главном экране */
+    val homeDropPlaceholder: Color,
+    /** Цвет события, если у календаря нет своего */
+    val calendarDefault: Color,
+    /** Пресеты цветов календарей */
+    val calendarPresets: List<Color>,
 )
 
 internal val LightThingsColors = ThingsColors(
@@ -168,6 +197,23 @@ internal val LightThingsColors = ThingsColors(
     badgeText = ThingsBadgeTextLight,
     editorIconInactive = ThingsEditorIconInactive,
     clearAction = ThingsWhenClear,
+    onAccent = Color.White,
+    scrim = Color.Black,
+    inbox = ThingsInboxBlue,
+    today = ThingsTodayStar,
+    upcoming = ThingsUpcomingRed,
+    anytime = ThingsAnytimeTeal,
+    someday = ThingsSomedayGrey,
+    area = ThingsAreaGreenLight,
+    project = ThingsDeepBlue,
+    swipeWhen = ThingsSwipeWhenYellow,
+    eveningIndicator = ThingsEveningIndicator,
+    areaIconStroke = ThingsAreaIconStroke,
+    newHeadingLine = ThingsNewHeadingLine,
+    newHeadingText = ThingsNewHeadingText,
+    homeDropPlaceholder = ThingsHomeDropPlaceholder,
+    calendarDefault = ThingsCalendarDefaultGreen,
+    calendarPresets = listOf(CalendarGreen, CalendarBlue, CalendarYellow, CalendarRed, CalendarPurple, CalendarPink, CalendarTeal),
 )
 
 internal val DarkThingsColors = LightThingsColors.copy(
@@ -201,6 +247,7 @@ internal val DarkThingsColors = LightThingsColors.copy(
     calendarMuted = ThingsMutedGreyDark,
     badgeBackground = ThingsFieldDark,
     badgeText = ThingsBadgeTextDark,
+    area = ThingsAreaGreenDark,
 )
 
 /** Стили текста по ролям. На экранах шире 600 dp размеры умножаются на 1.25 — здесь, один раз. */
@@ -250,6 +297,12 @@ data class ThingsTypography(
     val largeTitle: TextStyle,
     /** Кнопка подтверждения / действия (17 sp SemiBold) */
     val button: TextStyle,
+    /** Название в строке главного экрана: раздел, проект, область (19 sp Medium) */
+    val listTitle: TextStyle,
+    /** Эмодзи перед крупным названием проекта или области (30 sp) */
+    val heroEmoji: TextStyle,
+    /** Надпись капителью над группой: «PROJECTS», «TASKS», «NEW HEADING» (11 sp Bold, разрядка 1 sp) */
+    val overline: TextStyle,
 )
 
 internal fun thingsTypography(scale: Float = 1f) = ThingsTypography(
@@ -275,6 +328,9 @@ internal fun thingsTypography(scale: Float = 1f) = ThingsTypography(
     subheadMedium = TextStyle(fontFamily = FontFamily.Default, fontWeight = FontWeight.Medium, fontSize = (15 * scale).sp),
     largeTitle = TextStyle(fontFamily = FontFamily.Default, fontWeight = FontWeight.Bold, fontSize = (32 * scale).sp),
     button = TextStyle(fontFamily = FontFamily.Default, fontWeight = FontWeight.SemiBold, fontSize = (17 * scale).sp),
+    listTitle = TextStyle(fontFamily = FontFamily.Default, fontWeight = FontWeight.Medium, fontSize = (19 * scale).sp),
+    heroEmoji = TextStyle(fontFamily = FontFamily.Default, fontWeight = FontWeight.Normal, fontSize = (30 * scale).sp),
+    overline = TextStyle(fontFamily = FontFamily.Default, fontWeight = FontWeight.Bold, fontSize = (11 * scale).sp, letterSpacing = 1.sp),
 )
 
 /** Скругления по ролям. */
@@ -302,6 +358,8 @@ data class ThingsShapes(
     val button: Dp = 18.dp,
     /** Капсула поиска, пилюля (22 dp) */
     val capsule: Dp = 22.dp,
+    /** Плавающая панель действий внизу экрана — капсула высотой 50 dp (25 dp) */
+    val toolbar: Dp = 25.dp,
     /** Плавающая карточка, вырастающая из своего источника: Quick Find, Quick Add (30 dp) */
     val floatingCard: Dp = 30.dp,
     /** Модальный диалог: Move, теги, When, удаление (32 dp) */
@@ -318,6 +376,7 @@ data class ThingsShapes(
     val menuShape get() = RoundedCornerShape(menu)
     val buttonShape get() = RoundedCornerShape(button)
     val capsuleShape get() = RoundedCornerShape(capsule)
+    val toolbarShape get() = RoundedCornerShape(toolbar)
     val floatingCardShape get() = RoundedCornerShape(floatingCard)
     val dialogShape get() = RoundedCornerShape(dialog)
 }

@@ -23,13 +23,11 @@ import androidx.compose.ui.unit.dp
 import com.example.data.model.Item
 import com.example.data.model.ItemWithChecklist
 import com.example.ui.components.ProjectProgressArc
-import com.example.ui.theme.ThingsBlue
-import com.example.ui.theme.ThingsDeepBlue
 import com.example.ui.theme.dimens
 
 /**
  * Строка проекта в списке проектов области.
- * Отображает круглый индикатор прогресса ThingsBlue, название проекта,
+ * Отображает круглый индикатор прогресса ThingsTheme.colors.accent, название проекта,
  * опциональную иконку заметок и встроенный шеврон перехода > согласно эталону Things 3.
  */
 @Composable
@@ -74,7 +72,7 @@ fun ProjectItemRow(
             ProjectProgressArc(
                 completed = completedCount,
                 total = totalCount,
-                color = ThingsDeepBlue,
+                color = ThingsTheme.colors.project,
                 modifier = Modifier.requiredSize(20.dp)
             )
         }
@@ -85,7 +83,7 @@ fun ProjectItemRow(
         ) {
             Text(
                 text = project.title,
-                style = MaterialTheme.typography.displaySmall.copy(
+                style = ThingsTheme.type.listTitle.copy(
                     color = textPrimaryColor,
                     fontWeight = FontWeight.Medium
                 ),

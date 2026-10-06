@@ -36,11 +36,8 @@ import androidx.compose.material.icons.outlined.LocalOffer
 import androidx.compose.material.icons.outlined.FormatListBulleted
 import androidx.compose.material.icons.outlined.Brightness3
 import androidx.compose.material.icons.outlined.Archive
-import com.example.ui.theme.ThingsTodayStar
-import com.example.ui.theme.ThingsSomedayGrey
 import com.example.ui.theme.AppIcons
 import com.example.ui.theme.dimens
-import com.example.ui.theme.taskEditorDate
 import com.example.ui.screens.home.inlineeditor.utils.isTodayDate
 import com.example.ui.screens.home.inlineeditor.utils.isTodayDateOrPast
 import com.example.ui.screens.home.inlineeditor.utils.hasUnsavedChanges
@@ -271,7 +268,6 @@ fun ThingsTaskInlineEditor(
     }
 
     // Force strict light theme for the expanded inline editor (white background & black fonts)
-    val editorBackground = Color.White
     val buttonFontSize = ThingsTheme.type.dialogButton.fontSize
     val focusManager = LocalFocusManager.current
 
@@ -422,12 +418,12 @@ fun ThingsTaskInlineEditor(
             val activeDateColor = if (hasActiveDate) {
                 when {
                     startDate != null && isTodayDateOrPast(startDate) -> {
-                        if (isTonight) Color.Unspecified else ThingsTodayStar
+                        if (isTonight) Color.Unspecified else ThingsTheme.colors.today
                     }
                     startDate == null && section == TaskSection.TODAY -> {
-                        if (isTonight) Color.Unspecified else ThingsTodayStar
+                        if (isTonight) Color.Unspecified else ThingsTheme.colors.today
                     }
-                    section == TaskSection.SOMEDAY -> ThingsSomedayGrey
+                    section == TaskSection.SOMEDAY -> ThingsTheme.colors.someday
                     else -> Color.Unspecified
                 }
             } else Color.Unspecified
@@ -792,7 +788,7 @@ fun DeadlineDatePickerDialog(
                 TextButton(
                     onClick = onDismiss
                 ) {
-                    Text("Cancel", color = Color.Gray)
+                    Text("Cancel", color = ThingsTheme.colors.textSecondary)
                 }
             }
         }

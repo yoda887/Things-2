@@ -9,7 +9,7 @@
 Значок раздела (Evening, Upcoming, Someday — своими цветами, 20 dp) и строку названия.
 
 ## Размеры
-- Текст `section-header` (19 sp, Medium) цветом `text-primary`; значок в колонке чекбокса, отступ до текста 8 dp.
+- Текст `sectionHeader` (19 sp, Medium) цветом `text-primary`; значок в колонке чекбокса, отступ до текста 8 dp.
 - Над секцией 32 dp (`space-section`), под линией 8 dp; линия — `divider`, 1 dp.
 
 ## Правила

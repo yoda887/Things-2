@@ -20,8 +20,6 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.SolidColor
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.unit.dp
-import com.example.ui.theme.ThingsAnytimeTeal
-import com.example.ui.theme.ThingsBlue
 
 @Composable
 fun InlineTagField(
@@ -54,7 +52,7 @@ fun InlineTagField(
             Icon(
                 imageVector = AppIcons.Tag,
                 contentDescription = "Tags",
-                tint = ThingsAnytimeTeal,
+                tint = ThingsTheme.colors.anytime,
                 modifier = Modifier.size(16.dp)
             )
             Spacer(modifier = Modifier.width(8.dp))

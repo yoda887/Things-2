@@ -30,9 +30,7 @@ import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import com.example.ui.theme.ThingsBlue
 import com.example.ui.theme.dimens
-import com.example.ui.theme.taskEditorNotes
 import com.example.ui.components.HideTextSelectionHandles
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.focus.focusRequester
@@ -72,7 +70,7 @@ fun InlineMainInputRow(
             onCheckboxClick = onCheckboxClick,
             expansionProgress = expansionProgress,
             subtitleText = subtitleText,
-            cursorBrush = SolidColor(if (showCursor) ThingsBlue else Color.Unspecified),
+            cursorBrush = SolidColor(if (showCursor) ThingsTheme.colors.accent else Color.Unspecified),
             checklistBelow = checklistBelow,
             autoFocusTitle = autoFocusTitle,
             onTitleDone = onTitleDone

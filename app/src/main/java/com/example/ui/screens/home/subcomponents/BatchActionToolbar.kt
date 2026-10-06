@@ -81,7 +81,7 @@ fun BatchActionToolbar(
         Box(
             modifier = Modifier
                 .height(MaterialTheme.dimens.floatingToolbarHeight)
-                .clip(RoundedCornerShape(MaterialTheme.dimens.floatingToolbarCornerRadius))
+                .clip(ThingsTheme.shapes.toolbarShape)
                 .background(ThingsTheme.colors.overlaySurface)
                 .padding(horizontal = 16.dp),
             contentAlignment = Alignment.Center
@@ -141,12 +141,12 @@ fun BatchActionToolbar(
                         modifier = Modifier.background(ThingsTheme.colors.overlaySurface)
                     ) {
                         DropdownMenuItem(
-                            text = { Text(stringResource(R.string.batch_action_complete), color = Color.White, style = ThingsTheme.type.menuItem) },
+                            text = { Text(stringResource(R.string.batch_action_complete), color = ThingsTheme.colors.overlayContent, style = ThingsTheme.type.menuItem) },
                             leadingIcon = {
                                 Icon(
                                     imageVector = Icons.Outlined.CheckCircleOutline,
                                     contentDescription = null,
-                                    tint = Color.White,
+                                    tint = ThingsTheme.colors.overlayContent,
                                     modifier = Modifier.size(20.dp)
                                 )
                             },
@@ -158,12 +158,12 @@ fun BatchActionToolbar(
                         )
 
                         DropdownMenuItem(
-                            text = { Text(stringResource(R.string.batch_action_set_tags), color = Color.White, style = ThingsTheme.type.menuItem) },
+                            text = { Text(stringResource(R.string.batch_action_set_tags), color = ThingsTheme.colors.overlayContent, style = ThingsTheme.type.menuItem) },
                             leadingIcon = {
                                 Icon(
                                     imageVector = AppIcons.Tag,
                                     contentDescription = null,
-                                    tint = Color.White,
+                                    tint = ThingsTheme.colors.overlayContent,
                                     modifier = Modifier.size(20.dp)
                                 )
                             },
@@ -175,12 +175,12 @@ fun BatchActionToolbar(
                         )
 
                         DropdownMenuItem(
-                            text = { Text(stringResource(R.string.batch_action_set_deadline), color = Color.White, style = ThingsTheme.type.menuItem) },
+                            text = { Text(stringResource(R.string.batch_action_set_deadline), color = ThingsTheme.colors.overlayContent, style = ThingsTheme.type.menuItem) },
                             leadingIcon = {
                                 Icon(
                                     imageVector = AppIcons.Deadline,
                                     contentDescription = null,
-                                    tint = Color.White,
+                                    tint = ThingsTheme.colors.overlayContent,
                                     modifier = Modifier.size(20.dp)
                                 )
                             },
@@ -192,12 +192,12 @@ fun BatchActionToolbar(
                         )
 
                         DropdownMenuItem(
-                            text = { Text(stringResource(R.string.batch_action_duplicate), color = Color.White, style = ThingsTheme.type.menuItem) },
+                            text = { Text(stringResource(R.string.batch_action_duplicate), color = ThingsTheme.colors.overlayContent, style = ThingsTheme.type.menuItem) },
                             leadingIcon = {
                                 Icon(
                                     imageVector = Icons.Outlined.ContentCopy,
                                     contentDescription = null,
-                                    tint = Color.White,
+                                    tint = ThingsTheme.colors.overlayContent,
                                     modifier = Modifier.size(20.dp)
                                 )
                             },
@@ -209,12 +209,12 @@ fun BatchActionToolbar(
                         )
 
                         DropdownMenuItem(
-                            text = { Text(stringResource(R.string.batch_action_share), color = Color.White, style = ThingsTheme.type.menuItem) },
+                            text = { Text(stringResource(R.string.batch_action_share), color = ThingsTheme.colors.overlayContent, style = ThingsTheme.type.menuItem) },
                             leadingIcon = {
                                 Icon(
                                     imageVector = Icons.Outlined.Share,
                                     contentDescription = null,
-                                    tint = Color.White,
+                                    tint = ThingsTheme.colors.overlayContent,
                                     modifier = Modifier.size(20.dp)
                                 )
                             },
@@ -259,7 +259,7 @@ private fun CapsuleToolbarIconButton(
         Icon(
             imageVector = icon,
             contentDescription = contentDescription,
-            tint = if (enabled) Color.White else Color.White.copy(alpha = 0.35f),
+            tint = if (enabled) ThingsTheme.colors.overlayContent else ThingsTheme.colors.overlayContent.copy(alpha = 0.35f),
             modifier = Modifier.size(24.dp)
         )
     }

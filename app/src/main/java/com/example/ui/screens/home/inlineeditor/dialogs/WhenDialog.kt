@@ -42,7 +42,6 @@ import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogWindowProvider
 import androidx.compose.ui.window.DialogProperties
 import com.example.data.model.TaskSection
-import com.example.ui.theme.ThingsUpcomingRed
 import com.example.ui.theme.AppIcons
 import com.example.ui.screens.home.inlineeditor.utils.isPastDate
 import com.example.ui.screens.home.inlineeditor.utils.isTodayDate
@@ -84,7 +83,7 @@ private val CALENDAR_CELL_HEIGHT = 45.dp
  */
 private object DialogRippleTheme : RippleTheme {
     @Composable
-    override fun defaultColor(): Color = Color.White
+    override fun defaultColor(): Color = ThingsTheme.colors.overlayContent
 
     @Composable
     override fun rippleAlpha(): RippleAlpha = RippleAlpha(
@@ -318,7 +317,7 @@ fun ThingsWhenDialog(
                             Icon(
                                 imageVector = Icons.Default.Close,
                                 contentDescription = "Close",
-                                tint = Color.White,
+                                tint = ThingsTheme.colors.overlayContent,
                                 modifier = Modifier.size(18.dp)
                             )
                         }
@@ -578,11 +577,11 @@ fun ThingsWhenDialog(
                                                     val monthLabel = SimpleDateFormat("MMM", Locale.US).format(Date(cell.timestamp))
                                                     Text(
                                                         text = monthLabel,
-                                                        style = ThingsTheme.type.bodySmall.copy(color = Color.White)
+                                                        style = ThingsTheme.type.bodySmall.copy(color = ThingsTheme.colors.overlayContent)
                                                     )
                                                     Text(
                                                         text = cell.day.toString(),
-                                                        style = ThingsTheme.type.bodySmall.copy(color = Color.White)
+                                                        style = ThingsTheme.type.bodySmall.copy(color = ThingsTheme.colors.overlayContent)
                                                     )
                                                 }
                                             } else if (cell.isToday) {
@@ -600,17 +599,17 @@ fun ThingsWhenDialog(
                                                     ) {
                                                         Text(
                                                             text = cell.monthLabel,
-                                                            style = ThingsTheme.type.bodySmall.copy(color = Color.White)
+                                                            style = ThingsTheme.type.bodySmall.copy(color = ThingsTheme.colors.overlayContent)
                                                         )
                                                         Text(
                                                             text = cell.day.toString(),
-                                                            style = ThingsTheme.type.bodySmall.copy(color = Color.White)
+                                                            style = ThingsTheme.type.bodySmall.copy(color = ThingsTheme.colors.overlayContent)
                                                         )
                                                     }
                                                 } else {
                                                     Text(
                                                         text = cell.day.toString(),
-                                                        style = ThingsTheme.type.dialogRow.copy(color = Color.White)
+                                                        style = ThingsTheme.type.dialogRow.copy(color = ThingsTheme.colors.overlayContent)
                                                     )
                                                 }
                                             }
@@ -716,7 +715,7 @@ fun ThingsWhenDialog(
                         },
                         colors = ButtonDefaults.buttonColors(
                             containerColor = ThingsTheme.colors.clearAction,
-                            contentColor = Color.White
+                            contentColor = ThingsTheme.colors.overlayContent
                         ),
                         shape = ThingsTheme.shapes.capsuleShape,
                         modifier = Modifier

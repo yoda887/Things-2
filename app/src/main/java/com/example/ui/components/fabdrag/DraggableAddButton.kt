@@ -227,7 +227,7 @@ private fun BoxScope.FabBody(
             },
         contentAlignment = Alignment.Center
     ) {
-        Icon(Icons.Default.Add, contentDescription = "Create Task", tint = Color.White, modifier = Modifier.size(28.dp))
+        Icon(Icons.Default.Add, contentDescription = "Create Task", tint = ThingsTheme.colors.onAccent, modifier = Modifier.size(28.dp))
     }
 }
 
@@ -236,7 +236,7 @@ private fun BoxScope.FabBody(
 private fun BoxScope.FabCancelButton(controller: FabDragController) {
     FabActionButton(
         visible = controller.isDragging,
-        icon = { Icon(Icons.Default.Close, contentDescription = "Cancel", tint = Color.White, modifier = Modifier.size(20.dp)) },
+        icon = { Icon(Icons.Default.Close, contentDescription = "Cancel", tint = ThingsTheme.colors.overlayContent, modifier = Modifier.size(20.dp)) },
         onBounds = { controller.cancelBounds = it },
         modifier = Modifier.align(Alignment.Center)
     )
@@ -255,7 +255,7 @@ fun BoxScope.FabDragActions(controller: FabDragController) {
     Box(modifier = Modifier.matchParentSize().onGloballyPositioned { origin = it.positionInRoot() }) {
         FabActionButton(
             visible = controller.isDragging,
-            icon = { Icon(Icons.Default.MoveToInbox, contentDescription = "Move to Inbox", tint = Color.White, modifier = Modifier.size(22.dp)) },
+            icon = { Icon(Icons.Default.MoveToInbox, contentDescription = "Move to Inbox", tint = ThingsTheme.colors.overlayContent, modifier = Modifier.size(22.dp)) },
             onBounds = { controller.inboxBounds = it },
             modifier = Modifier.offset {
                 val center = controller.homeCenter

@@ -66,6 +66,7 @@ fun ThingsCheckbox(
 
     val interactionSource = remember { MutableInteractionSource() }
     val view = LocalView.current
+    val onAccent = com.example.ui.theme.ThingsTheme.colors.onAccent
 
     Canvas(
         modifier = modifier
@@ -133,7 +134,7 @@ fun ThingsCheckbox(
             // поэтому он проявляется целиком
             drawPath(
                 path = checkPath,
-                color = Color.White.copy(alpha = checkDrawProgress.coerceIn(0f, 1f)),
+                color = onAccent.copy(alpha = checkDrawProgress.coerceIn(0f, 1f)),
                 style = Stroke(
                     width = (size * 0.09f).toPx().coerceAtLeast(1.5.dp.toPx()),
                     cap = androidx.compose.ui.graphics.StrokeCap.Round
@@ -154,7 +155,7 @@ fun ThingsCheckbox(
 
             drawPath(
                 path = partialPath,
-                color = Color.White,
+                color = onAccent,
                 style = Stroke(
                     width = (size * 0.09f).toPx().coerceAtLeast(1.5.dp.toPx()),
                     cap = androidx.compose.ui.graphics.StrokeCap.Round,

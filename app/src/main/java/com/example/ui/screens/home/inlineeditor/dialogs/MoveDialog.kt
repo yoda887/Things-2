@@ -1,6 +1,7 @@
 package com.example.ui.screens.home.inlineeditor.dialogs
 
 import com.example.ui.theme.ThingsTheme
+import com.example.ui.theme.AppIcons
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
@@ -36,56 +37,10 @@ import com.example.data.model.Area
 import com.example.data.model.Item
 import com.example.data.model.ItemWithChecklist
 import com.example.ui.components.ProjectProgressArc
-import com.example.ui.theme.ThingsBlue
-import com.example.ui.theme.ThingsAreaGreen
 import androidx.compose.material.icons.outlined.Layers
 import com.example.ui.theme.dimens
 
 
-// Custom area icon adapted from vector drawable
-private val CustomAreaIcon: ImageVector by lazy {
-    ImageVector.Builder(
-        name = "CustomArea",
-        defaultWidth = 24.dp,
-        defaultHeight = 24.dp,
-        viewportWidth = 24f,
-        viewportHeight = 24f
-    ).apply {
-        path(
-            stroke = SolidColor(Color.White),
-            strokeLineWidth = 2f,
-            strokeLineCap = StrokeCap.Round,
-            strokeLineJoin = StrokeJoin.Round
-        ) {
-            moveTo(2f, 15.5f)
-            quadToRelative(0f, 2f, 1.8f, 2.9f)
-            lineToRelative(6.4f, 3.2f)
-            quadToRelative(1.8f, 0.9f, 3.6f, 0f)
-            lineToRelative(6.4f, -3.2f)
-            quadToRelative(1.8f, -0.9f, 1.8f, -2.9f)
-            lineToRelative(0f, -7f)
-            quadToRelative(0f, -2f, -1.8f, -2.9f)
-            lineToRelative(-6.4f, -3.2f)
-            quadToRelative(-1.8f, -0.9f, -3.6f, 0f)
-            lineToRelative(-6.4f, 3.2f)
-            quadToRelative(-1.8f, 0.9f, -1.8f, 2.9f)
-            close()
-        }
-        path(
-            stroke = SolidColor(Color.White),
-            strokeLineWidth = 1.4f,
-            strokeLineCap = StrokeCap.Round,
-            strokeLineJoin = StrokeJoin.Round
-        ) {
-            moveTo(3f, 6.5f)
-            curveToRelative(-1f, 1.2f, -0.2f, 1.9f, 0.8f, 2.4f)
-            lineTo(10.2f, 12.1f)
-            quadTo(12f, 13f, 13.8f, 12.1f)
-            lineTo(20.2f, 8.9f)
-            curveToRelative(1f, -0.5f, 1.8f, -1.2f, 0.8f, -2.4f)
-        }
-    }.build()
-}
 
 /**
  * [ИЗМЕНЕНИЕ]: Диалог выбора назначения перемещения ("Move") для задачи.
@@ -195,7 +150,7 @@ fun ThingsMoveDialog(
                             MoveDialogRow(
                                 title = "Inbox",
                                 icon = Icons.Default.Inbox,
-                                iconColor = ThingsBlue,
+                                iconColor = ThingsTheme.colors.accent,
                                 isSelected = isSelected,
                                 onClick = {
                                     onMove(null, null, true)
@@ -239,7 +194,7 @@ fun ThingsMoveDialog(
                                 MoveDialogRow(
                                     title = project.title,
                                     icon = null,
-                                    iconColor = Color.White,
+                                    iconColor = ThingsTheme.colors.overlayContent,
                                     isSelected = isSelected,
                                     isProject = true,
                                     completed = completedCount,
@@ -267,8 +222,8 @@ fun ThingsMoveDialog(
                                 val isSelected = currentAreaId == area.id && currentProjectId == null
                                 MoveDialogRow(
                                     title = area.title,
-                                    icon = CustomAreaIcon,
-                                    iconColor = ThingsAreaGreen,
+                                    icon = AppIcons.Area,
+                                    iconColor = ThingsTheme.colors.area,
                                     isSelected = isSelected,
                                     isAreaHeader = true,
                                     onClick = {
@@ -287,7 +242,7 @@ fun ThingsMoveDialog(
                                 MoveDialogRow(
                                     title = project.title,
                                     icon = null,
-                                    iconColor = Color.White,
+                                    iconColor = ThingsTheme.colors.overlayContent,
                                     isSelected = isSelected,
                                     isProject = true,
                                     completed = completedCount,

@@ -19,8 +19,6 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import com.example.data.model.ChecklistItem
 import com.example.data.model.TaskSection
-import com.example.ui.theme.ThingsTodayStar
-import com.example.ui.theme.ThingsSomedayGrey
 import com.example.ui.theme.AppIcons
 import com.example.ui.theme.dimens
 import com.example.ui.screens.home.inlineeditor.utils.isTodayDateOrPast
@@ -67,12 +65,12 @@ fun InlineEditorToolbar(
 
             val activeDateColor = when {
                 startDate != null && isTodayDateOrPast(startDate) -> {
-                    if (isTonight) Color.Unspecified else ThingsTodayStar
+                    if (isTonight) Color.Unspecified else ThingsTheme.colors.today
                 }
                 startDate == null && section == TaskSection.TODAY -> {
-                    if (isTonight) Color.Unspecified else ThingsTodayStar
+                    if (isTonight) Color.Unspecified else ThingsTheme.colors.today
                 }
-                section == TaskSection.SOMEDAY -> ThingsSomedayGrey
+                section == TaskSection.SOMEDAY -> ThingsTheme.colors.someday
                 else -> Color.Unspecified
             }
 

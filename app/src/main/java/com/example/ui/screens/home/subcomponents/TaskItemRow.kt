@@ -1,6 +1,6 @@
 package com.example.ui.screens.home.subcomponents
 
-import com.example.ui.theme.ThingsEveningIndicator
+import com.example.ui.theme.ThingsTheme
 import androidx.compose.animation.core.animateDpAsState
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.foundation.background
@@ -155,14 +155,15 @@ fun TaskItemRow(
 
     val isCalendarTask = task.id.startsWith("cal_")
 
-    val dateIndicator = remember(task.startDate, task.isTonight, task.start, task.dueDate) {
+    val eveningColor = ThingsTheme.colors.eveningIndicator
+    val dateIndicator = remember(task.startDate, task.isTonight, task.start, task.dueDate, eveningColor) {
         if (task.startDate != null) {
-            getStartDateIndicator(task.startDate, task.isTonight)
+            getStartDateIndicator(task.startDate, task.isTonight, eveningColor)
         } else if (task.isToday) {
             if (task.isTonight) {
                 DateIndicatorResult.IconIndicator(
                     icon = AppIcons.Evening,
-                    color = ThingsEveningIndicator,
+                    color = eveningColor,
                     contentDescription = "Tonight"
                 )
             } else {
@@ -222,7 +223,7 @@ fun TaskItemRow(
                     Icon(
                         imageVector = Icons.Outlined.CalendarToday,
                         contentDescription = "Calendar Event",
-                        tint = ThingsBlue,
+                        tint = ThingsTheme.colors.accent,
                         modifier = Modifier
                             .size(16.dp)
                     )
@@ -266,7 +267,7 @@ fun TaskItemRow(
                             }
                         },
                         size = 16.dp,
-                        checkedColor = if (isSearchLogbookStyle) searchLogbookCheckColor() else ThingsBlue,
+                        checkedColor = if (isSearchLogbookStyle) searchLogbookCheckColor() else ThingsTheme.colors.accent,
                         uncheckedColor = checkboxUncheckedColor,
                         isDashed = task.start == 3 && !localCompleted && !isSearchLogbookStyle,
                         isCancelled = isSearchLogbookStyle && isCancelledTask,
@@ -456,7 +457,7 @@ fun TaskItemRow(
                         }
 
                         val isOverdueOrToday = delta <= 0
-                        val color = if (isOverdueOrToday) ThingsUpcomingRed else textSecondaryColor.copy(alpha = 0.85f)
+                        val color = if (isOverdueOrToday) ThingsTheme.colors.danger else textSecondaryColor.copy(alpha = 0.85f)
 
                         Spacer(modifier = Modifier.width(8.dp))
                         Row(
@@ -574,6 +575,7 @@ fun TaskItemRow(
                         },
                     contentAlignment = Alignment.Center
                 ) {
+                    val selectionFill = ThingsTheme.colors.accent
                     androidx.compose.foundation.Canvas(
                         modifier = Modifier.size(24.dp)
                     ) {
@@ -594,7 +596,7 @@ fun TaskItemRow(
                             val currentInnerRadius = targetInnerRadius * animatedCheckScale
                             if (currentInnerRadius > 0f) {
                                 drawCircle(
-                                    color = ThingsBlue,
+                                    color = selectionFill,
                                     radius = currentInnerRadius
                                 )
                             }
@@ -635,7 +637,7 @@ private fun DateBadge(text: String) {
     )
 }
 
-private fun getStartDateIndicator(startDate: Long, isTonight: Boolean): DateIndicatorResult {
+private fun getStartDateIndicator(startDate: Long, isTonight: Boolean, eveningColor: Color): DateIndicatorResult {
     val taskCal = java.util.Calendar.getInstance().apply { timeInMillis = startDate }
     val todayCal = java.util.Calendar.getInstance()
     val currentYear = todayCal.get(java.util.Calendar.YEAR)
@@ -654,7 +656,7 @@ private fun getStartDateIndicator(startDate: Long, isTonight: Boolean): DateIndi
             // Иконка "Вечер" с использованием AppIcons.Evening
             DateIndicatorResult.IconIndicator(
                 icon = AppIcons.Evening,
-                color = ThingsEveningIndicator,
+                color = eveningColor,
                 contentDescription = "Tonight"
             )
         } else {
@@ -699,11 +701,11 @@ private fun getStartDateIndicator(startDate: Long, isTonight: Boolean): DateIndi
 
 /** Заливка флажка выполненной/отменённой задачи в результатах поиска — фирменный голубой. */
 @Composable
-private fun searchLogbookCheckColor(): Color = ThingsBlue
+private fun searchLogbookCheckColor(): Color = ThingsTheme.colors.accent
 
 /** Цвет даты завершения перед названием задачи в результатах поиска — фирменный голубой. */
 @Composable
-private fun searchLogbookDateColor(): Color = ThingsBlue
+private fun searchLogbookDateColor(): Color = ThingsTheme.colors.accent
 
 /** Короткая числовая дата в формате системы: 04/28/24 для en-US, 28.04.24 для ru/uk. */
 private fun formatSearchLogbookDate(millis: Long): String {

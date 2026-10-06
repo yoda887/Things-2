@@ -1,8 +1,6 @@
 package com.example.ui.screens.home.components
 
 import com.example.ui.theme.ThingsTheme
-import com.example.ui.theme.ThingsNewHeadingLine
-import com.example.ui.theme.ThingsNewHeadingText
 import androidx.compose.runtime.withFrameNanos
 import androidx.compose.foundation.gestures.scrollBy
 import com.example.ui.components.fabdrag.FabDropTarget
@@ -80,8 +78,6 @@ import com.example.ui.components.ProjectProgressArc
 import com.example.ui.components.dragdrop.rememberGenericDragDropState
 import com.example.ui.screens.home.ActiveScreen
 import com.example.ui.screens.home.subcomponents.TaskItemRow
-import com.example.ui.theme.ThingsUpcomingRed
-import com.example.ui.theme.ThingsDeepBlue
 import com.example.ui.screens.home.subcomponents.ProjectHeadingRow
 import com.example.ui.screens.home.inlineeditor.ThingsTaskInlineEditor
 import com.example.ui.screens.home.inlineeditor.dialogs.ThingsMoveDialog
@@ -1164,7 +1160,7 @@ fun ThingsCategoryListPanel(
                                     Icon(
                                         imageVector = AppIcons.Area,
                                         contentDescription = null,
-                                        tint = ThingsAreaGreen,
+                                        tint = ThingsTheme.colors.area,
                                         modifier = Modifier.requiredSize(SEARCH_ROW_ICON_SIZE)
                                     )
                                 },
@@ -1180,7 +1176,7 @@ fun ThingsCategoryListPanel(
                                     Icon(
                                         imageVector = AppIcons.Tag,
                                         contentDescription = null,
-                                        tint = ThingsSomedayGrey,
+                                        tint = ThingsTheme.colors.someday,
                                         modifier = Modifier.requiredSize(SEARCH_ROW_ICON_SIZE)
                                     )
                                 },
@@ -1268,7 +1264,7 @@ fun ThingsCategoryListPanel(
                     TextButton(onClick = {
                         headingToDelete = null
                         onEvent(ThingsCategoryListEvent.DeleteHeading(heading))
-                    }) { Text("Delete", color = ThingsUpcomingRed) }
+                    }) { Text("Delete", color = ThingsTheme.colors.danger) }
                 },
                 dismissButton = {
                     TextButton(onClick = { headingToDelete = null }) { Text("Cancel") }
@@ -1626,13 +1622,13 @@ private fun SearchSectionIcon(
         SearchSectionKind.AREA -> Icon(
             imageVector = AppIcons.Area,
             contentDescription = null,
-            tint = ThingsAreaGreen,
+            tint = ThingsTheme.colors.area,
             modifier = iconModifier
         )
         SearchSectionKind.TAGS -> Icon(
             imageVector = AppIcons.Tag,
             contentDescription = null,
-            tint = ThingsSomedayGrey,
+            tint = ThingsTheme.colors.someday,
             modifier = iconModifier
         )
         SearchSectionKind.PROJECT -> {
@@ -1640,7 +1636,7 @@ private fun SearchSectionIcon(
             ProjectProgressArc(
                 completed = progress?.completed ?: 0,
                 total = progress?.total ?: 0,
-                color = ThingsDeepBlue,
+                color = ThingsTheme.colors.project,
                 modifier = iconModifier
             )
         }
@@ -1684,6 +1680,7 @@ private fun listItemKey(element: Any): Any? = when (element) {
 @Composable
 private fun FabGapRow(asHeading: Boolean, extraPx: () -> Float, modifier: Modifier = Modifier) {
     if (asHeading) {
+        val lineColor = ThingsTheme.colors.newHeadingLine
         Box(
             modifier = modifier
                 .fillMaxWidth()
@@ -1693,7 +1690,7 @@ private fun FabGapRow(asHeading: Boolean, extraPx: () -> Float, modifier: Modifi
         ) {
             androidx.compose.foundation.Canvas(modifier = Modifier.fillMaxWidth().height(2.dp)) {
                 drawLine(
-                    color = ThingsNewHeadingLine,
+                    color = lineColor,
                     start = androidx.compose.ui.geometry.Offset(0f, size.height / 2f),
                     end = androidx.compose.ui.geometry.Offset(size.width, size.height / 2f),
                     strokeWidth = size.height,
@@ -1702,11 +1699,7 @@ private fun FabGapRow(asHeading: Boolean, extraPx: () -> Float, modifier: Modifi
             }
             Text(
                 text = "NEW HEADING",
-                style = ThingsTheme.type.caption.copy(
-                    fontWeight = FontWeight.SemiBold,
-                    letterSpacing = 1.sp,
-                    color = ThingsNewHeadingText
-                ),
+                style = ThingsTheme.type.overline.copy(color = ThingsTheme.colors.newHeadingText),
                 modifier = Modifier
                     .background(ThingsTheme.colors.background)
                     .padding(horizontal = 10.dp)

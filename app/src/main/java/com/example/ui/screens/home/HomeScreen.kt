@@ -54,7 +54,6 @@ import com.example.ui.screens.home.components.ThingsCategoryListState
 import com.example.ui.screens.home.components.ThingsCategoryListEvent
 import com.example.ui.screens.home.components.ThingsSearchOverlay
 import com.example.ui.screens.home.components.SearchResultItem
-import com.example.ui.screens.ThingsTaskDetailsSheet
 import com.example.ui.screens.home.inlineeditor.dialogs.QuickAddDialog
 import com.example.ui.theme.*
 import com.example.ui.viewmodel.ThingsViewModel
@@ -380,7 +379,7 @@ fun ThingsHomeScreen(viewModel: ThingsViewModel = hiltViewModel()) {
                         newTaskTitlePrefill = ""
                         showAddDialog = true
                     },
-                    containerColor = ThingsBlue,
+                    containerColor = ThingsTheme.colors.accent,
                     isEditorOpen = { inlineExpandedTaskId != null },
                     // Отступы 16 dp от краёв (Material Design 3) задаёт слот Scaffold
                     modifier = Modifier
@@ -900,7 +899,7 @@ fun ThingsHomeScreen(viewModel: ThingsViewModel = hiltViewModel()) {
                 Box(
                     modifier = Modifier
                         .fillMaxSize()
-                        .background(Color.Black.copy(alpha = 0.4f))
+                        .background(ThingsTheme.colors.scrim.copy(alpha = 0.4f))
                         .clickable(
                             interactionSource = remember { MutableInteractionSource() },
                             indication = null
@@ -932,7 +931,7 @@ fun ThingsHomeScreen(viewModel: ThingsViewModel = hiltViewModel()) {
                             modifier = Modifier
                                 .fillMaxWidth()
                                 .background(ThingsTheme.colors.overlaySurface, shape = ThingsTheme.shapes.menuShape)
-                                .border(1.dp, Color.White.copy(alpha = 0.08f), ThingsTheme.shapes.menuShape)
+                                .border(1.dp, ThingsTheme.colors.overlayContent.copy(alpha = 0.08f), ThingsTheme.shapes.menuShape)
                                 .padding(vertical = 4.dp)
                         ) {
                             // 1. New To-Do
@@ -955,7 +954,7 @@ fun ThingsHomeScreen(viewModel: ThingsViewModel = hiltViewModel()) {
                                     Icon(
                                         imageVector = Icons.Default.Add,
                                         contentDescription = null,
-                                        tint = Color.White,
+                                        tint = ThingsTheme.colors.overlayContent,
                                         modifier = Modifier.size(20.dp)
                                     )
                                 }
@@ -980,7 +979,7 @@ fun ThingsHomeScreen(viewModel: ThingsViewModel = hiltViewModel()) {
                                     .fillMaxWidth()
                                     .padding(horizontal = 16.dp)
                                     .height(0.5.dp)
-                                    .background(Color.White.copy(alpha = 0.08f))
+                                    .background(ThingsTheme.colors.overlayContent.copy(alpha = 0.08f))
                             )
 
                             // 2. New Project
@@ -1011,7 +1010,7 @@ fun ThingsHomeScreen(viewModel: ThingsViewModel = hiltViewModel()) {
                                     Icon(
                                         imageVector = Icons.Default.CheckCircle,
                                         contentDescription = null,
-                                        tint = ThingsBlue,
+                                        tint = ThingsTheme.colors.accent,
                                         modifier = Modifier.size(20.dp)
                                     )
                                 }
@@ -1036,7 +1035,7 @@ fun ThingsHomeScreen(viewModel: ThingsViewModel = hiltViewModel()) {
                                     .fillMaxWidth()
                                     .padding(horizontal = 16.dp)
                                     .height(0.5.dp)
-                                    .background(Color.White.copy(alpha = 0.08f))
+                                    .background(ThingsTheme.colors.overlayContent.copy(alpha = 0.08f))
                             )
 
                             // 3. New Area
@@ -1065,7 +1064,7 @@ fun ThingsHomeScreen(viewModel: ThingsViewModel = hiltViewModel()) {
                                     Icon(
                                         imageVector = Icons.Default.Layers,
                                         contentDescription = null,
-                                        tint = ThingsAreaGreen,
+                                        tint = ThingsTheme.colors.area,
                                         modifier = Modifier.size(20.dp)
                                     )
                                 }
@@ -1145,9 +1144,9 @@ fun ThingsHomeScreen(viewModel: ThingsViewModel = hiltViewModel()) {
                             .fillMaxWidth()
                             .testTag("project_title_input"),
                         colors = OutlinedTextFieldDefaults.colors(
-                            focusedBorderColor = ThingsBlue,
+                            focusedBorderColor = ThingsTheme.colors.accent,
                             unfocusedBorderColor = dividerColor,
-                            focusedLabelColor = ThingsBlue
+                            focusedLabelColor = ThingsTheme.colors.accent
                         )
                     )
                     Spacer(modifier = Modifier.height(12.dp))
@@ -1201,7 +1200,7 @@ fun ThingsHomeScreen(viewModel: ThingsViewModel = hiltViewModel()) {
                     },
                     modifier = Modifier.testTag("confirm_add_project")
                 ) {
-                    Text("Create", color = ThingsBlue, fontWeight = FontWeight.Bold)
+                    Text("Create", color = ThingsTheme.colors.accent, fontWeight = FontWeight.Bold)
                 }
             },
             dismissButton = {
@@ -1231,9 +1230,9 @@ fun ThingsHomeScreen(viewModel: ThingsViewModel = hiltViewModel()) {
                             .fillMaxWidth()
                             .testTag("area_title_input"),
                         colors = OutlinedTextFieldDefaults.colors(
-                            focusedBorderColor = ThingsBlue,
+                            focusedBorderColor = ThingsTheme.colors.accent,
                             unfocusedBorderColor = dividerColor,
-                            focusedLabelColor = ThingsBlue
+                            focusedLabelColor = ThingsTheme.colors.accent
                         )
                     )
                 }
@@ -1248,7 +1247,7 @@ fun ThingsHomeScreen(viewModel: ThingsViewModel = hiltViewModel()) {
                     },
                     modifier = Modifier.testTag("confirm_add_area")
                 ) {
-                    Text("Create", color = ThingsBlue, fontWeight = FontWeight.Bold)
+                    Text("Create", color = ThingsTheme.colors.accent, fontWeight = FontWeight.Bold)
                 }
             },
             dismissButton = {
@@ -1293,6 +1292,7 @@ private fun AnimatedVisibilityScope.ScreenTransitionWrapper(
         }
     }
 
+    val scrimColor = ThingsTheme.colors.scrim
     Box(
         modifier = Modifier
             .fillMaxSize()
@@ -1301,7 +1301,7 @@ private fun AnimatedVisibilityScope.ScreenTransitionWrapper(
             .drawWithContent {
                 drawContent()
                 if (dimmingAlpha > 0f) {
-                    drawRect(color = Color.Black.copy(alpha = dimmingAlpha))
+                    drawRect(color = scrimColor.copy(alpha = dimmingAlpha))
                 }
             }
     ) {

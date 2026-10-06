@@ -45,14 +45,14 @@ fun SmartListRow(
     ) {
         Icon(icon, contentDescription = title, tint = iconColor, modifier = Modifier.size(22.dp))
         Spacer(modifier = Modifier.width(7.dp))
-        Text(title, style = MaterialTheme.typography.displaySmall.copy(color = textPrimaryColor), modifier = Modifier.weight(1f))
+        Text(title, style = ThingsTheme.type.listTitle.copy(color = textPrimaryColor), modifier = Modifier.weight(1f))
         
         if (count > 0) {
             // [ИЗМЕНЕНИЕ]: Если флаг равен true (для Today и Inbox), рисуем цифру серого цвета и без фона
             if (isGrayCountAndNoBg) {
                 Text(
                     count.toString(),
-                    style = MaterialTheme.typography.displaySmall.copy(color = textSecondaryColor)
+                    style = ThingsTheme.type.listTitle.copy(color = textSecondaryColor)
                 )
             } else {
                 Box(
@@ -63,7 +63,7 @@ fun SmartListRow(
                 ) {
                     Text(
                         count.toString(),
-                        style = MaterialTheme.typography.displaySmall.copy(color = iconColor)
+                        style = ThingsTheme.type.listTitle.copy(color = iconColor)
                     )
                 }
             }

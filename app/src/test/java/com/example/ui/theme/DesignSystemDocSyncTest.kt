@@ -80,6 +80,40 @@ class DesignSystemDocSyncTest {
         )
     }
 
+    /**
+     * Ручные документы (README.md, Motion.md и описания компонентов) не генерируются, поэтому проверяется,
+     * что каждый токен, на который они ссылаются, существует: имя в обратных кавычках с дефисом
+     * (`text-secondary`) — в tokens.json, полная роль (`ThingsTheme.colors.accent`) —
+     * свойство ThingsColors / ThingsTypography / ThingsShapes. Имена параметров и API Compose не проверяются.
+     */
+    @Test
+    fun handWrittenDocsReferenceExistingTokens() {
+        val docsDir = getDocsDirectory()
+        val tokenNames = Regex(""""name": "([^"]+)"""").findAll(File(docsDir, "tokens.json").readText(Charsets.UTF_8))
+            .map { it.groupValues[1] }.toSet()
+        val roleNames = (ThingsColors::class.members + ThingsTypography::class.members + ThingsShapes::class.members)
+            .map { it.name }.toSet()
+        // Не токены: пути, имена файлов, константы вибрации и т. п.
+        val ignored = Regex("""[./]|^(kebab-case|light|dark)$""")
+        val files = listOf(File(docsDir, "README.md"), File(docsDir, "Motion.md")) +
+            (File(docsDir, "components").listFiles { f -> f.extension == "md" }?.toList() ?: emptyList())
+        val missing = mutableListOf<String>()
+        files.forEach { file ->
+            Regex("""`([^`\s]+)`""").findAll(file.readText(Charsets.UTF_8)).forEach { m ->
+                val ref = m.groupValues[1]
+                when {
+                    Regex("""^ThingsTheme\.(colors|type|shapes)\.(\w+)$""").matches(ref) -> {
+                        val name = ref.substringAfterLast('.')
+                        if (name !in roleNames) missing.add("${file.name}: $ref")
+                    }
+                    ignored.containsMatchIn(ref) -> Unit
+                    Regex("""^[a-z][a-z0-9]*(-[a-z0-9]+)+$""").matches(ref) -> if (ref !in tokenNames) missing.add("${file.name}: $ref")
+                }
+            }
+        }
+        assertTrue("Ручные документы ссылаются на несуществующие токены:\n" + missing.joinToString("\n"), missing.isEmpty())
+    }
+
     @Test
     fun generateDocs() {
         // Удобный тестовый метод для запуска генерации напрямую:

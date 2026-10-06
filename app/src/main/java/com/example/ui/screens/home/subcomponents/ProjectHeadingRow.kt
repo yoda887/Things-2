@@ -42,13 +42,10 @@ import androidx.compose.ui.unit.dp
 import com.example.data.model.Item
 import com.example.ui.components.HideTextSelectionHandles
 import com.example.ui.components.hideSoftKeyboardThen
-import com.example.ui.theme.ThingsBlue
-import com.example.ui.theme.ThingsDeepBlue
-import com.example.ui.theme.ThingsUpcomingRed
 
 // Тот же размер, что у остальных подзаголовков экранов («Вечер», «Планы», «Когда-нибудь»)
 private val headingTitleStyle: TextStyle
-    @Composable get() = ThingsTheme.type.sectionHeader.copy(color = ThingsDeepBlue, fontWeight = FontWeight.SemiBold)
+    @Composable get() = ThingsTheme.type.sectionHeader.copy(color = ThingsTheme.colors.project, fontWeight = FontWeight.SemiBold)
 
 /**
  * Заголовок внутри проекта, как в Things: голубое название, «•••» с меню и линия под ним.
@@ -98,7 +95,7 @@ fun ProjectHeadingRow(
                 Icon(
                     imageVector = Icons.Default.MoreHoriz,
                     contentDescription = "Heading Options",
-                    tint = ThingsDeepBlue,
+                    tint = ThingsTheme.colors.project,
                     modifier = Modifier
                         .size(26.dp)
                         .clickable(
@@ -150,7 +147,7 @@ private fun HeadingTitleField(heading: Item, onCommit: (String) -> Unit) {
             value = text,
             onValueChange = { text = it },
             textStyle = headingTitleStyle,
-            cursorBrush = SolidColor(if (isFinishing) Color.Unspecified else ThingsBlue),
+            cursorBrush = SolidColor(if (isFinishing) Color.Unspecified else ThingsTheme.colors.accent),
             singleLine = true,
             keyboardOptions = KeyboardOptions(
                 imeAction = ImeAction.Done,
@@ -170,7 +167,7 @@ private fun HeadingTitleField(heading: Item, onCommit: (String) -> Unit) {
             decorationBox = { inner ->
                 Box {
                     if (text.isEmpty()) {
-                        Text("New Heading", style = headingTitleStyle.copy(color = ThingsDeepBlue.copy(alpha = 0.4f)))
+                        Text("New Heading", style = headingTitleStyle.copy(color = ThingsTheme.colors.project.copy(alpha = 0.4f)))
                     }
                     inner()
                 }

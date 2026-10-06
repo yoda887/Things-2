@@ -43,9 +43,9 @@ fun InlinePriorityPanel(
     }
 
     val priorityColor = when (priority) {
-        3 -> ThingsUpcomingRed
-        2 -> ThingsTodayStar
-        1 -> ThingsAnytimeTeal
+        3 -> ThingsTheme.colors.upcoming
+        2 -> ThingsTheme.colors.today
+        1 -> ThingsTheme.colors.anytime
         else -> ThingsTheme.colors.textSecondary
     }
 
@@ -84,7 +84,7 @@ fun InlinePriorityPanel(
                 Text(
                     text = "No",
                     style = ThingsTheme.type.badge.copy(
-                        color = if (priority == 0) ThingsTheme.colors.accent else ThingsSomedayGrey,
+                        color = if (priority == 0) ThingsTheme.colors.accent else ThingsTheme.colors.someday,
                         fontWeight = FontWeight.Bold
                     ),
                     modifier = Modifier
@@ -94,7 +94,7 @@ fun InlinePriorityPanel(
                 Text(
                     text = "Low",
                     style = ThingsTheme.type.badge.copy(
-                        color = if (priority == 1) ThingsAnytimeTeal else ThingsSomedayGrey,
+                        color = if (priority == 1) ThingsTheme.colors.anytime else ThingsTheme.colors.someday,
                         fontWeight = FontWeight.Bold
                     ),
                     modifier = Modifier
@@ -104,7 +104,7 @@ fun InlinePriorityPanel(
                 Text(
                     text = "Med",
                     style = ThingsTheme.type.badge.copy(
-                        color = if (priority == 2) ThingsTodayStar else ThingsSomedayGrey,
+                        color = if (priority == 2) ThingsTheme.colors.today else ThingsTheme.colors.someday,
                         fontWeight = FontWeight.Bold
                     ),
                     modifier = Modifier
@@ -114,7 +114,7 @@ fun InlinePriorityPanel(
                 Text(
                     text = "High",
                     style = ThingsTheme.type.badge.copy(
-                        color = if (priority == 3) ThingsUpcomingRed else ThingsSomedayGrey,
+                        color = if (priority == 3) ThingsTheme.colors.upcoming else ThingsTheme.colors.someday,
                         fontWeight = FontWeight.Bold
                     ),
                     modifier = Modifier
