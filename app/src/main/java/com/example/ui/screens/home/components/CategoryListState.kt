@@ -723,6 +723,8 @@ sealed interface ThingsCategoryListEvent {
     // Заголовки проекта
     data class SaveHeading(val heading: Item) : ThingsCategoryListEvent
     data class DeleteHeading(val heading: Item) : ThingsCategoryListEvent
+    /** Новый заголовок без названия: удалить его, вернув [tasksBack] в группу выше */
+    data class DiscardHeading(val heading: Item, val tasksBack: List<Item>) : ThingsCategoryListEvent
     data class ArchiveHeading(val heading: Item) : ThingsCategoryListEvent
     data class ReorderHeadings(val headings: List<Item>) : ThingsCategoryListEvent
 

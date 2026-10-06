@@ -645,6 +645,7 @@ fun ThingsHomeScreen(viewModel: ThingsViewModel = hiltViewModel()) {
                                 }
                                 is ThingsCategoryListEvent.SaveHeading -> viewModel.saveHeading(event.heading)
                                 is ThingsCategoryListEvent.DeleteHeading -> viewModel.deleteHeading(event.heading)
+                                is ThingsCategoryListEvent.DiscardHeading -> viewModel.discardHeading(event.heading, event.tasksBack)
                                 is ThingsCategoryListEvent.ArchiveHeading -> viewModel.archiveHeading(event.heading)
                                 is ThingsCategoryListEvent.ReorderHeadings -> viewModel.reorderHeadings(event.headings)
                                 is ThingsCategoryListEvent.CreateTaskAt -> {

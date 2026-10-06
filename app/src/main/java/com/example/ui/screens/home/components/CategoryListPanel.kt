@@ -1123,9 +1123,17 @@ fun ThingsCategoryListPanel(
                                     onTitleCommit = { title ->
                                         if (editingHeadingId == heading.id) editingHeadingId = null
                                         when {
-                                            // Пустой новый заголовок не нужен
-                                            title.isEmpty() && heading.title.isEmpty() ->
-                                                onEvent(ThingsCategoryListEvent.DeleteHeading(heading))
+                                            // Пустой новый заголовок не нужен, но задачи, ушедшие под него
+                                            // при создании, возвращаются в группу выше — не удаляются с ним
+                                            title.isEmpty() && heading.title.isEmpty() -> {
+                                                val index = localHeadings.indexOfFirst { it.id == heading.id }
+                                                val groupAbove = localHeadings.getOrNull(index - 1)?.id
+                                                val now = System.currentTimeMillis()
+                                                val tasksBack = state.allTasks
+                                                    .filter { it.item.headingId == heading.id }
+                                                    .map { it.item.copy(headingId = groupAbove, modificationDate = now) }
+                                                onEvent(ThingsCategoryListEvent.DiscardHeading(heading, tasksBack))
+                                            }
                                             title.isNotEmpty() && title != heading.title ->
                                                 onEvent(ThingsCategoryListEvent.SaveHeading(heading.copy(title = title)))
                                         }

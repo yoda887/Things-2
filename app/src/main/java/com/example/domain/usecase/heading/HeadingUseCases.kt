@@ -33,6 +33,18 @@ class HeadingUseCases @Inject constructor(private val repository: ITaskRepositor
         repository.deleteTask(heading)
     }
 
+    /**
+     * Новый заголовок оставили без названия: он не нужен, но задачи, ушедшие под него при создании,
+     * сначала возвращаются в группу выше ([tasksBack] — уже с её headingId), и только потом заголовок
+     * удаляется. Иначе внешний ключ (ON DELETE CASCADE) унёс бы их вместе с ним.
+     */
+    suspend fun discard(heading: Item, tasksBack: List<Item>) {
+        repository.inTransaction {
+            if (tasksBack.isNotEmpty()) repository.insertTasks(tasksBack)
+            repository.deleteTask(heading)
+        }
+    }
+
     suspend fun archive(heading: Item) {
         repository.archiveHeading(heading)
     }

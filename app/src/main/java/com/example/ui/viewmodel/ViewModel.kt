@@ -362,6 +362,11 @@ class ThingsViewModel @Inject constructor(
         viewModelScope.launch { headingUseCases.delete(heading) }
     }
 
+    /** Пустой новый заголовок: его задачи возвращаются в группу выше, сам заголовок удаляется */
+    fun discardHeading(heading: Item, tasksBack: List<Item>) {
+        viewModelScope.launch { headingUseCases.discard(heading, tasksBack) }
+    }
+
     /** Архивирует заголовок: он и его задачи уходят в Logbook, невыполненные отмечаются выполненными */
     fun archiveHeading(heading: Item) {
         viewModelScope.launch { headingUseCases.archive(heading) }
