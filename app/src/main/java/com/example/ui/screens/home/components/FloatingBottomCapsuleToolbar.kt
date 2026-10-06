@@ -1,5 +1,7 @@
 package com.example.ui.screens.home.components
 
+import com.example.ui.components.ThingsDropdownMenu
+import com.example.ui.components.ThingsMenuItem
 import com.example.ui.theme.ThingsTheme
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.fadeIn
@@ -27,8 +29,6 @@ import androidx.compose.material.icons.filled.MoreHoriz
 import androidx.compose.material.icons.filled.Refresh
 import androidx.compose.material.icons.filled.Share
 import androidx.compose.material.icons.filled.Transform
-import androidx.compose.material3.DropdownMenu
-import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
@@ -152,65 +152,18 @@ fun FloatingBottomCapsuleToolbar(
                         )
                     }
 
-                    DropdownMenu(
+                    ThingsDropdownMenu(
                         expanded = expandedDotsMenu,
-                        onDismissRequest = { expandedDotsMenu = false },
-                        modifier = Modifier.background(ThingsTheme.colors.overlaySurface)
+                        onDismissRequest = { expandedDotsMenu = false }
                     ) {
-                        DropdownMenuItem(
-                            leadingIcon = {
-                                Icon(
-                                    imageVector = Icons.Default.ContentCopy,
-                                    contentDescription = "Duplicate icon",
-                                    tint = ThingsTheme.colors.overlayContent
-                                )
-                            },
-                            text = { Text("Duplicate", color = ThingsTheme.colors.overlayContent, fontWeight = FontWeight.Normal, style = ThingsTheme.type.menuItem) },
-                            onClick = {
-                                view.performHapticFeedback(HapticFeedbackConstants.CLOCK_TICK)
-                                onDuplicateClick()
-                                expandedDotsMenu = false
-                            }
-                        )
-                        DropdownMenuItem(
-                            leadingIcon = {
-                                Icon(
-                                    imageVector = Icons.Default.Refresh,
-                                    contentDescription = "Repeat icon",
-                                    tint = ThingsTheme.colors.overlayContentSecondary
-                                )
-                            },
-                            text = { Text("Repeat", color = ThingsTheme.colors.overlayContentSecondary, fontWeight = FontWeight.Normal, style = ThingsTheme.type.menuItem) },
-                            onClick = {
-                                expandedDotsMenu = false
-                            }
-                        )
-                        DropdownMenuItem(
-                            leadingIcon = {
-                                Icon(
-                                    imageVector = Icons.Default.Transform,
-                                    contentDescription = "Convert icon",
-                                    tint = ThingsTheme.colors.overlayContentSecondary
-                                )
-                            },
-                            text = { Text("Convert", color = ThingsTheme.colors.overlayContentSecondary, fontWeight = FontWeight.Normal, style = ThingsTheme.type.menuItem) },
-                            onClick = {
-                                expandedDotsMenu = false
-                            }
-                        )
-                        DropdownMenuItem(
-                            leadingIcon = {
-                                Icon(
-                                    imageVector = Icons.Default.Share,
-                                    contentDescription = "Share icon",
-                                    tint = ThingsTheme.colors.overlayContentSecondary
-                                )
-                            },
-                            text = { Text("Share", color = ThingsTheme.colors.overlayContentSecondary, fontWeight = FontWeight.Normal, style = ThingsTheme.type.menuItem) },
-                            onClick = {
-                                expandedDotsMenu = false
-                            }
-                        )
+                        ThingsMenuItem("Duplicate", Icons.Default.ContentCopy, onClick = {
+                            view.performHapticFeedback(HapticFeedbackConstants.CLOCK_TICK)
+                            onDuplicateClick()
+                            expandedDotsMenu = false
+                        })
+                        ThingsMenuItem("Repeat", Icons.Default.Refresh, onClick = { expandedDotsMenu = false })
+                        ThingsMenuItem("Convert", Icons.Default.Transform, onClick = { expandedDotsMenu = false })
+                        ThingsMenuItem("Share", Icons.Default.Share, onClick = { expandedDotsMenu = false })
                     }
                 }
             }

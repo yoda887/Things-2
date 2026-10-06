@@ -1,5 +1,11 @@
 package com.example.ui.screens.home.subcomponents
 
+import androidx.compose.material.icons.filled.RemoveDone
+import androidx.compose.material.icons.filled.DoneAll
+import androidx.compose.material.icons.filled.Add
+import androidx.compose.material.icons.filled.Checklist
+import com.example.ui.components.ThingsDropdownMenu
+import com.example.ui.components.ThingsMenuItem
 import androidx.compose.foundation.layout.*
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
@@ -164,56 +170,37 @@ fun CategoryListTopAppBar(
                     )
                 }
 
-                DropdownMenu(
+                ThingsDropdownMenu(
                     expanded = isOptionsMenuExpanded,
                     onDismissRequest = { isOptionsMenuExpanded = false }
                 ) {
-                    val menuItemStyle = ThingsTheme.type.menuItem.copy(fontWeight = FontWeight.Bold)
                     if (selectionState.isSelectionMode) {
                         if (selectionState.isAllSelected) {
-                            DropdownMenuItem(
-                                text = { Text(stringResource(R.string.deselect_all), style = menuItemStyle) },
-                                onClick = {
-                                    isOptionsMenuExpanded = false
-                                    selectionState.onDeselectAllClick()
-                                }
-                            )
+                            ThingsMenuItem(stringResource(R.string.deselect_all), Icons.Default.RemoveDone, onClick = {
+                                isOptionsMenuExpanded = false
+                                selectionState.onDeselectAllClick()
+                            })
                         } else {
-                            DropdownMenuItem(
-                                text = { Text(stringResource(R.string.select_all), style = menuItemStyle) },
-                                onClick = {
-                                    isOptionsMenuExpanded = false
-                                    selectionState.onSelectAllClick()
-                                }
-                            )
+                            ThingsMenuItem(stringResource(R.string.select_all), Icons.Default.DoneAll, onClick = {
+                                isOptionsMenuExpanded = false
+                                selectionState.onSelectAllClick()
+                            })
                         }
                     } else {
                         if (onAddHeading != null) {
-                            DropdownMenuItem(
-                                text = { Text("Add Heading", style = menuItemStyle) },
-                                onClick = {
-                                    isOptionsMenuExpanded = false
-                                    onAddHeading()
-                                }
-                            )
-                        }
-                        DropdownMenuItem(
-                            text = { Text(stringResource(R.string.select_items), style = menuItemStyle) },
-                            onClick = {
+                            ThingsMenuItem("Add Heading", Icons.Default.Add, onClick = {
                                 isOptionsMenuExpanded = false
-                                selectionState.onEnterSelectionMode()
-                            }
-                        )
+                                onAddHeading()
+                            })
+                        }
+                        ThingsMenuItem(stringResource(R.string.select_items), Icons.Default.Checklist, onClick = {
+                            isOptionsMenuExpanded = false
+                            selectionState.onEnterSelectionMode()
+                        })
                         if (hasTags) {
-                            DropdownMenuItem(
-                                text = {
-                                    Text(
-                                        stringResource(
-                                            if (isTagsFilterVisible) R.string.hide_tags else R.string.show_tags
-                                        ),
-                                        style = menuItemStyle
-                                    )
-                                },
+                            ThingsMenuItem(
+                                stringResource(if (isTagsFilterVisible) R.string.hide_tags else R.string.show_tags),
+                                AppIcons.Tag,
                                 onClick = {
                                     isOptionsMenuExpanded = false
                                     onToggleTagsFilter()

@@ -1,5 +1,7 @@
 package com.example.ui.screens.home
 
+import com.example.ui.components.ThingsDropdownMenu
+import com.example.ui.components.ThingsMenuItem
 import com.example.ui.theme.ThingsTheme
 import android.Manifest
 import android.content.pm.PackageManager
@@ -1164,25 +1166,19 @@ fun ThingsHomeScreen(viewModel: ThingsViewModel = hiltViewModel()) {
                         }
                         Text(activeAreaName, color = textPrimaryColor)
                         
-                        DropdownMenu(
+                        ThingsDropdownMenu(
                             expanded = showAreaDropdownInNewProject,
                             onDismissRequest = { showAreaDropdownInNewProject = false }
                         ) {
-                            DropdownMenuItem(
-                                text = { Text("Без области", color = textPrimaryColor) },
-                                onClick = {
-                                    selectedAreaIdForNewProject = null
-                                    showAreaDropdownInNewProject = false
-                                }
-                            )
+                            ThingsMenuItem("Без области", Icons.Default.Block, onClick = {
+                                selectedAreaIdForNewProject = null
+                                showAreaDropdownInNewProject = false
+                            })
                             areas.forEach { area ->
-                                DropdownMenuItem(
-                                    text = { Text(area.title, color = textPrimaryColor) },
-                                    onClick = {
-                                        selectedAreaIdForNewProject = area.id
-                                        showAreaDropdownInNewProject = false
-                                    }
-                                )
+                                ThingsMenuItem(area.title, AppIcons.Area, onClick = {
+                                    selectedAreaIdForNewProject = area.id
+                                    showAreaDropdownInNewProject = false
+                                })
                             }
                         }
                     }

@@ -1,5 +1,7 @@
 package com.example.ui.screens.home.subcomponents
 
+import com.example.ui.components.ThingsDropdownMenu
+import com.example.ui.components.ThingsMenuItem
 import com.example.ui.theme.ThingsTheme
 import android.view.HapticFeedbackConstants
 import androidx.compose.animation.AnimatedVisibility
@@ -135,95 +137,35 @@ fun BatchActionToolbar(
                         }
                     )
 
-                    DropdownMenu(
+                    ThingsDropdownMenu(
                         expanded = isMoreMenuExpanded,
-                        onDismissRequest = { isMoreMenuExpanded = false },
-                        modifier = Modifier.background(ThingsTheme.colors.overlaySurface)
+                        onDismissRequest = { isMoreMenuExpanded = false }
                     ) {
-                        DropdownMenuItem(
-                            text = { Text(stringResource(R.string.batch_action_complete), color = ThingsTheme.colors.overlayContent, style = ThingsTheme.type.menuItem) },
-                            leadingIcon = {
-                                Icon(
-                                    imageVector = Icons.Outlined.CheckCircleOutline,
-                                    contentDescription = null,
-                                    tint = ThingsTheme.colors.overlayContent,
-                                    modifier = Modifier.size(20.dp)
-                                )
-                            },
-                            onClick = {
-                                view.performHapticFeedback(HapticFeedbackConstants.CLOCK_TICK)
-                                isMoreMenuExpanded = false
-                                onCompleteClick()
-                            }
-                        )
-
-                        DropdownMenuItem(
-                            text = { Text(stringResource(R.string.batch_action_set_tags), color = ThingsTheme.colors.overlayContent, style = ThingsTheme.type.menuItem) },
-                            leadingIcon = {
-                                Icon(
-                                    imageVector = AppIcons.Tag,
-                                    contentDescription = null,
-                                    tint = ThingsTheme.colors.overlayContent,
-                                    modifier = Modifier.size(20.dp)
-                                )
-                            },
-                            onClick = {
-                                view.performHapticFeedback(HapticFeedbackConstants.CLOCK_TICK)
-                                isMoreMenuExpanded = false
-                                onSetTagsClick()
-                            }
-                        )
-
-                        DropdownMenuItem(
-                            text = { Text(stringResource(R.string.batch_action_set_deadline), color = ThingsTheme.colors.overlayContent, style = ThingsTheme.type.menuItem) },
-                            leadingIcon = {
-                                Icon(
-                                    imageVector = AppIcons.Deadline,
-                                    contentDescription = null,
-                                    tint = ThingsTheme.colors.overlayContent,
-                                    modifier = Modifier.size(20.dp)
-                                )
-                            },
-                            onClick = {
-                                view.performHapticFeedback(HapticFeedbackConstants.CLOCK_TICK)
-                                isMoreMenuExpanded = false
-                                onSetDeadlineClick()
-                            }
-                        )
-
-                        DropdownMenuItem(
-                            text = { Text(stringResource(R.string.batch_action_duplicate), color = ThingsTheme.colors.overlayContent, style = ThingsTheme.type.menuItem) },
-                            leadingIcon = {
-                                Icon(
-                                    imageVector = Icons.Outlined.ContentCopy,
-                                    contentDescription = null,
-                                    tint = ThingsTheme.colors.overlayContent,
-                                    modifier = Modifier.size(20.dp)
-                                )
-                            },
-                            onClick = {
-                                view.performHapticFeedback(HapticFeedbackConstants.CLOCK_TICK)
-                                isMoreMenuExpanded = false
-                                onDuplicateClick()
-                            }
-                        )
-
-                        DropdownMenuItem(
-                            text = { Text(stringResource(R.string.batch_action_share), color = ThingsTheme.colors.overlayContent, style = ThingsTheme.type.menuItem) },
-                            leadingIcon = {
-                                Icon(
-                                    imageVector = Icons.Outlined.Share,
-                                    contentDescription = null,
-                                    tint = ThingsTheme.colors.overlayContent,
-                                    modifier = Modifier.size(20.dp)
-                                )
-                            },
-                            onClick = {
-                                view.performHapticFeedback(HapticFeedbackConstants.CLOCK_TICK)
-                                isMoreMenuExpanded = false
-                                onShareClick()
-                            }
-                        )
+                        ThingsMenuItem(stringResource(R.string.batch_action_complete), Icons.Outlined.CheckCircleOutline, onClick = {
+                            view.performHapticFeedback(HapticFeedbackConstants.CLOCK_TICK)
+                            isMoreMenuExpanded = false
+                            onCompleteClick()
+                        })
+                        ThingsMenuItem(stringResource(R.string.batch_action_set_tags), AppIcons.Tag, onClick = {
+                            view.performHapticFeedback(HapticFeedbackConstants.CLOCK_TICK)
+                            isMoreMenuExpanded = false
+                            onSetTagsClick()
+                        })
+                        ThingsMenuItem(stringResource(R.string.batch_action_set_deadline), AppIcons.Deadline, onClick = {
+                            view.performHapticFeedback(HapticFeedbackConstants.CLOCK_TICK)
+                            isMoreMenuExpanded = false
+                            onSetDeadlineClick()
+                        })
+                        ThingsMenuItem(stringResource(R.string.batch_action_duplicate), Icons.Outlined.ContentCopy, onClick = {
+                            view.performHapticFeedback(HapticFeedbackConstants.CLOCK_TICK)
+                            isMoreMenuExpanded = false
+                            onDuplicateClick()
+                        })
+                        ThingsMenuItem(stringResource(R.string.batch_action_share), Icons.Outlined.Share, onClick = {
+                            view.performHapticFeedback(HapticFeedbackConstants.CLOCK_TICK)
+                            isMoreMenuExpanded = false
+                            onShareClick()
+                        })
                     }
                 }
             }

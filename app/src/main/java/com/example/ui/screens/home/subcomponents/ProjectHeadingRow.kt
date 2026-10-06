@@ -1,5 +1,10 @@
 package com.example.ui.screens.home.subcomponents
 
+import androidx.compose.material.icons.filled.Edit
+import androidx.compose.material.icons.filled.Archive
+import androidx.compose.material.icons.filled.Delete
+import com.example.ui.components.ThingsDropdownMenu
+import com.example.ui.components.ThingsMenuItem
 import com.example.ui.theme.ThingsTheme
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
@@ -16,8 +21,6 @@ import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.MoreHoriz
-import androidx.compose.material3.DropdownMenu
-import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.Icon
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -103,23 +106,13 @@ fun ProjectHeadingRow(
                             indication = null
                         ) { showMenu = true }
                 )
-                DropdownMenu(
+                ThingsDropdownMenu(
                     expanded = showMenu,
-                    onDismissRequest = { showMenu = false },
-                    modifier = Modifier.background(ThingsTheme.colors.overlaySurface)
+                    onDismissRequest = { showMenu = false }
                 ) {
-                    DropdownMenuItem(
-                        text = { Text("Rename", color = ThingsTheme.colors.overlayContent, style = ThingsTheme.type.menuItem) },
-                        onClick = { showMenu = false; onStartEditing() }
-                    )
-                    DropdownMenuItem(
-                        text = { Text("Archive", color = ThingsTheme.colors.overlayContent, style = ThingsTheme.type.menuItem) },
-                        onClick = { showMenu = false; onArchive() }
-                    )
-                    DropdownMenuItem(
-                        text = { Text("Delete", color = ThingsTheme.colors.danger, style = ThingsTheme.type.menuItem) },
-                        onClick = { showMenu = false; onDelete() }
-                    )
+                    ThingsMenuItem("Rename", Icons.Default.Edit, onClick = { showMenu = false; onStartEditing() })
+                    ThingsMenuItem("Archive", Icons.Default.Archive, onClick = { showMenu = false; onArchive() })
+                    ThingsMenuItem("Delete", Icons.Default.Delete, destructive = true, onClick = { showMenu = false; onDelete() })
                 }
             }
         }

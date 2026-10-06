@@ -1,5 +1,7 @@
 package com.example.ui.screens.home.subcomponents
 
+import com.example.ui.components.ThingsDropdownMenu
+import com.example.ui.components.ThingsMenuItem
 import com.example.ui.theme.ThingsTheme
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
@@ -290,45 +292,18 @@ fun MainCategoryHeader(
                                 modifier = Modifier.size((headerTitleFontSize.value * 0.88f).dp)
                             )
 
-                            DropdownMenu(
+                            ThingsDropdownMenu(
                                 expanded = showOptionsMenu,
-                                onDismissRequest = { showOptionsMenu = false },
-                                modifier = Modifier.background(ThingsTheme.colors.overlaySurface)
+                                onDismissRequest = { showOptionsMenu = false }
                             ) {
-                                DropdownMenuItem(
-                                    text = {
-                                        Text(
-                                            text = "Add Heading",
-                                            color = ThingsTheme.colors.overlayContent,
-                                            style = ThingsTheme.type.menuItem
-                                        )
-                                    },
-                                    onClick = {
-                                        showOptionsMenu = false
-                                        onAddHeading()
-                                    }
-                                )
-                                DropdownMenuItem(
-                                    leadingIcon = {
-                                        Icon(
-                                            imageVector = Icons.Default.Delete,
-                                            contentDescription = "Delete",
-                                            tint = ThingsTheme.colors.danger,
-                                            modifier = Modifier.size(24.dp)
-                                        )
-                                    },
-                                    text = {
-                                        Text(
-                                            text = "Delete Project",
-                                            color = ThingsTheme.colors.danger,
-                                            style = ThingsTheme.type.menuItem
-                                        )
-                                    },
-                                    onClick = {
-                                        showOptionsMenu = false
-                                        showDeleteConfirmDialog = true
-                                    }
-                                )
+                                ThingsMenuItem("Add Heading", Icons.Default.Add, onClick = {
+                                    showOptionsMenu = false
+                                    onAddHeading()
+                                })
+                                ThingsMenuItem("Delete Project", Icons.Default.Delete, destructive = true, onClick = {
+                                    showOptionsMenu = false
+                                    showDeleteConfirmDialog = true
+                                })
                             }
                         }
                     }
@@ -394,32 +369,14 @@ fun MainCategoryHeader(
                                 modifier = Modifier.size((headerTitleFontSize.value * 0.88f).dp)
                             )
 
-                            DropdownMenu(
+                            ThingsDropdownMenu(
                                 expanded = showAreaOptionsMenu,
-                                onDismissRequest = { showAreaOptionsMenu = false },
-                                modifier = Modifier.background(ThingsTheme.colors.overlaySurface)
+                                onDismissRequest = { showAreaOptionsMenu = false }
                             ) {
-                                DropdownMenuItem(
-                                    leadingIcon = {
-                                        Icon(
-                                            imageVector = Icons.Default.Delete,
-                                            contentDescription = "Delete",
-                                            tint = ThingsTheme.colors.danger,
-                                            modifier = Modifier.size(24.dp)
-                                        )
-                                    },
-                                    text = {
-                                        Text(
-                                            text = "Delete Area",
-                                            color = ThingsTheme.colors.danger,
-                                            style = ThingsTheme.type.menuItem
-                                        )
-                                    },
-                                    onClick = {
-                                        showAreaOptionsMenu = false
-                                        showAreaDeleteConfirmDialog = true
-                                    }
-                                )
+                                ThingsMenuItem("Delete Area", Icons.Default.Delete, destructive = true, onClick = {
+                                    showAreaOptionsMenu = false
+                                    showAreaDeleteConfirmDialog = true
+                                })
                             }
                         }
                     }
