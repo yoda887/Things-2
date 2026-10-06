@@ -3,7 +3,7 @@
 Капсула тега в раскрытом редакторе и в окне быстрого добавления.
 
 ## Размеры
-- Фон `tag-chip-bg`, текст `tag-chip-text` 12 sp Medium (`caption`), радиус `radius-chip` (10 dp), поля 10 dp по бокам и 4 dp сверху и снизу.
+- Фон `tag-chip-bg`, текст `tag-chip-text` 14 sp Medium (`tagChip`), радиус `radius-chip` (10 dp), поля 10 dp по бокам и 4 dp сверху и снизу.
 - Чипы идут в строку с переносом: 8 dp между ними, 6 dp между строками; строка чипов начинается с 24 dp (`space-editor-indicators-start`).
 
 ## Правила

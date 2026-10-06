@@ -279,6 +279,8 @@ data class ThingsTypography(
     val topAppBarTitle: TextStyle,
     /** Мелкие метки и бейджи */
     val caption: TextStyle,
+    /** Чип тега в редакторе задачи и окне быстрого добавления (14 sp Medium) */
+    val tagChip: TextStyle,
     /** Текст бейджа даты */
     val badge: TextStyle,
     /** Мелкий пояснительный текст (13 sp) */
@@ -319,6 +321,7 @@ internal fun thingsTypography(scale: Float = 1f) = ThingsTypography(
     sectionHeader = TextStyle(fontFamily = FontFamily.Default, fontWeight = FontWeight.Medium, fontSize = (19 * scale).sp),
     topAppBarTitle = TextStyle(fontFamily = FontFamily.Default, fontWeight = FontWeight.SemiBold, fontSize = (20 * scale).sp),
     caption = TextStyle(fontFamily = FontFamily.Default, fontWeight = FontWeight.Medium, fontSize = (12 * scale).sp),
+    tagChip = TextStyle(fontFamily = FontFamily.Default, fontWeight = FontWeight.Medium, fontSize = (14 * scale).sp),
     badge = TextStyle(fontFamily = FontFamily.Default, fontWeight = FontWeight.Medium, fontSize = (11 * scale).sp),
     bodySmall = TextStyle(fontFamily = FontFamily.Default, fontWeight = FontWeight.Normal, fontSize = (13 * scale).sp),
     bodyMedium = TextStyle(fontFamily = FontFamily.Default, fontWeight = FontWeight.Normal, fontSize = (14 * scale).sp),

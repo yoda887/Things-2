@@ -148,6 +148,7 @@ object DesignSystemDocGenerator {
         TypeToken("bodyMedium", { it.bodyMedium }, "Вспомогательный текст, описание проекта, теги.", "Description text"),
         TypeToken("bodySmall", { it.bodySmall }, "Мелкий пояснительный текст, вторичные счётчики.", "Secondary small text"),
         TypeToken("caption", { it.caption }, "Мелкие метки, бейджи, подписи.", "14:00"),
+        TypeToken("tagChip", { it.tagChip }, "Название тега в чипе редактора задачи и окна быстрого добавления.", "Things"),
         TypeToken("badge", { it.badge }, "Компактные бейджи даты и приоритета в строке задачи.", "TODAY"),
         TypeToken("listTitle", { it.listTitle }, "Название в строке главного экрана: раздел, проект, область.", "Things 2"),
         TypeToken("heroEmoji", { it.heroEmoji }, "Эмодзи перед крупным названием проекта или области.", "🎯"),

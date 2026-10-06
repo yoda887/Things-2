@@ -467,7 +467,7 @@ fun ThingsTaskInlineEditor(
                                 ) {
                                     Text(
                                         text = tag,
-                                        style = ThingsTheme.type.caption.copy(
+                                        style = ThingsTheme.type.tagChip.copy(
                                             color = ThingsTheme.colors.tagChipText
                                         )
                                     )
