@@ -5,6 +5,7 @@ import androidx.compose.ui.graphics.SolidColor
 import androidx.compose.ui.graphics.StrokeJoin
 import androidx.compose.ui.graphics.StrokeCap
 import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.graphics.vector.group
 import androidx.compose.ui.graphics.vector.path
 import androidx.compose.ui.unit.dp
 import androidx.compose.material.icons.Icons
@@ -449,6 +450,9 @@ object AppIcons {
         }.build()
     }
 
+    // Масштаб бирки в сетке 24 × 24 (общий для Tag и TagFilled)
+    private const val TAG_SCALE = 1.1f
+
     // Кастомная контурная иконка тега в каноничном стиле Things 3 (бирка с отверстием)
     val Tag: ImageVector by lazy(LazyThreadSafetyMode.NONE) {
         ImageVector.Builder(
@@ -458,32 +462,35 @@ object AppIcons {
             viewportWidth = 24f,
             viewportHeight = 24f
         ).apply {
-            // Контур бирки: канонический срез под 45° и параллельные грани со 100% симметрией
-            path(
-                stroke = SolidColor(Color.White),
-                strokeLineWidth = 1.8f,
-                strokeLineCap = StrokeCap.Round,
-                strokeLineJoin = StrokeJoin.Round
-            ) {
-                moveTo(12.0f, 3.0f)
-                horizontalLineTo(5.5f)
-                curveTo(4.1f, 3.0f, 3.0f, 4.1f, 3.0f, 5.5f)
-                verticalLineTo(12.0f)
-                lineTo(11.5f, 20.5f)
-                curveTo(12.3f, 21.3f, 13.3f, 21.3f, 14.3f, 20.5f)
-                lineTo(20.5f, 14.3f)
-                curveTo(21.3f, 13.3f, 21.3f, 12.3f, 20.5f, 11.5f)
-                lineTo(12.0f, 3.0f)
-                close()
-            }
-            // Отверстие (люверс) - сплошная залитая точка по канону Things 3
-            path(
-                fill = SolidColor(Color.White)
-            ) {
-                moveTo(7.5f, 6.0f)
-                arcTo(1.5f, 1.5f, 0f, isMoreThanHalf = true, isPositiveArc = true, 7.5f, 9.0f)
-                arcTo(1.5f, 1.5f, 0f, isMoreThanHalf = true, isPositiveArc = true, 7.5f, 6.0f)
-                close()
+            // Бирка увеличена на 10 % от центра сетки: на 24 dp она занимала только 18 dp
+            group(name = "scaled", scaleX = TAG_SCALE, scaleY = TAG_SCALE, pivotX = 12f, pivotY = 12f) {
+                // Контур бирки: канонический срез под 45° и параллельные грани со 100% симметрией
+                path(
+                    stroke = SolidColor(Color.White),
+                    strokeLineWidth = 1.8f / TAG_SCALE,
+                    strokeLineCap = StrokeCap.Round,
+                    strokeLineJoin = StrokeJoin.Round
+                ) {
+                    moveTo(12.0f, 3.0f)
+                    horizontalLineTo(5.5f)
+                    curveTo(4.1f, 3.0f, 3.0f, 4.1f, 3.0f, 5.5f)
+                    verticalLineTo(12.0f)
+                    lineTo(11.5f, 20.5f)
+                    curveTo(12.3f, 21.3f, 13.3f, 21.3f, 14.3f, 20.5f)
+                    lineTo(20.5f, 14.3f)
+                    curveTo(21.3f, 13.3f, 21.3f, 12.3f, 20.5f, 11.5f)
+                    lineTo(12.0f, 3.0f)
+                    close()
+                }
+                // Отверстие (люверс) - сплошная залитая точка по канону Things 3
+                path(
+                    fill = SolidColor(Color.White)
+                ) {
+                    moveTo(7.5f, 6.0f)
+                    arcTo(1.5f, 1.5f, 0f, isMoreThanHalf = true, isPositiveArc = true, 7.5f, 9.0f)
+                    arcTo(1.5f, 1.5f, 0f, isMoreThanHalf = true, isPositiveArc = true, 7.5f, 6.0f)
+                    close()
+                }
             }
         }.build()
     }
@@ -497,27 +504,30 @@ object AppIcons {
             viewportWidth = 24f,
             viewportHeight = 24f
         ).apply {
-            // Тело бирки со 100% симметрией и вырезанным отверстием (EvenOdd)
-            path(
-                fill = SolidColor(Color.White),
-                pathFillType = androidx.compose.ui.graphics.PathFillType.EvenOdd
-            ) {
-                moveTo(12.0f, 3.0f)
-                horizontalLineTo(5.5f)
-                curveTo(4.1f, 3.0f, 3.0f, 4.1f, 3.0f, 5.5f)
-                verticalLineTo(12.0f)
-                lineTo(11.5f, 20.5f)
-                curveTo(12.3f, 21.3f, 13.3f, 21.3f, 14.3f, 20.5f)
-                lineTo(20.5f, 14.3f)
-                curveTo(21.3f, 13.3f, 21.3f, 12.3f, 20.5f, 11.5f)
-                lineTo(12.0f, 3.0f)
-                close()
+            // Бирка увеличена на 10 % от центра сетки: на 24 dp она занимала только 18 dp
+            group(name = "scaled", scaleX = TAG_SCALE, scaleY = TAG_SCALE, pivotX = 12f, pivotY = 12f) {
+                // Тело бирки со 100% симметрией и вырезанным отверстием (EvenOdd)
+                path(
+                    fill = SolidColor(Color.White),
+                    pathFillType = androidx.compose.ui.graphics.PathFillType.EvenOdd
+                ) {
+                    moveTo(12.0f, 3.0f)
+                    horizontalLineTo(5.5f)
+                    curveTo(4.1f, 3.0f, 3.0f, 4.1f, 3.0f, 5.5f)
+                    verticalLineTo(12.0f)
+                    lineTo(11.5f, 20.5f)
+                    curveTo(12.3f, 21.3f, 13.3f, 21.3f, 14.3f, 20.5f)
+                    lineTo(20.5f, 14.3f)
+                    curveTo(21.3f, 13.3f, 21.3f, 12.3f, 20.5f, 11.5f)
+                    lineTo(12.0f, 3.0f)
+                    close()
 
-                // Вырезанное отверстие
-                moveTo(7.5f, 5.9f)
-                arcTo(1.6f, 1.6f, 0f, isMoreThanHalf = true, isPositiveArc = true, 7.5f, 9.1f)
-                arcTo(1.6f, 1.6f, 0f, isMoreThanHalf = true, isPositiveArc = true, 7.5f, 5.9f)
-                close()
+                    // Вырезанное отверстие
+                    moveTo(7.5f, 5.9f)
+                    arcTo(1.6f, 1.6f, 0f, isMoreThanHalf = true, isPositiveArc = true, 7.5f, 9.1f)
+                    arcTo(1.6f, 1.6f, 0f, isMoreThanHalf = true, isPositiveArc = true, 7.5f, 5.9f)
+                    close()
+                }
             }
         }.build()
     }

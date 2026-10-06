@@ -612,7 +612,7 @@ fun QuickAddDialog(
                                         contentDescription = "Tags",
                                         tint = iconInactiveColor,
                                         modifier = Modifier
-                                            .size(22.dp)
+                                            .size(20.dp)
                                             .clickable { showTagDialog = true }
                                     )
                                 }

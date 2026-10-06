@@ -142,7 +142,7 @@ fun InlineEditorToolbar(
                     contentDescription = "Tags",
                     tint = iconInactiveColor,
                     modifier = Modifier
-                        .size(22.dp)
+                        .size(20.dp)
                         .clickable {
                             view.performHapticFeedback(HapticFeedbackConstants.CLOCK_TICK)
                             onShowTagHelperChange(true)
