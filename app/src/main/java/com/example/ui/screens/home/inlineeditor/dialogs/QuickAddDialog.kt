@@ -272,7 +272,7 @@ fun QuickAddDialog(
                     Column(
                         modifier = Modifier
                             .fillMaxWidth()
-                            .padding(start = 28.dp, end = 20.dp, top = 26.dp, bottom = 18.dp)
+                            .padding(start = 20.dp, end = 16.dp, top = 26.dp, bottom = 18.dp)
                     ) {
                         // 1. Верхний ряд: Чекбокс + Заголовок (Title)
                         Row(
