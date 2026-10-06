@@ -534,16 +534,24 @@ fun ThingsSearchOverlay(
                     .wrapContentHeight()
             ) {
                 // Верхний заголовок со строкой поиска и кнопкой закрытия
+                // Из поля стартового экрана шапка раскладывается в текущую ширину карточки на экране
+                // и не сжимается вместе с ней: иначе лупа и «Quick Find» в первом кадре сдвигаются влево
+                val headerCounterScale = morphFromWideField && !isMorphClosing && dst != null && dst.width > 0f
+                val headerWidthModifier = if (headerCounterScale) {
+                    Modifier.width(with(density) { (dst!!.width * layerScaleX).toDp() })
+                } else {
+                    Modifier.fillMaxWidth()
+                }
                 Column(
-                    modifier = Modifier
-                        .fillMaxWidth()
+                    modifier = headerWidthModifier
                         .onSizeChanged { headerHeightPx = it.height }
                         .graphicsLayer {
                             if (morphFromWideField) {
-                                // Шапка не сжимается вместе с карточкой: обратный масштаб по вертикали.
+                                // Шапка не сжимается вместе с карточкой: обратный масштаб.
                                 // Верхний отступ до поля нарастает от 0, чтобы поле стартовало ровно
                                 // на месте капсулы; сдвиг задан в координатах сжатой карточки
                                 transformOrigin = TransformOrigin(pivotFractionX = 0f, pivotFractionY = 0f)
+                                if (headerCounterScale) scaleX = 1f / layerScaleX
                                 scaleY = 1f / layerScaleY
                                 translationY = -headerTopPaddingPx * (1f - fieldMorph) / layerScaleY
                             }
