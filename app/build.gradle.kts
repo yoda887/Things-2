@@ -52,6 +52,12 @@ android {
     }
 }
 
+
+// Схема базы Room по версиям — основа для миграций; файлы хранятся в репозитории
+ksp {
+    arg("room.schemaLocation", "$projectDir/schemas")
+}
+
 dependencies {
     implementation(libs.androidx.core.ktx)
     implementation(libs.androidx.lifecycle.runtime.ktx)
