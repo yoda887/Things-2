@@ -1,5 +1,6 @@
 package com.example.ui.components.dragdrop
 
+import com.example.ui.theme.ThingsMotion
 import android.view.HapticFeedbackConstants
 import androidx.compose.animation.core.Animatable
 import androidx.compose.animation.core.tween
@@ -182,7 +183,7 @@ class GenericDragDropState(
             launch {
                 animY.animateTo(
                     targetValue = 0f,
-                    animationSpec = tween(durationMillis = 200)
+                    animationSpec = tween(durationMillis = ThingsMotion.BASE)
                 ) {
                     dragAccumulatedY = this.value
                 }
@@ -190,7 +191,7 @@ class GenericDragDropState(
             launch {
                 animX.animateTo(
                     targetValue = 0f,
-                    animationSpec = tween(durationMillis = 200)
+                    animationSpec = tween(durationMillis = ThingsMotion.BASE)
                 ) {
                     dragAccumulatedX = this.value
                 }

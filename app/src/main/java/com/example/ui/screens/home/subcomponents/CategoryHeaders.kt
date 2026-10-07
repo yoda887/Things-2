@@ -1,5 +1,9 @@
 package com.example.ui.screens.home.subcomponents
 
+import com.example.R
+import androidx.compose.ui.res.pluralStringResource
+import androidx.compose.ui.res.stringResource
+import com.example.ui.components.ThingsConfirmDialog
 import com.example.ui.components.ThingsDropdownMenu
 import com.example.ui.components.ThingsMenuItem
 import com.example.ui.theme.ThingsTheme
@@ -37,6 +41,8 @@ import com.example.ui.screens.home.components.TaskListKeys
 import com.example.ui.screens.home.ActiveScreen
 import com.example.ui.theme.*
 
+private const val OPTIONS_ICON_ALPHA = 0.45f
+
 /**
  * Компонент основного заголовка категории (Inbox, Today, Upcoming и т.д.).
  */
@@ -65,64 +71,34 @@ fun MainCategoryHeader(
 
     if (showDeleteConfirmDialog && project != null) {
         val taskCountInProj = tasks.count { it.item.projectId == project.id }
-        AlertDialog(
-            onDismissRequest = { showDeleteConfirmDialog = false },
-            title = { Text("Удалить проект?", fontWeight = FontWeight.Bold, color = textPrimaryColor) },
-            text = {
-                Text(
-                    if (taskCountInProj > 0) {
-                        "Вы действительно хотите удалить проект \"${project.name}\"? Проект удалится вместе с $taskCountInProj задачами."
-                    } else {
-                        "Вы действительно хотите удалить проект \"${project.name}\"?"
-                    },
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    style = ThingsTheme.type.bodyMedium
-                )
+        ThingsConfirmDialog(
+            title = stringResource(R.string.delete_project_title),
+            message = if (taskCountInProj > 0) {
+                pluralStringResource(R.plurals.delete_project_message_tasks, taskCountInProj, project.name, taskCountInProj)
+            } else {
+                stringResource(R.string.delete_project_message, project.name)
             },
-            confirmButton = {
-                TextButton(
-                    onClick = {
-                        showDeleteConfirmDialog = false
-                        onDeleteProject(project)
-                    }
-                ) {
-                    Text("Удалить", color = ThingsTheme.colors.danger, fontWeight = FontWeight.Bold)
-                }
+            confirmText = stringResource(R.string.delete),
+            dismissText = stringResource(R.string.cancel),
+            onConfirm = {
+                showDeleteConfirmDialog = false
+                onDeleteProject(project)
             },
-            dismissButton = {
-                TextButton(onClick = { showDeleteConfirmDialog = false }) {
-                    Text("Отмена", color = textPrimaryColor)
-                }
-            }
+            onDismiss = { showDeleteConfirmDialog = false }
         )
     }
 
     if (showAreaDeleteConfirmDialog && area != null) {
-        AlertDialog(
-            onDismissRequest = { showAreaDeleteConfirmDialog = false },
-            title = { Text("Удалить область?", fontWeight = FontWeight.Bold, color = textPrimaryColor) },
-            text = {
-                Text(
-                    "Вы действительно хотите удалить область \"${area.title}\"?",
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    style = ThingsTheme.type.bodyMedium
-                )
+        ThingsConfirmDialog(
+            title = stringResource(R.string.delete_area_title),
+            message = stringResource(R.string.delete_area_message, area.title),
+            confirmText = stringResource(R.string.delete),
+            dismissText = stringResource(R.string.cancel),
+            onConfirm = {
+                showAreaDeleteConfirmDialog = false
+                onDeleteArea(area)
             },
-            confirmButton = {
-                TextButton(
-                    onClick = {
-                        showAreaDeleteConfirmDialog = false
-                        onDeleteArea(area)
-                    }
-                ) {
-                    Text("Удалить", color = ThingsTheme.colors.danger, fontWeight = FontWeight.Bold)
-                }
-            },
-            dismissButton = {
-                TextButton(onClick = { showAreaDeleteConfirmDialog = false }) {
-                    Text("Отмена", color = textPrimaryColor)
-                }
-            }
+            onDismiss = { showAreaDeleteConfirmDialog = false }
         )
     }
 
@@ -257,7 +233,7 @@ fun MainCategoryHeader(
                 )
                 Spacer(modifier = Modifier.width(12.dp))
 
-                val projectNameText = project?.name ?: "Project"
+                val projectNameText = project?.name ?: stringResource(R.string.fallback_project)
                 val projectTitleAnnotated = remember(projectNameText) {
                     buildAnnotatedString {
                         append(projectNameText)
@@ -287,8 +263,8 @@ fun MainCategoryHeader(
                         ) {
                             Icon(
                                 imageVector = Icons.Default.MoreHoriz,
-                                contentDescription = "Project Options",
-                                tint = textPrimaryColor.copy(alpha = 0.45f),
+                                contentDescription = stringResource(R.string.cd_project_options),
+                                tint = textPrimaryColor.copy(alpha = OPTIONS_ICON_ALPHA),
                                 modifier = Modifier.size((headerTitleFontSize.value * 0.88f).dp)
                             )
 
@@ -296,11 +272,11 @@ fun MainCategoryHeader(
                                 expanded = showOptionsMenu,
                                 onDismissRequest = { showOptionsMenu = false }
                             ) {
-                                ThingsMenuItem("Add Heading", Icons.Default.Add, onClick = {
+                                ThingsMenuItem(stringResource(R.string.ui_add_heading), Icons.Default.Add, onClick = {
                                     showOptionsMenu = false
                                     onAddHeading()
                                 })
-                                ThingsMenuItem("Delete Project", Icons.Default.Delete, destructive = true, onClick = {
+                                ThingsMenuItem(stringResource(R.string.ui_delete_project), Icons.Default.Delete, destructive = true, onClick = {
                                     showOptionsMenu = false
                                     showDeleteConfirmDialog = true
                                 })
@@ -332,7 +308,7 @@ fun MainCategoryHeader(
                 )
                 Spacer(modifier = Modifier.width(12.dp))
 
-                val areaTitleText = area?.title ?: "Responsibility Area"
+                val areaTitleText = area?.title ?: stringResource(R.string.fallback_area)
                 val areaTitleAnnotated = remember(areaTitleText) {
                     buildAnnotatedString {
                         append(areaTitleText)
@@ -364,8 +340,8 @@ fun MainCategoryHeader(
                         ) {
                             Icon(
                                 imageVector = Icons.Default.MoreHoriz,
-                                contentDescription = "Area Options",
-                                tint = textPrimaryColor.copy(alpha = 0.45f),
+                                contentDescription = stringResource(R.string.cd_area_options),
+                                tint = textPrimaryColor.copy(alpha = OPTIONS_ICON_ALPHA),
                                 modifier = Modifier.size((headerTitleFontSize.value * 0.88f).dp)
                             )
 
@@ -373,7 +349,7 @@ fun MainCategoryHeader(
                                 expanded = showAreaOptionsMenu,
                                 onDismissRequest = { showAreaOptionsMenu = false }
                             ) {
-                                ThingsMenuItem("Delete Area", Icons.Default.Delete, destructive = true, onClick = {
+                                ThingsMenuItem(stringResource(R.string.ui_delete_area), Icons.Default.Delete, destructive = true, onClick = {
                                     showAreaOptionsMenu = false
                                     showAreaDeleteConfirmDialog = true
                                 })
@@ -405,7 +381,7 @@ fun MainCategoryHeader(
                 )
                 Spacer(modifier = Modifier.width(12.dp))
                 Text(
-                    text = tag?.title ?: "Tag",
+                    text = tag?.title ?: stringResource(R.string.fallback_tag),
                     style = TextStyle(
                         fontSize = headerTitleFontSize,
                         fontWeight = FontWeight.Bold,
@@ -423,7 +399,7 @@ fun MainCategoryHeader(
                 )
                 Spacer(modifier = Modifier.width((10 * scaleFactor).dp))
                 Text(
-                    text = "Search",
+                    text = stringResource(R.string.cd_search),
                     style = TextStyle(
                         fontSize = headerTitleFontSize,
                         fontWeight = FontWeight.Bold,
@@ -458,8 +434,8 @@ fun SubCategoryHeader(
                 .padding(top = 22.dp, bottom = 10.dp)
         ) {
             Text(
-                text = "PROJECTS",
-                style = ThingsTheme.type.overline.copy(color = textSecondaryColor.copy(alpha = 0.5f)),
+                text = stringResource(R.string.ui_projects),
+                style = ThingsTheme.type.overline.copy(color = textSecondaryColor.copy(alpha = ThingsAlpha.HALF)),
                 modifier = Modifier.padding(bottom = 6.dp)
             )
             Box(
@@ -477,8 +453,8 @@ fun SubCategoryHeader(
                 .padding(top = 22.dp, bottom = 10.dp)
         ) {
             Text(
-                text = "TASKS",
-                style = ThingsTheme.type.overline.copy(color = textSecondaryColor.copy(alpha = 0.5f)),
+                text = stringResource(R.string.ui_tasks),
+                style = ThingsTheme.type.overline.copy(color = textSecondaryColor.copy(alpha = ThingsAlpha.HALF)),
                 modifier = Modifier.padding(bottom = 6.dp)
             )
             Box(
@@ -584,7 +560,7 @@ fun SubCategoryHeader(
                     if (isLaterItemsHidden) com.example.R.string.area_show_later_items else com.example.R.string.area_hide_later_items
                 ),
                 style = ThingsTheme.type.bodyMedium.copy(
-                    color = textSecondaryColor.copy(alpha = 0.6f)
+                    color = textSecondaryColor.copy(alpha = ThingsAlpha.HINT)
                 ),
                 modifier = Modifier
                     .clickable(
@@ -611,11 +587,11 @@ fun SubCategoryHeader(
                 // Иконка "Вечер" с автоматическим подбором цвета и размера
                 Icon(
                     imageVector = AppIcons.Evening,
-                    contentDescription = "This Evening",
+                    contentDescription = stringResource(R.string.category_this_evening),
                     tint = Color.Unspecified,
                     modifier = Modifier
                         .padding(end = 8.dp)
-                        .size(20.dp)
+                        .size(ThingsIconSize.M)
                 )
                 Text(
                     text = androidx.compose.ui.res.stringResource(com.example.R.string.category_this_evening),
@@ -679,7 +655,7 @@ fun UpcomingDateHeader(
                 text = dayOfWeekLabel,
                 style = ThingsTheme.type.headline.copy(
                     fontWeight = FontWeight.Bold,
-                    color = textSecondaryColor.copy(alpha = 0.5f)
+                    color = textSecondaryColor.copy(alpha = ThingsAlpha.HALF)
                 )
             )
         }

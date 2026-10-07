@@ -1,5 +1,7 @@
 package com.example.ui.screens.home.subcomponents
 
+import com.example.R
+import androidx.compose.ui.res.stringResource
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
@@ -44,7 +46,7 @@ fun TagFilterRow(
                     .padding(horizontal = 10.dp, vertical = 5.dp)
             ) {
                 Text(
-                    text = "All",
+                    text = stringResource(R.string.ui_all),
                     color = if (isAllSelected) ThingsTheme.colors.onAccent else textSecondaryColor,
                     style = ThingsTheme.type.caption.copy(fontWeight = FontWeight.Bold)
                 )

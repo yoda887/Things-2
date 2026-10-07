@@ -1,5 +1,6 @@
 package com.example.ui.components
 
+import com.example.ui.theme.ThingsMotion
 import com.example.ui.theme.ThingsTheme
 import androidx.compose.animation.core.*
 import androidx.compose.foundation.Canvas
@@ -16,6 +17,11 @@ import androidx.compose.ui.graphics.drawscope.scale
 import androidx.compose.ui.graphics.drawscope.translate
 import androidx.compose.ui.graphics.vector.PathParser
 import androidx.compose.ui.unit.dp
+
+// Особые длительности анимации крышки (сверены с Things)
+private const val LID_FILL_OPEN_MS = 195
+private const val LID_STROKE_OPEN_MS = 175
+private const val BODY_LINE_CLOSE_DELAY_MS = 50
 
 private val OvershootEasing = Easing { t ->
     val tension = 2.0f
@@ -37,10 +43,10 @@ fun AreaIconAnimated(
         transitionSpec = {
             if (targetState) {
                 // Закрытие
-                tween(400, easing = OvershootEasing)
+                tween(ThingsMotion.SLOW, easing = OvershootEasing)
             } else {
                 // Открытие[cite: 2]
-                tween(400, easing = FastOutSlowInEasing) 
+                tween(ThingsMotion.SLOW, easing = FastOutSlowInEasing) 
             }
         },
         label = "lidTranslateY"
@@ -50,10 +56,10 @@ fun AreaIconAnimated(
     val lidFillAlpha by transition.animateFloat(
         transitionSpec = {
             if (targetState) {
-                tween(100, easing = LinearEasing)
+                tween(ThingsMotion.FAST, easing = LinearEasing)
             } else {
                 // Открытие: задержка 200мс, длительность 195мс[cite: 2]
-                tween(195, delayMillis = 200, easing = LinearEasing)
+                tween(LID_FILL_OPEN_MS, delayMillis = ThingsMotion.BASE, easing = LinearEasing)
             }
         },
         label = "lidFillAlpha"
@@ -63,10 +69,10 @@ fun AreaIconAnimated(
     val lidStrokeAlpha by transition.animateFloat(
         transitionSpec = {
             if (targetState) {
-                tween(100, easing = LinearEasing)
+                tween(ThingsMotion.FAST, easing = LinearEasing)
             } else {
                 // Открытие: задержка 200мс, длительность 175мс[cite: 2]
-                tween(175, delayMillis = 200, easing = LinearEasing)
+                tween(LID_STROKE_OPEN_MS, delayMillis = ThingsMotion.BASE, easing = LinearEasing)
             }
         },
         label = "lidStrokeAlpha"
@@ -76,9 +82,9 @@ fun AreaIconAnimated(
     val bodyTopLineAlpha by transition.animateFloat(
         transitionSpec = {
             if (targetState) {
-                tween(100, delayMillis = 50, easing = LinearEasing)
+                tween(ThingsMotion.FAST, delayMillis = BODY_LINE_CLOSE_DELAY_MS, easing = LinearEasing)
             } else {
-                tween(100, easing = LinearEasing) // Быстрое появление при открытии
+                tween(ThingsMotion.FAST, easing = LinearEasing) // Быстрое появление при открытии
             }
         },
         label = "bodyTopLineAlpha"
@@ -88,10 +94,10 @@ fun AreaIconAnimated(
     val wallHeight by transition.animateFloat(
         transitionSpec = {
             if (targetState) {
-                tween(250, delayMillis = 150, easing = OvershootEasing)
+                tween(ThingsMotion.MEDIUM, delayMillis = ThingsMotion.QUICK, easing = OvershootEasing)
             } else {
                 // Длительность 300мс из закомментированного блока XML[cite: 2]
-                tween(300, easing = FastOutSlowInEasing)
+                tween(ThingsMotion.STANDARD, easing = FastOutSlowInEasing)
             }
         },
         label = "wallHeight"

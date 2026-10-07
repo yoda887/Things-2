@@ -1,5 +1,7 @@
 package com.example.ui.screens.home.components
 
+import com.example.R
+import androidx.compose.ui.res.stringResource
 import androidx.compose.animation.core.Animatable
 import androidx.compose.animation.core.spring
 import androidx.compose.foundation.lazy.LazyListState
@@ -149,7 +151,8 @@ private const val UPCOMING_MONTHS_HORIZON = 4
  */
 fun computeUpcomingSchedule(
     localTasksList: List<ItemWithChecklist>,
-    calendarEvents: List<Item>
+    calendarEvents: List<Item>,
+    tomorrowLabel: String
 ): UpcomingSchedule {
     val daysList = mutableListOf<UpcomingDay>()
 
@@ -190,7 +193,7 @@ fun computeUpcomingSchedule(
         }
 
         val dayOfWeekLabel = when (offset) {
-            0 -> "Tomorrow"
+            0 -> tomorrowLabel
             else -> weekdayFormat.format(Date(dayStart))
         }
 
@@ -333,9 +336,10 @@ fun computeUpcomingSchedule(
  */
 fun computeUpcomingDays(
     localTasksList: List<ItemWithChecklist>,
-    calendarEvents: List<Item>
+    calendarEvents: List<Item>,
+    tomorrowLabel: String
 ): List<UpcomingDay> {
-    return computeUpcomingSchedule(localTasksList, calendarEvents).days
+    return computeUpcomingSchedule(localTasksList, calendarEvents, tomorrowLabel).days
 }
 
 /**
@@ -346,8 +350,9 @@ fun rememberUpcomingDays(
     localTasksList: List<ItemWithChecklist>,
     calendarEvents: List<Item>
 ): List<UpcomingDay> {
-    return remember(localTasksList, calendarEvents) {
-        computeUpcomingDays(localTasksList, calendarEvents)
+    val tomorrowLabel = stringResource(R.string.tomorrow)
+    return remember(localTasksList, calendarEvents, tomorrowLabel) {
+        computeUpcomingDays(localTasksList, calendarEvents, tomorrowLabel)
     }
 }
 
@@ -359,8 +364,9 @@ fun rememberUpcomingSchedule(
     localTasksList: List<ItemWithChecklist>,
     calendarEvents: List<Item>
 ): UpcomingSchedule {
-    return remember(localTasksList, calendarEvents) {
-        computeUpcomingSchedule(localTasksList, calendarEvents)
+    val tomorrowLabel = stringResource(R.string.tomorrow)
+    return remember(localTasksList, calendarEvents, tomorrowLabel) {
+        computeUpcomingSchedule(localTasksList, calendarEvents, tomorrowLabel)
     }
 }
 
@@ -407,7 +413,9 @@ fun rememberFlattenedList(
     searchQuery: String = "",
     headings: List<Item> = emptyList()
 ): List<Any> {
-    return remember(screen, standardToday, eveningToday, draggedItemKey, upcomingDays, upcomingMonths, projects, area, displayTasks, isLaterItemsHidden, tag, allTasks, areas, savedTags, searchQuery, headings) {
+    val headerTags = stringResource(R.string.tag_dialog_title)
+    val headerLogbook = stringResource(R.string.category_logbook)
+    return remember(screen, standardToday, eveningToday, headerTags, headerLogbook, draggedItemKey, upcomingDays, upcomingMonths, projects, area, displayTasks, isLaterItemsHidden, tag, allTasks, areas, savedTags, searchQuery, headings) {
         buildList<Any> {
             if (screen == ActiveScreen.TODAY) {
                 addAll(standardToday)
@@ -507,7 +515,7 @@ fun rememberFlattenedList(
                     }
                 }
             } else if (screen == ActiveScreen.SEARCH) {
-                addSearchResults(displayTasks, projects, areas, savedTags, searchQuery)
+                addSearchResults(displayTasks, projects, areas, savedTags, searchQuery, headerTags, headerLogbook)
             } else {
                 addAll(displayTasks)
             }
@@ -525,6 +533,9 @@ private fun MutableList<Any>.addSearchResults(
     areas: List<Area>,
     savedTags: List<Tag>,
     searchQuery: String
+,
+    headerTags: String,
+    headerLogbook: String
 ) {
     val q = searchQuery.trim()
     if (q.isEmpty()) return
@@ -544,7 +555,7 @@ private fun MutableList<Any>.addSearchResults(
     addAll(matchedAreas.map { SearchAreaItem(it) })
     val matchedTags = savedTags.filter { it.title.isNotBlank() && it.title.contains(q, ignoreCase = true) }
     if (matchedTags.isNotEmpty()) {
-        add(SearchSectionHeaderItem("search_hdr_tags", "Tags", SearchSectionKind.TAGS))
+        add(SearchSectionHeaderItem("search_hdr_tags", headerTags, SearchSectionKind.TAGS))
         addAll(matchedTags.map { SearchTagItem(it) })
     }
 
@@ -570,7 +581,7 @@ private fun MutableList<Any>.addSearchResults(
     val logbook = matchedTasks.filter { it.item.isDone() }
         .sortedByDescending { it.item.stopDate ?: it.item.modificationDate }
     if (logbook.isNotEmpty()) {
-        add(SearchSectionHeaderItem("search_hdr_logbook", "Logbook", SearchSectionKind.LOGBOOK))
+        add(SearchSectionHeaderItem("search_hdr_logbook", headerLogbook, SearchSectionKind.LOGBOOK))
         addAll(logbook)
     }
 }

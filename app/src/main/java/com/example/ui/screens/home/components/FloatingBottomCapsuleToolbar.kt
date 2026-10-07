@@ -1,5 +1,8 @@
 package com.example.ui.screens.home.components
 
+import com.example.ui.theme.ThingsIconSize
+import com.example.R
+import androidx.compose.ui.res.stringResource
 import com.example.ui.components.ThingsDropdownMenu
 import com.example.ui.components.ThingsMenuItem
 import com.example.ui.theme.ThingsTheme
@@ -101,13 +104,13 @@ fun FloatingBottomCapsuleToolbar(
                 ) {
                     Icon(
                         imageVector = Icons.AutoMirrored.Filled.ArrowForward,
-                        contentDescription = "Move icon",
+                        contentDescription = stringResource(R.string.cd_move_icon),
                         tint = ThingsTheme.colors.overlayContent,
-                        modifier = Modifier.size(22.dp)
+                        modifier = Modifier.size(ThingsIconSize.L)
                     )
                     Spacer(modifier = Modifier.width(6.dp))
                     Text(
-                        text = "Move",
+                        text = stringResource(R.string.batch_action_move),
                         color = ThingsTheme.colors.overlayContent,
                         style = ThingsTheme.type.dialogButton.copy(fontWeight = FontWeight.Bold)
                     )
@@ -126,9 +129,9 @@ fun FloatingBottomCapsuleToolbar(
                 ) {
                     Icon(
                         imageVector = Icons.Default.Delete,
-                        contentDescription = "Delete task",
+                        contentDescription = stringResource(R.string.cd_delete_task),
                         tint = ThingsTheme.colors.overlayContent,
-                        modifier = Modifier.size(24.dp)
+                        modifier = Modifier.size(ThingsIconSize.XL)
                     )
                 }
 
@@ -146,9 +149,9 @@ fun FloatingBottomCapsuleToolbar(
                     ) {
                         Icon(
                             imageVector = Icons.Default.MoreHoriz,
-                            contentDescription = "More options",
+                            contentDescription = stringResource(R.string.cd_more_options),
                             tint = ThingsTheme.colors.overlayContent,
-                            modifier = Modifier.size(24.dp)
+                            modifier = Modifier.size(ThingsIconSize.XL)
                         )
                     }
 
@@ -156,14 +159,14 @@ fun FloatingBottomCapsuleToolbar(
                         expanded = expandedDotsMenu,
                         onDismissRequest = { expandedDotsMenu = false }
                     ) {
-                        ThingsMenuItem("Duplicate", Icons.Default.ContentCopy, onClick = {
+                        ThingsMenuItem(stringResource(R.string.batch_action_duplicate), Icons.Default.ContentCopy, onClick = {
                             view.performHapticFeedback(HapticFeedbackConstants.CLOCK_TICK)
                             onDuplicateClick()
                             expandedDotsMenu = false
                         })
-                        ThingsMenuItem("Repeat", Icons.Default.Refresh, onClick = { expandedDotsMenu = false })
-                        ThingsMenuItem("Convert", Icons.Default.Transform, onClick = { expandedDotsMenu = false })
-                        ThingsMenuItem("Share", Icons.Default.Share, onClick = { expandedDotsMenu = false })
+                        ThingsMenuItem(stringResource(R.string.ui_repeat), Icons.Default.Refresh, onClick = { expandedDotsMenu = false })
+                        ThingsMenuItem(stringResource(R.string.ui_convert), Icons.Default.Transform, onClick = { expandedDotsMenu = false })
+                        ThingsMenuItem(stringResource(R.string.batch_action_share), Icons.Default.Share, onClick = { expandedDotsMenu = false })
                     }
                 }
             }

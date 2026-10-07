@@ -1,5 +1,7 @@
 package com.example.ui.screens.home.components
 
+import com.example.R
+import androidx.compose.ui.res.stringResource
 import com.example.ui.theme.ThingsTheme
 import androidx.activity.compose.BackHandler
 import kotlinx.coroutines.delay
@@ -82,6 +84,12 @@ import com.example.ui.components.ProjectProgressArc
 import com.example.ui.components.HideTextSelectionHandles
 import com.example.ui.components.hideSoftKeyboardNow
 import com.example.ui.theme.*
+
+private const val FOCUS_AFTER_OPEN_DELAY_MS = 110L
+private val CLEAR_BADGE_ICON_SIZE = 11.dp
+private val RESULT_ICON_SIZE = 19.dp
+private const val EMPTY_HINT_ALPHA = 0.8f
+private const val ARC_ACCENT_TINT_ALPHA = 0.45f
 
 // Номинальная длительность раскрытия формы карточки Quick Find (0.22 с)
 private const val MORPH_TRANSFORM_DURATION_MS = 220
@@ -252,11 +260,11 @@ fun ThingsSearchOverlay(
         if (!isMorphMeasured) return@LaunchedEffect
         if (isReduceMotion) {
             transformProgress.snapTo(1f)
-            opacityProgress.animateTo(1f, tween(100))
+            opacityProgress.animateTo(1f, tween(ThingsMotion.FAST))
             focusRequester.requestFocus()
         } else {
             coroutineScope.launch {
-                delay(110)
+                delay(FOCUS_AFTER_OPEN_DELAY_MS)
                 focusRequester.requestFocus()
             }
             coroutineScope.launch {
@@ -295,7 +303,7 @@ fun ThingsSearchOverlay(
                         dismissProgress.animateTo(
                             targetValue = 1f,
                             animationSpec = tween(
-                                durationMillis = 250,
+                                durationMillis = ThingsMotion.MEDIUM,
                                 easing = FastOutSlowInEasing
                             )
                         ) {
@@ -323,7 +331,16 @@ fun ThingsSearchOverlay(
 
 
     // Алгоритм умного поиска (Quick Find)
-    val searchResults = remember(searchQuery, allTasks, projects, areas, allSavedTagObjects) {
+    // Названия смарт-списков на языке системы — по ним же идёт поиск
+    val smartListNames = listOf(
+        ActiveScreen.TODAY to stringResource(R.string.category_today),
+        ActiveScreen.INBOX to stringResource(R.string.category_inbox),
+        ActiveScreen.UPCOMING to stringResource(R.string.category_upcoming),
+        ActiveScreen.ANYTIME to stringResource(R.string.category_anytime),
+        ActiveScreen.SOMEDAY to stringResource(R.string.category_someday),
+        ActiveScreen.LOGBOOK to stringResource(R.string.category_logbook)
+    )
+    val searchResults = remember(searchQuery, allTasks, projects, areas, allSavedTagObjects, smartListNames) {
         if (searchQuery.isBlank()) {
             emptyList<SearchResultItem>()
         } else {
@@ -331,14 +348,7 @@ fun ThingsSearchOverlay(
             val query = searchQuery.trim()
 
             // 1. Поиск по смарт-спискам
-            val smartLists = listOf(
-                Pair("Today", ActiveScreen.TODAY),
-                Pair("Inbox", ActiveScreen.INBOX),
-                Pair("Upcoming", ActiveScreen.UPCOMING),
-                Pair("Anytime", ActiveScreen.ANYTIME),
-                Pair("Someday", ActiveScreen.SOMEDAY),
-                Pair("Logbook", ActiveScreen.LOGBOOK)
-            )
+            val smartLists = smartListNames.map { (screen, name) -> Pair(name, screen) }
             for ((name, screen) in smartLists) {
                 if (name.contains(query, ignoreCase = true)) {
                     results.add(SearchResultItem.SmartListResult(name, screen))
@@ -576,16 +586,16 @@ fun ThingsSearchOverlay(
                             val currentIconTint = textSecondary
                             Icon(
                                 imageVector = Icons.Default.Search,
-                                contentDescription = "Search",
+                                contentDescription = stringResource(R.string.cd_search),
                                 tint = currentIconTint,
-                                modifier = Modifier.size(20.dp)
+                                modifier = Modifier.size(ThingsIconSize.M)
                             )
                             Spacer(modifier = Modifier.width(8.dp))
                             Box(modifier = Modifier.weight(1f)) {
                                 if (searchQuery.isEmpty()) {
-                                    val currentTextTint = textSecondary.copy(alpha = 0.6f)
+                                    val currentTextTint = textSecondary.copy(alpha = ThingsAlpha.HINT)
                                     Text(
-                                        text = "Quick Find",
+                                        text = stringResource(R.string.ui_quick_find),
                                         color = currentTextTint,
                                         style = ThingsTheme.type.bodyLarge
                                     )
@@ -617,14 +627,14 @@ fun ThingsSearchOverlay(
                                     modifier = Modifier
                                         .size(18.dp)
                                         .clip(CircleShape)
-                                        .background(textSecondary.copy(alpha = 0.5f))
+                                        .background(textSecondary.copy(alpha = ThingsAlpha.HALF))
                                         .clickable { onSearchQueryChange("") }
                                 ) {
                                     Icon(
                                         imageVector = Icons.Default.Close,
-                                        contentDescription = "Clear",
+                                        contentDescription = stringResource(R.string.cd_clear),
                                         tint = currentInputBg,
-                                        modifier = Modifier.size(11.dp)
+                                        modifier = Modifier.size(CLEAR_BADGE_ICON_SIZE)
                                     )
                                 }
                             }
@@ -646,9 +656,9 @@ fun ThingsSearchOverlay(
                             ) {
                                 Icon(
                                     imageVector = Icons.Default.Close,
-                                    contentDescription = "Close",
+                                    contentDescription = stringResource(R.string.cd_close),
                                     tint = textPrimary,
-                                    modifier = Modifier.size(20.dp)
+                                    modifier = Modifier.size(ThingsIconSize.M)
                                 )
                             }
                         }
@@ -712,7 +722,7 @@ fun ThingsSearchOverlay(
                         // РЕЖИМ 1: Стартовый экран (без запроса)
                         if (validRecentItems.isNotEmpty()) {
                             Text(
-                                text = "Recent",
+                                text = stringResource(R.string.ui_recent),
                                 color = textSecondary,
                                 style = ThingsTheme.type.subheadMedium,
                                 modifier = Modifier.padding(start = 4.dp, bottom = 6.dp)
@@ -762,8 +772,8 @@ fun ThingsSearchOverlay(
 
                         // Подпись внизу
                         Text(
-                            text = "Quickly switch lists, find to-dos,\nsearch for tags...",
-                            color = textSecondary.copy(alpha = 0.8f),
+                            text = stringResource(R.string.ui_quickly_switch_lists_find_to_dos),
+                            color = textSecondary.copy(alpha = EMPTY_HINT_ALPHA),
                             style = ThingsTheme.type.subhead,
                             fontStyle = FontStyle.Normal,
                             textAlign = TextAlign.Center,
@@ -874,12 +884,12 @@ fun ContinueSearchTaskRow(
                 imageVector = Icons.Default.Search,
                 contentDescription = null,
                 tint = textPrimary,
-                modifier = Modifier.size(22.dp)
+                modifier = Modifier.size(ThingsIconSize.L)
             )
         }
         Spacer(modifier = Modifier.width(MaterialTheme.dimens.searchSpacingToText))
         Text(
-            text = "Continue Search",
+            text = stringResource(R.string.ui_continue_search),
             style = ThingsTheme.type.taskTitle.copy(
                 color = textPrimary,
                 fontWeight = FontWeight.SemiBold
@@ -928,9 +938,9 @@ fun RecentRow(
         if (isChecked) {
             Icon(
                 imageVector = Icons.Default.Check,
-                contentDescription = "Current screen",
+                contentDescription = stringResource(R.string.cd_current_screen),
                 tint = ThingsTheme.colors.accent,
-                modifier = Modifier.size(18.dp)
+                modifier = Modifier.size(ThingsIconSize.S)
             )
         }
     }
@@ -989,7 +999,7 @@ fun SearchResultRow(
             val isSomeday = result.project.isSomeday
             val baseArcColor = if (isSomeday) ThingsTheme.colors.someday else ThingsTheme.colors.project
             val arcColor = if (isHighlighted) androidx.compose.ui.graphics.lerp(baseArcColor, accentColor, 0.45f) else baseArcColor
-            val rowBg = if (isHighlighted) accentColor.copy(alpha = 0.3f) else Color.Transparent
+            val rowBg = if (isHighlighted) accentColor.copy(alpha = ThingsAlpha.LOW) else Color.Transparent
 
             Row(
                 modifier = Modifier
@@ -1026,15 +1036,15 @@ fun SearchResultRow(
                 if (isChecked) {
                     Icon(
                         imageVector = Icons.Default.Check,
-                        contentDescription = "Current screen",
+                        contentDescription = stringResource(R.string.cd_current_screen),
                         tint = accentColor,
-                        modifier = Modifier.size(18.dp)
+                        modifier = Modifier.size(ThingsIconSize.S)
                     )
                 }
             }
         }
         else -> {
-            val rowBg = if (isHighlighted) accentColor.copy(alpha = 0.3f) else Color.Transparent
+            val rowBg = if (isHighlighted) accentColor.copy(alpha = ThingsAlpha.LOW) else Color.Transparent
 
             val title = when (result) {
                 is SearchResultItem.SmartListResult -> result.title
@@ -1073,7 +1083,7 @@ fun SearchResultRow(
                                     .graphicsLayer(compositingStrategy = CompositingStrategy.Offscreen)
                                     .drawWithContent {
                                         drawContent()
-                                        drawRect(accentColor.copy(alpha = 0.45f), blendMode = BlendMode.SrcAtop)
+                                        drawRect(accentColor.copy(alpha = ARC_ACCENT_TINT_ALPHA), blendMode = BlendMode.SrcAtop)
                                     }
                             } else Modifier
                         )
@@ -1093,7 +1103,7 @@ fun SearchResultRow(
                                 imageVector = info.first,
                                 contentDescription = null,
                                 tint = info.second,
-                                modifier = iconModifier.size(19.dp)
+                                modifier = iconModifier.size(RESULT_ICON_SIZE)
                             )
                         }
                         is SearchResultItem.SpecialResult -> {
@@ -1101,7 +1111,7 @@ fun SearchResultRow(
                                 imageVector = result.icon,
                                 contentDescription = null,
                                 tint = result.iconColor,
-                                modifier = iconModifier.size(20.dp)
+                                modifier = iconModifier.size(ThingsIconSize.M)
                             )
                         }
                         is SearchResultItem.AreaResult -> {
@@ -1109,7 +1119,7 @@ fun SearchResultRow(
                                 imageVector = AppIcons.Area,
                                 contentDescription = null,
                                 tint = ThingsTheme.colors.area,
-                                modifier = iconModifier.size(20.dp)
+                                modifier = iconModifier.size(ThingsIconSize.M)
                             )
                         }
                         is SearchResultItem.TagResult -> {
@@ -1117,7 +1127,7 @@ fun SearchResultRow(
                                 imageVector = AppIcons.Tag,
                                 contentDescription = null,
                                 tint = ThingsTheme.colors.someday,
-                                modifier = iconModifier.size(20.dp)
+                                modifier = iconModifier.size(ThingsIconSize.M)
                             )
                         }
                         else -> {}
@@ -1140,9 +1150,9 @@ fun SearchResultRow(
                 if (isChecked) {
                     Icon(
                         imageVector = Icons.Default.Check,
-                        contentDescription = "Current screen",
+                        contentDescription = stringResource(R.string.cd_current_screen),
                         tint = accentColor,
-                        modifier = Modifier.size(18.dp)
+                        modifier = Modifier.size(ThingsIconSize.S)
                     )
                 }
             }

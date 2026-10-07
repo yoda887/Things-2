@@ -1,5 +1,7 @@
 package com.example.ui.screens.home.inlineeditor.components
 
+import com.example.R
+import androidx.compose.ui.res.stringResource
 import com.example.ui.theme.ThingsTheme
 import androidx.compose.animation.*
 import androidx.compose.foundation.background
@@ -22,6 +24,8 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import com.example.ui.theme.*
 
+private val PRIORITY_ICON_SIZE = 14.dp
+
 @Composable
 fun InlinePriorityPanel(
     priority: Int,
@@ -36,10 +40,10 @@ fun InlinePriorityPanel(
     val helperBgColor = ThingsTheme.colors.searchField // panel background
 
     val priorityName = when (priority) {
-        3 -> "High Priority"
-        2 -> "Medium Priority"
-        1 -> "Low Priority"
-        else -> "No Priority"
+        3 -> stringResource(R.string.priority_high)
+        2 -> stringResource(R.string.priority_medium)
+        1 -> stringResource(R.string.priority_low)
+        else -> stringResource(R.string.priority_none)
     }
 
     val priorityColor = when (priority) {
@@ -65,9 +69,9 @@ fun InlinePriorityPanel(
         ) {
             Icon(
                 imageVector = if (priority > 0) Icons.Filled.Flag else AppIcons.Deadline,
-                contentDescription = "Priority",
+                contentDescription = stringResource(R.string.cd_priority),
                 tint = priorityColor,
-                modifier = Modifier.size(16.dp)
+                modifier = Modifier.size(ThingsIconSize.XS)
             )
             Spacer(modifier = Modifier.width(8.dp))
             Text(
@@ -82,7 +86,7 @@ fun InlinePriorityPanel(
                 verticalAlignment = Alignment.CenterVertically
             ) {
                 Text(
-                    text = "No",
+                    text = stringResource(R.string.ui_no),
                     style = ThingsTheme.type.badge.copy(
                         color = if (priority == 0) ThingsTheme.colors.accent else ThingsTheme.colors.someday,
                         fontWeight = FontWeight.Bold
@@ -92,7 +96,7 @@ fun InlinePriorityPanel(
                         .padding(horizontal = 4.dp, vertical = 2.dp)
                 )
                 Text(
-                    text = "Low",
+                    text = stringResource(R.string.ui_low),
                     style = ThingsTheme.type.badge.copy(
                         color = if (priority == 1) ThingsTheme.colors.anytime else ThingsTheme.colors.someday,
                         fontWeight = FontWeight.Bold
@@ -102,7 +106,7 @@ fun InlinePriorityPanel(
                         .padding(horizontal = 4.dp, vertical = 2.dp)
                 )
                 Text(
-                    text = "Med",
+                    text = stringResource(R.string.ui_med),
                     style = ThingsTheme.type.badge.copy(
                         color = if (priority == 2) ThingsTheme.colors.today else ThingsTheme.colors.someday,
                         fontWeight = FontWeight.Bold
@@ -112,7 +116,7 @@ fun InlinePriorityPanel(
                         .padding(horizontal = 4.dp, vertical = 2.dp)
                 )
                 Text(
-                    text = "High",
+                    text = stringResource(R.string.ui_high),
                     style = ThingsTheme.type.badge.copy(
                         color = if (priority == 3) ThingsTheme.colors.upcoming else ThingsTheme.colors.someday,
                         fontWeight = FontWeight.Bold
@@ -125,10 +129,10 @@ fun InlinePriorityPanel(
             Spacer(modifier = Modifier.width(8.dp))
             Icon(
                 imageVector = Icons.Default.Close,
-                contentDescription = "Close Priority",
-                tint = textSecondaryColor.copy(alpha = 0.6f),
+                contentDescription = stringResource(R.string.cd_close_priority),
+                tint = textSecondaryColor.copy(alpha = ThingsAlpha.HINT),
                 modifier = Modifier
-                    .size(14.dp)
+                    .size(PRIORITY_ICON_SIZE)
                     .clickable {
                         onShowPriorityHelperChange(false)
                     }

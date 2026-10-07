@@ -1,5 +1,8 @@
 package com.example.ui.screens.home.subcomponents
 
+import com.example.ui.theme.ThingsAlpha
+import com.example.R
+import androidx.compose.ui.res.stringResource
 import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material.icons.filled.Archive
 import androidx.compose.material.icons.filled.Delete
@@ -45,6 +48,8 @@ import androidx.compose.ui.unit.dp
 import com.example.data.model.Item
 import com.example.ui.components.HideTextSelectionHandles
 import com.example.ui.components.hideSoftKeyboardThen
+
+private val HEADING_OPTIONS_ICON_SIZE = 26.dp
 
 // Тот же размер, что у остальных подзаголовков экранов («Вечер», «Планы», «Когда-нибудь»)
 private val headingTitleStyle: TextStyle
@@ -97,10 +102,10 @@ fun ProjectHeadingRow(
             Box {
                 Icon(
                     imageVector = Icons.Default.MoreHoriz,
-                    contentDescription = "Heading Options",
+                    contentDescription = stringResource(R.string.cd_heading_options),
                     tint = ThingsTheme.colors.project,
                     modifier = Modifier
-                        .size(26.dp)
+                        .size(HEADING_OPTIONS_ICON_SIZE)
                         .clickable(
                             interactionSource = remember { MutableInteractionSource() },
                             indication = null
@@ -110,9 +115,9 @@ fun ProjectHeadingRow(
                     expanded = showMenu,
                     onDismissRequest = { showMenu = false }
                 ) {
-                    ThingsMenuItem("Rename", Icons.Default.Edit, onClick = { showMenu = false; onStartEditing() })
-                    ThingsMenuItem("Archive", Icons.Default.Archive, onClick = { showMenu = false; onArchive() })
-                    ThingsMenuItem("Delete", Icons.Default.Delete, destructive = true, onClick = { showMenu = false; onDelete() })
+                    ThingsMenuItem(stringResource(R.string.ui_rename), Icons.Default.Edit, onClick = { showMenu = false; onStartEditing() })
+                    ThingsMenuItem(stringResource(R.string.ui_archive), Icons.Default.Archive, onClick = { showMenu = false; onArchive() })
+                    ThingsMenuItem(stringResource(R.string.tag_dialog_delete), Icons.Default.Delete, destructive = true, onClick = { showMenu = false; onDelete() })
                 }
             }
         }
@@ -160,7 +165,7 @@ private fun HeadingTitleField(heading: Item, onCommit: (String) -> Unit) {
             decorationBox = { inner ->
                 Box {
                     if (text.isEmpty()) {
-                        Text("New Heading", style = headingTitleStyle.copy(color = ThingsTheme.colors.project.copy(alpha = 0.4f)))
+                        Text(stringResource(R.string.ui_new_heading_2), style = headingTitleStyle.copy(color = ThingsTheme.colors.project.copy(alpha = ThingsAlpha.MUTED)))
                     }
                     inner()
                 }

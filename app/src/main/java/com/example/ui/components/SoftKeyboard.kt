@@ -26,6 +26,9 @@ import androidx.compose.ui.platform.LocalWindowInfo
 import androidx.compose.ui.platform.WindowInfo
 import kotlin.math.roundToInt
 
+// Удержание экрана на время скрытия клавиатуры: анимация в один кадр
+private const val HOLD_FRAME_MS = 1
+
 /**
  * Прячет экранную клавиатуру немедленно — в том же кадре, не дожидаясь очереди команд Compose.
  *
@@ -94,7 +97,7 @@ const val SOFT_KEYBOARD_SYSTEM_HIDE_SETTLE_MS = 700
  * и он подменял собой сдвиг экрана (slideOutVertically), экран не уезжал, а резко гас.
  */
 fun holdForSoftKeyboardHide(settleMillis: Int = SOFT_KEYBOARD_HIDE_SETTLE_MS): ExitTransition =
-    scaleOut(tween(durationMillis = 1, delayMillis = settleMillis), targetScale = 0.999f)
+    scaleOut(tween(durationMillis = HOLD_FRAME_MS, delayMillis = settleMillis), targetScale = 0.999f)
 
 /** Маркер курсора и выделение прозрачного цвета — чтобы спрятать их, не снимая фокус с поля. */
 private val HiddenTextSelectionColors = TextSelectionColors(

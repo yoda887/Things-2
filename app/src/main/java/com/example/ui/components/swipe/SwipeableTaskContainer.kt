@@ -1,5 +1,7 @@
 package com.example.ui.components.swipe
 
+import com.example.R
+import androidx.compose.ui.res.stringResource
 import com.example.ui.theme.ThingsTheme
 import androidx.compose.animation.core.Animatable
 import androidx.compose.animation.core.FastOutSlowInEasing
@@ -131,7 +133,7 @@ fun SwipeableTaskContainer(
                     // Свайп вправо → When/Календарь → AppIcons.Upcoming
                     Icon(
                         imageVector = AppIcons.Upcoming,
-                        contentDescription = "When",
+                        contentDescription = stringResource(R.string.batch_action_when),
                         tint = ThingsTheme.colors.onAccent,
                         modifier = Modifier
                             .padding(start = ICON_PADDING_DP.dp)
@@ -147,7 +149,7 @@ fun SwipeableTaskContainer(
                     // Свайп влево → Мультиселекция → AppIcons.BulletList
                     Icon(
                         imageVector = AppIcons.BulletList,
-                        contentDescription = "Select",
+                        contentDescription = stringResource(R.string.cd_select),
                         tint = ThingsTheme.colors.onAccent,
                         modifier = Modifier
                             .padding(end = ICON_PADDING_DP.dp)
@@ -173,7 +175,7 @@ fun SwipeableTaskContainer(
                 .then(
                     if (lockedDirection != SwipeDirection.NONE) {
                         Modifier.background(
-                            color = MaterialTheme.colorScheme.background,
+                            color = ThingsTheme.colors.background,
                             shape = ThingsTheme.shapes.rowShape
                         )
                     } else {

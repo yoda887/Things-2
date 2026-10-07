@@ -1,5 +1,9 @@
 package com.example.ui.screens.home.components
 
+import com.example.R
+import androidx.compose.ui.res.pluralStringResource
+import androidx.compose.ui.res.stringResource
+import com.example.ui.components.ThingsConfirmDialog
 import com.example.ui.theme.ThingsTheme
 import androidx.compose.runtime.withFrameNanos
 import androidx.compose.foundation.gestures.scrollBy
@@ -455,7 +459,7 @@ fun ThingsCategoryListPanel(
     // Высота раскрытой строки — по ней промежуток раздвигается в следующий раз точно
     LaunchedEffect(inlineExpandedTaskId) {
         val id = inlineExpandedTaskId ?: return@LaunchedEffect
-        kotlinx.coroutines.delay(500)
+        kotlinx.coroutines.delay(ThingsMotion.LONG.toLong())
         lazyListState.layoutInfo.visibleItemsInfo.firstOrNull { it.key == id }?.size
             ?.takeIf { it > 0 }?.let { fabDrag?.expandedRowHeightPx = it.toFloat() }
     }
@@ -880,13 +884,13 @@ fun ThingsCategoryListPanel(
                     if (state.searchQuery.isBlank()) {
                         SearchEmptyState(
                             icon = Icons.Default.Search,
-                            text = "Quickly find to-dos, notes,\nchecklists, and completed items.",
+                            text = stringResource(R.string.ui_quickly_find_to_dos_notes_checklists),
                             textSecondaryColor = textSecondaryColor
                         )
                     } else {
                         SearchEmptyState(
                             icon = Icons.Outlined.SearchOff,
-                            text = "No results found for \"${state.searchQuery}\"",
+                            text = stringResource(R.string.ui_no_results_for, state.searchQuery),
                             textSecondaryColor = textSecondaryColor
                         )
                     }
@@ -962,8 +966,8 @@ fun ThingsCategoryListPanel(
                                     Modifier.animateItem(
                                         // Новая задача после сброса «+» раскрывается из центра сама (AnimatedTaskItem)
                                         fadeInSpec = if (fabDrag?.freshTaskId == item.item.id) null
-                                        else androidx.compose.animation.core.tween(300),
-                                        fadeOutSpec = androidx.compose.animation.core.tween(300),
+                                        else androidx.compose.animation.core.tween(ThingsMotion.STANDARD),
+                                        fadeOutSpec = androidx.compose.animation.core.tween(ThingsMotion.STANDARD),
                                         placementSpec = placementSpec
                                     )
                                 }
@@ -1271,19 +1275,16 @@ fun ThingsCategoryListPanel(
         // [ИЗМЕНЕНИЕ]: Передаем в AppBar дополнительные параметры (состояние скролла, экран, проект, область ответственности и список задач) для вывода иконки и полужирного заголовка
         headingToDelete?.let { heading ->
             val count = state.allTasks.count { it.item.headingId == heading.id }
-            AlertDialog(
-                onDismissRequest = { headingToDelete = null },
-                title = { Text("Delete Heading?") },
-                text = { Text("The heading \"${heading.title}\" and its $count to-dos will be deleted.") },
-                confirmButton = {
-                    TextButton(onClick = {
-                        headingToDelete = null
-                        onEvent(ThingsCategoryListEvent.DeleteHeading(heading))
-                    }) { Text("Delete", color = ThingsTheme.colors.danger) }
+            ThingsConfirmDialog(
+                title = stringResource(R.string.delete_heading_title),
+                message = pluralStringResource(R.plurals.delete_heading_message, count, heading.title, count),
+                confirmText = stringResource(R.string.delete),
+                dismissText = stringResource(R.string.cancel),
+                onConfirm = {
+                    headingToDelete = null
+                    onEvent(ThingsCategoryListEvent.DeleteHeading(heading))
                 },
-                dismissButton = {
-                    TextButton(onClick = { headingToDelete = null }) { Text("Cancel") }
-                }
+                onDismiss = { headingToDelete = null }
             )
         }
 
@@ -1369,7 +1370,7 @@ fun ThingsCategoryListPanel(
                     // 2. Включаем серое закрашивание серым кругом от чекбокса и серость текста
                     deletedTaskIds.add(activeTask.item.id)
                     // 3. Ждём 500 мс (стандартный таймер выполнения чекбокса)
-                    delay(500L)
+                    delay(ThingsMotion.LONG.toLong())
                     // 4. Удаляем из ViewModel -> animateItem растворяет карточку и сдвигает список
                     onEvent(ThingsCategoryListEvent.DeleteTask(activeTask))
                 }
@@ -1720,7 +1721,7 @@ private fun FabGapRow(asHeading: Boolean, extraPx: () -> Float, modifier: Modifi
                 contentAlignment = Alignment.BottomCenter
             ) {
                 Text(
-                    text = "NEW HEADING",
+                    text = stringResource(R.string.ui_new_heading),
                     style = ThingsTheme.type.overline.copy(color = ThingsTheme.colors.newHeadingText),
                     modifier = Modifier.padding(bottom = 3.dp)
                 )

@@ -1,5 +1,8 @@
 package com.example.ui.screens.home.subcomponents
 
+import com.example.ui.theme.ThingsAlpha
+import com.example.R
+import androidx.compose.ui.res.stringResource
 import androidx.compose.foundation.layout.*
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.outlined.AssignmentTurnedIn
@@ -11,6 +14,8 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.unit.dp
 import com.example.ui.theme.ThingsTheme
+
+private val EMPTY_STATE_ICON_SIZE = 60.dp
 
 /**
  * Подкомпонент для отображения пустого состояния списка задач.
@@ -34,13 +39,13 @@ fun EmptyStateView(
         Column(horizontalAlignment = Alignment.CenterHorizontally) {
             Icon(
                 Icons.Outlined.AssignmentTurnedIn,
-                contentDescription = "Empty",
-                tint = textSecondaryColor.copy(alpha = 0.3f),
-                modifier = Modifier.size(60.dp)
+                contentDescription = stringResource(R.string.cd_empty),
+                tint = textSecondaryColor.copy(alpha = ThingsAlpha.LOW),
+                modifier = Modifier.size(EMPTY_STATE_ICON_SIZE)
             )
             Spacer(modifier = Modifier.height(12.dp))
             Text(
-                text = "All clear here! Enjoy your day.",
+                text = stringResource(R.string.ui_all_clear_here_enjoy_your_day),
                 color = textSecondaryColor,
                 style = ThingsTheme.type.bodyMedium
             )

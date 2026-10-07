@@ -25,6 +25,19 @@ class DesignSystemEnforcementTest {
     private val roundedCornerShapeRegex = Regex("""RoundedCornerShape\s*\(\s*(?:[0-9]|[A-Z][A-Z0-9_]+\b|MaterialTheme\b)""")
     private val namedColorRegex = Regex("""\bColor\.(White|Black|Gray|LightGray|DarkGray|Red|Green|Blue|Yellow|Cyan|Magenta)\b""")
     private val materialTypographyRegex = Regex("""\bMaterialTheme\.typography\b""")
+    private val materialAlertDialogRegex = Regex("""\bAlertDialog\s*\(""")
+    // Длительность — из ThingsMotion или именованной константы файла, не числом на месте
+    private val durationLiteralRegex = Regex("""(durationMillis\s*=\s*|\btween\(\s*|\bdelay\(\s*|delayMillis\s*=\s*)\d""")
+    // Прозрачность — из ThingsAlpha или именованной константы файла
+    private val alphaLiteralRegex = Regex("""copy\(\s*alpha\s*=\s*\d+(\.\d+)?f?\s*\)""")
+    private val iconSizeLiteralRegex = Regex("""\.size\(\s*\d+(\.\d+)?\.dp\s*\)""")
+    // Разрешено только MaterialTheme.colorScheme.copy(...) — подмена схемы под компонент темы (ThingsMenu)
+    private val materialColorSchemeRegex = Regex("""\bMaterialTheme\.colorScheme\b(?!\.copy\()""")
+    // Видимый текст и подписи для экранного диктора — только из strings.xml. Одиночная буква
+    // (невидимая строка для замера высоты) не считается надписью
+    private val hardcodedUiTextRegex = Regex(
+        """(Text\(\s*(text\s*=\s*)?|(?<![\w.])text\s*=\s*|contentDescription\s*=\s*|ThingsMenuItem\(\s*)"[^"]*\p{L}{2,}"""
+    )
     private val isSystemDarkRegex = Regex("""\bisSystemInDarkTheme\s*\(""")
 
     /** Все константы палитры Color.kt: компоненты берут цвета только через роли ThingsTheme.colors */
@@ -84,6 +97,77 @@ class DesignSystemEnforcementTest {
         val violations = violationsOf(materialTypographyRegex)
         assertTrue(
             "Обнаружены стили MaterialTheme.typography в UI компонентах. Используйте роли ThingsTheme.type.*:\n" +
+                violations.joinToString("\n"),
+            violations.isEmpty()
+        )
+    }
+
+    @Test
+    fun noMaterialAlertDialogInUiComponents() {
+        val violations = violationsOf(materialAlertDialogRegex)
+        assertTrue(
+            "Обнаружен стандартный Material AlertDialog. Подтверждения — только общий тёмный ThingsConfirmDialog:\n" +
+                violations.joinToString("\n"),
+            violations.isEmpty()
+        )
+    }
+
+    @Test
+    fun noMaterialColorSchemeInUiComponents() {
+        val violations = violationsOf(materialColorSchemeRegex)
+        assertTrue(
+            "Обнаружены цвета MaterialTheme.colorScheme в UI компонентах. Используйте роли ThingsTheme.colors.*:\n" +
+                violations.joinToString("\n"),
+            violations.isEmpty()
+        )
+    }
+
+    @Test
+    fun noHardcodedUiTextInUiComponents() {
+        val violations = violationsOf(hardcodedUiTextRegex)
+        assertTrue(
+            "Обнаружены надписи прямо в коде. Вынесите их в res/values/strings.xml и используйте stringResource:\n" +
+                violations.joinToString("\n"),
+            violations.isEmpty()
+        )
+    }
+
+    @Test
+    fun noDurationLiteralsInUiComponents() {
+        val violations = violationsOf(durationLiteralRegex)
+        assertTrue(
+            "Длительность анимации числом на месте. Используйте ThingsMotion или именованную константу файла:\n" +
+                violations.joinToString("\n"),
+            violations.isEmpty()
+        )
+    }
+
+    @Test
+    fun noAlphaLiteralsInUiComponents() {
+        val violations = violationsOf(alphaLiteralRegex)
+        assertTrue(
+            "Прозрачность числом на месте. Используйте ThingsAlpha или именованную константу файла:\n" +
+                violations.joinToString("\n"),
+            violations.isEmpty()
+        )
+    }
+
+    /** Размер иконки (строка .size(N.dp) в пределах шести строк после Icon( ) — из ThingsIconSize или константы файла */
+    @Test
+    fun noIconSizeLiteralsInUiComponents() {
+        val violations = mutableListOf<String>()
+        getUiFilesToValidate().forEach { file ->
+            val lines = file.readLines()
+            lines.forEachIndexed { index, line ->
+                if (!iconSizeLiteralRegex.containsMatchIn(line)) return@forEachIndexed
+                val context = lines.subList(maxOf(0, index - 6), index + 1).joinToString("\n")
+                if (Regex("""\bIcon\(""").containsMatchIn(context)) {
+                    violations.add("${file.name}:${index + 1}: ${line.trim()}")
+                }
+            }
+        }
+        assertTrue(
+            "Размер иконки числом на месте. Используйте ThingsIconSize или именованную константу файла:\n" +
                 violations.joinToString("\n"),
             violations.isEmpty()
         )

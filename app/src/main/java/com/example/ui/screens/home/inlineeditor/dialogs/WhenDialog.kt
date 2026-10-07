@@ -1,5 +1,8 @@
 package com.example.ui.screens.home.inlineeditor.dialogs
 
+import com.example.ui.theme.ThingsIconSize
+import com.example.R
+import androidx.compose.ui.res.stringResource
 import com.example.ui.theme.ThingsTheme
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
@@ -298,7 +301,7 @@ fun ThingsWhenDialog(
                         contentAlignment = Alignment.Center
                     ) {
                         Text(
-                            text = "When?",
+                            text = stringResource(R.string.ui_when),
                             style = ThingsTheme.type.dialogTitle.copy(color = ThingsTheme.colors.overlayContent)
                         )
                     }
@@ -316,9 +319,9 @@ fun ThingsWhenDialog(
                         ) {
                             Icon(
                                 imageVector = Icons.Default.Close,
-                                contentDescription = "Close",
+                                contentDescription = stringResource(R.string.cd_close),
                                 tint = ThingsTheme.colors.overlayContent,
-                                modifier = Modifier.size(18.dp)
+                                modifier = Modifier.size(ThingsIconSize.S)
                             )
                         }
                     }
@@ -350,7 +353,7 @@ fun ThingsWhenDialog(
                     ) {
                         Icon(
                             imageVector = AppIcons.Today,
-                            contentDescription = "Today",
+                            contentDescription = stringResource(R.string.category_today),
                             tint = Color.Unspecified,
                             modifier = Modifier.size(ROW_LEADING_ICON_SIZE)
                         )
@@ -364,9 +367,9 @@ fun ThingsWhenDialog(
                         if (isTodayActive) {
                             Icon(
                                 imageVector = Icons.Default.Check,
-                                contentDescription = "Active Today",
+                                contentDescription = stringResource(R.string.cd_active_today),
                                 tint = ThingsTheme.colors.accent,
-                                modifier = Modifier.size(18.dp)
+                                modifier = Modifier.size(ThingsIconSize.S)
                             )
                         }
                     }
@@ -398,7 +401,7 @@ fun ThingsWhenDialog(
                     ) {
                         Icon(
                             imageVector = AppIcons.Evening,
-                            contentDescription = "This Evening",
+                            contentDescription = stringResource(R.string.category_this_evening),
                             tint = Color.Unspecified,
                             modifier = Modifier.size(ROW_LEADING_ICON_SIZE)
                         )
@@ -412,9 +415,9 @@ fun ThingsWhenDialog(
                         if (isThisEveningActive) {
                             Icon(
                                 imageVector = Icons.Default.Check,
-                                contentDescription = "Active This Evening",
+                                contentDescription = stringResource(R.string.cd_active_this_evening),
                                 tint = ThingsTheme.colors.accent,
-                                modifier = Modifier.size(18.dp)
+                                modifier = Modifier.size(ThingsIconSize.S)
                             )
                         }
                     }
@@ -432,7 +435,15 @@ fun ThingsWhenDialog(
                         modifier = Modifier.fillMaxWidth(),
                     horizontalArrangement = Arrangement.SpaceBetween
                 ) {
-                    val weekdays = listOf("Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun")
+                    // Короткие названия дней недели по языку системы, с понедельника
+                    val weekdays = remember {
+                        val names = java.text.DateFormatSymbols.getInstance().shortWeekdays
+                        listOf(
+                            java.util.Calendar.MONDAY, java.util.Calendar.TUESDAY, java.util.Calendar.WEDNESDAY,
+                            java.util.Calendar.THURSDAY, java.util.Calendar.FRIDAY, java.util.Calendar.SATURDAY,
+                            java.util.Calendar.SUNDAY
+                        ).map { day -> names[day].replaceFirstChar { it.titlecase() } }
+                    }
                     weekdays.forEach { dayName ->
                         Text(
                             text = dayName,
@@ -525,10 +536,10 @@ fun ThingsWhenDialog(
                                     is CalendarCell.PrevMonth -> {
                                         Icon(
                                             imageVector = Icons.Default.ChevronLeft,
-                                            contentDescription = "Previous Month",
+                                            contentDescription = stringResource(R.string.cd_previous_month),
                                             tint = ThingsTheme.colors.overlayContentSecondary,
                                             modifier = Modifier
-                                                .size(20.dp)
+                                                .size(ThingsIconSize.M)
                                                 .clickable {
                                                     calendarWeekOffset = maxOf(0, calendarWeekOffset - 3)
                                                 }
@@ -537,10 +548,10 @@ fun ThingsWhenDialog(
                                     is CalendarCell.NextMonth -> {
                                         Icon(
                                             imageVector = Icons.Default.ChevronRight,
-                                            contentDescription = "Next Month",
+                                            contentDescription = stringResource(R.string.cd_next_month),
                                             tint = ThingsTheme.colors.overlayContentSecondary,
                                             modifier = Modifier
-                                                .size(20.dp)
+                                                .size(ThingsIconSize.M)
                                                 .clickable {
                                                     calendarWeekOffset += 3
                                                 }
@@ -587,9 +598,9 @@ fun ThingsWhenDialog(
                                             } else if (cell.isToday) {
                                                 Icon(
                                                     imageVector = Icons.Filled.Star,
-                                                    contentDescription = "Today",
+                                                    contentDescription = stringResource(R.string.category_today),
                                                     tint = ThingsTheme.colors.badgeText,
-                                                    modifier = Modifier.size(16.dp)
+                                                    modifier = Modifier.size(ThingsIconSize.XS)
                                                 )
                                             } else {
                                                 if (cell.monthLabel != null) {
@@ -648,9 +659,9 @@ fun ThingsWhenDialog(
                     ) {
                         Icon(
                             imageVector = AppIcons.Someday,
-                            contentDescription = "Someday",
+                            contentDescription = stringResource(R.string.area_someday_heading),
                             tint = Color.Unspecified,
-                            modifier = Modifier.size(18.dp)
+                            modifier = Modifier.size(ThingsIconSize.S)
                         )
                     }
                     Text(
@@ -662,9 +673,9 @@ fun ThingsWhenDialog(
                         if (isSomedayActive) {
                             Icon(
                                 imageVector = Icons.Default.Check,
-                                contentDescription = "Active Someday",
+                                contentDescription = stringResource(R.string.cd_active_someday),
                                 tint = ThingsTheme.colors.accent,
-                                modifier = Modifier.size(18.dp)
+                                modifier = Modifier.size(ThingsIconSize.S)
                             )
                         }
                     }
@@ -689,11 +700,11 @@ fun ThingsWhenDialog(
                             imageVector = Icons.Default.Add,
                             contentDescription = null,
                             tint = ThingsTheme.colors.overlayContentSecondary,
-                            modifier = Modifier.size(18.dp)
+                            modifier = Modifier.size(ThingsIconSize.S)
                         )
                     }
                     Text(
-                        text = "Add Reminder",
+                        text = stringResource(R.string.ui_add_reminder),
                         style = ThingsTheme.type.dialogRow.copy(color = ThingsTheme.colors.overlayContentSecondary),
                         modifier = Modifier.weight(5f)
                     )
@@ -723,7 +734,7 @@ fun ThingsWhenDialog(
                             .height(CLEAR_BUTTON_HEIGHT)
                     ) {
                         Text(
-                            text = "Clear",
+                            text = stringResource(R.string.cd_clear),
                             style = ThingsTheme.type.dialogButton
                         )
                     }

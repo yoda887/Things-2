@@ -1,5 +1,8 @@
 package com.example.ui.screens.home.inlineeditor.dialogs
 
+import com.example.ui.theme.ThingsIconSize
+import com.example.R
+import androidx.compose.ui.res.stringResource
 import com.example.ui.theme.ThingsTheme
 import com.example.ui.theme.AppIcons
 import androidx.compose.foundation.background
@@ -110,7 +113,7 @@ fun ThingsMoveDialog(
                         Box(modifier = Modifier.size(36.dp))
 
                         Text(
-                            text = "Move",
+                            text = stringResource(R.string.batch_action_move),
                             color = ThingsTheme.colors.overlayContent,
                             style = ThingsTheme.type.dialogTitle,
                             textAlign = TextAlign.Center,
@@ -128,9 +131,9 @@ fun ThingsMoveDialog(
                         ) {
                             Icon(
                                 imageVector = Icons.Default.Close,
-                                contentDescription = "Cancel",
+                                contentDescription = stringResource(R.string.tag_dialog_cancel),
                                 tint = ThingsTheme.colors.overlayContent,
-                                modifier = Modifier.size(18.dp)
+                                modifier = Modifier.size(ThingsIconSize.S)
                             )
                         }
                     }
@@ -148,7 +151,7 @@ fun ThingsMoveDialog(
                         item {
                             val isSelected = currentProjectId == null && currentAreaId == null && currentIsInbox
                             MoveDialogRow(
-                                title = "Inbox",
+                                title = stringResource(R.string.category_inbox),
                                 icon = Icons.Default.Inbox,
                                 iconColor = ThingsTheme.colors.accent,
                                 isSelected = isSelected,
@@ -162,7 +165,7 @@ fun ThingsMoveDialog(
                         item {
                             val isSelected = currentProjectId == null && currentAreaId == null && !currentIsInbox
                             MoveDialogRow(
-                                title = "No Project",
+                                title = stringResource(R.string.move_no_project),
                                 icon = Icons.Default.Block,
                                 iconColor = ThingsTheme.colors.overlayContentSecondary,
                                 isSelected = isSelected,
@@ -304,7 +307,7 @@ private fun MoveDialogRow(
                 imageVector = icon,
                 contentDescription = null,
                 tint = iconColor,
-                modifier = Modifier.size(20.dp)
+                modifier = Modifier.size(ThingsIconSize.M)
             )
             Spacer(modifier = Modifier.width(12.dp))
         }
@@ -320,9 +323,9 @@ private fun MoveDialogRow(
         if (isSelected) {
             Icon(
                 imageVector = Icons.Default.Check,
-                contentDescription = "Selected",
+                contentDescription = stringResource(R.string.cd_selected),
                 tint = ThingsTheme.colors.accent,
-                modifier = Modifier.size(16.dp)
+                modifier = Modifier.size(ThingsIconSize.XS)
             )
         }
     }

@@ -1,5 +1,7 @@
 package com.example.ui.screens.home.subcomponents
 
+import com.example.R
+import androidx.compose.ui.res.stringResource
 import com.example.ui.theme.ThingsTheme
 import androidx.compose.animation.core.animateDpAsState
 import androidx.compose.animation.core.animateFloatAsState
@@ -45,6 +47,23 @@ import com.example.ui.components.ThingsCheckbox
 import com.example.ui.theme.*
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
+
+private const val COMPLETION_FILL_MS = 350
+// Подсветка найденной задачи — по кадрам эталона Things 3
+private const val FOUND_GLOW_IN_MS = 160
+private const val FOUND_GLOW_HOLD_MS = 80L
+private const val FOUND_GLOW_OUT_MS = 720
+private const val FOUND_SCALE_DELAY_MS = 40L
+private const val FOUND_SCALE_UP_MS = 60
+private const val FOUND_SCALE_DOWN_MS = 650
+// Импульс нажатия чекбокса
+private const val TITLE_PRESS_MS = 70L
+private const val CARD_PRESS_MS = 50L
+private const val COMPLETE_TOGGLE_DELAY_MS = 220L
+private const val SELECT_BOUNCE_MS = 80
+private val ROW_META_ICON_SIZE = 13.dp
+private val DUE_ICON_SIZE = 15.dp
+private const val DUE_TEXT_ALPHA = 0.85f
 
 /** Пауза перед подсветкой найденной задачи: экран успевает открыться и докрутить до неё */
 const val FOUND_HIGHLIGHT_DELAY_MS = 450L
@@ -105,7 +124,7 @@ fun TaskItemRow(
     val completionFillProgress by androidx.compose.animation.core.animateFloatAsState(
         targetValue = if (isMarkedDoneOrDeleted) 1f else 0f,
         animationSpec = androidx.compose.animation.core.tween(
-            durationMillis = 350,
+            durationMillis = COMPLETION_FILL_MS,
             easing = androidx.compose.animation.core.FastOutSlowInEasing
         ),
         label = "completionFill_${task.id}"
@@ -113,7 +132,7 @@ fun TaskItemRow(
 
     val animatedTitleColor by androidx.compose.animation.animateColorAsState(
         targetValue = if (isMarkedDoneOrDeleted || (isSearchLogbookStyle && isCancelledTask)) textSecondaryColor else textPrimaryColor,
-        animationSpec = androidx.compose.animation.core.tween(durationMillis = 300),
+        animationSpec = androidx.compose.animation.core.tween(durationMillis = ThingsMotion.STANDARD),
         label = "titleColor_${task.id}"
     )
 
@@ -151,13 +170,13 @@ fun TaskItemRow(
         if (isFound) {
             delay(FOUND_HIGHLIGHT_DELAY_MS)
             launch {
-                foundGlow.animateTo(1f, androidx.compose.animation.core.tween(160, easing = androidx.compose.animation.core.LinearEasing))
-                delay(80)
-                foundGlow.animateTo(0f, androidx.compose.animation.core.tween(720, easing = androidx.compose.animation.core.LinearOutSlowInEasing))
+                foundGlow.animateTo(1f, androidx.compose.animation.core.tween(FOUND_GLOW_IN_MS, easing = androidx.compose.animation.core.LinearEasing))
+                delay(FOUND_GLOW_HOLD_MS)
+                foundGlow.animateTo(0f, androidx.compose.animation.core.tween(FOUND_GLOW_OUT_MS, easing = androidx.compose.animation.core.LinearOutSlowInEasing))
             }
-            delay(40)
-            foundScale.animateTo(1.05f, androidx.compose.animation.core.tween(60, easing = androidx.compose.animation.core.LinearEasing))
-            foundScale.animateTo(1f, androidx.compose.animation.core.tween(650, easing = androidx.compose.animation.core.LinearOutSlowInEasing))
+            delay(FOUND_SCALE_DELAY_MS)
+            foundScale.animateTo(1.05f, androidx.compose.animation.core.tween(FOUND_SCALE_UP_MS, easing = androidx.compose.animation.core.LinearEasing))
+            foundScale.animateTo(1f, androidx.compose.animation.core.tween(FOUND_SCALE_DOWN_MS, easing = androidx.compose.animation.core.LinearOutSlowInEasing))
         } else {
             foundGlow.snapTo(0f)
             foundScale.snapTo(1f)
@@ -168,7 +187,7 @@ fun TaskItemRow(
     val rowShapeForGlow = ThingsTheme.shapes.rowShape
     val highlightColor = when {
         // Выделенная строка результатов Quick Find — 30 % акцента
-        isHighlighted -> ThingsTheme.colors.accent.copy(alpha = 0.3f)
+        isHighlighted -> ThingsTheme.colors.accent.copy(alpha = ThingsAlpha.LOW)
         else -> Color.Transparent
     }
 
@@ -178,7 +197,7 @@ fun TaskItemRow(
             isSelected -> ThingsTheme.colors.accentSelection
             else -> highlightColor
         },
-        animationSpec = androidx.compose.animation.core.tween(durationMillis = 200),
+        animationSpec = androidx.compose.animation.core.tween(durationMillis = ThingsMotion.BASE),
         label = "rowBgColor_${task.id}"
     )
 
@@ -187,21 +206,23 @@ fun TaskItemRow(
     val isCalendarTask = task.id.startsWith("cal_")
 
     val eveningColor = ThingsTheme.colors.eveningIndicator
-    val dateIndicator = remember(task.startDate, task.isTonight, task.start, task.dueDate, eveningColor) {
+    val tonightDescription = stringResource(R.string.cd_tonight)
+    val todayDescription = stringResource(R.string.category_today)
+    val dateIndicator = remember(task.startDate, task.isTonight, task.start, task.dueDate, eveningColor, tonightDescription, todayDescription) {
         if (task.startDate != null) {
-            getStartDateIndicator(task.startDate, task.isTonight, eveningColor)
+            getStartDateIndicator(task.startDate, task.isTonight, eveningColor, tonightDescription, todayDescription)
         } else if (task.isToday) {
             if (task.isTonight) {
                 DateIndicatorResult.IconIndicator(
                     icon = AppIcons.Evening,
                     color = eveningColor,
-                    contentDescription = "Tonight"
+                    contentDescription = tonightDescription
                 )
             } else {
                 DateIndicatorResult.IconIndicator(
                     icon = AppIcons.Today,
                     color = androidx.compose.ui.graphics.Color.Unspecified,
-                    contentDescription = "Today"
+                    contentDescription = todayDescription
                 )
             }
         } else {
@@ -257,10 +278,10 @@ fun TaskItemRow(
                 if (isCalendarTask) {
                     Icon(
                         imageVector = Icons.Outlined.CalendarToday,
-                        contentDescription = "Calendar Event",
+                        contentDescription = stringResource(R.string.cd_calendar_event),
                         tint = ThingsTheme.colors.accent,
                         modifier = Modifier
-                            .size(16.dp)
+                            .size(ThingsIconSize.XS)
                     )
                 } else {
                     val checkboxUncheckedColor = if (isHighlighted) {
@@ -278,24 +299,24 @@ fun TaskItemRow(
                             // Импульсы сжатия текста и карточки запускаются СТРОГО при физическом клике по чекбоксу
                             scope.launch {
                                 titleScaleTarget = 0.93f
-                                delay(70)
+                                delay(TITLE_PRESS_MS)
                                 titleScaleTarget = 1.0f
                             }
                             scope.launch {
                                 cardScaleTarget = 0.97f
-                                delay(50)
+                                delay(CARD_PRESS_MS)
                                 cardScaleTarget = 1.0f
                             }
 
                             if (task.isCompleted) {
                                 scope.launch {
-                                    delay(220)
+                                    delay(COMPLETE_TOGGLE_DELAY_MS)
                                     onToggle()
                                 }
                             } else {
                                 if (newChecked) {
                                     completionJob = scope.launch {
-                                        delay(500)
+                                        delay(ThingsMotion.LONG.toLong())
                                         onToggle()
                                     }
                                 }
@@ -375,7 +396,7 @@ fun TaskItemRow(
                                             imageVector = dateIndicator.icon,
                                             contentDescription = dateIndicator.contentDescription,
                                             tint = dateIndicator.color,
-                                            modifier = Modifier.size(16.dp)
+                                            modifier = Modifier.size(ThingsIconSize.XS)
                                         )
                                     }
                                     is DateIndicatorResult.TextIndicator -> {
@@ -421,25 +442,25 @@ fun TaskItemRow(
                                 if (task.notes.isNotBlank()) {
                                     Icon(
                                         imageVector = Icons.Outlined.Description,
-                                        contentDescription = "Has notes",
-                                        tint = textSecondaryColor.copy(alpha = 0.4f),
-                                        modifier = Modifier.size(13.dp)
+                                        contentDescription = stringResource(R.string.cd_has_notes),
+                                        tint = textSecondaryColor.copy(alpha = ThingsAlpha.MUTED),
+                                        modifier = Modifier.size(ROW_META_ICON_SIZE)
                                     )
                                 }
                                 if (task.checklistItemsCount > 0) {
                                     Icon(
                                         imageVector = AppIcons.BulletList,
-                                        contentDescription = "Has checklist",
-                                        tint = textSecondaryColor.copy(alpha = 0.4f),
-                                        modifier = Modifier.size(13.dp)
+                                        contentDescription = stringResource(R.string.cd_has_checklist),
+                                        tint = textSecondaryColor.copy(alpha = ThingsAlpha.MUTED),
+                                        modifier = Modifier.size(ROW_META_ICON_SIZE)
                                     )
                                 }
                                 if (task.cachedTags.isNotBlank()) {
                                     Icon(
                                         imageVector = AppIcons.Tag,
-                                        contentDescription = "Has tags",
-                                        tint = textSecondaryColor.copy(alpha = 0.4f),
-                                        modifier = Modifier.size(13.dp)
+                                        contentDescription = stringResource(R.string.cd_has_tags),
+                                        tint = textSecondaryColor.copy(alpha = ThingsAlpha.MUTED),
+                                        modifier = Modifier.size(ROW_META_ICON_SIZE)
                                     )
                                 }
                             }
@@ -469,30 +490,10 @@ fun TaskItemRow(
                             }
                         }
 
-                        val lang = remember { java.util.Locale.getDefault().language }
-                        val relativeText = when (lang) {
-                            "uk" -> when {
-                                delta < 0 -> "протерміновано"
-                                delta == 0 -> "сьогодні"
-                                delta == 1 -> "завтра"
-                                else -> "через $delta дн."
-                            }
-                            "ru" -> when {
-                                delta < 0 -> "просрочено"
-                                delta == 0 -> "сегодня"
-                                delta == 1 -> "завтра"
-                                else -> "через $delta дн."
-                            }
-                            else -> when {
-                                delta < 0 -> "overdue"
-                                delta == 0 -> "today"
-                                delta == 1 -> "tomorrow"
-                                else -> "in $delta d."
-                            }
-                        }
+                        val relativeText = com.example.ui.screens.home.inlineeditor.utils.relativeDueText(delta)
 
                         val isOverdueOrToday = delta <= 0
-                        val color = if (isOverdueOrToday) ThingsTheme.colors.danger else textSecondaryColor.copy(alpha = 0.85f)
+                        val color = if (isOverdueOrToday) ThingsTheme.colors.danger else textSecondaryColor.copy(alpha = DUE_TEXT_ALPHA)
 
                         Spacer(modifier = Modifier.width(8.dp))
                         Row(
@@ -501,9 +502,9 @@ fun TaskItemRow(
                         ) {
                             Icon(
                                 imageVector = AppIcons.Deadline,
-                                contentDescription = "Deadline Flag",
+                                contentDescription = stringResource(R.string.cd_deadline_flag),
                                 tint = color,
-                                modifier = Modifier.size(15.dp)
+                                modifier = Modifier.size(DUE_ICON_SIZE)
                             )
                             Spacer(modifier = Modifier.width(4.dp))
                             Text(
@@ -544,12 +545,12 @@ fun TaskItemRow(
         ) {
             val targetBorderColor = when {
                 isSelected -> ThingsTheme.colors.accent
-                isDragSelecting -> ThingsTheme.colors.accent.copy(alpha = 0.5f)
+                isDragSelecting -> ThingsTheme.colors.accent.copy(alpha = ThingsAlpha.HALF)
                 else -> ThingsTheme.colors.checkboxBorder
             }
             val animatedBorderColor by androidx.compose.animation.animateColorAsState(
                 targetValue = targetBorderColor,
-                animationSpec = androidx.compose.animation.core.tween(durationMillis = 200),
+                animationSpec = androidx.compose.animation.core.tween(durationMillis = ThingsMotion.BASE),
                 label = "selectionBorderColor"
             )
             val animatedCheckScale by androidx.compose.animation.core.animateFloatAsState(
@@ -563,7 +564,7 @@ fun TaskItemRow(
 
             val animatedDragSelectScale by androidx.compose.animation.core.animateFloatAsState(
                 targetValue = if (isDragSelecting) 1.14f else 1f,
-                animationSpec = androidx.compose.animation.core.tween(durationMillis = 200),
+                animationSpec = androidx.compose.animation.core.tween(durationMillis = ThingsMotion.BASE),
                 label = "dragSelectScale"
             )
 
@@ -577,7 +578,7 @@ fun TaskItemRow(
                     iconBounceScale.animateTo(
                         targetValue = 1.18f,
                         animationSpec = androidx.compose.animation.core.tween(
-                            durationMillis = 80,
+                            durationMillis = SELECT_BOUNCE_MS,
                             easing = androidx.compose.animation.core.FastOutSlowInEasing
                         )
                     )
@@ -672,7 +673,13 @@ private fun DateBadge(text: String) {
     )
 }
 
-private fun getStartDateIndicator(startDate: Long, isTonight: Boolean, eveningColor: Color): DateIndicatorResult {
+private fun getStartDateIndicator(
+    startDate: Long,
+    isTonight: Boolean,
+    eveningColor: Color,
+    tonightDescription: String,
+    todayDescription: String
+): DateIndicatorResult {
     val taskCal = java.util.Calendar.getInstance().apply { timeInMillis = startDate }
     val todayCal = java.util.Calendar.getInstance()
     val currentYear = todayCal.get(java.util.Calendar.YEAR)
@@ -692,13 +699,13 @@ private fun getStartDateIndicator(startDate: Long, isTonight: Boolean, eveningCo
             DateIndicatorResult.IconIndicator(
                 icon = AppIcons.Evening,
                 color = eveningColor,
-                contentDescription = "Tonight"
+                contentDescription = tonightDescription
             )
         } else {
             DateIndicatorResult.IconIndicator(
                 icon = AppIcons.Today,
                 color = androidx.compose.ui.graphics.Color.Unspecified,
-                contentDescription = "Today"
+                contentDescription = todayDescription
             )
         }
     }

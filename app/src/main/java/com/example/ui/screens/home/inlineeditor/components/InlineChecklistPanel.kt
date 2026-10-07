@@ -82,6 +82,10 @@ import kotlinx.coroutines.launch
 import kotlin.math.PI
 import kotlin.math.abs
 
+private const val ROW_SETTLE_MS = 160L
+private const val ROW_LIFT_MS = 130
+private const val HANDLE_HIDE_MS = 180
+
 // Цвета, пропорции и тайминги сняты с видео Things 3 (пункты чек-листа в карточке задачи).
 // Размеры считаются от размера шрифта пункта (у Roboto высота заглавной ≈ 0,71 размера шрифта).
 // Разделитель, вспышка, фон строки в фокусе и перетаскиваемой строки зависят от темы — берутся из ThingsTheme
@@ -368,7 +372,7 @@ fun InlineChecklistPanel(
             if (reordered.map { it.id } != current.map { it.id }) latestOnChecklistChange(reordered)
             settlingId = id
             scope.launch {
-                delay(160)
+                delay(ROW_SETTLE_MS)
                 if (settlingId == id) settlingId = null
             }
         }
@@ -448,7 +452,7 @@ fun InlineChecklistPanel(
                     val isDragged = draggingId == item.id
                     val lift by animateFloatAsState(
                         targetValue = if (isDragged) 1f else 0f,
-                        animationSpec = tween(130),
+                        animationSpec = tween(ROW_LIFT_MS),
                         label = "checklist_row_lift"
                     )
                     // Поле пункта: TextFieldValue — чтобы ставить курсор при переводе фокуса
@@ -787,7 +791,7 @@ private fun ChecklistRowAction(
     }
     val handleHide by animateFloatAsState(
         targetValue = if (handleCovered) 1f else 0f,
-        animationSpec = tween(180, easing = FastOutSlowInEasing),
+        animationSpec = tween(HANDLE_HIDE_MS, easing = FastOutSlowInEasing),
         label = "checklist_handle_hide"
     )
 

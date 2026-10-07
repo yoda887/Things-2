@@ -67,7 +67,7 @@ fun PullToSearchIndicator(
     // Цвета с дискретным переключением темы (_selected) строго на пороге с коротким кроссфейдом 100 мс
     val circleColor by animateColorAsState(
         targetValue = if (isTriggered) ThingsTheme.colors.accent else ThingsTheme.colors.pullIndicatorBackground,
-        animationSpec = tween(durationMillis = 100, easing = LinearEasing),
+        animationSpec = tween(durationMillis = ThingsMotion.FAST, easing = LinearEasing),
         label = "pullCircleColor"
     )
     // В эталоне лупа всегда чисто белая
@@ -76,7 +76,7 @@ fun PullToSearchIndicator(
     // Цвета стрелки: normal / selected из ролей темы
     val arrowColor by animateColorAsState(
         targetValue = if (isTriggered) ThingsTheme.colors.pullArrowSelected else ThingsTheme.colors.pullArrow,
-        animationSpec = tween(durationMillis = 100, easing = LinearEasing),
+        animationSpec = tween(durationMillis = ThingsMotion.FAST, easing = LinearEasing),
         label = "pullArrowColor"
     )
 

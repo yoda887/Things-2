@@ -1,5 +1,6 @@
 package com.example.ui.screens.home.subcomponents
 
+import com.example.ui.theme.ThingsIconSize
 import com.example.ui.components.ThingsDropdownMenu
 import com.example.ui.components.ThingsMenuItem
 import com.example.ui.theme.ThingsTheme
@@ -38,6 +39,8 @@ import androidx.compose.ui.unit.dp
 import com.example.R
 import com.example.ui.theme.AppIcons
 import com.example.ui.theme.dimens
+
+private const val DISABLED_ICON_ALPHA = 0.35f
 
 /**
  * Плавающая нижняя панель действий (BatchActionToolbar) в стиле Things 3.
@@ -201,8 +204,8 @@ private fun CapsuleToolbarIconButton(
         Icon(
             imageVector = icon,
             contentDescription = contentDescription,
-            tint = if (enabled) ThingsTheme.colors.overlayContent else ThingsTheme.colors.overlayContent.copy(alpha = 0.35f),
-            modifier = Modifier.size(24.dp)
+            tint = if (enabled) ThingsTheme.colors.overlayContent else ThingsTheme.colors.overlayContent.copy(alpha = DISABLED_ICON_ALPHA),
+            modifier = Modifier.size(ThingsIconSize.XL)
         )
     }
 }

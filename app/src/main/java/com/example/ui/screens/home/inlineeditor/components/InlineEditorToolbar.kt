@@ -1,5 +1,8 @@
 package com.example.ui.screens.home.inlineeditor.components
 
+import com.example.ui.theme.ThingsIconSize
+import com.example.R
+import androidx.compose.ui.res.stringResource
 import com.example.ui.theme.ThingsTheme
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
@@ -86,9 +89,9 @@ fun InlineEditorToolbar(
             ) {
                 Icon(
                     imageVector = activeDateIcon,
-                    contentDescription = "Change date",
+                    contentDescription = stringResource(R.string.cd_change_date),
                     tint = activeDateColor,
-                    modifier = Modifier.size(18.dp)
+                    modifier = Modifier.size(ThingsIconSize.S)
                 )
                 Spacer(modifier = Modifier.width(6.dp))
                 Text(
@@ -105,10 +108,10 @@ fun InlineEditorToolbar(
             // Show Calendar symbol on the left
             //Icon(
            //     imageVector = AppIcons.Upcoming,
-            //    contentDescription = "Schedule",
+            //    contentDescription = stringResource(R.string.cd_schedule),
             //    tint = iconInactiveColor,
             //    modifier = Modifier
-            //        .size(22.dp)
+            //        .size(ThingsIconSize.L)
                //     .clickable { onShowWhenDialogChange(true) }
             //)
         }
@@ -124,10 +127,10 @@ fun InlineEditorToolbar(
              if (!hasActiveDate) {
              Icon(
                 imageVector = AppIcons.Upcoming,
-                contentDescription = "Schedule",
+                contentDescription = stringResource(R.string.cd_schedule),
                 tint = iconInactiveColor,
                 modifier = Modifier
-                    .size(22.dp)
+                    .size(ThingsIconSize.L)
                     .clickable {
                         view.performHapticFeedback(HapticFeedbackConstants.CLOCK_TICK)
                         onShowWhenDialogChange(true)
@@ -139,10 +142,10 @@ fun InlineEditorToolbar(
             if (!showTagHelper && tagInput.trim().isEmpty()) {
                 Icon(
                     imageVector = AppIcons.Tag,
-                    contentDescription = "Tags",
+                    contentDescription = stringResource(R.string.tag_dialog_title),
                     tint = iconInactiveColor,
                     modifier = Modifier
-                        .size(20.dp)
+                        .size(ThingsIconSize.M)
                         .clickable {
                             view.performHapticFeedback(HapticFeedbackConstants.CLOCK_TICK)
                             onShowTagHelperChange(true)
@@ -154,10 +157,10 @@ fun InlineEditorToolbar(
             if (!showChecklistHelper && checklist.isEmpty()) {
                 Icon(
                     imageVector = AppIcons.BulletList,
-                    contentDescription = "Checklists",
+                    contentDescription = stringResource(R.string.cd_checklists),
                     tint = iconInactiveColor,
                     modifier = Modifier
-                        .size(22.dp)
+                        .size(ThingsIconSize.L)
                         .clickable {
                             view.performHapticFeedback(HapticFeedbackConstants.CLOCK_TICK)
                             onShowChecklistHelperChange(true)
@@ -169,10 +172,10 @@ fun InlineEditorToolbar(
             if (dueDate == null) {
                 Icon(
                     imageVector = AppIcons.Deadline,
-                    contentDescription = "Set Deadline",
+                    contentDescription = stringResource(R.string.batch_action_set_deadline),
                     tint = iconInactiveColor,
                     modifier = Modifier
-                        .size(22.dp)
+                        .size(ThingsIconSize.L)
                         .clickable {
                             view.performHapticFeedback(HapticFeedbackConstants.CLOCK_TICK)
                             onShowDatePickerChange(true)

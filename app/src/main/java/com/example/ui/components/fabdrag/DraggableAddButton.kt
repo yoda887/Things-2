@@ -1,5 +1,8 @@
 package com.example.ui.components.fabdrag
 
+import com.example.ui.theme.ThingsIconSize
+import com.example.R
+import androidx.compose.ui.res.stringResource
 import com.example.ui.theme.ThingsTheme
 import android.view.HapticFeedbackConstants
 import androidx.compose.animation.AnimatedVisibility
@@ -53,6 +56,9 @@ import androidx.compose.ui.platform.LocalView
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.zIndex
 
+private const val FAB_SETTLE_MS = 180
+private val FAB_PLUS_ICON_SIZE = 28.dp
+
 
 /** Насколько близко к кнопке действия нужно поднести палец, чтобы она сработала */
 private const val ACTION_HIT_SLOP_FACTOR = 1.4f
@@ -94,7 +100,7 @@ fun DraggableAddButton(
     // Приземление: кнопка летит в центр промежутка и уменьшается до нуля
     LaunchedEffect(controller.settleToken) {
         if (controller.settleToken == 0) return@LaunchedEffect
-        animate(0f, 1f, animationSpec = tween(durationMillis = 180, easing = LinearEasing)) { value, _ ->
+        animate(0f, 1f, animationSpec = tween(durationMillis = FAB_SETTLE_MS, easing = LinearEasing)) { value, _ ->
             controller.settleProgress = value
         }
         // Снимается, когда редактор закрывается (HomeScreen) или кнопка уходит из композиции
@@ -227,7 +233,7 @@ private fun BoxScope.FabBody(
             },
         contentAlignment = Alignment.Center
     ) {
-        Icon(Icons.Default.Add, contentDescription = "Create Task", tint = ThingsTheme.colors.onAccent, modifier = Modifier.size(28.dp))
+        Icon(Icons.Default.Add, contentDescription = stringResource(R.string.cd_create_task), tint = ThingsTheme.colors.onAccent, modifier = Modifier.size(FAB_PLUS_ICON_SIZE))
     }
 }
 
@@ -236,7 +242,7 @@ private fun BoxScope.FabBody(
 private fun BoxScope.FabCancelButton(controller: FabDragController) {
     FabActionButton(
         visible = controller.isDragging,
-        icon = { Icon(Icons.Default.Close, contentDescription = "Cancel", tint = ThingsTheme.colors.overlayContent, modifier = Modifier.size(20.dp)) },
+        icon = { Icon(Icons.Default.Close, contentDescription = stringResource(R.string.tag_dialog_cancel), tint = ThingsTheme.colors.overlayContent, modifier = Modifier.size(ThingsIconSize.M)) },
         onBounds = { controller.cancelBounds = it },
         modifier = Modifier.align(Alignment.Center)
     )
@@ -255,7 +261,7 @@ fun BoxScope.FabDragActions(controller: FabDragController) {
     Box(modifier = Modifier.matchParentSize().onGloballyPositioned { origin = it.positionInRoot() }) {
         FabActionButton(
             visible = controller.isDragging,
-            icon = { Icon(Icons.Default.MoveToInbox, contentDescription = "Move to Inbox", tint = ThingsTheme.colors.overlayContent, modifier = Modifier.size(22.dp)) },
+            icon = { Icon(Icons.Default.MoveToInbox, contentDescription = stringResource(R.string.cd_move_to_inbox), tint = ThingsTheme.colors.overlayContent, modifier = Modifier.size(ThingsIconSize.L)) },
             onBounds = { controller.inboxBounds = it },
             modifier = Modifier.offset {
                 val center = controller.homeCenter

@@ -1,5 +1,9 @@
 package com.example.ui.screens.home.subcomponents
 
+import com.example.ui.theme.ThingsIconSize
+import com.example.ui.theme.ThingsAlpha
+import com.example.R
+import androidx.compose.ui.res.stringResource
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
@@ -31,6 +35,9 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import com.example.ui.theme.ThingsTheme
 import com.example.ui.theme.dimens
+
+private val TAG_BADGE_ICON_SIZE = 11.dp
+private val EMPTY_STATE_ICON_SIZE = 60.dp
 
 // Строка поиска — как поле Quick Find на стартовом экране
 private val SEARCH_FIELD_HEIGHT = 44.dp
@@ -88,14 +95,14 @@ fun SearchQueryField(
             imageVector = Icons.Default.Search,
             contentDescription = null,
             tint = textSecondaryColor,
-            modifier = Modifier.size(20.dp)
+            modifier = Modifier.size(ThingsIconSize.M)
         )
         Spacer(modifier = Modifier.width(8.dp))
         Box(modifier = Modifier.weight(1f)) {
             if (query.isEmpty()) {
                 Text(
-                    text = "Search",
-                    color = textSecondaryColor.copy(alpha = 0.6f),
+                    text = stringResource(R.string.cd_search),
+                    color = textSecondaryColor.copy(alpha = ThingsAlpha.HINT),
                     style = ThingsTheme.type.bodyLarge
                 )
             }
@@ -120,7 +127,7 @@ fun SearchQueryField(
                 modifier = Modifier
                     .size(18.dp)
                     .clip(CircleShape)
-                    .background(textSecondaryColor.copy(alpha = 0.5f))
+                    .background(textSecondaryColor.copy(alpha = ThingsAlpha.HALF))
                     .clickable {
                         textFieldValue = TextFieldValue("", selection = TextRange.Zero)
                         onQueryChange("")
@@ -128,9 +135,9 @@ fun SearchQueryField(
             ) {
                 Icon(
                     imageVector = Icons.Default.Close,
-                    contentDescription = "Clear",
+                    contentDescription = stringResource(R.string.cd_clear),
                     tint = ThingsTheme.colors.background,
-                    modifier = Modifier.size(11.dp)
+                    modifier = Modifier.size(TAG_BADGE_ICON_SIZE)
                 )
             }
         }
@@ -188,8 +195,8 @@ fun SearchSectionHeader(
                 Icon(
                     imageVector = Icons.AutoMirrored.Filled.KeyboardArrowRight,
                     contentDescription = null,
-                    tint = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.4f),
-                    modifier = Modifier.size(16.dp)
+                    tint = ThingsTheme.colors.textSecondary.copy(alpha = ThingsAlpha.MUTED),
+                    modifier = Modifier.size(ThingsIconSize.XS)
                 )
             }
         }
@@ -250,8 +257,8 @@ fun SearchEntityRow(
         Icon(
             imageVector = Icons.AutoMirrored.Filled.KeyboardArrowRight,
             contentDescription = null,
-            tint = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.4f),
-            modifier = Modifier.size(16.dp)
+            tint = ThingsTheme.colors.textSecondary.copy(alpha = ThingsAlpha.MUTED),
+            modifier = Modifier.size(ThingsIconSize.XS)
         )
     }
 }
@@ -276,8 +283,8 @@ fun SearchEmptyState(
             Icon(
                 imageVector = icon,
                 contentDescription = null,
-                tint = textSecondaryColor.copy(alpha = 0.3f),
-                modifier = Modifier.size(60.dp)
+                tint = textSecondaryColor.copy(alpha = ThingsAlpha.LOW),
+                modifier = Modifier.size(EMPTY_STATE_ICON_SIZE)
             )
             Spacer(modifier = Modifier.height(12.dp))
             Text(

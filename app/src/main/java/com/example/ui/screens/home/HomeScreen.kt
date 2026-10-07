@@ -1,5 +1,7 @@
 package com.example.ui.screens.home
 
+import com.example.R
+import androidx.compose.ui.res.stringResource
 import com.example.ui.components.ThingsDropdownMenu
 import com.example.ui.components.ThingsMenuItem
 import com.example.ui.theme.ThingsTheme
@@ -68,6 +70,11 @@ import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
 import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.toRoute
+
+private const val FAB_SHOW_FADE_MS = 220
+private const val FAB_HIDE_FADE_MS = 180
+// Переход из Quick Find к найденной задаче — экран проступает под гаснущим окном
+private const val SEARCH_RESULT_CROSSFADE_MS = 120
 
 
 /**
@@ -204,8 +211,6 @@ fun ThingsHomeScreen(viewModel: ThingsViewModel = hiltViewModel()) {
     }
     var taskToEdit by remember { mutableStateOf<ItemWithChecklist?>(null) }
     var showAddDialog by remember { mutableStateOf(false) }
-    var showAddProjectDialog by remember { mutableStateOf(false) }
-    var showAddAreaDialog by remember { mutableStateOf(false) }
     var editingProjectId by remember { mutableStateOf<String?>(null) }
     var editingAreaId by remember { mutableStateOf<String?>(null) }
     var showFabMenu by remember { mutableStateOf(false) }
@@ -263,9 +268,6 @@ fun ThingsHomeScreen(viewModel: ThingsViewModel = hiltViewModel()) {
     }
     
     // Project input fields
-    var newProjectName by remember { mutableStateOf("") }
-    var selectedAreaIdForNewProject by remember { mutableStateOf<String?>(null) }
-    var showAreaDropdownInNewProject by remember { mutableStateOf(false) }
     
     val scope = rememberCoroutineScope()
     
@@ -309,11 +311,11 @@ fun ThingsHomeScreen(viewModel: ThingsViewModel = hiltViewModel()) {
                         dampingRatio = 0.78f,
                         stiffness = 240f
                     )
-                ) + fadeIn(animationSpec = tween(durationMillis = 220)),
+                ) + fadeIn(animationSpec = tween(durationMillis = FAB_SHOW_FADE_MS)),
                 exit = slideOutVertically(
                     targetOffsetY = { it * 2 },
-                    animationSpec = tween(durationMillis = 200, easing = FastOutSlowInEasing)
-                ) + fadeOut(animationSpec = tween(durationMillis = 180))
+                    animationSpec = tween(durationMillis = ThingsMotion.BASE, easing = FastOutSlowInEasing)
+                ) + fadeOut(animationSpec = tween(durationMillis = FAB_HIDE_FADE_MS))
             ) {
                 val view = androidx.compose.ui.platform.LocalView.current
                 val onFabClick: () -> Unit = {
@@ -413,39 +415,39 @@ fun ThingsHomeScreen(viewModel: ThingsViewModel = hiltViewModel()) {
                 navController = navController,
                 startDestination = HomeRoute,
                 enterTransition = {
-                    if (crossfadeNavigation) fadeIn(animationSpec = tween(durationMillis = 120)) else scaleIn(
+                    if (crossfadeNavigation) fadeIn(animationSpec = tween(durationMillis = SEARCH_RESULT_CROSSFADE_MS)) else scaleIn(
                         initialScale = 0f,
                         transformOrigin = TransformOrigin.Center,
-                        animationSpec = tween(durationMillis = 300, easing = FastOutSlowInEasing)
+                        animationSpec = tween(durationMillis = ThingsMotion.STANDARD, easing = FastOutSlowInEasing)
                     ) + fadeIn(
-                        animationSpec = tween(durationMillis = 200)
+                        animationSpec = tween(durationMillis = ThingsMotion.BASE)
                     )
                 },
                 exitTransition = {
-                    if (crossfadeNavigation) fadeOut(animationSpec = tween(durationMillis = 120)) else scaleOut(
+                    if (crossfadeNavigation) fadeOut(animationSpec = tween(durationMillis = SEARCH_RESULT_CROSSFADE_MS)) else scaleOut(
                         targetScale = 0.9f,
                         transformOrigin = TransformOrigin.Center,
-                        animationSpec = tween(durationMillis = 300, easing = FastOutSlowInEasing)
+                        animationSpec = tween(durationMillis = ThingsMotion.STANDARD, easing = FastOutSlowInEasing)
                     ) + fadeOut(
-                        animationSpec = tween(durationMillis = 200)
+                        animationSpec = tween(durationMillis = ThingsMotion.BASE)
                     )
                 },
                 popEnterTransition = {
                     scaleIn(
                         initialScale = 0.9f,
                         transformOrigin = TransformOrigin.Center,
-                        animationSpec = tween(durationMillis = 300, easing = FastOutSlowInEasing)
+                        animationSpec = tween(durationMillis = ThingsMotion.STANDARD, easing = FastOutSlowInEasing)
                     ) + fadeIn(
-                        animationSpec = tween(durationMillis = 200)
+                        animationSpec = tween(durationMillis = ThingsMotion.BASE)
                     )
                 },
                 popExitTransition = {
                     scaleOut(
                         targetScale = 0f,
                         transformOrigin = TransformOrigin.Center,
-                        animationSpec = tween(durationMillis = 300, easing = CubicBezierEasing(0.4f, 0f, 1f, 1f))
+                        animationSpec = tween(durationMillis = ThingsMotion.STANDARD, easing = CubicBezierEasing(0.4f, 0f, 1f, 1f))
                     ) + fadeOut(
-                        animationSpec = tween(durationMillis = 200)
+                        animationSpec = tween(durationMillis = ThingsMotion.BASE)
                     )
                 }
             ) {
@@ -781,6 +783,15 @@ fun ThingsHomeScreen(viewModel: ThingsViewModel = hiltViewModel()) {
             }
 
             // [ИЗМЕНЕНИЕ]: Полноэкранный оверлей поиска с бесшовным пространственным морфингом (Spatial UI)
+            // Названия смарт-списков для Recent — на языке системы
+            val smartListTitles = mapOf(
+                ActiveScreen.TODAY to stringResource(R.string.category_today),
+                ActiveScreen.INBOX to stringResource(R.string.category_inbox),
+                ActiveScreen.UPCOMING to stringResource(R.string.category_upcoming),
+                ActiveScreen.ANYTIME to stringResource(R.string.category_anytime),
+                ActiveScreen.SOMEDAY to stringResource(R.string.category_someday),
+                ActiveScreen.LOGBOOK to stringResource(R.string.category_logbook)
+            )
             if (isSearchOverlayActive) {
                 Box(modifier = Modifier.graphicsLayer { alpha = searchOverlayFade.value }) {
                 ThingsSearchOverlay(
@@ -845,7 +856,7 @@ fun ThingsHomeScreen(viewModel: ThingsViewModel = hiltViewModel()) {
                         
                         // Как в Things 3: окно поиска гаснет за 100 мс, а под ним уже проступает экран задачи
                         scope.launch {
-                            searchOverlayFade.animateTo(0f, tween(durationMillis = 100))
+                            searchOverlayFade.animateTo(0f, tween(durationMillis = ThingsMotion.FAST))
                             viewModel.setSearchQuery("")
                             isSearchOverlayActive = false
                             searchOverlayFade.snapTo(1f)
@@ -879,15 +890,7 @@ fun ThingsHomeScreen(viewModel: ThingsViewModel = hiltViewModel()) {
                     },
                     onSmartListClick = { smartScreen ->
                         // [ИЗМЕНЕНИЕ]: Добавление смарт-списка в недавно искавшиеся объекты
-                        val title = when (smartScreen) {
-                            ActiveScreen.TODAY -> "Today"
-                            ActiveScreen.INBOX -> "Inbox"
-                            ActiveScreen.UPCOMING -> "Upcoming"
-                            ActiveScreen.ANYTIME -> "Anytime"
-                            ActiveScreen.SOMEDAY -> "Someday"
-                            ActiveScreen.LOGBOOK -> "Logbook"
-                            else -> "List"
-                        }
+                        val title = smartListTitles[smartScreen] ?: smartScreen.name
                         addToRecent(SearchResultItem.SmartListResult(title, smartScreen))
 
                         navigateTo(smartScreen)
@@ -921,7 +924,7 @@ fun ThingsHomeScreen(viewModel: ThingsViewModel = hiltViewModel()) {
                 Box(
                     modifier = Modifier
                         .fillMaxSize()
-                        .background(ThingsTheme.colors.scrim.copy(alpha = 0.4f))
+                        .background(ThingsTheme.colors.scrim.copy(alpha = ThingsAlpha.MUTED))
                         .clickable(
                             interactionSource = remember { MutableInteractionSource() },
                             indication = null
@@ -953,7 +956,7 @@ fun ThingsHomeScreen(viewModel: ThingsViewModel = hiltViewModel()) {
                             modifier = Modifier
                                 .fillMaxWidth()
                                 .background(ThingsTheme.colors.overlaySurface, shape = ThingsTheme.shapes.menuShape)
-                                .border(1.dp, ThingsTheme.colors.overlayContent.copy(alpha = 0.08f), ThingsTheme.shapes.menuShape)
+                                .border(1.dp, ThingsTheme.colors.overlayContent.copy(alpha = ThingsAlpha.FAINT), ThingsTheme.shapes.menuShape)
                                 .padding(vertical = 4.dp)
                         ) {
                             // 1. New To-Do
@@ -977,18 +980,18 @@ fun ThingsHomeScreen(viewModel: ThingsViewModel = hiltViewModel()) {
                                         imageVector = Icons.Default.Add,
                                         contentDescription = null,
                                         tint = ThingsTheme.colors.overlayContent,
-                                        modifier = Modifier.size(20.dp)
+                                        modifier = Modifier.size(ThingsIconSize.M)
                                     )
                                 }
                                 Spacer(modifier = Modifier.width(16.dp))
                                 Column {
                                     Text(
-                                        text = "New To-Do",
+                                        text = stringResource(R.string.ui_new_to_do),
                                         style = ThingsTheme.type.menuItem.copy(color = ThingsTheme.colors.overlayContent)
                                     )
                                     Spacer(modifier = Modifier.height(2.dp))
                                     Text(
-                                        text = "Quickly add a to-do to your inbox.",
+                                        text = stringResource(R.string.ui_quickly_add_a_to_do_to),
                                         style = ThingsTheme.type.bodySmall.copy(
                                             color = ThingsTheme.colors.overlayContentSecondary
                                         )
@@ -1001,7 +1004,7 @@ fun ThingsHomeScreen(viewModel: ThingsViewModel = hiltViewModel()) {
                                     .fillMaxWidth()
                                     .padding(horizontal = 16.dp)
                                     .height(0.5.dp)
-                                    .background(ThingsTheme.colors.overlayContent.copy(alpha = 0.08f))
+                                    .background(ThingsTheme.colors.overlayContent.copy(alpha = ThingsAlpha.FAINT))
                             )
 
                             // 2. New Project
@@ -1033,18 +1036,18 @@ fun ThingsHomeScreen(viewModel: ThingsViewModel = hiltViewModel()) {
                                         imageVector = Icons.Default.CheckCircle,
                                         contentDescription = null,
                                         tint = ThingsTheme.colors.accent,
-                                        modifier = Modifier.size(20.dp)
+                                        modifier = Modifier.size(ThingsIconSize.M)
                                     )
                                 }
                                 Spacer(modifier = Modifier.width(16.dp))
                                 Column {
                                     Text(
-                                        text = "New Project",
+                                        text = stringResource(R.string.ui_new_project),
                                         style = ThingsTheme.type.menuItem.copy(color = ThingsTheme.colors.overlayContent)
                                     )
                                     Spacer(modifier = Modifier.height(2.dp))
                                     Text(
-                                        text = "Define a goal, then work towards it one to-do at a time.",
+                                        text = stringResource(R.string.ui_define_a_goal_then_work_towards),
                                         style = ThingsTheme.type.bodySmall.copy(
                                             color = ThingsTheme.colors.overlayContentSecondary
                                         )
@@ -1057,7 +1060,7 @@ fun ThingsHomeScreen(viewModel: ThingsViewModel = hiltViewModel()) {
                                     .fillMaxWidth()
                                     .padding(horizontal = 16.dp)
                                     .height(0.5.dp)
-                                    .background(ThingsTheme.colors.overlayContent.copy(alpha = 0.08f))
+                                    .background(ThingsTheme.colors.overlayContent.copy(alpha = ThingsAlpha.FAINT))
                             )
 
                             // 3. New Area
@@ -1087,18 +1090,18 @@ fun ThingsHomeScreen(viewModel: ThingsViewModel = hiltViewModel()) {
                                         imageVector = Icons.Default.Layers,
                                         contentDescription = null,
                                         tint = ThingsTheme.colors.area,
-                                        modifier = Modifier.size(20.dp)
+                                        modifier = Modifier.size(ThingsIconSize.M)
                                     )
                                 }
                                 Spacer(modifier = Modifier.width(16.dp))
                                 Column {
                                     Text(
-                                        text = "New Area",
+                                        text = stringResource(R.string.ui_new_area),
                                         style = ThingsTheme.type.menuItem.copy(color = ThingsTheme.colors.overlayContent)
                                     )
                                     Spacer(modifier = Modifier.height(2.dp))
                                     Text(
-                                        text = "Group projects and to-dos based on different responsibilities, such as Family or Work.",
+                                        text = stringResource(R.string.ui_group_projects_and_to_dos_based),
                                         style = ThingsTheme.type.bodySmall.copy(
                                             color = ThingsTheme.colors.overlayContentSecondary
                                         )
@@ -1149,131 +1152,6 @@ fun ThingsHomeScreen(viewModel: ThingsViewModel = hiltViewModel()) {
         )
     }
 
-    // Project creation Dialog
-    if (showAddProjectDialog) {
-        AlertDialog(
-            onDismissRequest = { showAddProjectDialog = false },
-            title = { Text("Create Custom Project", fontWeight = FontWeight.Bold, color = textPrimaryColor) },
-            text = {
-                Column {
-                    Text("Projects group tasks and track completion status with visual progress charts.", color = textSecondaryColor, style = ThingsTheme.type.bodySmall)
-                    Spacer(modifier = Modifier.height(12.dp))
-                    OutlinedTextField(
-                        value = newProjectName,
-                        onValueChange = { newProjectName = it },
-                        label = { Text("Project Title") },
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .testTag("project_title_input"),
-                        colors = OutlinedTextFieldDefaults.colors(
-                            focusedBorderColor = ThingsTheme.colors.accent,
-                            unfocusedBorderColor = dividerColor,
-                            focusedLabelColor = ThingsTheme.colors.accent
-                        )
-                    )
-                    Spacer(modifier = Modifier.height(12.dp))
-                    Text("Area of Responsibility:", color = textPrimaryColor, fontWeight = FontWeight.SemiBold, style = ThingsTheme.type.bodyMedium)
-                    Spacer(modifier = Modifier.height(4.dp))
-                    Box(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .border(1.dp, dividerColor, ThingsTheme.shapes.badgeShape)
-                            .clickable { showAreaDropdownInNewProject = true }
-                            .padding(12.dp)
-                    ) {
-                        val activeAreaName = if (selectedAreaIdForNewProject == null) "Без области" else {
-                            areas.firstOrNull { it.id == selectedAreaIdForNewProject }?.title ?: "Без области"
-                        }
-                        Text(activeAreaName, color = textPrimaryColor)
-                        
-                        ThingsDropdownMenu(
-                            expanded = showAreaDropdownInNewProject,
-                            onDismissRequest = { showAreaDropdownInNewProject = false }
-                        ) {
-                            ThingsMenuItem("Без области", Icons.Default.Block, onClick = {
-                                selectedAreaIdForNewProject = null
-                                showAreaDropdownInNewProject = false
-                            })
-                            areas.forEach { area ->
-                                ThingsMenuItem(area.title, AppIcons.Area, onClick = {
-                                    selectedAreaIdForNewProject = area.id
-                                    showAreaDropdownInNewProject = false
-                                })
-                            }
-                        }
-                    }
-                }
-            },
-            confirmButton = {
-                TextButton(
-                    onClick = {
-                        if (newProjectName.isNotBlank()) {
-                            viewModel.addProject(newProjectName.trim(), areaId = selectedAreaIdForNewProject)
-                            newProjectName = ""
-                            selectedAreaIdForNewProject = null
-                            showAddProjectDialog = false
-                        }
-                    },
-                    modifier = Modifier.testTag("confirm_add_project")
-                ) {
-                    Text("Create", color = ThingsTheme.colors.accent, fontWeight = FontWeight.Bold)
-                }
-            },
-            dismissButton = {
-                TextButton(onClick = { showAddProjectDialog = false }) {
-                    Text("Cancel", color = textSecondaryColor)
-                }
-            },
-            containerColor = cardSurfaceColor
-        )
-    }
-
-    // Area creation Dialog
-    if (showAddAreaDialog) {
-        var newAreaName by remember { mutableStateOf("") }
-        AlertDialog(
-            onDismissRequest = { showAddAreaDialog = false },
-            title = { Text("Create Responsibility Area", fontWeight = FontWeight.Bold, color = textPrimaryColor) },
-            text = {
-                Column {
-                    Text("Areas (Области) organize related activities like Work, Personal Life, or Health, and do not have deadlines.", color = textSecondaryColor, style = ThingsTheme.type.bodySmall)
-                    Spacer(modifier = Modifier.height(12.dp))
-                    OutlinedTextField(
-                        value = newAreaName,
-                        onValueChange = { newAreaName = it },
-                        label = { Text("Area Title") },
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .testTag("area_title_input"),
-                        colors = OutlinedTextFieldDefaults.colors(
-                            focusedBorderColor = ThingsTheme.colors.accent,
-                            unfocusedBorderColor = dividerColor,
-                            focusedLabelColor = ThingsTheme.colors.accent
-                        )
-                    )
-                }
-            },
-            confirmButton = {
-                TextButton(
-                    onClick = {
-                        if (newAreaName.isNotBlank()) {
-                            viewModel.addArea(newAreaName.trim())
-                            showAddAreaDialog = false
-                        }
-                    },
-                    modifier = Modifier.testTag("confirm_add_area")
-                ) {
-                    Text("Create", color = ThingsTheme.colors.accent, fontWeight = FontWeight.Bold)
-                }
-            },
-            dismissButton = {
-                TextButton(onClick = { showAddAreaDialog = false }) {
-                    Text("Cancel", color = textSecondaryColor)
-                }
-            },
-            containerColor = cardSurfaceColor
-        )
-    }
 }
 
 /**
@@ -1297,7 +1175,7 @@ private fun AnimatedVisibilityScope.ScreenTransitionWrapper(
     // Visible maps to 0f dimming, PostExit maps to 0.3f dimming, PreEnter/initial states map to 0f dimming.
     val dimmingAlpha by transition.animateFloat(
         transitionSpec = {
-            tween(durationMillis = 300, easing = FastOutSlowInEasing)
+            tween(durationMillis = ThingsMotion.STANDARD, easing = FastOutSlowInEasing)
         },
         label = "DimmingAlpha"
     ) { state ->

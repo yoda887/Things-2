@@ -1,5 +1,9 @@
 package com.example.ui.screens.home.components
 
+import com.example.R
+import androidx.compose.ui.res.pluralStringResource
+import androidx.compose.ui.res.stringResource
+import com.example.ui.components.ThingsConfirmDialog
 import com.example.ui.theme.ThingsTheme
 import kotlinx.coroutines.launch
 
@@ -90,6 +94,8 @@ import com.example.ui.components.AreaIconAnimated
 import com.example.ui.screens.home.ActiveScreen
 import com.example.ui.screens.home.subcomponents.SmartListRow
 import com.example.ui.theme.*
+
+private const val PULL_ACTIVE_TEXT_ALPHA = 0.9f
 
 /**
  * Элементы плоского дерева проектов и областей на главном экране.
@@ -226,32 +232,20 @@ fun ThingsHomePanel(
     if (projectToDelete != null) {
         val proj = projectToDelete!!
         val taskCountInProj = allTasks.count { it.item.projectId == proj.id }
-        AlertDialog(
-            onDismissRequest = { projectToDelete = null },
-            title = { Text("Удалить проект?", fontWeight = FontWeight.Bold, color = textPrimaryColor) },
-            text = {
-                Text(
-                    "Вы действительно хотите удалить проект \"${proj.title}\"? Проект удалится вместе с $taskCountInProj задачами.",
-                    color = textSecondaryColor,
-                    style = ThingsTheme.type.bodyMedium
-                )
+        ThingsConfirmDialog(
+            title = stringResource(R.string.delete_project_title),
+            message = if (taskCountInProj > 0) {
+                pluralStringResource(R.plurals.delete_project_message_tasks, taskCountInProj, proj.title, taskCountInProj)
+            } else {
+                stringResource(R.string.delete_project_message, proj.title)
             },
-            confirmButton = {
-                TextButton(
-                    onClick = {
-                        onDeleteProject(proj)
-                        projectToDelete = null
-                    }
-                ) {
-                    Text("Удалить", color = ThingsTheme.colors.danger, fontWeight = FontWeight.Bold)
-                }
+            confirmText = stringResource(R.string.delete),
+            dismissText = stringResource(R.string.cancel),
+            onConfirm = {
+                onDeleteProject(proj)
+                projectToDelete = null
             },
-            dismissButton = {
-                TextButton(onClick = { projectToDelete = null }) {
-                    Text("Отмена", color = textSecondaryColor)
-                }
-            },
-            containerColor = cardSurfaceColor
+            onDismiss = { projectToDelete = null }
         )
     }
 
@@ -538,7 +532,7 @@ fun ThingsHomePanel(
         item {
             Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
                 SmartListRow(
-                    title = "Inbox",
+                    title = stringResource(R.string.category_inbox),
                     // Используем кастомную иконку AppIcons.Inbox
                     icon = AppIcons.Inbox,
                     // Задаём Unspecified цвет, чтобы отображался оригинальный красивый градиент/цвет иконки
@@ -551,7 +545,7 @@ fun ThingsHomePanel(
                 )
                 Spacer(modifier = Modifier.height(12.dp))
                 SmartListRow(
-                    title = "Today",
+                    title = stringResource(R.string.category_today),
                     // Используем кастомную иконку AppIcons.Today
                     icon = AppIcons.Today,
                     iconColor = Color.Unspecified,
@@ -562,7 +556,7 @@ fun ThingsHomePanel(
                     onClick = { onSmartListClick(ActiveScreen.TODAY) }
                 )
                 SmartListRow(
-                    title = "Upcoming",
+                    title = stringResource(R.string.category_upcoming),
                     // Используем кастомную иконку AppIcons.Upcoming
                     icon = AppIcons.Upcoming,
                     iconColor = Color.Unspecified,
@@ -572,7 +566,7 @@ fun ThingsHomePanel(
                     onClick = { onSmartListClick(ActiveScreen.UPCOMING) }
                 )
                 SmartListRow(
-                    title = "Anytime",
+                    title = stringResource(R.string.category_anytime),
                     // Используем кастомную иконку AppIcons.Anytime
                     icon = AppIcons.Anytime,
                     iconColor = Color.Unspecified,
@@ -582,7 +576,7 @@ fun ThingsHomePanel(
                     onClick = { onSmartListClick(ActiveScreen.ANYTIME) }
                 )
                 SmartListRow(
-                    title = "Someday",
+                    title = stringResource(R.string.category_someday),
                     // Используем кастомную иконку AppIcons.Someday
                     icon = AppIcons.Someday,
                     iconColor = Color.Unspecified,
@@ -592,7 +586,7 @@ fun ThingsHomePanel(
                     onClick = { onSmartListClick(ActiveScreen.SOMEDAY) }
                 )
                 SmartListRow(
-                    title = "Logbook",
+                    title = stringResource(R.string.category_logbook),
                     // Используем кастомную иконку AppIcons.Logbook
                     icon = AppIcons.Logbook,
                     iconColor = Color.Unspecified,
@@ -660,7 +654,7 @@ fun ThingsHomePanel(
                     val isAreaEditing = area.id == editingAreaId
                     val rotationAngle by animateFloatAsState(
                         targetValue = if (isExpanded) 90f else 0f,
-                        animationSpec = tween(durationMillis = 200, easing = FastOutSlowInEasing),
+                        animationSpec = tween(durationMillis = ThingsMotion.BASE, easing = FastOutSlowInEasing),
                         label = "rotationAngle_${area.id}"
                     )
 
@@ -673,7 +667,7 @@ fun ThingsHomePanel(
                     val areaDragElev by animateDpAsState(
                         targetValue = if (isAreaDragging) 8.dp else 0.dp,
                         animationSpec = tween(
-                            durationMillis = 250,
+                            durationMillis = ThingsMotion.MEDIUM,
                             easing = FastOutSlowInEasing
                         ),
                         label = "areaDragElev_${area.id}"
@@ -683,7 +677,7 @@ fun ThingsHomePanel(
                     Column(
                         modifier = (if (!isAreaDragging && areaDragElev == 0.dp) {
                             Modifier.animateItem(
-                                placementSpec = tween(durationMillis = 200, easing = FastOutSlowInEasing)
+                                placementSpec = tween(durationMillis = ThingsMotion.BASE, easing = FastOutSlowInEasing)
                             )
                         } else {
                             Modifier
@@ -732,7 +726,7 @@ fun ThingsHomePanel(
                                     .clip(areaChipShape)
                                     .background(
                                         if (isAreaDragging || areaDragElev > 0.dp) cardSurfaceColor
-                                        else if (isAreaEditing) ThingsTheme.colors.accent.copy(alpha = 0.15f)
+                                        else if (isAreaEditing) ThingsTheme.colors.accent.copy(alpha = ThingsAlpha.SUBTLE)
                                         else Color.Transparent
                                     )
                                     .areaDragAndDrop(
@@ -815,9 +809,9 @@ fun ThingsHomePanel(
                                         Box(modifier = Modifier.fillMaxWidth()) {
                                             if (textState.isEmpty()) {
                                                 Text(
-                                                    text = "New Area",
+                                                    text = stringResource(R.string.ui_new_area),
                                                     style = ThingsTheme.type.listTitle.copy(
-                                                        color = textSecondaryColor.copy(alpha = 0.6f)
+                                                        color = textSecondaryColor.copy(alpha = ThingsAlpha.HINT)
                                                     )
                                                 )
                                             }
@@ -846,10 +840,10 @@ fun ThingsHomePanel(
                                 ) {
                                     Icon(
                                         imageVector = Icons.AutoMirrored.Filled.KeyboardArrowRight,
-                                        contentDescription = "Toggle Area",
+                                        contentDescription = stringResource(R.string.cd_toggle_area),
                                         tint = textSecondaryColor,
                                         modifier = Modifier
-                                            .size(22.dp)
+                                            .size(ThingsIconSize.L)
                                             .graphicsLayer(rotationZ = rotationAngle)
                                     )
                                 }
@@ -886,13 +880,13 @@ fun ThingsHomePanel(
                         verticalAlignment = Alignment.CenterVertically
                     ) {
                         Row(verticalAlignment = Alignment.CenterVertically) {
-                            Icon(Icons.Default.CloudSync, contentDescription = "Google Sync", tint = ThingsTheme.colors.inbox, modifier = Modifier.size(22.dp))
+                            Icon(Icons.Default.CloudSync, contentDescription = stringResource(R.string.cd_google_sync), tint = ThingsTheme.colors.inbox, modifier = Modifier.size(ThingsIconSize.L))
                             Spacer(modifier = Modifier.width(10.dp))
-                            Text("Google Tasks Sync Settings", style = ThingsTheme.type.bodyMedium.copy(fontWeight = FontWeight.SemiBold, color = textPrimaryColor))
+                            Text(stringResource(R.string.ui_google_tasks_sync_settings), style = ThingsTheme.type.bodyMedium.copy(fontWeight = FontWeight.SemiBold, color = textPrimaryColor))
                         }
                         Icon(
                             imageVector = if (isSyncConfigExpanded) Icons.Default.ExpandLess else Icons.Default.ExpandMore,
-                            contentDescription = "Toggle Settings",
+                            contentDescription = stringResource(R.string.cd_toggle_settings),
                             tint = textSecondaryColor
                         )
                     }
@@ -900,7 +894,7 @@ fun ThingsHomePanel(
                     AnimatedVisibility(visible = isSyncConfigExpanded) {
                         Column(modifier = Modifier.padding(top = 12.dp)) {
                             Text(
-                                "Enter an OAuth access token to bidirectionally synchronize local tasks and projects directly with Google Tasks.",
+                                stringResource(R.string.ui_enter_an_oauth_access_token_to),
                                 style = ThingsTheme.type.caption.copy(color = textSecondaryColor)
                             )
                             Spacer(modifier = Modifier.height(10.dp))
@@ -908,7 +902,7 @@ fun ThingsHomePanel(
                             OutlinedTextField(
                                 value = rawTokenInput,
                                 onValueChange = { rawTokenInput = it },
-                                label = { Text("Google Access Token", style = ThingsTheme.type.caption) },
+                                label = { Text(stringResource(R.string.ui_google_access_token), style = ThingsTheme.type.caption) },
                                 singleLine = true,
                                 modifier = Modifier
                                     .fillMaxWidth()
@@ -926,7 +920,7 @@ fun ThingsHomePanel(
 
                             if (syncError != null) {
                                 Text(
-                                    "Error: $syncError",
+                                    stringResource(R.string.ui_sync_error, syncError),
                                     color = ThingsTheme.colors.danger,
                                     style = ThingsTheme.type.caption.copy(fontWeight = FontWeight.Medium),
                                     modifier = Modifier.padding(bottom = 8.dp)
@@ -945,7 +939,7 @@ fun ThingsHomePanel(
                                 if (isSyncing) {
                                     CircularProgressIndicator(modifier = Modifier.size(18.dp), color = ThingsTheme.colors.onAccent)
                                 } else {
-                                    Text("Sync Tasks Now", color = ThingsTheme.colors.onAccent, fontWeight = FontWeight.Bold)
+                                    Text(stringResource(R.string.ui_sync_tasks_now), color = ThingsTheme.colors.onAccent, fontWeight = FontWeight.Bold)
                                 }
                             }
                         }
@@ -979,17 +973,17 @@ fun ThingsHomePanel(
         // Дискретное переключение темы цвета (_selected) строго на пороге с коротким кроссфейдом 100 мс
         val inputBackground by animateColorAsState(
             targetValue = if (isPastThreshold) ThingsTheme.colors.accent else inputNormalBackground,
-            animationSpec = tween(durationMillis = 100, easing = LinearEasing),
+            animationSpec = tween(durationMillis = ThingsMotion.FAST, easing = LinearEasing),
             label = "homeSearchInputBg"
         )
         val iconTint by animateColorAsState(
             targetValue = if (isPastThreshold) ThingsTheme.colors.onAccent else textSecondaryColor,
-            animationSpec = tween(durationMillis = 100, easing = LinearEasing),
+            animationSpec = tween(durationMillis = ThingsMotion.FAST, easing = LinearEasing),
             label = "homeSearchIconTint"
         )
         val textTint by animateColorAsState(
-            targetValue = if (isPastThreshold) ThingsTheme.colors.onAccent.copy(alpha = 0.9f) else textSecondaryColor.copy(alpha = 0.6f),
-            animationSpec = tween(durationMillis = 100, easing = LinearEasing),
+            targetValue = if (isPastThreshold) ThingsTheme.colors.onAccent.copy(alpha = PULL_ACTIVE_TEXT_ALPHA) else textSecondaryColor.copy(alpha = ThingsAlpha.HINT),
+            animationSpec = tween(durationMillis = ThingsMotion.FAST, easing = LinearEasing),
             label = "homeSearchTextTint"
         )
         // Цвета темы quickFind.sourceListSearchBar.arrow из ThingsTheme
@@ -997,7 +991,7 @@ fun ThingsHomePanel(
         val arrowSelectedColor = ThingsTheme.colors.pullArrowSelected
         val arrowColor by animateColorAsState(
             targetValue = if (isPastThreshold) arrowSelectedColor else arrowNormalColor,
-            animationSpec = tween(durationMillis = 100, easing = LinearEasing),
+            animationSpec = tween(durationMillis = ThingsMotion.FAST, easing = LinearEasing),
             label = "homeSearchArrowColor"
         )
 
@@ -1061,10 +1055,10 @@ fun ThingsHomePanel(
             ) {
                 Icon(
                     imageVector = Icons.Default.Search,
-                    contentDescription = "Search",
+                    contentDescription = stringResource(R.string.cd_search),
                     tint = iconTint,
                     modifier = Modifier
-                        .size(20.dp)
+                        .size(ThingsIconSize.M)
                         .graphicsLayer {
                             scaleX = iconScale
                             scaleY = iconScale
@@ -1073,7 +1067,7 @@ fun ThingsHomePanel(
                 )
                 Spacer(modifier = Modifier.width(8.dp))
                 Text(
-                    text = "Quick Find",
+                    text = stringResource(R.string.ui_quick_find),
                     color = textTint,
                     style = ThingsTheme.type.bodyLarge
                 )
@@ -1166,7 +1160,7 @@ private fun LazyItemScope.ProjectItemRow(
     val dragElev by animateDpAsState(
         targetValue = if (isDragging) 8.dp else 0.dp,
         animationSpec = tween(
-            durationMillis = 250,
+            durationMillis = ThingsMotion.MEDIUM,
             easing = FastOutSlowInEasing
         ),
         label = "projDragElev_${project.id}"
@@ -1179,7 +1173,7 @@ private fun LazyItemScope.ProjectItemRow(
             .then(
                 if (!isDragging && dragElev == 0.dp) {
                     Modifier.animateItem(
-                        placementSpec = tween(durationMillis = 200, easing = FastOutSlowInEasing)
+                        placementSpec = tween(durationMillis = ThingsMotion.BASE, easing = FastOutSlowInEasing)
                     )
                 } else {
                     Modifier
@@ -1217,7 +1211,7 @@ private fun LazyItemScope.ProjectItemRow(
                 .clip(projectChipShape)
                 .background(
                     if (isDragging || dragElev > 0.dp) cardSurfaceColor
-                    else if (isEditing) ThingsTheme.colors.accent.copy(alpha = 0.15f)
+                    else if (isEditing) ThingsTheme.colors.accent.copy(alpha = ThingsAlpha.SUBTLE)
                     else Color.Transparent
                 )
                 .projectDragAndDrop(
@@ -1307,9 +1301,9 @@ private fun LazyItemScope.ProjectItemRow(
                         Box(modifier = Modifier.fillMaxWidth()) {
                             if (textState.isEmpty()) {
                                 Text(
-                                    text = "New Project",
+                                    text = stringResource(R.string.ui_new_project),
                                     style = ThingsTheme.type.listTitle.copy(
-                                        color = textSecondaryColor.copy(alpha = 0.6f),
+                                        color = textSecondaryColor.copy(alpha = ThingsAlpha.HINT),
                                         fontWeight = FontWeight.Normal
                                     )
                                 )

@@ -1,5 +1,8 @@
 package com.example.ui.screens.home.inlineeditor.components
 
+import com.example.ui.theme.ThingsAlpha
+import com.example.R
+import androidx.compose.ui.res.stringResource
 import com.example.ui.theme.ThingsTheme
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
@@ -160,9 +163,9 @@ private fun InlineMainInputRowContent(
                     decorationBox = { innerTextField ->
                         if (title.isEmpty()) {
                             Text(
-                                "New To-Do",
+                                stringResource(R.string.ui_new_to_do),
                                 style = ThingsTheme.type.taskTitle.copy(
-                                    color = textSecondaryColor.copy(alpha = 0.5f)
+                                    color = textSecondaryColor.copy(alpha = ThingsAlpha.HALF)
                                 )
                             )
                         }
@@ -244,9 +247,9 @@ private fun InlineMainInputRowContent(
                     decorationBox = { innerTextField ->
                         if (notes.isEmpty()) {
                             Text(
-                                "Notes",
+                                stringResource(R.string.ui_notes),
                                 style = ThingsTheme.type.editorNotes.copy(
-                                    color = textSecondaryColor.copy(alpha = 0.5f)
+                                    color = textSecondaryColor.copy(alpha = ThingsAlpha.HALF)
                                 )
                             )
                         }

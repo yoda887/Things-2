@@ -1,5 +1,7 @@
 package com.example.ui.screens.home.subcomponents
 
+import com.example.ui.theme.ThingsIconSize
+import com.example.ui.theme.ThingsMotion
 import com.example.ui.theme.ThingsTheme
 import androidx.compose.animation.animateContentSize
 import androidx.compose.animation.core.animateDpAsState
@@ -82,6 +84,9 @@ import androidx.compose.material.icons.outlined.ChevronRight
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.outlined.FormatListBulleted
 import com.example.ui.components.swipe.SwipeableTaskContainer
+
+// Раскрытие новой задачи из кнопки «+»
+private const val FAB_REVEAL_MS = 160
 
 private const val DELETE_ANIMATION_DELAY_MS = 300L
 
@@ -172,7 +177,7 @@ fun AnimatedTaskItem(
             reveal.animateTo(
                 1f,
                 androidx.compose.animation.core.tween(
-                    durationMillis = 160,
+                    durationMillis = FAB_REVEAL_MS,
                     easing = androidx.compose.animation.core.FastOutSlowInEasing
                 )
             )
@@ -386,16 +391,16 @@ fun AnimatedTaskItem(
             visible = !isSecondaryBatchItem,
             enter = androidx.compose.animation.expandVertically(
                 animationSpec = tween(
-                    durationMillis = 250,
+                    durationMillis = ThingsMotion.MEDIUM,
                     easing = FastOutSlowInEasing
                 )
-            ) + androidx.compose.animation.fadeIn(animationSpec = tween(200)),
+            ) + androidx.compose.animation.fadeIn(animationSpec = tween(ThingsMotion.BASE)),
             exit = androidx.compose.animation.shrinkVertically(
                 animationSpec = tween(
-                    durationMillis = 250,
+                    durationMillis = ThingsMotion.MEDIUM,
                     easing = FastOutSlowInEasing
                 )
-            ) + androidx.compose.animation.fadeOut(animationSpec = tween(200))
+            ) + androidx.compose.animation.fadeOut(animationSpec = tween(ThingsMotion.BASE))
         ) {
             Box {
                 // Каскадный эффект стопки карточек под ведущей задачей при групповом перетаскивании
@@ -615,7 +620,7 @@ fun AnimatedTaskItem(
                                 // 2. Включаем серое закрашивание серым кругом от чекбокса и серость текста (как при чекбоксе)
                                 onDeletedTaskIdAdd(task.id)
                                 // 3. Ждём 500 мс (стандартный таймер выполнения чекбокса)
-                                delay(500L)
+                                delay(ThingsMotion.LONG.toLong())
                                 // 4. Удаляем задачу из ViewModel -> animateItem растворяет серую карточку и подтягивает задачи
                                 onEvent(ThingsCategoryListEvent.DeleteTask(taskWrapper))
                             }
@@ -769,7 +774,7 @@ fun AnimatedTaskItem(
                                     imageVector = AppIcons.Area,
                                     contentDescription = null,
                                     tint = pillContentColor,
-                                    modifier = Modifier.size(16.dp)
+                                    modifier = Modifier.size(ThingsIconSize.XS)
                                 )
                             }
                             Spacer(modifier = Modifier.width(6.dp))
@@ -785,7 +790,7 @@ fun AnimatedTaskItem(
                                 imageVector = androidx.compose.material.icons.Icons.Outlined.ChevronRight,
                                 contentDescription = null,
                                 tint = pillContentColor,
-                                modifier = Modifier.size(20.dp)
+                                modifier = Modifier.size(ThingsIconSize.M)
                             )
                         }
                     }

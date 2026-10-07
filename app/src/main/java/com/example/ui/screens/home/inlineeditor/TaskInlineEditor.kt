@@ -1,5 +1,8 @@
 package com.example.ui.screens.home.inlineeditor
 
+import com.example.ui.theme.ThingsIconSize
+import com.example.R
+import androidx.compose.ui.res.stringResource
 import com.example.ui.theme.ThingsTheme
 import androidx.compose.animation.*
 import androidx.compose.foundation.clickable
@@ -493,9 +496,9 @@ fun ThingsTaskInlineEditor(
                         ) {
                             Icon(
                                 imageVector = activeDateIcon,
-                                contentDescription = "Change date",
+                                contentDescription = stringResource(R.string.cd_change_date),
                                 tint = activeDateColor,
-                                modifier = Modifier.size(18.dp)
+                                modifier = Modifier.size(ThingsIconSize.S)
                             )
                             Spacer(modifier = Modifier.width(6.dp))
                             Text(
@@ -539,35 +542,9 @@ fun ThingsTaskInlineEditor(
                             }
                         }
 
-                        val lang = remember { java.util.Locale.getDefault().language }
-                        val relativeText = when (lang) {
-                            "uk" -> when {
-                                delta < 0 -> "протерміновано"
-                                delta == 0 -> "сьогодні"
-                                delta == 1 -> "завтра"
-                                else -> "через $delta дн."
-                            }
-                            "ru" -> when {
-                                delta < 0 -> "просрочено"
-                                delta == 0 -> "сегодня"
-                                delta == 1 -> "завтра"
-                                else -> "через $delta дн."
-                            }
-                            else -> when {
-                                delta < 0 -> "overdue"
-                                delta == 0 -> "today"
-                                delta == 1 -> "tomorrow"
-                                else -> "in $delta d."
-                            }
-                        }
+                        val relativeText = com.example.ui.screens.home.inlineeditor.utils.relativeDueText(delta)
 
-                        val locale = remember(lang) {
-                            when (lang) {
-                                "uk" -> java.util.Locale("uk")
-                                "ru" -> java.util.Locale("ru")
-                                else -> java.util.Locale.US
-                            }
-                        }
+                        val locale = remember { java.util.Locale.getDefault() }
                         val sdf = remember(locale) { java.text.SimpleDateFormat("EEE, d MMMM", locale) }
                         val dateText = remember(dueDate) {
                             dueDate?.let { sdf.format(java.util.Date(it)).lowercase() } ?: ""
@@ -588,9 +565,9 @@ fun ThingsTaskInlineEditor(
                         ) {
                             Icon(
                                 imageVector = AppIcons.Deadline,
-                                contentDescription = "Deadline Flag",
+                                contentDescription = stringResource(R.string.cd_deadline_flag),
                                 tint = primaryColor,
-                                modifier = Modifier.size(18.dp)
+                                modifier = Modifier.size(ThingsIconSize.S)
                             )
                             Spacer(modifier = Modifier.width(6.dp))
                             Text(
@@ -630,10 +607,10 @@ fun ThingsTaskInlineEditor(
                         Box(modifier = Modifier.padding(start = MaterialTheme.dimens.taskEditorActionIconsSpacing)) {
                             Icon(
                                 imageVector = AppIcons.Upcoming,
-                                contentDescription = "Schedule",
+                                contentDescription = stringResource(R.string.cd_schedule),
                                 tint = iconInactiveColor,
                                 modifier = Modifier
-                                    .size(22.dp)
+                                    .size(ThingsIconSize.L)
                                     .clickable {
                                         view.performHapticFeedback(HapticFeedbackConstants.CLOCK_TICK)
                                         showWhenDialog = true
@@ -651,10 +628,10 @@ fun ThingsTaskInlineEditor(
                         Box(modifier = Modifier.padding(start = MaterialTheme.dimens.taskEditorActionIconsSpacing)) {
                             Icon(
                                 imageVector = AppIcons.Tag,
-                                contentDescription = "Tags",
+                                contentDescription = stringResource(R.string.tag_dialog_title),
                                 tint = iconInactiveColor,
                                 modifier = Modifier
-                                    .size(20.dp)
+                                    .size(ThingsIconSize.M)
                                     .clickable {
                                         view.performHapticFeedback(HapticFeedbackConstants.CLOCK_TICK)
                                         showTagDialog = true
@@ -672,10 +649,10 @@ fun ThingsTaskInlineEditor(
                         Box(modifier = Modifier.padding(start = MaterialTheme.dimens.taskEditorActionIconsSpacing)) {
                             Icon(
                                 imageVector = AppIcons.BulletList,
-                                contentDescription = "Checklists",
+                                contentDescription = stringResource(R.string.cd_checklists),
                                 tint = iconInactiveColor,
                                 modifier = Modifier
-                                    .size(22.dp)
+                                    .size(ThingsIconSize.L)
                                     .clickable {
                                         view.performHapticFeedback(HapticFeedbackConstants.CLOCK_TICK)
                                         showChecklistHelper = true
@@ -693,10 +670,10 @@ fun ThingsTaskInlineEditor(
                         Box(modifier = Modifier.padding(start = MaterialTheme.dimens.taskEditorActionIconsSpacing)) {
                             Icon(
                                 imageVector = AppIcons.Deadline,
-                                contentDescription = "Set Deadline",
+                                contentDescription = stringResource(R.string.batch_action_set_deadline),
                                 tint = iconInactiveColor,
                                 modifier = Modifier
-                                    .size(22.dp)
+                                    .size(ThingsIconSize.L)
                                     .clickable {
                                         view.performHapticFeedback(HapticFeedbackConstants.CLOCK_TICK)
                                         showDatePicker = true
@@ -771,7 +748,7 @@ fun DeadlineDatePickerDialog(
                     onDismiss()
                 }
             ) {
-                Text("OK", color = ThingsTheme.colors.accent)
+                Text(stringResource(R.string.ui_ok), color = ThingsTheme.colors.accent)
             }
         },
         dismissButton = {
@@ -782,13 +759,13 @@ fun DeadlineDatePickerDialog(
                         onDismiss()
                     }
                 ) {
-                    Text("Clear", color = ThingsTheme.colors.danger)
+                    Text(stringResource(R.string.cd_clear), color = ThingsTheme.colors.danger)
                 }
                 Spacer(modifier = Modifier.width(8.dp))
                 TextButton(
                     onClick = onDismiss
                 ) {
-                    Text("Cancel", color = ThingsTheme.colors.textSecondary)
+                    Text(stringResource(R.string.tag_dialog_cancel), color = ThingsTheme.colors.textSecondary)
                 }
             }
         }

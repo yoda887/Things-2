@@ -1,5 +1,9 @@
 package com.example.ui.screens.home.subcomponents
 
+import com.example.ui.theme.ThingsIconSize
+import com.example.ui.theme.ThingsAlpha
+import com.example.R
+import androidx.compose.ui.res.stringResource
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
@@ -24,6 +28,8 @@ import com.example.data.model.Item
 import com.example.data.model.ItemWithChecklist
 import com.example.ui.components.ProjectProgressArc
 import com.example.ui.theme.dimens
+
+private val NOTES_ICON_SIZE = 14.dp
 
 /**
  * Строка проекта в списке проектов области.
@@ -95,17 +101,17 @@ fun ProjectItemRow(
                 Spacer(modifier = Modifier.width(5.dp))
                 Icon(
                     imageVector = Icons.Outlined.Description,
-                    contentDescription = "Has notes",
-                    tint = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.4f),
-                    modifier = Modifier.size(14.dp)
+                    contentDescription = stringResource(R.string.cd_has_notes),
+                    tint = ThingsTheme.colors.textSecondary.copy(alpha = ThingsAlpha.MUTED),
+                    modifier = Modifier.size(NOTES_ICON_SIZE)
                 )
             }
             Spacer(modifier = Modifier.width(3.dp))
             Icon(
                 imageVector = Icons.AutoMirrored.Filled.KeyboardArrowRight,
                 contentDescription = null,
-                tint = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.4f),
-                modifier = Modifier.size(16.dp)
+                tint = ThingsTheme.colors.textSecondary.copy(alpha = ThingsAlpha.MUTED),
+                modifier = Modifier.size(ThingsIconSize.XS)
             )
         }
     }

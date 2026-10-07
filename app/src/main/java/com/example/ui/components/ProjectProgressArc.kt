@@ -1,5 +1,6 @@
 package com.example.ui.components
 
+import com.example.ui.theme.ThingsAlpha
 import com.example.ui.theme.ThingsTheme
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.layout.aspectRatio
@@ -20,7 +21,7 @@ fun ProjectProgressArc(
     total: Int,
     modifier: Modifier = Modifier,
     // [ИЗМЕНЕНИЕ]: Добавлен параметр цвета, по умолчанию серый, для возможности кастомизации на экране проекта
-    color: Color = ThingsTheme.colors.textSecondary.copy(alpha = 0.6f)
+    color: Color = ThingsTheme.colors.textSecondary.copy(alpha = ThingsAlpha.HINT)
 ) {
     val progress = if (total > 0) completed.toFloat() / total else 0f
     

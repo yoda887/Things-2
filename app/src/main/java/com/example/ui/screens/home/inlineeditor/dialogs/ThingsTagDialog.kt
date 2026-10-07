@@ -1,5 +1,9 @@
 package com.example.ui.screens.home.inlineeditor.dialogs
 
+import com.example.ui.theme.ThingsIconSize
+import com.example.ui.theme.ThingsMotion
+import androidx.compose.ui.res.pluralStringResource
+import com.example.ui.components.ThingsConfirmDialog
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
@@ -64,6 +68,9 @@ import com.example.R
 import com.example.data.model.Tag
 import com.example.ui.theme.ThingsTheme
 import kotlinx.coroutines.delay
+
+// Сколько ждать, пока новая группа тега сохранится в базе
+private const val PARENT_SYNC_WAIT_MS = 2000L
 
 // Цвета диалога — роли темы (ThingsTheme)
 private val DialogBackgroundColor @Composable get() = ThingsTheme.colors.overlaySurface
@@ -201,7 +208,7 @@ fun ThingsTagDialog(
 
     LaunchedEffect(awaitingParents) {
         if (awaitingParents != null) {
-            delay(2000L)
+            delay(PARENT_SYNC_WAIT_MS)
             awaitingParents = null
         }
     }
@@ -250,49 +257,35 @@ fun ThingsTagDialog(
     // Focus immediately when switching to creation or edit mode
     LaunchedEffect(currentScreen) {
         if (currentScreen == DialogScreen.CREATE || currentScreen == DialogScreen.EDIT) {
-            delay(100L) // Allow slide animation to prepare
+            delay(ThingsMotion.FAST.toLong()) // Allow slide animation to prepare
             focusRequester.requestFocus()
         }
     }
 
     if (tagToDeleteWithChildren != null) {
-        AlertDialog(
-            onDismissRequest = { tagToDeleteWithChildren = null },
-            title = { Text(stringResource(id = R.string.delete_group_title)) },
-            text = { Text(stringResource(id = R.string.delete_group_message)) },
-            confirmButton = {
-                TextButton(onClick = {
-                    val parent = tagToDeleteWithChildren!!
-                    val children = childTagsToDelete
-                    
-                    // TaskRepository will handle deleting children from DB and items
-                    onDeleteTag(parent)
-                    
-                    var newlyDeleted = setOf(parent.title)
-                    children.forEach { child ->
-                        newlyDeleted = newlyDeleted + child.title
-                    }
-                    
-                    deletedTags = deletedTags + newlyDeleted
-                    selectedTags = selectedTags - newlyDeleted
-                    
-                    tagToDeleteWithChildren = null
-                }) {
-                    Text(
-                        text = stringResource(id = R.string.tag_dialog_delete),
-                        color = ThingsTheme.colors.danger,
-                        style = ThingsTheme.type.dialogButton
-                    )
+        ThingsConfirmDialog(
+            title = stringResource(id = R.string.delete_group_title),
+            message = stringResource(id = R.string.delete_group_message),
+            confirmText = stringResource(id = R.string.tag_dialog_delete),
+            dismissText = stringResource(id = R.string.tag_dialog_cancel),
+            onConfirm = {
+                val parent = tagToDeleteWithChildren!!
+                val children = childTagsToDelete
+
+                // TaskRepository will handle deleting children from DB and items
+                onDeleteTag(parent)
+
+                var newlyDeleted = setOf(parent.title)
+                children.forEach { child ->
+                    newlyDeleted = newlyDeleted + child.title
                 }
+
+                deletedTags = deletedTags + newlyDeleted
+                selectedTags = selectedTags - newlyDeleted
+
+                tagToDeleteWithChildren = null
             },
-            dismissButton = {
-                TextButton(onClick = { tagToDeleteWithChildren = null }) {
-                    Text(
-                        text = stringResource(id = R.string.tag_dialog_cancel),
-                        style = ThingsTheme.type.dialogButton
-                    )
-                }
-            }
+            onDismiss = { tagToDeleteWithChildren = null }
         )
     }
 
@@ -393,8 +386,8 @@ fun ThingsTagDialog(
                 // ----------------------------------------------------
                 androidx.compose.animation.AnimatedVisibility(
                     visible = currentScreen == DialogScreen.LIST,
-                    enter = fadeIn(animationSpec = tween(150)),
-                    exit = fadeOut(animationSpec = tween(150))
+                    enter = fadeIn(animationSpec = tween(ThingsMotion.QUICK)),
+                    exit = fadeOut(animationSpec = tween(ThingsMotion.QUICK))
                 ) {
                     Column(
                         modifier = Modifier
@@ -432,9 +425,9 @@ fun ThingsTagDialog(
                             ) {
                                 Icon(
                                     imageVector = if (hasChanges) Icons.Default.Check else Icons.Default.Close,
-                                    contentDescription = if (hasChanges) "Save" else "Cancel",
+                                    contentDescription = stringResource(if (hasChanges) R.string.cd_save else R.string.cancel),
                                     tint = ThingsTheme.colors.overlayContent,
-                                    modifier = Modifier.size(18.dp)
+                                    modifier = Modifier.size(ThingsIconSize.S)
                                 )
                             }
                         }
@@ -474,7 +467,7 @@ fun ThingsTagDialog(
                                         imageVector = if (isSelected) AppIcons.TagFilled else AppIcons.Tag,
                                         contentDescription = null,
                                         tint = if (isSelected) ThingsTheme.colors.accent else ItemMutedColor,
-                                        modifier = Modifier.size(18.dp)
+                                        modifier = Modifier.size(ThingsIconSize.S)
                                     )
 
                                     Spacer(modifier = Modifier.width(12.dp))
@@ -491,9 +484,9 @@ fun ThingsTagDialog(
                                     if (isSelected) {
                                         Icon(
                                             imageVector = Icons.Default.Check,
-                                            contentDescription = "Selected",
+                                            contentDescription = stringResource(R.string.cd_selected),
                                             tint = ThingsTheme.colors.accent,
-                                            modifier = Modifier.size(18.dp)
+                                            modifier = Modifier.size(ThingsIconSize.S)
                                         )
                                     }
                                 }
@@ -554,12 +547,12 @@ fun ThingsTagDialog(
                     visible = currentScreen == DialogScreen.CREATE,
                     enter = slideInVertically(
                         initialOffsetY = { it },
-                        animationSpec = tween(300)
-                    ) + fadeIn(animationSpec = tween(150)),
+                        animationSpec = tween(ThingsMotion.STANDARD)
+                    ) + fadeIn(animationSpec = tween(ThingsMotion.QUICK)),
                     exit = slideOutVertically(
                         targetOffsetY = { it },
-                        animationSpec = tween(300)
-                    ) + fadeOut(animationSpec = tween(150)) +
+                        animationSpec = tween(ThingsMotion.STANDARD)
+                    ) + fadeOut(animationSpec = tween(ThingsMotion.QUICK)) +
                         // Поле держится, пока клавиатура не скрыта полностью: в окне диалога она уходит штатной
                         // анимацией, дольше, чем в окне приложения (см. SOFT_KEYBOARD_SYSTEM_HIDE_SETTLE_MS)
                         holdForSoftKeyboardHide(SOFT_KEYBOARD_SYSTEM_HIDE_SETTLE_MS)
@@ -588,9 +581,9 @@ fun ThingsTagDialog(
                             ) {
                                 Icon(
                                     imageVector = Icons.Default.Close,
-                                    contentDescription = "Cancel",
+                                    contentDescription = stringResource(R.string.tag_dialog_cancel),
                                     tint = ThingsTheme.colors.overlayContent,
-                                    modifier = Modifier.size(18.dp)
+                                    modifier = Modifier.size(ThingsIconSize.S)
                                 )
                             }
 
@@ -610,9 +603,9 @@ fun ThingsTagDialog(
                             ) {
                                 Icon(
                                     imageVector = Icons.Default.Check,
-                                    contentDescription = "Save",
+                                    contentDescription = stringResource(R.string.tag_dialog_save),
                                     tint = if (isSaveEnabled) ThingsTheme.colors.overlayContent else ItemMutedColor,
-                                    modifier = Modifier.size(18.dp)
+                                    modifier = Modifier.size(ThingsIconSize.S)
                                 )
                             }
                         }
@@ -676,7 +669,7 @@ fun ThingsTagDialog(
                                     imageVector = Icons.AutoMirrored.Filled.KeyboardArrowRight,
                                     contentDescription = null,
                                     tint = ThingsTheme.colors.accent,
-                                    modifier = Modifier.size(18.dp)
+                                    modifier = Modifier.size(ThingsIconSize.S)
                                 )
                             }
                         }
@@ -692,12 +685,12 @@ fun ThingsTagDialog(
                     visible = currentScreen == DialogScreen.SELECT_GROUP,
                     enter = slideInVertically(
                         initialOffsetY = { it },
-                        animationSpec = tween(300)
-                    ) + fadeIn(animationSpec = tween(150)),
+                        animationSpec = tween(ThingsMotion.STANDARD)
+                    ) + fadeIn(animationSpec = tween(ThingsMotion.QUICK)),
                     exit = slideOutVertically(
                         targetOffsetY = { it },
-                        animationSpec = tween(300)
-                    ) + fadeOut(animationSpec = tween(150))
+                        animationSpec = tween(ThingsMotion.STANDARD)
+                    ) + fadeOut(animationSpec = tween(ThingsMotion.QUICK))
                 ) {
                     Column(
                         modifier = Modifier
@@ -724,9 +717,9 @@ fun ThingsTagDialog(
                             ) {
                                 Icon(
                                     imageVector = Icons.AutoMirrored.Filled.KeyboardArrowLeft,
-                                    contentDescription = "Back",
+                                    contentDescription = stringResource(R.string.cd_back),
                                     tint = ThingsTheme.colors.overlayContent,
-                                    modifier = Modifier.size(18.dp)
+                                    modifier = Modifier.size(ThingsIconSize.S)
                                 )
                             }
 
@@ -776,9 +769,9 @@ fun ThingsTagDialog(
                                     if (isSelected) {
                                         Icon(
                                             imageVector = Icons.Default.Check,
-                                            contentDescription = "Selected",
+                                            contentDescription = stringResource(R.string.cd_selected),
                                             tint = ThingsTheme.colors.accent,
-                                            modifier = Modifier.size(18.dp)
+                                            modifier = Modifier.size(ThingsIconSize.S)
                                         )
                                     }
                                 }
@@ -794,12 +787,12 @@ fun ThingsTagDialog(
                     visible = currentScreen == DialogScreen.MANAGE,
                     enter = slideInVertically(
                         initialOffsetY = { it },
-                        animationSpec = tween(300)
-                    ) + fadeIn(animationSpec = tween(150)),
+                        animationSpec = tween(ThingsMotion.STANDARD)
+                    ) + fadeIn(animationSpec = tween(ThingsMotion.QUICK)),
                     exit = slideOutVertically(
                         targetOffsetY = { it },
-                        animationSpec = tween(300)
-                    ) + fadeOut(animationSpec = tween(150))
+                        animationSpec = tween(ThingsMotion.STANDARD)
+                    ) + fadeOut(animationSpec = tween(ThingsMotion.QUICK))
                 ) {
                     Column(
                         modifier = Modifier
@@ -834,9 +827,9 @@ fun ThingsTagDialog(
                             ) {
                                 Icon(
                                     imageVector = Icons.Default.Close,
-                                    contentDescription = "Done",
+                                    contentDescription = stringResource(R.string.tag_dialog_done),
                                     tint = ThingsTheme.colors.overlayContent,
-                                    modifier = Modifier.size(18.dp)
+                                    modifier = Modifier.size(ThingsIconSize.S)
                                 )
                             }
                         }
@@ -924,7 +917,7 @@ fun ThingsTagDialog(
                                         ) {
                                             Icon(
                                                 imageVector = Icons.Default.Delete,
-                                                contentDescription = "Delete",
+                                                contentDescription = stringResource(R.string.tag_dialog_delete),
                                                 tint = ThingsTheme.colors.overlayContent,
                                                 modifier = Modifier.size(ButtonIconSize)
                                             )
@@ -958,7 +951,7 @@ fun ThingsTagDialog(
                                         ) {
                                             Icon(
                                                 imageVector = Icons.Default.Edit,
-                                                contentDescription = "Edit",
+                                                contentDescription = stringResource(R.string.cd_edit),
                                                 tint = ThingsTheme.colors.overlayContent,
                                                 modifier = Modifier.size(ButtonIconSize)
                                             )
@@ -999,12 +992,12 @@ fun ThingsTagDialog(
                     visible = currentScreen == DialogScreen.EDIT,
                     enter = slideInVertically(
                         initialOffsetY = { it },
-                        animationSpec = tween(300)
-                    ) + fadeIn(animationSpec = tween(150)),
+                        animationSpec = tween(ThingsMotion.STANDARD)
+                    ) + fadeIn(animationSpec = tween(ThingsMotion.QUICK)),
                     exit = slideOutVertically(
                         targetOffsetY = { it },
-                        animationSpec = tween(300)
-                    ) + fadeOut(animationSpec = tween(150)) +
+                        animationSpec = tween(ThingsMotion.STANDARD)
+                    ) + fadeOut(animationSpec = tween(ThingsMotion.QUICK)) +
                         // Поле держится, пока клавиатура не скрыта полностью: в окне диалога она уходит штатной
                         // анимацией, дольше, чем в окне приложения (см. SOFT_KEYBOARD_SYSTEM_HIDE_SETTLE_MS)
                         holdForSoftKeyboardHide(SOFT_KEYBOARD_SYSTEM_HIDE_SETTLE_MS)
@@ -1033,9 +1026,9 @@ fun ThingsTagDialog(
                             ) {
                                 Icon(
                                     imageVector = Icons.Default.Close,
-                                    contentDescription = "Cancel",
+                                    contentDescription = stringResource(R.string.tag_dialog_cancel),
                                     tint = ThingsTheme.colors.overlayContent,
-                                    modifier = Modifier.size(18.dp)
+                                    modifier = Modifier.size(ThingsIconSize.S)
                                 )
                             }
 
@@ -1055,9 +1048,9 @@ fun ThingsTagDialog(
                             ) {
                                 Icon(
                                     imageVector = Icons.Default.Check,
-                                    contentDescription = "Save",
+                                    contentDescription = stringResource(R.string.tag_dialog_save),
                                     tint = if (isSaveEnabled) ThingsTheme.colors.overlayContent else ItemMutedColor,
-                                    modifier = Modifier.size(18.dp)
+                                    modifier = Modifier.size(ThingsIconSize.S)
                                 )
                             }
                         }
@@ -1089,7 +1082,7 @@ fun ThingsTagDialog(
                                         IconButton(onClick = { editTagName = "" }) {
                                             Icon(
                                                 imageVector = Icons.Default.Close,
-                                                contentDescription = "Clear",
+                                                contentDescription = stringResource(R.string.cd_clear),
                                                 tint = ItemMutedColor
                                             )
                                         }
@@ -1132,7 +1125,7 @@ fun ThingsTagDialog(
                                     imageVector = Icons.AutoMirrored.Filled.KeyboardArrowRight,
                                     contentDescription = null,
                                     tint = ThingsTheme.colors.accent,
-                                    modifier = Modifier.size(18.dp)
+                                    modifier = Modifier.size(ThingsIconSize.S)
                                 )
                             }
                         }

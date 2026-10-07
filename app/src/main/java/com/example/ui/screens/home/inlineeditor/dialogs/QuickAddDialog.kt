@@ -1,5 +1,7 @@
 package com.example.ui.screens.home.inlineeditor.dialogs
 
+import com.example.R
+import androidx.compose.ui.res.stringResource
 import com.example.ui.theme.ThingsTheme
 import androidx.activity.compose.BackHandler
 import androidx.compose.animation.*
@@ -59,6 +61,12 @@ import kotlinx.coroutines.launch
 import java.text.SimpleDateFormat
 import java.util.*
 
+// Закрытие окна: подскок, уход вниз и растворение
+private const val DISMISS_NUDGE_MS = 90
+private const val DISMISS_DROP_MS = 260
+private const val DISMISS_FADE_DELAY_MS = 30L
+private const val DISMISS_FADE_MS = 270
+
 /**
  * Диалог быстрого добавления новой задачи (Quick Add Dialog).
  * Содержит все элементы и интерактивность раскрытой для редактирования задачи (TaskInlineEditor),
@@ -113,7 +121,7 @@ fun QuickAddDialog(
     val view = LocalView.current
 
     LaunchedEffect(Unit) {
-        delay(150)
+        delay(ThingsMotion.QUICK.toLong())
         try {
             titleFocusRequester.requestFocus()
         } catch (_: Exception) {}
@@ -156,10 +164,10 @@ fun QuickAddDialog(
             )
         }
         launch {
-            alpha.animateTo(1f, animationSpec = tween(durationMillis = 200, easing = FastOutSlowInEasing))
+            alpha.animateTo(1f, animationSpec = tween(durationMillis = ThingsMotion.BASE, easing = FastOutSlowInEasing))
         }
         launch {
-            scrimAlpha.animateTo(0.4f, animationSpec = tween(durationMillis = 250, easing = FastOutSlowInEasing))
+            scrimAlpha.animateTo(0.4f, animationSpec = tween(durationMillis = ThingsMotion.MEDIUM, easing = FastOutSlowInEasing))
         }
     }
 
@@ -174,18 +182,18 @@ fun QuickAddDialog(
             coroutineScope.launch {
                 // 1. Мягкий подскок вверх (-12dp), затем плавный уход вниз
                 launch {
-                    offsetY.animateTo(dismissNudgePx, tween(durationMillis = 90, easing = FastOutSlowInEasing))
-                    offsetY.animateTo(dismissDropPx, tween(durationMillis = 260, easing = FastOutSlowInEasing))
+                    offsetY.animateTo(dismissNudgePx, tween(durationMillis = DISMISS_NUDGE_MS, easing = FastOutSlowInEasing))
+                    offsetY.animateTo(dismissDropPx, tween(durationMillis = DISMISS_DROP_MS, easing = FastOutSlowInEasing))
                 }
                 // 2. Плавное растворение карточки и затемнения фона за 300мс
                 launch {
-                    delay(30)
-                    alpha.animateTo(0f, tween(durationMillis = 270, easing = FastOutLinearInEasing))
+                    delay(DISMISS_FADE_DELAY_MS)
+                    alpha.animateTo(0f, tween(durationMillis = DISMISS_FADE_MS, easing = FastOutLinearInEasing))
                 }
                 launch {
-                    scrimAlpha.animateTo(0f, tween(durationMillis = 300, easing = FastOutSlowInEasing))
+                    scrimAlpha.animateTo(0f, tween(durationMillis = ThingsMotion.STANDARD, easing = FastOutSlowInEasing))
                 }
-                delay(300)
+                delay(ThingsMotion.STANDARD.toLong())
                 onDismissRequest()
             }
         }
@@ -200,18 +208,18 @@ fun QuickAddDialog(
             coroutineScope.launch {
                 // 1. Мягкий подскок вверх (-12dp), затем плавный уход вниз
                 launch {
-                    offsetY.animateTo(dismissNudgePx, tween(durationMillis = 90, easing = FastOutSlowInEasing))
-                    offsetY.animateTo(dismissDropPx, tween(durationMillis = 260, easing = FastOutSlowInEasing))
+                    offsetY.animateTo(dismissNudgePx, tween(durationMillis = DISMISS_NUDGE_MS, easing = FastOutSlowInEasing))
+                    offsetY.animateTo(dismissDropPx, tween(durationMillis = DISMISS_DROP_MS, easing = FastOutSlowInEasing))
                 }
                 // 2. Плавное растворение карточки и затемнения фона за 300мс
                 launch {
-                    delay(30)
-                    alpha.animateTo(0f, tween(durationMillis = 270, easing = FastOutLinearInEasing))
+                    delay(DISMISS_FADE_DELAY_MS)
+                    alpha.animateTo(0f, tween(durationMillis = DISMISS_FADE_MS, easing = FastOutLinearInEasing))
                 }
                 launch {
-                    scrimAlpha.animateTo(0f, tween(durationMillis = 300, easing = FastOutSlowInEasing))
+                    scrimAlpha.animateTo(0f, tween(durationMillis = ThingsMotion.STANDARD, easing = FastOutSlowInEasing))
                 }
-                delay(300)
+                delay(ThingsMotion.STANDARD.toLong())
                 val tagList = tagInput.split(",")
                     .map { it.trim() }
                     .filter { it.isNotEmpty() }
@@ -295,9 +303,9 @@ fun QuickAddDialog(
                                 Box(modifier = Modifier.fillMaxWidth()) {
                                     if (title.isEmpty()) {
                                         Text(
-                                            text = "New To-Do",
+                                            text = stringResource(R.string.ui_new_to_do),
                                             style = ThingsTheme.type.taskTitle.copy(
-                                                color = ThingsTheme.colors.textNotes.copy(alpha = 0.5f)
+                                                color = ThingsTheme.colors.textNotes.copy(alpha = ThingsAlpha.HALF)
                                             )
                                         )
                                     }
@@ -327,9 +335,9 @@ fun QuickAddDialog(
                                 Box(modifier = Modifier.fillMaxWidth()) {
                                     if (notes.isEmpty()) {
                                         Text(
-                                            text = "Notes",
+                                            text = stringResource(R.string.ui_notes),
                                             style = ThingsTheme.type.editorNotes.copy(
-                                                color = ThingsTheme.colors.textNotes.copy(alpha = 0.5f)
+                                                color = ThingsTheme.colors.textNotes.copy(alpha = ThingsAlpha.HALF)
                                             )
                                         )
                                     }
@@ -457,9 +465,9 @@ fun QuickAddDialog(
                                 ) {
                                     Icon(
                                         imageVector = activeDateIcon,
-                                        contentDescription = "Change date",
+                                        contentDescription = stringResource(R.string.cd_change_date),
                                         tint = activeDateColor,
-                                        modifier = Modifier.size(18.dp)
+                                        modifier = Modifier.size(ThingsIconSize.S)
                                     )
                                     Spacer(modifier = Modifier.width(6.dp))
                                     Text(
@@ -503,34 +511,9 @@ fun QuickAddDialog(
                                 }
 
                                 val lang = remember { Locale.getDefault().language }
-                                val relativeText = when (lang) {
-                                    "uk" -> when {
-                                        delta < 0 -> "протерміновано"
-                                        delta == 0 -> "сьогодні"
-                                        delta == 1 -> "завтра"
-                                        else -> "через $delta дн."
-                                    }
-                                    "ru" -> when {
-                                        delta < 0 -> "просрочено"
-                                        delta == 0 -> "сегодня"
-                                        delta == 1 -> "завтра"
-                                        else -> "через $delta дн."
-                                    }
-                                    else -> when {
-                                        delta < 0 -> "overdue"
-                                        delta == 0 -> "today"
-                                        delta == 1 -> "tomorrow"
-                                        else -> "in $delta d."
-                                    }
-                                }
+                                val relativeText = com.example.ui.screens.home.inlineeditor.utils.relativeDueText(delta)
 
-                                val locale = remember(lang) {
-                                    when (lang) {
-                                        "uk" -> Locale("uk")
-                                        "ru" -> Locale("ru")
-                                        else -> Locale.US
-                                    }
-                                }
+                                val locale = remember { java.util.Locale.getDefault() }
                                 val sdf = remember(locale) { SimpleDateFormat("EEE, d MMMM", locale) }
                                 val dateText = remember(dueDate) {
                                     dueDate?.let { sdf.format(Date(it)).lowercase() } ?: ""
@@ -547,9 +530,9 @@ fun QuickAddDialog(
                                 ) {
                                     Icon(
                                         imageVector = AppIcons.Deadline,
-                                        contentDescription = "Deadline Flag",
+                                        contentDescription = stringResource(R.string.cd_deadline_flag),
                                         tint = primaryColor,
-                                        modifier = Modifier.size(18.dp)
+                                        modifier = Modifier.size(ThingsIconSize.S)
                                     )
                                     Spacer(modifier = Modifier.width(6.dp))
                                     Text(
@@ -591,10 +574,10 @@ fun QuickAddDialog(
                                 Box(modifier = Modifier.padding(start = MaterialTheme.dimens.taskEditorActionIconsSpacing)) {
                                     Icon(
                                         imageVector = AppIcons.Upcoming,
-                                        contentDescription = "Schedule",
+                                        contentDescription = stringResource(R.string.cd_schedule),
                                         tint = iconInactiveColor,
                                         modifier = Modifier
-                                            .size(22.dp)
+                                            .size(ThingsIconSize.L)
                                             .clickable { showWhenDialog = true }
                                     )
                                 }
@@ -609,10 +592,10 @@ fun QuickAddDialog(
                                 Box(modifier = Modifier.padding(start = MaterialTheme.dimens.taskEditorActionIconsSpacing)) {
                                     Icon(
                                         imageVector = AppIcons.Tag,
-                                        contentDescription = "Tags",
+                                        contentDescription = stringResource(R.string.tag_dialog_title),
                                         tint = iconInactiveColor,
                                         modifier = Modifier
-                                            .size(20.dp)
+                                            .size(ThingsIconSize.M)
                                             .clickable { showTagDialog = true }
                                     )
                                 }
@@ -627,10 +610,10 @@ fun QuickAddDialog(
                                 Box(modifier = Modifier.padding(start = MaterialTheme.dimens.taskEditorActionIconsSpacing)) {
                                     Icon(
                                         imageVector = AppIcons.BulletList,
-                                        contentDescription = "Checklists",
+                                        contentDescription = stringResource(R.string.cd_checklists),
                                         tint = iconInactiveColor,
                                         modifier = Modifier
-                                            .size(22.dp)
+                                            .size(ThingsIconSize.L)
                                             .clickable { showChecklistHelper = true }
                                     )
                                 }
@@ -645,10 +628,10 @@ fun QuickAddDialog(
                                 Box(modifier = Modifier.padding(start = MaterialTheme.dimens.taskEditorActionIconsSpacing)) {
                                     Icon(
                                         imageVector = AppIcons.Deadline,
-                                        contentDescription = "Set Deadline",
+                                        contentDescription = stringResource(R.string.batch_action_set_deadline),
                                         tint = iconInactiveColor,
                                         modifier = Modifier
-                                            .size(22.dp)
+                                            .size(ThingsIconSize.L)
                                             .clickable { showDatePicker = true }
                                     )
                                 }
@@ -676,9 +659,9 @@ fun QuickAddDialog(
                         ) {
                             Icon(
                                 imageVector = AppIcons.Inbox,
-                                contentDescription = "Destination",
+                                contentDescription = stringResource(R.string.cd_destination),
                                 tint = ThingsTheme.colors.textSecondary,
-                                modifier = Modifier.size(20.dp)
+                                modifier = Modifier.size(ThingsIconSize.M)
                             )
                             Spacer(modifier = Modifier.width(6.dp))
                             Text(
@@ -702,7 +685,7 @@ fun QuickAddDialog(
                             modifier = Modifier.height(36.dp)
                         ) {
                             Text(
-                                text = "Save",
+                                text = stringResource(R.string.tag_dialog_save),
                                 style = ThingsTheme.type.button
                             )
                         }
@@ -722,9 +705,9 @@ fun QuickAddDialog(
                 ) {
                     Icon(
                         imageVector = Icons.Default.Close,
-                        contentDescription = "Cancel",
+                        contentDescription = stringResource(R.string.tag_dialog_cancel),
                         tint = ThingsTheme.colors.textSecondary,
-                        modifier = Modifier.size(18.dp)
+                        modifier = Modifier.size(ThingsIconSize.S)
                     )
                 }
             }

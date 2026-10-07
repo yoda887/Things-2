@@ -1,5 +1,6 @@
 package com.example.ui.components
 
+import com.example.ui.theme.ThingsIconSize
 import androidx.compose.foundation.layout.ColumnScope
 import androidx.compose.foundation.layout.size
 import androidx.compose.material3.DropdownMenu
@@ -75,7 +76,7 @@ fun ThingsMenuItem(
                 imageVector = icon,
                 contentDescription = null,
                 tint = iconColor.copy(alpha = alpha),
-                modifier = Modifier.size(22.dp)
+                modifier = Modifier.size(ThingsIconSize.L)
             )
         },
         onClick = onClick,

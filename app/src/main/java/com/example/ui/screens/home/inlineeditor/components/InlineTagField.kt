@@ -1,5 +1,9 @@
 package com.example.ui.screens.home.inlineeditor.components
 
+import com.example.ui.theme.ThingsIconSize
+import com.example.ui.theme.ThingsAlpha
+import com.example.R
+import androidx.compose.ui.res.stringResource
 import com.example.ui.theme.ThingsTheme
 import androidx.compose.animation.*
 import androidx.compose.foundation.background
@@ -20,6 +24,8 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.SolidColor
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.unit.dp
+
+private val TAG_FIELD_ICON_SIZE = 14.dp
 
 @Composable
 fun InlineTagField(
@@ -51,9 +57,9 @@ fun InlineTagField(
         ) {
             Icon(
                 imageVector = AppIcons.Tag,
-                contentDescription = "Tags",
+                contentDescription = stringResource(R.string.tag_dialog_title),
                 tint = ThingsTheme.colors.anytime,
-                modifier = Modifier.size(16.dp)
+                modifier = Modifier.size(ThingsIconSize.XS)
             )
             Spacer(modifier = Modifier.width(8.dp))
             BasicTextField(
@@ -65,7 +71,7 @@ fun InlineTagField(
                 decorationBox = { innerTextField ->
                     if (tagInput.isEmpty()) {
                         Text(
-                            "Tags (e.g., Work, Home)",
+                            stringResource(R.string.ui_tags_e_g_work_home),
                             style = ThingsTheme.type.bodyLarge.copy(color = helperHintColor)
                         )
                     }
@@ -75,10 +81,10 @@ fun InlineTagField(
             Spacer(modifier = Modifier.width(6.dp))
             Icon(
                 imageVector = Icons.Default.Close,
-                contentDescription = "Close Tags",
-                tint = textSecondaryColor.copy(alpha = 0.6f),
+                contentDescription = stringResource(R.string.cd_close_tags),
+                tint = textSecondaryColor.copy(alpha = ThingsAlpha.HINT),
                 modifier = Modifier
-                    .size(14.dp)
+                    .size(TAG_FIELD_ICON_SIZE)
                     .clickable {
                         onTagInputChange("")
                         onShowTagHelperChange(false)

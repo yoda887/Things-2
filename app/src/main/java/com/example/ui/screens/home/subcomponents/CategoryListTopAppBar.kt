@@ -204,7 +204,7 @@ fun CategoryListTopAppBar(
                         }
                     } else {
                         if (onAddHeading != null) {
-                            ThingsMenuItem("Add Heading", Icons.Default.Add, onClick = {
+                            ThingsMenuItem(stringResource(R.string.ui_add_heading), Icons.Default.Add, onClick = {
                                 isOptionsMenuExpanded = false
                                 onAddHeading()
                             })
@@ -372,7 +372,7 @@ private fun CategoryTopAppBarTitleContent(
                 )
                 Spacer(modifier = Modifier.width(TOP_APP_BAR_SPACING))
                 Text(
-                    text = project?.name ?: "Project",
+                    text = project?.name ?: stringResource(R.string.fallback_project),
                     style = ThingsTheme.type.topAppBarTitle,
                     color = textPrimaryColor,
                     fontWeight = FontWeight.SemiBold,
@@ -389,7 +389,7 @@ private fun CategoryTopAppBarTitleContent(
                 )
                 Spacer(modifier = Modifier.width(TOP_APP_BAR_SPACING))
                 Text(
-                    text = area?.title ?: "Responsibility Area",
+                    text = area?.title ?: stringResource(R.string.fallback_area),
                     style = ThingsTheme.type.topAppBarTitle,
                     color = textPrimaryColor,
                     fontWeight = FontWeight.SemiBold,
@@ -406,7 +406,7 @@ private fun CategoryTopAppBarTitleContent(
                 )
                 Spacer(modifier = Modifier.width(TOP_APP_BAR_SPACING))
                 Text(
-                    text = tag?.title ?: "Tag",
+                    text = tag?.title ?: stringResource(R.string.fallback_tag),
                     style = ThingsTheme.type.topAppBarTitle,
                     color = textPrimaryColor,
                     fontWeight = FontWeight.SemiBold,
@@ -423,7 +423,7 @@ private fun CategoryTopAppBarTitleContent(
                 )
                 Spacer(modifier = Modifier.width(TOP_APP_BAR_SPACING))
                 Text(
-                    text = "Search",
+                    text = stringResource(R.string.cd_search),
                     style = ThingsTheme.type.topAppBarTitle,
                     color = textPrimaryColor,
                     fontWeight = FontWeight.SemiBold

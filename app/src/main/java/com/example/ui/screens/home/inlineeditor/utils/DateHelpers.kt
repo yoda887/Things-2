@@ -52,36 +52,23 @@ fun isTodayDateOrPast(timestamp: Long?): Boolean {
  * • Позже текущей недели (в текущем году) -> "15 авг."
  * • Позже текущего года -> "2027 г."
  */
+@androidx.compose.runtime.Composable
 fun formatStartDateLabel(
     startDate: Long?,
     section: com.example.data.model.TaskSection,
     isTonight: Boolean
 ): String {
+    val somedayLabel = androidx.compose.ui.res.stringResource(com.example.R.string.category_someday)
+    val todayLabel = androidx.compose.ui.res.stringResource(com.example.R.string.category_today)
+    val eveningLabel = androidx.compose.ui.res.stringResource(com.example.R.string.category_this_evening)
+    val tomorrowLabel = androidx.compose.ui.res.stringResource(com.example.R.string.tomorrow)
     if (section == com.example.data.model.TaskSection.SOMEDAY) {
-        val lang = java.util.Locale.getDefault().language
-        return when (lang) {
-            "ru" -> "Когда-нибудь"
-            "uk" -> "Колись"
-            else -> "Someday"
-        }
+        return somedayLabel
     }
 
     val isToday = (startDate != null && isTodayDateOrPast(startDate)) || (startDate == null && section == com.example.data.model.TaskSection.TODAY)
     if (isToday) {
-        val lang = java.util.Locale.getDefault().language
-        return if (isTonight) {
-            when (lang) {
-                "ru" -> "Сегодня вечером"
-                "uk" -> "Сьогодні ввечері"
-                else -> "This Evening"
-            }
-        } else {
-            when (lang) {
-                "ru" -> "Сегодня"
-                "uk" -> "Сьогодні"
-                else -> "Today"
-            }
-        }
+        return if (isTonight) eveningLabel else todayLabel
     }
 
     if (startDate == null) return ""
@@ -104,14 +91,8 @@ fun formatStartDateLabel(
     val diffMillis = targetCal.timeInMillis - todayCal.timeInMillis
     val diffDays = (diffMillis / (24 * 60 * 60 * 1000L)).toInt()
 
-    val lang = java.util.Locale.getDefault().language
-
     if (diffDays == 1) {
-        return when (lang) {
-            "ru" -> "Завтра"
-            "uk" -> "Завтра"
-            else -> "Tomorrow"
-        }
+        return tomorrowLabel
     }
 
     val startOfWeek = (todayCal.clone() as Calendar).apply {
