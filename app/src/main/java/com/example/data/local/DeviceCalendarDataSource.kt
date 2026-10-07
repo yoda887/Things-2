@@ -17,7 +17,7 @@ class DeviceCalendarDataSource(private val context: Context) {
 
     /**
      * Запрашивает события системного календаря за текущий день и на 1 год вперед (для отображения в днях и месяцах Upcoming).
-     * Если разрешение не предоставлено или возникает ошибка, возвращает резервные/тестовые данные.
+     * Без разрешения на чтение календаря — пустой список: выдуманные события не подставляются.
      *
      * @return [Result] со списком обнаруженных событий в виде объектов [Item]
      */
@@ -29,7 +29,7 @@ class DeviceCalendarDataSource(private val context: Context) {
             ) != android.content.pm.PackageManager.PERMISSION_GRANTED
         ) {
             Log.w("DeviceCalendarDataSource", "Calendar access permission not granted.")
-            return Result.success(getMockCalendarEvents())
+            return Result.success(emptyList())
         }
         try {
             val events = mutableListOf<Item>()
@@ -114,142 +114,14 @@ class DeviceCalendarDataSource(private val context: Context) {
                 }
             } ?: Log.e("DeviceCalendarDataSource", "ContentResolver.query returned null for Calendar Instances")
 
-            // Если список событий пуст, генерируем демонстрационные резервные данные
-            if (events.isEmpty()) {
-                events.addAll(getMockCalendarEvents())
-            }
-
             Log.d("DeviceCalendarDataSource", "Fetched total ${events.size} local calendar events")
             return Result.success(events)
         } catch (e: SecurityException) {
             Log.w("DeviceCalendarDataSource", "SecurityException: Calendar access permission not granted.")
-            return Result.success(getMockCalendarEvents())
+            return Result.success(emptyList())
         } catch (e: Exception) {
             Log.e("DeviceCalendarDataSource", "Failed to fetch local calendar events", e)
             return Result.failure(e)
         }
-    }
-
-    /**
-     * Создает фиксированный набор тестовых (mock) событий для демонстрации в случае отсутствия прав доступа к календарю.
-     */
-    private fun getMockCalendarEvents(): List<Item> {
-        val events = mutableListOf<Item>()
-        val tom = Calendar.getInstance().apply { add(Calendar.DAY_OF_YEAR, 1) }
-        
-        val lydiaStart = Calendar.getInstance().apply {
-            timeInMillis = tom.timeInMillis
-            set(Calendar.HOUR_OF_DAY, 10)
-            set(Calendar.MINUTE, 0)
-            set(Calendar.SECOND, 0)
-        }.timeInMillis
-        events.add(
-            Item(
-                id = "cal_mock_lydia",
-                type = 0,
-                title = "Interview with Lydia",
-                notes = "Local Calendar Event",
-                start = 1,
-                status = 0,
-                cachedTags = "Calendar",
-                calendarColor = android.graphics.Color.parseColor("#4CD964"),
-                calendarDisplayName = "Work",
-                eventStartMillis = lydiaStart,
-                isAllDay = false
-            )
-        )
-
-        val benefitsStart = Calendar.getInstance().apply {
-            timeInMillis = tom.timeInMillis
-            set(Calendar.HOUR_OF_DAY, 13)
-            set(Calendar.MINUTE, 0)
-            set(Calendar.SECOND, 0)
-        }.timeInMillis
-        events.add(
-            Item(
-                id = "cal_mock_benefits",
-                type = 0,
-                title = "Benefits presentation",
-                notes = "Local Calendar Event",
-                start = 1,
-                status = 0,
-                cachedTags = "Calendar",
-                calendarColor = android.graphics.Color.parseColor("#4CD964"),
-                calendarDisplayName = "Work",
-                eventStartMillis = benefitsStart,
-                isAllDay = false
-            )
-        )
-
-        val thur = Calendar.getInstance().apply { add(Calendar.DAY_OF_YEAR, 2) }
-
-        val workHomeStart = Calendar.getInstance().apply {
-            timeInMillis = thur.timeInMillis
-            set(Calendar.HOUR_OF_DAY, 9)
-            set(Calendar.MINUTE, 0)
-            set(Calendar.SECOND, 0)
-        }.timeInMillis
-        events.add(
-            Item(
-                id = "cal_mock_work_home",
-                type = 0,
-                title = "Work from home",
-                notes = "Local Calendar Event",
-                start = 1,
-                status = 0,
-                cachedTags = "Calendar",
-                calendarColor = android.graphics.Color.parseColor("#4CD964"),
-                calendarDisplayName = "Personal",
-                eventStartMillis = workHomeStart,
-                isAllDay = true
-            )
-        )
-
-        val confStart = Calendar.getInstance().apply {
-            timeInMillis = thur.timeInMillis
-            set(Calendar.HOUR_OF_DAY, 13)
-            set(Calendar.MINUTE, 0)
-            set(Calendar.SECOND, 0)
-        }.timeInMillis
-        events.add(
-            Item(
-                id = "cal_mock_conf",
-                type = 0,
-                title = "Monthly conference call",
-                notes = "Local Calendar Event",
-                start = 1,
-                status = 0,
-                cachedTags = "Calendar",
-                calendarColor = android.graphics.Color.parseColor("#4CD964"),
-                calendarDisplayName = "Work",
-                eventStartMillis = confStart,
-                isAllDay = false
-            )
-        )
-
-        val nextMonthCal = Calendar.getInstance().apply { add(Calendar.DAY_OF_YEAR, 25) }
-        val nextMonthEventStart = Calendar.getInstance().apply {
-            timeInMillis = nextMonthCal.timeInMillis
-            set(Calendar.HOUR_OF_DAY, 11)
-            set(Calendar.MINUTE, 0)
-            set(Calendar.SECOND, 0)
-        }.timeInMillis
-        events.add(
-            Item(
-                id = "cal_mock_future_plan",
-                type = 0,
-                title = "Quarterly Strategy Review",
-                notes = "Local Calendar Event",
-                start = 1,
-                status = 0,
-                cachedTags = "Calendar",
-                calendarColor = android.graphics.Color.parseColor("#4CD964"),
-                calendarDisplayName = "Work",
-                eventStartMillis = nextMonthEventStart,
-                isAllDay = false
-            )
-        )
-
-        return events
     }
 }
