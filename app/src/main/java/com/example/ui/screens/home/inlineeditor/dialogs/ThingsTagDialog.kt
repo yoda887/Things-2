@@ -1,5 +1,7 @@
 package com.example.ui.screens.home.inlineeditor.dialogs
 
+import com.example.ui.theme.ThingsElevation
+import com.example.ui.theme.ThingsSpacing
 import com.example.ui.theme.ThingsIconSize
 import com.example.ui.theme.ThingsMotion
 import androidx.compose.ui.res.pluralStringResource
@@ -90,6 +92,13 @@ private val RowPaddingBottom = 8.dp
 private val ButtonIconSize = 16.dp
 private val EditButtonSize = 28.dp
 private val DeleteButtonSize = 28.dp
+/** Круглые кнопки шапки (закрыть, сохранить, назад) */
+private val HeaderButtonSize = 36.dp
+/** Строка тега в списке — сверху и снизу */
+private val TagRowVerticalPadding = 10.dp
+/** Кнопки «Управлять тегами» / «Новый тег» внизу: промежуток и вертикальный отступ */
+private val TagDialogButtonsGap = 10.dp
+private val TagDialogButtonVerticalPadding = 10.dp
 
 /**
  * Screen states for the ThingsTagDialog options.
@@ -393,7 +402,7 @@ fun ThingsTagDialog(
                         modifier = Modifier
                             .fillMaxSize()
                             .padding(InnerContentPadding),
-                        verticalArrangement = Arrangement.spacedBy(16.dp)
+                        verticalArrangement = Arrangement.spacedBy(ThingsSpacing.L)
                     ) {
                         // Header
                         val hasChanges = selectedTags != activeTags.toSet()
@@ -402,7 +411,7 @@ fun ThingsTagDialog(
                             horizontalArrangement = Arrangement.SpaceBetween,
                             verticalAlignment = Alignment.CenterVertically
                         ) {
-                            Box(modifier = Modifier.size(36.dp))
+                            Box(modifier = Modifier.size(HeaderButtonSize))
 
                             Text(
                                 text = stringResource(id = R.string.tag_dialog_title),
@@ -412,7 +421,7 @@ fun ThingsTagDialog(
 
                             Box(
                                 modifier = Modifier
-                                    .size(36.dp)
+                                    .size(HeaderButtonSize)
                                     .clip(androidx.compose.foundation.shape.CircleShape)
                                     .background(if (hasChanges) ThingsTheme.colors.accent else DarkButtonBgColor)
                                     .clickable {
@@ -437,7 +446,7 @@ fun ThingsTagDialog(
                             modifier = Modifier
                                 .fillMaxWidth()
                                 .weight(1f),
-                            verticalArrangement = Arrangement.spacedBy(4.dp)
+                            verticalArrangement = Arrangement.spacedBy(ThingsSpacing.XS)
                         ) {
                             items(flatTagList, key = { it.first.id }) { item ->
                                 val tag = item.first
@@ -456,10 +465,10 @@ fun ThingsTagDialog(
                                             }
                                         }
                                         .padding(
-                                            start = if (isChild) 28.dp else 4.dp,
-                                            end = 4.dp,
-                                            top = 10.dp,
-                                            bottom = 10.dp
+                                            start = if (isChild) RowPaddingStartChild else RowPaddingStartNormal,
+                                            end = RowPaddingEnd,
+                                            top = TagRowVerticalPadding,
+                                            bottom = TagRowVerticalPadding
                                         ),
                                     verticalAlignment = Alignment.CenterVertically
                                 ) {
@@ -470,14 +479,11 @@ fun ThingsTagDialog(
                                         modifier = Modifier.size(ThingsIconSize.S)
                                     )
 
-                                    Spacer(modifier = Modifier.width(12.dp))
+                                    Spacer(modifier = Modifier.width(ThingsSpacing.M))
 
                                     Text(
                                         text = tag.title,
-                                        style = ThingsTheme.type.dialogRow.copy(
-                                            color = ThingsTheme.colors.overlayContent,
-                                            fontWeight = if (isSelected) FontWeight.SemiBold else FontWeight.Normal
-                                        ),
+                                        style = (if (isSelected) ThingsTheme.type.dialogRowSelected else ThingsTheme.type.dialogRow).copy(color = ThingsTheme.colors.overlayContent),
                                         modifier = Modifier.weight(1f)
                                     )
 
@@ -497,8 +503,8 @@ fun ThingsTagDialog(
                         Row(
                             modifier = Modifier
                                 .fillMaxWidth()
-                                .padding(top = 4.dp),
-                            horizontalArrangement = Arrangement.spacedBy(10.dp)
+                                .padding(top = ThingsSpacing.XS),
+                            horizontalArrangement = Arrangement.spacedBy(TagDialogButtonsGap)
                         ) {
                             Button(
                                 onClick = { currentScreen = DialogScreen.MANAGE },
@@ -508,7 +514,7 @@ fun ThingsTagDialog(
                                 ),
                                 shape = ThingsTheme.shapes.rowShape,
                                 modifier = Modifier.weight(1f),
-                                contentPadding = PaddingValues(vertical = 10.dp)
+                                contentPadding = PaddingValues(vertical = TagDialogButtonVerticalPadding)
                             ) {
                                 Text(
                                     text = stringResource(id = R.string.tag_dialog_manage_tags),
@@ -529,7 +535,7 @@ fun ThingsTagDialog(
                                 ),
                                 shape = ThingsTheme.shapes.rowShape,
                                 modifier = Modifier.weight(1f),
-                                contentPadding = PaddingValues(vertical = 10.dp)
+                                contentPadding = PaddingValues(vertical = TagDialogButtonVerticalPadding)
                             ) {
                                 Text(
                                     text = stringResource(id = R.string.tag_dialog_new_tag),
@@ -562,7 +568,7 @@ fun ThingsTagDialog(
                             .fillMaxSize()
                             .background(DialogBackgroundColor)
                             .padding(InnerContentPadding),
-                        verticalArrangement = Arrangement.spacedBy(16.dp)
+                        verticalArrangement = Arrangement.spacedBy(ThingsSpacing.L)
                     ) {
                         // Header
                         val isSaveEnabled = newTagName.trim().isNotEmpty()
@@ -573,7 +579,7 @@ fun ThingsTagDialog(
                         ) {
                             Box(
                                 modifier = Modifier
-                                    .size(36.dp)
+                                    .size(HeaderButtonSize)
                                     .clip(androidx.compose.foundation.shape.CircleShape)
                                     .background(DarkButtonBgColor)
                                     .clickable { closeCreateScreen() },
@@ -595,7 +601,7 @@ fun ThingsTagDialog(
 
                             Box(
                                 modifier = Modifier
-                                    .size(36.dp)
+                                    .size(HeaderButtonSize)
                                     .clip(androidx.compose.foundation.shape.CircleShape)
                                     .background(if (isSaveEnabled) ThingsTheme.colors.accent else DarkButtonBgColor)
                                     .clickable(enabled = isSaveEnabled) { saveNewTag() },
@@ -649,21 +655,21 @@ fun ThingsTagDialog(
                                     groupSelectionTargetScreen = DialogScreen.CREATE
                                     currentScreen = DialogScreen.SELECT_GROUP
                                 }
-                                .padding(vertical = 12.dp, horizontal = 4.dp),
+                                .padding(vertical = ThingsSpacing.M, horizontal = ThingsSpacing.XS),
                             horizontalArrangement = Arrangement.SpaceBetween,
                             verticalAlignment = Alignment.CenterVertically
                         ) {
                             Text(
                                 text = stringResource(id = R.string.tag_dialog_group),
-                                style = ThingsTheme.type.dialogRow.copy(color = ThingsTheme.colors.overlayContent, fontWeight = FontWeight.Normal)
+                                style = ThingsTheme.type.dialogRow.copy(color = ThingsTheme.colors.overlayContent)
                             )
                             Row(
                                 verticalAlignment = Alignment.CenterVertically,
-                                horizontalArrangement = Arrangement.spacedBy(4.dp)
+                                horizontalArrangement = Arrangement.spacedBy(ThingsSpacing.XS)
                             ) {
                                 Text(
                                     text = selectedGroup?.title ?: stringResource(id = R.string.tag_dialog_no_tag),
-                                    style = ThingsTheme.type.dialogRow.copy(color = ThingsTheme.colors.accent, fontWeight = FontWeight.Medium)
+                                    style = ThingsTheme.type.dialogRowAction.copy(color = ThingsTheme.colors.accent)
                                 )
                                 Icon(
                                     imageVector = Icons.AutoMirrored.Filled.KeyboardArrowRight,
@@ -697,7 +703,7 @@ fun ThingsTagDialog(
                             .fillMaxSize()
                             .background(DialogBackgroundColor)
                             .padding(InnerContentPadding),
-                        verticalArrangement = Arrangement.spacedBy(16.dp)
+                        verticalArrangement = Arrangement.spacedBy(ThingsSpacing.L)
                     ) {
                         // Header
                         Row(
@@ -707,7 +713,7 @@ fun ThingsTagDialog(
                         ) {
                             Box(
                                 modifier = Modifier
-                                    .size(36.dp)
+                                    .size(HeaderButtonSize)
                                     .clip(androidx.compose.foundation.shape.CircleShape)
                                     .background(DarkButtonBgColor)
                                     .clickable {
@@ -729,7 +735,7 @@ fun ThingsTagDialog(
                                 textAlign = TextAlign.Center
                             )
 
-                            Box(modifier = Modifier.size(36.dp))
+                            Box(modifier = Modifier.size(HeaderButtonSize))
                         }
 
                         // Presaved groups list (all top-level tags + Sentinel)
@@ -743,7 +749,7 @@ fun ThingsTagDialog(
                             modifier = Modifier
                                 .fillMaxWidth()
                                 .weight(1f),
-                            verticalArrangement = Arrangement.spacedBy(4.dp)
+                            verticalArrangement = Arrangement.spacedBy(ThingsSpacing.XS)
                         ) {
                             items(groupOptions, key = { it.id }) { option ->
                                 val isSelected = if (option.id == "No Tag") selectedGroup == null else selectedGroup?.id == option.id
@@ -755,15 +761,12 @@ fun ThingsTagDialog(
                                             selectedGroup = if (option.id == "No Tag") null else option
                                             currentScreen = groupSelectionTargetScreen
                                         }
-                                        .padding(vertical = 12.dp, horizontal = 8.dp),
+                                        .padding(vertical = ThingsSpacing.M, horizontal = ThingsSpacing.S),
                                     verticalAlignment = Alignment.CenterVertically
                                 ) {
                                     Text(
                                         text = if (option.id == "No Tag") stringResource(id = R.string.tag_dialog_no_tag) else option.title,
-                                        style = ThingsTheme.type.dialogRow.copy(
-                                            color = ThingsTheme.colors.overlayContent,
-                                            fontWeight = if (isSelected) FontWeight.SemiBold else FontWeight.Normal
-                                        ),
+                                        style = (if (isSelected) ThingsTheme.type.dialogRowSelected else ThingsTheme.type.dialogRow).copy(color = ThingsTheme.colors.overlayContent),
                                         modifier = Modifier.weight(1f)
                                     )
                                     if (isSelected) {
@@ -799,7 +802,7 @@ fun ThingsTagDialog(
                             .fillMaxSize()
                             .background(DialogBackgroundColor)
                             .padding(InnerContentPadding),
-                        verticalArrangement = Arrangement.spacedBy(16.dp)
+                        verticalArrangement = Arrangement.spacedBy(ThingsSpacing.L)
                     ) {
                         // Header
                         Row(
@@ -807,7 +810,7 @@ fun ThingsTagDialog(
                             horizontalArrangement = Arrangement.SpaceBetween,
                             verticalAlignment = Alignment.CenterVertically
                         ) {
-                            Box(modifier = Modifier.size(36.dp))
+                            Box(modifier = Modifier.size(HeaderButtonSize))
 
                             Text(
                                 text = stringResource(id = R.string.tag_dialog_manage_tags),
@@ -817,7 +820,7 @@ fun ThingsTagDialog(
 
                             Box(
                                 modifier = Modifier
-                                    .size(36.dp)
+                                    .size(HeaderButtonSize)
                                     .clip(androidx.compose.foundation.shape.CircleShape)
                                     .background(DarkButtonBgColor)
                                     .clickable {
@@ -844,7 +847,7 @@ fun ThingsTagDialog(
                                 modifier = Modifier
                                     .fillMaxWidth()
                                     .weight(1f),
-                                verticalArrangement = Arrangement.spacedBy(4.dp)
+                                verticalArrangement = Arrangement.spacedBy(ThingsSpacing.XS)
                             ) {
                                 items(displayedManageTags, key = { it.first.id }) { item ->
                                     val tag = item.first
@@ -873,7 +876,7 @@ fun ThingsTagDialog(
                                                 val scale = 1f + 0.03f * lift
                                                 scaleX = scale
                                                 scaleY = scale
-                                                shadowElevation = 8.dp.toPx() * lift
+                                                shadowElevation = ThingsElevation.CARD.toPx() * lift
                                                 shape = liftShape
                                                 clip = false
                                             }
@@ -923,15 +926,12 @@ fun ThingsTagDialog(
                                             )
                                         }
 
-                                        Spacer(modifier = Modifier.width(12.dp))
+                                        Spacer(modifier = Modifier.width(ThingsSpacing.M))
 
                                         // Tag Title
                                         Text(
                                             text = tag.title,
-                                            style = ThingsTheme.type.dialogRow.copy(
-                                                color = ThingsTheme.colors.overlayContent,
-                                                fontWeight = FontWeight.Normal
-                                            ),
+                                            style = ThingsTheme.type.dialogRow.copy(color = ThingsTheme.colors.overlayContent),
                                             modifier = Modifier.weight(1f)
                                         )
 
@@ -975,7 +975,7 @@ fun ThingsTagDialog(
                             ),
                             shape = ThingsTheme.shapes.rowShape,
                             modifier = Modifier.fillMaxWidth(),
-                            contentPadding = PaddingValues(vertical = 10.dp)
+                            contentPadding = PaddingValues(vertical = TagDialogButtonVerticalPadding)
                         ) {
                             Text(
                                 text = stringResource(id = R.string.tag_dialog_new_tag),
@@ -1007,7 +1007,7 @@ fun ThingsTagDialog(
                             .fillMaxSize()
                             .background(DialogBackgroundColor)
                             .padding(InnerContentPadding),
-                        verticalArrangement = Arrangement.spacedBy(16.dp)
+                        verticalArrangement = Arrangement.spacedBy(ThingsSpacing.L)
                     ) {
                         // Header
                         val isSaveEnabled = editTagName.trim().isNotEmpty()
@@ -1018,7 +1018,7 @@ fun ThingsTagDialog(
                         ) {
                             Box(
                                 modifier = Modifier
-                                    .size(36.dp)
+                                    .size(HeaderButtonSize)
                                     .clip(androidx.compose.foundation.shape.CircleShape)
                                     .background(DarkButtonBgColor)
                                     .clickable { closeEditScreen() },
@@ -1040,7 +1040,7 @@ fun ThingsTagDialog(
 
                             Box(
                                 modifier = Modifier
-                                    .size(36.dp)
+                                    .size(HeaderButtonSize)
                                     .clip(androidx.compose.foundation.shape.CircleShape)
                                     .background(if (isSaveEnabled) ThingsTheme.colors.accent else DarkButtonBgColor)
                                     .clickable(enabled = isSaveEnabled) { saveEditedTag() },
@@ -1105,21 +1105,21 @@ fun ThingsTagDialog(
                                     groupSelectionTargetScreen = DialogScreen.EDIT
                                     currentScreen = DialogScreen.SELECT_GROUP
                                 }
-                                .padding(vertical = 12.dp, horizontal = 4.dp),
+                                .padding(vertical = ThingsSpacing.M, horizontal = ThingsSpacing.XS),
                             horizontalArrangement = Arrangement.SpaceBetween,
                             verticalAlignment = Alignment.CenterVertically
                         ) {
                             Text(
                                 text = stringResource(id = R.string.tag_dialog_group),
-                                style = ThingsTheme.type.dialogRow.copy(color = ThingsTheme.colors.overlayContent, fontWeight = FontWeight.Normal)
+                                style = ThingsTheme.type.dialogRow.copy(color = ThingsTheme.colors.overlayContent)
                             )
                             Row(
                                 verticalAlignment = Alignment.CenterVertically,
-                                horizontalArrangement = Arrangement.spacedBy(4.dp)
+                                horizontalArrangement = Arrangement.spacedBy(ThingsSpacing.XS)
                             ) {
                                 Text(
                                     text = selectedGroup?.title ?: stringResource(id = R.string.tag_dialog_no_tag),
-                                    style = ThingsTheme.type.dialogRow.copy(color = ThingsTheme.colors.accent, fontWeight = FontWeight.Medium)
+                                    style = ThingsTheme.type.dialogRowAction.copy(color = ThingsTheme.colors.accent)
                                 )
                                 Icon(
                                     imageVector = Icons.AutoMirrored.Filled.KeyboardArrowRight,

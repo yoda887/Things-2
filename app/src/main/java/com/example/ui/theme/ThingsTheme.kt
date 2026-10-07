@@ -257,6 +257,10 @@ data class ThingsTypography(
     val dialogTitle: TextStyle,
     /** Строка выбора в диалоге: проект в Move, тег, «Сегодня» в When */
     val dialogRow: TextStyle,
+    /** Выбранная строка диалога: тег, группа (19 sp SemiBold) */
+    val dialogRowSelected: TextStyle,
+    /** Строка-действие диалога цветом accent: «New Tag», «Manage Tags» (19 sp Medium) */
+    val dialogRowAction: TextStyle,
     /** Пояснительный текст диалога */
     val dialogBody: TextStyle,
     /** Кнопка действия в диалоге: Cancel, Delete, Clear */
@@ -316,6 +320,8 @@ data class ThingsTypography(
 internal fun thingsTypography(scale: Float = 1f) = ThingsTypography(
     dialogTitle = TextStyle(fontFamily = FontFamily.Default, fontWeight = FontWeight.Bold, fontSize = (20 * scale).sp),
     dialogRow = TextStyle(fontFamily = FontFamily.Default, fontWeight = FontWeight.Normal, fontSize = (19 * scale).sp),
+    dialogRowSelected = TextStyle(fontFamily = FontFamily.Default, fontWeight = FontWeight.SemiBold, fontSize = (19 * scale).sp),
+    dialogRowAction = TextStyle(fontFamily = FontFamily.Default, fontWeight = FontWeight.Medium, fontSize = (19 * scale).sp),
     dialogBody = TextStyle(fontFamily = FontFamily.Default, fontWeight = FontWeight.Normal, fontSize = (15 * scale).sp),
     dialogButton = TextStyle(fontFamily = FontFamily.Default, fontWeight = FontWeight.Normal, fontSize = (18 * scale).sp),
     menuItem = TextStyle(fontFamily = FontFamily.Default, fontWeight = FontWeight.Normal, fontSize = (18 * scale).sp),

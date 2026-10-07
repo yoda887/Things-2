@@ -133,6 +133,8 @@ object DesignSystemDocGenerator {
         TypeToken("taskTitle", { it.taskTitle }, "Название задачи в строке списка и в раскрытом редакторе.", "Купити молоко"),
         TypeToken("sectionHeader", { it.sectionHeader }, "Подзаголовки секций: «Сегодня вечером», «Планы», «Когда-нибудь», заголовок поиска.", "ЦЬОГО ВЕЧОРА"),
         TypeToken("dialogRow", { it.dialogRow }, "Строка выбора в диалоге: проект в Move, тег, «Сегодня» в When.", "Inbox"),
+        TypeToken("dialogRowSelected", { it.dialogRowSelected }, "Выбранная строка диалога: тег, группа тегов.", "Things"),
+        TypeToken("dialogRowAction", { it.dialogRowAction }, "Строка-действие диалога цветом accent: «Новий тег», «Керування тегами».", "Новий тег"),
         TypeToken("dialogButton", { it.dialogButton }, "Кнопка действия в диалоге: Cancel, Delete, Clear.", "Cancel"),
         TypeToken("menuItem", { it.menuItem }, "Пункт выпадающего меню: «New To-Do», «Delete Project», меню подзаголовка.", "New To-Do"),
         TypeToken("editorNotes", { it.editorNotes }, "Заметки в раскрытом редакторе.", "Додаткові примітки..."),

@@ -179,7 +179,7 @@ class DesignSystemEnforcementTest {
      * MaterialTheme.dimens, роли ThingsTheme.type или именованные константы файла (`private val X = N.dp`).
      * Список растёт по мере перевода экранов.
      */
-    private val fullyMigratedFiles = setOf("HomePanel.kt")
+    private val fullyMigratedFiles = setOf("HomePanel.kt", "ThingsTagDialog.kt")
 
     @Test
     fun migratedScreensHaveNoDpLiteralsOrWeightOverrides() {
