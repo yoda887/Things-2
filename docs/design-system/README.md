@@ -55,7 +55,7 @@
 | [AddButton](components/AddButton.md) | Круглая кнопка «+» в правом нижнем углу |
 | [CalendarEvents](components/CalendarEvents.md) | Блок событий календаря на «Сегодня» и в днях «Предстоящих» |
 | [Checkbox](components/Checkbox.md) | Квадратный чекбокс задачи со скруглением 23 % стороны; отметка заливает его `accent` от центра и прорисовывает галочку. |
-| [DarkDialog](components/DarkDialog.md) | Тёмный модальный диалог в обеих темах: выбор проекта (Move), подтверждение удаления, меню. |
+| [DarkDialog](components/DarkDialog.md) | Тёмный модальный диалог в обеих темах: выбор проекта (Move), дата (When), теги, меню. Там же — светлый диалог подтверждения `ThingsConfirmDialog`. |
 | [DropPlaceholder](components/DropPlaceholder.md) | Серая плашка, которая показывает, куда встанет перетаскиваемая задача, подзаголовок или новая задача из «+». |
 | [ProjectHeading](components/ProjectHeading.md) | Подзаголовок внутри проекта: название цветом `project`, кнопка «•••» с меню и тонкая линия под ним. |
 | [QuickFind](components/QuickFind.md) | Плавающая карточка быстрого поиска |
