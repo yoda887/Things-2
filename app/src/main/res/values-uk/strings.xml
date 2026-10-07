@@ -167,4 +167,6 @@
     <string name="fallback_area">Область</string>
     <string name="fallback_tag">Тег</string>
     <string name="cd_save">Зберегти</string>
+    <string name="untitled_task">Завдання без назви</string>
+    <string name="sync_error_unknown">Невідома помилка синхронізації</string>
 </resources>

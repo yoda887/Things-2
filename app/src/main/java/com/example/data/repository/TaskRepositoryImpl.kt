@@ -1,5 +1,6 @@
 package com.example.data.repository
 
+import com.example.data.remote.GoogleTasksApi
 import javax.inject.Inject
 import android.util.Log
 import com.example.data.local.LocalTaskDataSource
@@ -59,7 +60,7 @@ class TaskRepositoryImpl @Inject constructor(
     }
 
     override fun observeAllProjects(): Flow<List<Item>> = localDataSource.getAllItems().map { items ->
-        items.filter { it.type == 1 }
+        items.filter { it.type == Item.TYPE_PROJECT }
     }
 
     override fun observeHeadings(): Flow<List<Item>> = localDataSource.getAllItems().map { items ->
@@ -70,9 +71,9 @@ class TaskRepositoryImpl @Inject constructor(
         inTransaction {
             val now = System.currentTimeMillis()
             val openTasks = localDataSource.getAllItemsSync()
-                .filter { it.headingId == heading.id && !it.isHeading && it.status == 0 }
-                .map { it.copy(status = 3, stopDate = now, modificationDate = now) }
-            val archived = heading.copy(status = 3, stopDate = now, modificationDate = now)
+                .filter { it.headingId == heading.id && !it.isHeading && it.status == Item.STATUS_OPEN }
+                .map { it.copy(status = Item.STATUS_COMPLETED, stopDate = now, modificationDate = now) }
+            val archived = heading.copy(status = Item.STATUS_COMPLETED, stopDate = now, modificationDate = now)
             localDataSource.insertItems(openTasks + archived)
         }
     }
@@ -361,7 +362,7 @@ class TaskRepositoryImpl @Inject constructor(
 
     override suspend fun syncWithGoogleTasks(accessToken: String): Result<Unit> = withContext(Dispatchers.IO) {
         try {
-            val authHeader = "Bearer $accessToken"
+            val authHeader = GoogleTasksApi.authHeader(accessToken)
             Log.d("TaskRepository", "Starting Google Tasks sync")
 
             // 1. Извлекаем локальные несохраненные проекты и отправляем их на сервер Google
@@ -388,12 +389,12 @@ class TaskRepositoryImpl @Inject constructor(
 
             // Мержим удаленные списки Google во внутренние проекты Project
             for (remoteList in remoteLists) {
-                if (remoteList.id == "@default") continue
+                if (remoteList.id == GoogleTasksApi.DEFAULT_LIST_ID) continue
                 val existingProject = localDataSource.getItemById(remoteList.id)
                 if (existingProject == null) {
                     val newProject = Item(
                         id = remoteList.id,
-                        type = 1,
+                        type = Item.TYPE_PROJECT,
                         title = remoteList.title,
                         googleTaskListId = remoteList.id
                     )
@@ -402,11 +403,11 @@ class TaskRepositoryImpl @Inject constructor(
             }
 
             // 3. Синхронизируем список задач "по умолчанию" (Inbox)
-            syncListTasks(authHeader, "@default", null)
+            syncListTasks(authHeader, GoogleTasksApi.DEFAULT_LIST_ID, null)
 
             // 4. Синхронизируем задачи для каждого пользовательского проекта
             for (remoteList in remoteLists) {
-                if (remoteList.id == "@default") continue
+                if (remoteList.id == GoogleTasksApi.DEFAULT_LIST_ID) continue
                 syncListTasks(authHeader, remoteList.id, remoteList.id)
             }
 
@@ -415,15 +416,15 @@ class TaskRepositoryImpl @Inject constructor(
             for (task in unsyncedTasks) {
                 try {
                     val listId = if (task.projectId != null) {
-                        localDataSource.getItemById(task.projectId)?.googleTaskListId ?: "@default"
+                        localDataSource.getItemById(task.projectId)?.googleTaskListId ?: GoogleTasksApi.DEFAULT_LIST_ID
                     } else {
-                        "@default"
+                        GoogleTasksApi.DEFAULT_LIST_ID
                     }
 
                     val gTask = GoogleTask(
                         title = task.title,
                         notes = task.notes,
-                        status = if (task.isCompleted) "completed" else "needsAction"
+                        status = if (task.isCompleted) GoogleTasksApi.STATUS_COMPLETED else GoogleTasksApi.STATUS_NEEDS_ACTION
                     )
 
                     val remoteTask = remoteDataSource.createTask(authHeader, listId, gTask)
@@ -456,14 +457,14 @@ class TaskRepositoryImpl @Inject constructor(
             for (remoteTask in remoteTasks) {
                 val remoteTaskId = remoteTask.id ?: continue
                 val localTask = localDataSource.getItemByGoogleTaskId(remoteTaskId)
-                val isCompletedRemote = remoteTask.status == "completed"
+                val isCompletedRemote = remoteTask.status == GoogleTasksApi.STATUS_COMPLETED
                 val notesRemote = remoteTask.notes ?: ""
                 val titleRemote = remoteTask.title
 
                 if (localTask == null) {
                     val defaultStart = if (projectId == null) 0 else 2 // 0 = Inbox, 2 = Anytime
                     val newTask = Item(
-                        type = 0,
+                        type = Item.TYPE_TASK,
                         title = titleRemote,
                         notes = notesRemote,
                         start = defaultStart,

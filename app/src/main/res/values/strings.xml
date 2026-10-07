@@ -162,4 +162,6 @@
     <string name="fallback_area">Area</string>
     <string name="fallback_tag">Tag</string>
     <string name="cd_save">Save</string>
+    <string name="untitled_task">Untitled To-Do</string>
+    <string name="sync_error_unknown">Unknown sync error</string>
 </resources>

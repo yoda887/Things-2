@@ -920,7 +920,7 @@ fun ThingsHomePanel(
 
                             if (syncError != null) {
                                 Text(
-                                    stringResource(R.string.ui_sync_error, syncError),
+                                    stringResource(R.string.ui_sync_error, syncError.ifBlank { stringResource(R.string.sync_error_unknown) }),
                                     color = ThingsTheme.colors.danger,
                                     style = ThingsTheme.type.caption.copy(fontWeight = FontWeight.Medium),
                                     modifier = Modifier.padding(bottom = 8.dp)

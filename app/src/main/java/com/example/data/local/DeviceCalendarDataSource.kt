@@ -99,11 +99,11 @@ class DeviceCalendarDataSource(private val context: Context) {
                     events.add(
                         Item(
                             id = "cal_$id",
-                            type = 0,
+                            type = Item.TYPE_TASK,
                             title = title,
                             notes = "Local Calendar Event",
-                            start = 1, // mapping onto today/upcoming smart list
-                            status = 0,
+                            start = Item.START_TODAY, // mapping onto today/upcoming smart list
+                            status = Item.STATUS_OPEN,
                             cachedTags = "Calendar",
                             calendarColor = calendarColor,
                             calendarDisplayName = calendarDisplayName,

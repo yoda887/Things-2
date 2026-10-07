@@ -8,6 +8,17 @@ import retrofit2.http.PATCH
 import retrofit2.http.POST
 import retrofit2.http.Path
 
+/** Значения Google Tasks API, на которые опирается синхронизация */
+object GoogleTasksApi {
+    const val BASE_URL = "https://tasks.googleapis.com/v1/"
+    /** Список задач по умолчанию — в приложении это «Входящие» */
+    const val DEFAULT_LIST_ID = "@default"
+    const val STATUS_COMPLETED = "completed"
+    const val STATUS_NEEDS_ACTION = "needsAction"
+
+    fun authHeader(accessToken: String): String = "Bearer $accessToken"
+}
+
 data class GoogleTaskList(
     val id: String,
     val title: String
@@ -21,7 +32,7 @@ data class GoogleTask(
     val id: String? = null,
     val title: String,
     val notes: String? = null,
-    val status: String? = null, // "needsAction" or "completed"
+    val status: String? = null, // GoogleTasksApi.STATUS_*
     val due: String? = null,    // RFC3339 timestamp (e.g., yyyy-MM-dd'T'HH:mm:ss.SSS'Z')
     val completed: String? = null
 )

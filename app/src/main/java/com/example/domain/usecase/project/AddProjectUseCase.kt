@@ -10,11 +10,11 @@ import javax.inject.Inject
 class AddProjectUseCase @Inject constructor(private val repository: ITaskRepository) {
 
     /**
-     * Создает новый проект (Item с type = 1) и записывает в БД.
+     * Создает новый проект (Item с type = Item.TYPE_PROJECT) и записывает в БД.
      */
     suspend operator fun invoke(name: String, notes: String = "", areaId: String? = null) {
         val project = Item(
-            type = 1,
+            type = Item.TYPE_PROJECT,
             title = name.ifBlank { "New Project" },
             notes = notes,
             areaId = areaId

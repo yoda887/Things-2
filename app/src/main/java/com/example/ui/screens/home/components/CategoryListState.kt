@@ -1,5 +1,6 @@
 package com.example.ui.screens.home.components
 
+import com.example.data.model.Item
 import com.example.R
 import androidx.compose.ui.res.stringResource
 import androidx.compose.animation.core.Animatable
@@ -459,9 +460,9 @@ fun rememberFlattenedList(
                 }
                 val areaDirectTasks = displayTasks.filter { it.item.areaId == area?.id && (it.item.projectId == null || it.item.projectId == "") }
                 val bounds = DayBounds.now()
-                val currentTasks = areaDirectTasks.filter { !bounds.isUpcoming(it.item) && it.item.start != 3 }
-                val upcomingTasks = areaDirectTasks.filter { bounds.isUpcoming(it.item) && it.item.start != 3 }
-                val somedayTasks = areaDirectTasks.filter { it.item.start == 3 }
+                val currentTasks = areaDirectTasks.filter { !bounds.isUpcoming(it.item) && it.item.start != Item.START_SOMEDAY }
+                val upcomingTasks = areaDirectTasks.filter { bounds.isUpcoming(it.item) && it.item.start != Item.START_SOMEDAY }
+                val somedayTasks = areaDirectTasks.filter { it.item.start == Item.START_SOMEDAY }
 
                 if (areaProjects.isNotEmpty() && (currentTasks.isNotEmpty() || upcomingTasks.isNotEmpty() || somedayTasks.isNotEmpty())) {
                     add(TaskListKeys.AREA_PROJECTS_SPACER)
@@ -485,17 +486,17 @@ fun rememberFlattenedList(
                 }
             } else if (screen == ActiveScreen.TAG_DETAIL) {
                 val tagTitle = tag?.title ?: ""
-                val tagProjects = projects.filter { !it.trashed && !it.isCompleted && it.status != 2 && it.tags.contains(tagTitle) }
+                val tagProjects = projects.filter { !it.trashed && !it.isCompleted && it.status != Item.STATUS_CANCELLED && it.tags.contains(tagTitle) }
                 if (tagProjects.isNotEmpty()) {
                     addAll(tagProjects)
                 }
-                val activeTagTasks = displayTasks.filter { !it.item.trashed && !it.item.isCompleted && it.item.status != 2 }
+                val activeTagTasks = displayTasks.filter { !it.item.trashed && !it.item.isCompleted && it.item.status != Item.STATUS_CANCELLED }
                 if (tagProjects.isNotEmpty() && activeTagTasks.isNotEmpty()) {
                     add(TaskListKeys.AREA_PROJECTS_SPACER)
                 }
                 addAll(activeTagTasks)
 
-                val logbookTasks = allTasks.filter { !it.item.trashed && (it.item.isCompleted || it.item.status == 2) && it.item.tags.contains(tagTitle) }
+                val logbookTasks = allTasks.filter { !it.item.trashed && (it.item.isCompleted || it.item.status == Item.STATUS_CANCELLED) && it.item.tags.contains(tagTitle) }
                     .sortedByDescending { it.item.stopDate ?: it.item.modificationDate }
                 if (logbookTasks.isNotEmpty()) {
                     addAll(logbookTasks)
@@ -540,7 +541,7 @@ private fun MutableList<Any>.addSearchResults(
     val q = searchQuery.trim()
     if (q.isEmpty()) return
 
-    fun Item.isDone() = isCompleted || status == 2
+    fun Item.isDone() = isCompleted || status == Item.STATUS_CANCELLED
     val active = matchedTasks.filter { !it.item.isDone() }
 
     // 1. Открытые задачи без проекта и области — сразу под строкой поиска, без заголовка
@@ -548,7 +549,7 @@ private fun MutableList<Any>.addSearchResults(
 
     // 2. Найденные проекты и области — строками без заголовка секции, затем теги
     val matchedProjects = projects.filter {
-        it.type == 1 && !it.trashed && (it.title.contains(q, ignoreCase = true) || it.notes.contains(q, ignoreCase = true))
+        it.type == Item.TYPE_PROJECT && !it.trashed && (it.title.contains(q, ignoreCase = true) || it.notes.contains(q, ignoreCase = true))
     }
     addAll(matchedProjects)
     val matchedAreas = areas.filter { !it.trashed && it.title.contains(q, ignoreCase = true) }

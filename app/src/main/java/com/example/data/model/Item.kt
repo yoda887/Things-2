@@ -16,11 +16,11 @@ enum class TaskSection {
  */
 fun TaskSection.toStartVal(): Int {
     return when (this) {
-        TaskSection.INBOX -> 0
-        TaskSection.TODAY -> 1
-        TaskSection.ANYTIME -> 2
-        TaskSection.UPCOMING -> 2 // Anytime и Upcoming делят один статус
-        TaskSection.SOMEDAY -> 3
+        TaskSection.INBOX -> Item.START_INBOX
+        TaskSection.TODAY -> Item.START_TODAY
+        TaskSection.ANYTIME -> Item.START_ANYTIME
+        TaskSection.UPCOMING -> Item.START_ANYTIME // Anytime и Upcoming делят один статус
+        TaskSection.SOMEDAY -> Item.START_SOMEDAY
     }
 }
 
@@ -55,11 +55,11 @@ fun TaskSection.toStartVal(): Int {
 )
 data class Item(
     @PrimaryKey val id: String = UUID.randomUUID().toString(),
-    val type: Int = 0, // 0=task, 1=project, 2=heading, 3=template
+    val type: Int = TYPE_TASK, // TYPE_*
     val title: String = "",
     val notes: String = "",
-    val status: Int = 0, // 0=open, 2=cancelled, 3=completed
-    val start: Int = 0, // 0=inbox, 1=today, 2=anytime, 3=someday
+    val status: Int = STATUS_OPEN, // STATUS_*
+    val start: Int = START_INBOX, // START_*
     val isTonight: Boolean = false,
     val stopDate: Long? = null,
     val dueDate: Long? = null,
@@ -76,7 +76,7 @@ data class Item(
     val calendarDisplayName: String? = null,
     val eventStartMillis: Long? = null,
     val isAllDay: Boolean = false,
-    val priority: Int = 0, // 0=None, 1=Low, 2=Medium, 3=High
+    val priority: Int = PRIORITY_NONE, // PRIORITY_*
     val trashed: Boolean = false,
     val startDate: Long? = null,
     val modificationDate: Long = System.currentTimeMillis(),
@@ -84,7 +84,7 @@ data class Item(
 ) {
     @get:Ignore
     val isCompleted: Boolean
-        get() = status == 3
+        get() = status == Item.STATUS_COMPLETED
 
     /** Заголовок внутри проекта: группирует задачи проекта, сам задачей не является */
     @get:Ignore
@@ -92,9 +92,28 @@ data class Item(
         get() = type == TYPE_HEADING
 
     companion object {
+        // type
         const val TYPE_TASK = 0
         const val TYPE_PROJECT = 1
         const val TYPE_HEADING = 2
+        const val TYPE_TEMPLATE = 3
+
+        // status
+        const val STATUS_OPEN = 0
+        const val STATUS_CANCELLED = 2
+        const val STATUS_COMPLETED = 3
+
+        // start — раздел задачи без даты
+        const val START_INBOX = 0
+        const val START_TODAY = 1
+        const val START_ANYTIME = 2
+        const val START_SOMEDAY = 3
+
+        // priority
+        const val PRIORITY_NONE = 0
+        const val PRIORITY_LOW = 1
+        const val PRIORITY_MEDIUM = 2
+        const val PRIORITY_HIGH = 3
     }
 
     @get:Ignore
@@ -115,7 +134,7 @@ data class Item(
      */
     @get:Ignore
     val isInbox: Boolean
-        get() = type == 0 && start == 0 && startDate == null && dueDate == null && projectId == null
+        get() = type == Item.TYPE_TASK && start == Item.START_INBOX && startDate == null && dueDate == null && projectId == null
 
     /**
      * Determines if the task belongs to Today category.
@@ -181,8 +200,8 @@ class DayBounds private constructor(
      * имеет горящий дедлайн или дату старта не позже конца сегодняшнего дня.
      */
     fun isToday(item: Item): Boolean {
-        if (item.type != 0 || item.isCompleted) return false
-        if (item.start == 1) return true
+        if (item.type != Item.TYPE_TASK || item.isCompleted) return false
+        if (item.start == Item.START_TODAY) return true
         if (isDueSoon(item.dueDate)) return true
         val startDate = item.startDate ?: return false
         return startDate <= endOfToday
@@ -193,7 +212,7 @@ class DayBounds private constructor(
      * и при этом не имеет горящего дедлайна.
      */
     fun isUpcoming(item: Item): Boolean {
-        if (item.type != 0 || item.isCompleted) return false
+        if (item.type != Item.TYPE_TASK || item.isCompleted) return false
         if (isToday(item)) return false
         val startDate = item.startDate ?: return false
         return startDate > endOfToday
@@ -204,21 +223,21 @@ class DayBounds private constructor(
      * но она не в Inbox, не в Someday и не запланирована на будущее.
      */
     fun isAnytime(item: Item): Boolean {
-        if (item.type != 0 || item.isCompleted) return false
+        if (item.type != Item.TYPE_TASK || item.isCompleted) return false
         if (isToday(item)) return false
-        if (item.start == 0 && item.startDate == null && item.projectId == null) return false
-        if (item.start == 3) return false
+        if (item.start == Item.START_INBOX && item.startDate == null && item.projectId == null) return false
+        if (item.start == Item.START_SOMEDAY) return false
 
         val startDate = item.startDate
         if (startDate != null) return startDate <= endOfToday
-        return item.start == 2 || item.start == 0 || item.projectId != null
+        return item.start == Item.START_ANYTIME || item.start == Item.START_INBOX || item.projectId != null
     }
 
     /**
      * Задача отложена в «Когда-нибудь потом» (Someday).
      */
     fun isSomeday(item: Item): Boolean =
-        item.type == 0 && !item.isCompleted && !isToday(item) && item.start == 3
+        item.type == Item.TYPE_TASK && !item.isCompleted && !isToday(item) && item.start == Item.START_SOMEDAY
 
     /**
      * Секция, в которую попадает задача с учётом дедлайна и даты старта.
@@ -232,10 +251,10 @@ class DayBounds private constructor(
             return if (startDate > endOfToday) TaskSection.UPCOMING else TaskSection.TODAY
         }
         return when (item.start) {
-            0 -> TaskSection.INBOX
-            1 -> TaskSection.TODAY
-            2 -> TaskSection.ANYTIME
-            3 -> TaskSection.SOMEDAY
+            Item.START_INBOX -> TaskSection.INBOX
+            Item.START_TODAY -> TaskSection.TODAY
+            Item.START_ANYTIME -> TaskSection.ANYTIME
+            Item.START_SOMEDAY -> TaskSection.SOMEDAY
             else -> TaskSection.INBOX
         }
     }

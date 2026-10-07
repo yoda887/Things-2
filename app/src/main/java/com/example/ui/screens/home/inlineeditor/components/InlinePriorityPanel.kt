@@ -1,5 +1,6 @@
 package com.example.ui.screens.home.inlineeditor.components
 
+import com.example.data.model.Item
 import com.example.R
 import androidx.compose.ui.res.stringResource
 import com.example.ui.theme.ThingsTheme
@@ -40,16 +41,16 @@ fun InlinePriorityPanel(
     val helperBgColor = ThingsTheme.colors.searchField // panel background
 
     val priorityName = when (priority) {
-        3 -> stringResource(R.string.priority_high)
-        2 -> stringResource(R.string.priority_medium)
-        1 -> stringResource(R.string.priority_low)
+        Item.PRIORITY_HIGH -> stringResource(R.string.priority_high)
+        Item.PRIORITY_MEDIUM -> stringResource(R.string.priority_medium)
+        Item.PRIORITY_LOW -> stringResource(R.string.priority_low)
         else -> stringResource(R.string.priority_none)
     }
 
     val priorityColor = when (priority) {
-        3 -> ThingsTheme.colors.upcoming
-        2 -> ThingsTheme.colors.today
-        1 -> ThingsTheme.colors.anytime
+        Item.PRIORITY_HIGH -> ThingsTheme.colors.upcoming
+        Item.PRIORITY_MEDIUM -> ThingsTheme.colors.today
+        Item.PRIORITY_LOW -> ThingsTheme.colors.anytime
         else -> ThingsTheme.colors.textSecondary
     }
 
@@ -88,41 +89,41 @@ fun InlinePriorityPanel(
                 Text(
                     text = stringResource(R.string.ui_no),
                     style = ThingsTheme.type.badge.copy(
-                        color = if (priority == 0) ThingsTheme.colors.accent else ThingsTheme.colors.someday,
+                        color = if (priority == Item.PRIORITY_NONE) ThingsTheme.colors.accent else ThingsTheme.colors.someday,
                         fontWeight = FontWeight.Bold
                     ),
                     modifier = Modifier
-                        .clickable { onPriorityChange(0) }
+                        .clickable { onPriorityChange(Item.PRIORITY_NONE) }
                         .padding(horizontal = 4.dp, vertical = 2.dp)
                 )
                 Text(
                     text = stringResource(R.string.ui_low),
                     style = ThingsTheme.type.badge.copy(
-                        color = if (priority == 1) ThingsTheme.colors.anytime else ThingsTheme.colors.someday,
+                        color = if (priority == Item.PRIORITY_LOW) ThingsTheme.colors.anytime else ThingsTheme.colors.someday,
                         fontWeight = FontWeight.Bold
                     ),
                     modifier = Modifier
-                        .clickable { onPriorityChange(1) }
+                        .clickable { onPriorityChange(Item.PRIORITY_LOW) }
                         .padding(horizontal = 4.dp, vertical = 2.dp)
                 )
                 Text(
                     text = stringResource(R.string.ui_med),
                     style = ThingsTheme.type.badge.copy(
-                        color = if (priority == 2) ThingsTheme.colors.today else ThingsTheme.colors.someday,
+                        color = if (priority == Item.PRIORITY_MEDIUM) ThingsTheme.colors.today else ThingsTheme.colors.someday,
                         fontWeight = FontWeight.Bold
                     ),
                     modifier = Modifier
-                        .clickable { onPriorityChange(2) }
+                        .clickable { onPriorityChange(Item.PRIORITY_MEDIUM) }
                         .padding(horizontal = 4.dp, vertical = 2.dp)
                 )
                 Text(
                     text = stringResource(R.string.ui_high),
                     style = ThingsTheme.type.badge.copy(
-                        color = if (priority == 3) ThingsTheme.colors.upcoming else ThingsTheme.colors.someday,
+                        color = if (priority == Item.PRIORITY_HIGH) ThingsTheme.colors.upcoming else ThingsTheme.colors.someday,
                         fontWeight = FontWeight.Bold
                     ),
                     modifier = Modifier
-                        .clickable { onPriorityChange(3) }
+                        .clickable { onPriorityChange(Item.PRIORITY_HIGH) }
                         .padding(horizontal = 4.dp, vertical = 2.dp)
                 )
             }

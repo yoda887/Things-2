@@ -178,12 +178,12 @@ class ThingsViewModel @Inject constructor(
                         ActiveScreen.SOMEDAY -> bounds.isSomeday(task)
                         ActiveScreen.LOGBOOK -> task.isCompleted
                         ActiveScreen.PROJECT_DETAIL -> task.projectId == project?.id && !task.isCompleted
-                        ActiveScreen.AREA_DETAIL -> task.areaId == area?.id && task.type == 0 && !task.isCompleted
-                        ActiveScreen.TAG_DETAIL -> task.type == 0 && tag != null && task.tags.contains(tag.title) && !task.isCompleted
+                        ActiveScreen.AREA_DETAIL -> task.areaId == area?.id && task.type == Item.TYPE_TASK && !task.isCompleted
+                        ActiveScreen.TAG_DETAIL -> task.type == Item.TYPE_TASK && tag != null && task.tags.contains(tag.title) && !task.isCompleted
                         // Поиск: задачи (открытые, выполненные и отменённые) по названию, заметкам и чек-листу
                         ActiveScreen.SEARCH -> {
                             val q = query.trim()
-                            q.isNotEmpty() && task.type == 0 && !task.trashed && (
+                            q.isNotEmpty() && task.type == Item.TYPE_TASK && !task.trashed && (
                                 task.title.contains(q, ignoreCase = true) ||
                                     task.notes.contains(q, ignoreCase = true) ||
                                     wrapper.checklist.any { it.title.contains(q, ignoreCase = true) }
@@ -196,7 +196,7 @@ class ThingsViewModel @Inject constructor(
 
             // Экран проекта: активные заголовки проекта, задачи — в порядке экрана, по заголовкам
             val projectHeadings = if (screen == ActiveScreen.PROJECT_DETAIL && project != null) {
-                headingList.filter { it.projectId == project.id && it.status == 0 && !it.trashed }
+                headingList.filter { it.projectId == project.id && it.status == Item.STATUS_OPEN && !it.trashed }
                     .sortedBy { it.sortOrder }
             } else {
                 emptyList()
@@ -510,7 +510,8 @@ class ThingsViewModel @Inject constructor(
         dueDate: Long?,
         tags: List<String>,
         projectId: String?,
-        priority: Int
+        priority: Int,
+        untitledTitle: String
     ) {
         viewModelScope.launch {
             val startVal = if (projectId != null && section == TaskSection.INBOX) {
@@ -519,7 +520,7 @@ class ThingsViewModel @Inject constructor(
                 section.toStartVal()
             }
             val updatedTask = task.copy(
-                title = title.ifBlank { "Untitled To-Do" },
+                title = title.ifBlank { untitledTitle },
                 notes = notes,
                 start = startVal,
                 isTonight = isTonight,
@@ -608,7 +609,7 @@ class ThingsViewModel @Inject constructor(
      * Пакетно назначает дату старта выбранным задачам.
      *
      * Меняется не только дата, но и сама секция: списки отбирают задачи по [Item.start]
-     * ([DayBounds.isSomeday] — по `start == 3` и т. д.), поэтому без него задача с новой датой
+     * ([DayBounds.isSomeday] — по `start == Item.START_SOMEDAY` и т. д.), поэтому без него задача с новой датой
      * осталась бы в своём прежнем списке.
      */
     fun batchScheduleTasks(
@@ -657,7 +658,7 @@ class ThingsViewModel @Inject constructor(
             val updated = taskWrappers.map { wrapper ->
                 if (moveToInbox) {
                     wrapper.item.copy(
-                        start = 0,
+                        start = Item.START_INBOX,
                         projectId = null,
                         areaId = null,
                         startDate = null,
@@ -665,7 +666,7 @@ class ThingsViewModel @Inject constructor(
                         modificationDate = System.currentTimeMillis()
                     )
                 } else {
-                    val newStart = if (wrapper.item.start == 0 && projectId != null) 2 else wrapper.item.start
+                    val newStart = if (wrapper.item.start == Item.START_INBOX && projectId != null) Item.START_ANYTIME else wrapper.item.start
                     wrapper.item.copy(
                         start = newStart,
                         projectId = projectId,
@@ -775,7 +776,8 @@ class ThingsViewModel @Inject constructor(
             val result = syncUseCases.syncGoogleTasks(googleAccessToken.value)
             
             result.onFailure { error ->
-                _syncError.value = error.localizedMessage ?: "Unknown sync error"
+                // Пустая строка — текст «неизвестная ошибка» подставит экран на языке системы
+                _syncError.value = error.localizedMessage.orEmpty()
             }
             
             _isSyncing.value = false

@@ -285,7 +285,7 @@ private fun findInsertionIndexForSection(
 
 /** Секция задачи на экране сферы — та же классификация, что и в rememberFlattenedList */
 private fun ItemWithChecklist.areaSection(bounds: DayBounds): Int = when {
-    item.start == 3 -> 2
+    item.start == Item.START_SOMEDAY -> 2
     bounds.isUpcoming(item) -> 1
     else -> 0
 }

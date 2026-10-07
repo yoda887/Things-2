@@ -367,7 +367,7 @@ fun ThingsSearchOverlay(
 
             // 3. Поиск по проектам (только активные по названию, заметкам; исключая удаленные и завершенные/отмененные)
             val matchedProjects = projects.filter {
-                it.type == 1 && !it.trashed && !it.isCompleted && it.status != 2 && (
+                it.type == Item.TYPE_PROJECT && !it.trashed && !it.isCompleted && it.status != Item.STATUS_CANCELLED && (
                     it.title.contains(query, ignoreCase = true) ||
                     it.notes.contains(query, ignoreCase = true)
                 )
@@ -376,7 +376,7 @@ fun ThingsSearchOverlay(
 
             // 4. Поиск по задачам (только активные по названию, заметкам, чеклистам; исключая удаленные и завершенные/отмененные)
             val matchedTasks = allTasks.filter { wrapper ->
-                wrapper.item.type == 0 && !wrapper.item.trashed && !wrapper.item.isCompleted && wrapper.item.status != 2 && (
+                wrapper.item.type == Item.TYPE_TASK && !wrapper.item.trashed && !wrapper.item.isCompleted && wrapper.item.status != Item.STATUS_CANCELLED && (
                     wrapper.item.title.contains(query, ignoreCase = true) ||
                     wrapper.item.notes.contains(query, ignoreCase = true) ||
                     wrapper.checklist.any { it.title.contains(query, ignoreCase = true) }
@@ -393,10 +393,10 @@ fun ThingsSearchOverlay(
 
     // Имя первого доступного проекта для отображения в "Recent"
     val recentProjectName = remember(projects) {
-        projects.firstOrNull { it.type == 1 && !it.trashed && !it.isCompleted && it.status != 2 }?.title ?: "Vacation in Rome"
+        projects.firstOrNull { it.type == Item.TYPE_PROJECT && !it.trashed && !it.isCompleted && it.status != Item.STATUS_CANCELLED }?.title ?: "Vacation in Rome"
     }
     val recentProject = remember(projects) {
-        projects.firstOrNull { it.type == 1 && !it.trashed && !it.isCompleted && it.status != 2 }
+        projects.firstOrNull { it.type == Item.TYPE_PROJECT && !it.trashed && !it.isCompleted && it.status != Item.STATUS_CANCELLED }
     }
 
     // Ход анимации формы (220 мс, пружина ζ = 0.8) и проявления контента (154 мс, functionByExpanding: 0.7)
@@ -994,8 +994,8 @@ fun SearchResultRow(
             )
         }
         is SearchResultItem.ProjectResult -> {
-            val totalCount = allTasks.count { it.item.projectId == result.project.id && it.item.type == 0 }
-            val completedCount = allTasks.count { it.item.projectId == result.project.id && it.item.type == 0 && it.item.isCompleted }
+            val totalCount = allTasks.count { it.item.projectId == result.project.id && it.item.type == Item.TYPE_TASK }
+            val completedCount = allTasks.count { it.item.projectId == result.project.id && it.item.type == Item.TYPE_TASK && it.item.isCompleted }
             val isSomeday = result.project.isSomeday
             val baseArcColor = if (isSomeday) ThingsTheme.colors.someday else ThingsTheme.colors.project
             val arcColor = if (isHighlighted) androidx.compose.ui.graphics.lerp(baseArcColor, accentColor, 0.45f) else baseArcColor

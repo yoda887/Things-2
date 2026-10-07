@@ -109,6 +109,8 @@ fun ThingsHomeScreen(viewModel: ThingsViewModel = hiltViewModel()) {
     
     val isSyncing by viewModel.isSyncing.collectAsState()
     val syncError by viewModel.syncError.collectAsState()
+    // Название задачи, сохранённой без названия, — на языке системы
+    val untitledTaskTitle = stringResource(R.string.untitled_task)
     val googleToken by viewModel.googleAccessToken.collectAsState()
 
     val context = LocalContext.current
@@ -369,7 +371,7 @@ fun ThingsHomeScreen(viewModel: ThingsViewModel = hiltViewModel()) {
 
                             val newTask = Item(
                                 id = newTaskId,
-                                type = 0,
+                                type = Item.TYPE_TASK,
                                 title = "",
                                 notes = "",
                                 start = startValue,
@@ -613,7 +615,8 @@ fun ThingsHomeScreen(viewModel: ThingsViewModel = hiltViewModel()) {
                                         dueDate = event.dueDate,
                                         tags = event.tags,
                                         projectId = event.projectId,
-                                        priority = event.priority
+                                        priority = event.priority,
+                                        untitledTitle = untitledTaskTitle
                                     )
                                 }
                                 is ThingsCategoryListEvent.DeleteTask -> {
@@ -627,13 +630,13 @@ fun ThingsHomeScreen(viewModel: ThingsViewModel = hiltViewModel()) {
                                         event.taskWrapper.item.copy(
                                             projectId = null,
                                             areaId = null,
-                                            start = 0,
+                                            start = Item.START_INBOX,
                                             startDate = null,
                                             dueDate = null,
                                             modificationDate = System.currentTimeMillis()
                                         )
                                     } else {
-                                        val newStart = if (event.taskWrapper.item.start == 0 && event.projectId != null) 2 else event.taskWrapper.item.start
+                                        val newStart = if (event.taskWrapper.item.start == Item.START_INBOX && event.projectId != null) Item.START_ANYTIME else event.taskWrapper.item.start
                                         event.taskWrapper.item.copy(
                                             projectId = event.projectId,
                                             areaId = event.areaId,
@@ -1016,7 +1019,7 @@ fun ThingsHomeScreen(viewModel: ThingsViewModel = hiltViewModel()) {
                                         val newProjectId = java.util.UUID.randomUUID().toString()
                                         val newProject = Item(
                                             id = newProjectId,
-                                            type = 1,
+                                            type = Item.TYPE_PROJECT,
                                             title = "",
                                             creationDate = System.currentTimeMillis()
                                         )

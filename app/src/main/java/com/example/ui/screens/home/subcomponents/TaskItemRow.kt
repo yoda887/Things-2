@@ -116,7 +116,7 @@ fun TaskItemRow(
     }
 
     val isMarkedDoneOrDeleted = localCompleted || localDeleted
-    val isCancelledTask = task.status == 2
+    val isCancelledTask = task.status == Item.STATUS_CANCELLED
     // Выполненные и отменённые задачи в результатах поиска — как в Logbook эталона: без серой
     // подложки, с заполненным тёмно-синим флажком и датой завершения перед названием
     val isSearchLogbookStyle = screen == ActiveScreen.SEARCH && (task.isCompleted || isCancelledTask)
@@ -325,7 +325,7 @@ fun TaskItemRow(
                         size = 16.dp,
                         checkedColor = if (isSearchLogbookStyle) searchLogbookCheckColor() else ThingsTheme.colors.accent,
                         uncheckedColor = checkboxUncheckedColor,
-                        isDashed = task.start == 3 && !localCompleted && !isSearchLogbookStyle,
+                        isDashed = task.start == Item.START_SOMEDAY && !localCompleted && !isSearchLogbookStyle,
                         isCancelled = isSearchLogbookStyle && isCancelledTask,
                         modifier = Modifier
                             .testTag("task_checkbox")

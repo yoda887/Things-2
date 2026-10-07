@@ -45,10 +45,10 @@ interface TaskDao {
     @Query("SELECT * FROM items WHERE googleTaskId = :googleTaskId")
     suspend fun getItemByGoogleTaskId(googleTaskId: String): Item?
 
-    @Query("SELECT * FROM items WHERE googleTaskId IS NULL AND type = 0")
+    @Query("SELECT * FROM items WHERE googleTaskId IS NULL AND type = ${Item.TYPE_TASK}")
     suspend fun getUnsyncedTasks(): List<Item>
 
-    @Query("SELECT * FROM items WHERE googleTaskListId IS NULL AND type = 1")
+    @Query("SELECT * FROM items WHERE googleTaskListId IS NULL AND type = ${Item.TYPE_PROJECT}")
     suspend fun getUnsyncedProjects(): List<Item>
 
     // AREAS

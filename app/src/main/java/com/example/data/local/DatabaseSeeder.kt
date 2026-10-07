@@ -25,7 +25,7 @@ object DatabaseSeeder {
         // Внутри "Рабочие дела"
         val workProj1 = Item(
             id = "work_proj_1",
-            type = 1, // проект
+            type = Item.TYPE_PROJECT, // проект
             title = "Повышение квалификации",
             notes = "Курсы, книги, вебинары и профессиональное развитие",
             areaId = "work_area",
@@ -33,7 +33,7 @@ object DatabaseSeeder {
         )
         val workProj2 = Item(
             id = "work_proj_2",
-            type = 1, // проект
+            type = Item.TYPE_PROJECT, // проект
             title = "Запуск нового продукта",
             notes = "Подготовка, запуск и сбор обратной связи по новому проекту",
             areaId = "work_area",
@@ -43,7 +43,7 @@ object DatabaseSeeder {
         // Внутри "Личная жизнь"
         val personalProj1 = Item(
             id = "personal_proj_1",
-            type = 1, // проект
+            type = Item.TYPE_PROJECT, // проект
             title = "Спорт и здоровье",
             notes = "Тренировки, активность, правильное питание и сон",
             areaId = "personal_area",
@@ -51,7 +51,7 @@ object DatabaseSeeder {
         )
         val personalProj2 = Item(
             id = "personal_proj_2",
-            type = 1, // проект
+            type = Item.TYPE_PROJECT, // проект
             title = "Домашний уют",
             notes = "Уборка, обустройство квартиры и бытовые дела",
             areaId = "personal_area",
@@ -61,7 +61,7 @@ object DatabaseSeeder {
         // Вне областей (areaId = null)
         val globalProj1 = Item(
             id = "global_proj_1",
-            type = 1, // проект
+            type = Item.TYPE_PROJECT, // проект
             title = "Изучение английского",
             notes = "Лексика, грамматика, разговорная практика по Skype",
             areaId = null,
@@ -69,7 +69,7 @@ object DatabaseSeeder {
         )
         val globalProj2 = Item(
             id = "global_proj_2",
-            type = 1, // проект
+            type = Item.TYPE_PROJECT, // проект
             title = "Планирование отпуска",
             notes = "Маршруты, билеты, жилье и бюджет на Алтай",
             areaId = null,
@@ -166,13 +166,13 @@ object DatabaseSeeder {
                 
                 val item = Item(
                     id = taskId,
-                    type = 0, // задача
+                    type = Item.TYPE_TASK, // задача
                     title = quad.title,
                     notes = quad.notes,
-                    status = 0, // open
+                    status = Item.STATUS_OPEN, // open
                     // Для Сегодня (dayOffset = 0) устанавливаем start = 1 (Сегодня)
                     // Для других дней устанавливаем start = 2 (Anytime/Upcoming)
-                    start = if (dayOffset == 0) 1 else 2,
+                    start = if (dayOffset == 0) Item.START_TODAY else Item.START_ANYTIME,
                     isTonight = quad.isTonight,
                     startDate = if (dayOffset == 0) null else taskTimeMillis,
                     dueDate = if (dayOffset == 0) null else taskTimeMillis,

@@ -17,7 +17,7 @@ object NetworkModule {
     @Singleton
     fun provideRetrofit(): Retrofit {
         return Retrofit.Builder()
-            .baseUrl("https://tasks.googleapis.com/v1/")
+            .baseUrl(com.example.data.remote.GoogleTasksApi.BASE_URL)
             .addConverterFactory(MoshiConverterFactory.create())
             .build()
     }

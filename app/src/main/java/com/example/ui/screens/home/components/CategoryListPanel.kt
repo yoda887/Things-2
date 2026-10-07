@@ -411,7 +411,7 @@ fun ThingsCategoryListPanel(
                 ).let { task ->
                     when {
                         // Экран области: секция «Когда-нибудь» и «Планы» задаются свойствами задачи
-                        placement.inAreaSomeday -> task.copy(start = 3)
+                        placement.inAreaSomeday -> task.copy(start = Item.START_SOMEDAY)
                         placement.inAreaUpcoming -> task.copy(startDate = tomorrowNoonMillis())
                         else -> task
                     }
@@ -870,9 +870,9 @@ fun ThingsCategoryListPanel(
                 }
                 ActiveScreen.TAG_DETAIL -> {
                     val tagTitle = state.tag?.title ?: ""
-                    val tagProjCount = projects.count { !it.trashed && !it.isCompleted && it.status != 2 && it.tags.contains(tagTitle) }
-                    val tagTasksCount = displayTasks.count { !it.item.trashed && !it.item.isCompleted && it.item.status != 2 }
-                    val logbookCount = state.allTasks.count { !it.item.trashed && (it.item.isCompleted || it.item.status == 2) && it.item.tags.contains(tagTitle) }
+                    val tagProjCount = projects.count { !it.trashed && !it.isCompleted && it.status != Item.STATUS_CANCELLED && it.tags.contains(tagTitle) }
+                    val tagTasksCount = displayTasks.count { !it.item.trashed && !it.item.isCompleted && it.item.status != Item.STATUS_CANCELLED }
+                    val logbookCount = state.allTasks.count { !it.item.trashed && (it.item.isCompleted || it.item.status == Item.STATUS_CANCELLED) && it.item.tags.contains(tagTitle) }
                     tagProjCount > 0 || tagTasksCount > 0 || logbookCount > 0
                 }
                 ActiveScreen.PROJECT_DETAIL -> displayTasks.isNotEmpty() || localHeadings.isNotEmpty()
@@ -975,7 +975,7 @@ fun ThingsCategoryListPanel(
                         }
                         is Item -> {
                             val task = item
-                            if (task.type == 1) {
+                            if (task.type == Item.TYPE_PROJECT) {
                                 // Извлеченный подкомпонент строки проекта
                                 ProjectItemRow(
                                     project = task,

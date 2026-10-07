@@ -38,7 +38,7 @@ class AddTaskUseCase @Inject constructor(private val repository: ITaskRepository
         val computedStartDate = startDate ?: if (effectiveSection == TaskSection.TODAY) System.currentTimeMillis() else null
         val item = Item(
             id = itemId,
-            type = 0,
+            type = Item.TYPE_TASK,
             title = title.ifBlank { "Untitled To-Do" },
             notes = notes,
             start = startValue,
