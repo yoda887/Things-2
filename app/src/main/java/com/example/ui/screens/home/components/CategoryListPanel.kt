@@ -529,16 +529,22 @@ fun ThingsCategoryListPanel(
     val density = androidx.compose.ui.platform.LocalDensity.current
     val itemHeightPx = with(density) { MaterialTheme.dimens.taskItemEstimatedHeight.roundToPx() }
     
+    // Переход к задаче из Quick Find: экран сразу показывается прокрученным к ней, как в Things 3.
+    // Список экрана приходит не в первом кадре — ждём, пока в нём появится задача, и прокручиваем
+    // в том же кадре, без задержки (иначе экран успевал показаться с начала списка и прыгал)
     LaunchedEffect(highlightedTaskId) {
         if (highlightedTaskId != null) {
-            kotlinx.coroutines.delay(50)
-            val innerIndex = flattened.indexOfFirst { item ->
-                when (item) {
-                    is ItemWithChecklist -> item.item.id == highlightedTaskId
-                    is Item -> item.id == highlightedTaskId
-                    else -> false
-                }
-            }
+            val innerIndex = kotlinx.coroutines.withTimeoutOrNull(1000) {
+                androidx.compose.runtime.snapshotFlow {
+                    currentFlattened.indexOfFirst { item ->
+                        when (item) {
+                            is ItemWithChecklist -> item.item.id == highlightedTaskId
+                            is Item -> item.id == highlightedTaskId
+                            else -> false
+                        }
+                    }
+                }.first { it != -1 }
+            } ?: -1
             if (innerIndex != -1) {
                 val headerOffset = run {
                     var count = 1 // main_header

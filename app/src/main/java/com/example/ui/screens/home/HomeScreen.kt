@@ -22,6 +22,7 @@ import androidx.compose.ui.draw.drawWithContent
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Rect
 import androidx.compose.ui.geometry.Size
+import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.animation.core.FastOutSlowInEasing
 import androidx.compose.ui.platform.LocalDensity
@@ -171,7 +172,15 @@ fun ThingsHomeScreen(viewModel: ThingsViewModel = hiltViewModel()) {
         }
     }
 
-    fun navigateTo(screen: ActiveScreen, entityId: String? = null) {
+    // Следующий переход между экранами — простое проявление (см. navigateTo)
+    var crossfadeNavigation by remember { mutableStateOf(false) }
+
+    /**
+     * @param crossfade переход из Quick Find к найденной задаче: как в Things 3, новый экран просто
+     *   проступает под гаснущим окном поиска, без роста из точки
+     */
+    fun navigateTo(screen: ActiveScreen, entityId: String? = null, crossfade: Boolean = false) {
+        crossfadeNavigation = crossfade
         val currentListRoute = try {
             navBackStackEntry?.toRoute<ListRoute>()
         } catch (e: Exception) {
@@ -201,6 +210,8 @@ fun ThingsHomeScreen(viewModel: ThingsViewModel = hiltViewModel()) {
     var editingAreaId by remember { mutableStateOf<String?>(null) }
     var showFabMenu by remember { mutableStateOf(false) }
     var isSearchOverlayActive by remember { mutableStateOf(false) }
+    // Прозрачность окна поиска при уходе к найденной задаче
+    val searchOverlayFade = remember { androidx.compose.animation.core.Animatable(1f) }
     // Окно поиска готово рисоваться на месте поля: поле стартового экрана прячется только после этого
     var isSearchMorphReady by remember { mutableStateOf(false) }
     // [ИЗМЕНЕНИЕ]: Плавная прозрачность капсулы поиска для бесшовного cross-fade при закрытии оверлея
@@ -402,7 +413,7 @@ fun ThingsHomeScreen(viewModel: ThingsViewModel = hiltViewModel()) {
                 navController = navController,
                 startDestination = HomeRoute,
                 enterTransition = {
-                    scaleIn(
+                    if (crossfadeNavigation) fadeIn(animationSpec = tween(durationMillis = 120)) else scaleIn(
                         initialScale = 0f,
                         transformOrigin = TransformOrigin.Center,
                         animationSpec = tween(durationMillis = 300, easing = FastOutSlowInEasing)
@@ -411,7 +422,7 @@ fun ThingsHomeScreen(viewModel: ThingsViewModel = hiltViewModel()) {
                     )
                 },
                 exitTransition = {
-                    scaleOut(
+                    if (crossfadeNavigation) fadeOut(animationSpec = tween(durationMillis = 120)) else scaleOut(
                         targetScale = 0.9f,
                         transformOrigin = TransformOrigin.Center,
                         animationSpec = tween(durationMillis = 300, easing = FastOutSlowInEasing)
@@ -771,6 +782,7 @@ fun ThingsHomeScreen(viewModel: ThingsViewModel = hiltViewModel()) {
 
             // [ИЗМЕНЕНИЕ]: Полноэкранный оверлей поиска с бесшовным пространственным морфингом (Spatial UI)
             if (isSearchOverlayActive) {
+                Box(modifier = Modifier.graphicsLayer { alpha = searchOverlayFade.value }) {
                 ThingsSearchOverlay(
                     morphSource = searchMorphSource,
                     morphFromWideField = searchFromWideField,
@@ -818,7 +830,7 @@ fun ThingsHomeScreen(viewModel: ThingsViewModel = hiltViewModel()) {
                             task.item.areaId != null -> area?.id
                             else -> null
                         }
-                        navigateTo(targetScreen, targetEntityId)
+                        navigateTo(targetScreen, targetEntityId, crossfade = true)
                         
                         // [ИЗМЕНЕНИЕ]: Кликнутая задача более не разворачивается для редактирования, а кратковременно подсвечивается
                         viewModel.setHighlightedTaskId(task.item.id)
@@ -831,8 +843,13 @@ fun ThingsHomeScreen(viewModel: ThingsViewModel = hiltViewModel()) {
                             }
                         }
                         
-                        viewModel.setSearchQuery("")
-                        isSearchOverlayActive = false
+                        // Как в Things 3: окно поиска гаснет за 100 мс, а под ним уже проступает экран задачи
+                        scope.launch {
+                            searchOverlayFade.animateTo(0f, tween(durationMillis = 100))
+                            viewModel.setSearchQuery("")
+                            isSearchOverlayActive = false
+                            searchOverlayFade.snapTo(1f)
+                        }
                     },
                     onProjectClick = { proj ->
                         // [ИЗМЕНЕНИЕ]: Добавление проекта в недавно искавшиеся объекты
@@ -889,6 +906,7 @@ fun ThingsHomeScreen(viewModel: ThingsViewModel = hiltViewModel()) {
                         navigateTo(ActiveScreen.SEARCH)
                     }
                 )
+                }
             }
 
             AnimatedVisibility(
