@@ -95,6 +95,22 @@ import com.example.ui.screens.home.ActiveScreen
 import com.example.ui.screens.home.subcomponents.SmartListRow
 import com.example.ui.theme.*
 
+// Жест оттяжки главного экрана к Quick Find
+private val PULL_SEARCH_THRESHOLD = 100.dp
+private val PULL_SEARCH_MAX_OFFSET = 150.dp
+private val PULL_SEARCH_RESISTANCE_MAX = 32.dp
+// Стрелка под полем при оттяжке: значок 32 × 14, концы в (3, 3), острие в (16, 11.75)
+private val PULL_ARROW_WIDTH = 32.dp
+private val PULL_ARROW_HEIGHT = 14.dp
+private val PULL_ARROW_STROKE = 3.dp
+private val PULL_ARROW_EDGE_X = 3.dp
+private val PULL_ARROW_EDGE_Y = 3.dp
+private val PULL_ARROW_TIP_X = 16.dp
+private val PULL_ARROW_TIP_Y = 11.75.dp
+private val PULL_ARROW_BASE_GAP = 10.dp
+private val PULL_ARROW_OVERPULL_GAP = 30.dp
+private val PULL_ARROW_CAPSULE_BOTTOM = 52.dp
+
 private const val PULL_ACTIVE_TEXT_ALPHA = 0.9f
 
 /**
@@ -271,13 +287,15 @@ fun ThingsHomePanel(
     // [ИЗМЕНЕНИЕ]: Реализация жеста pull-down с порогом 100.dp, лимитом свайпа 150.dp
     // и вызовом поиска только после завершения возвращающей анимации
     val density = androidx.compose.ui.platform.LocalDensity.current
+    // Блок над списком под поле Quick Find — нужен и в обработчиках жеста
+    val homeSearchBlockHeightDp = MaterialTheme.dimens.homeSearchBlockHeight
     val coroutineScope = rememberCoroutineScope()
     val pullOffset = remember { Animatable(0f) }
     // Поле поиска в покое (без сдвига оттяжки/прокрутки), координаты корня
     var searchFieldRestBounds by remember { mutableStateOf<Rect?>(null) }
     fun searchFieldBoundsAt(translationY: Float): Rect? = searchFieldRestBounds?.translate(0f, translationY)
-    val thresholdPx = with(density) { 100.dp.toPx() }
-    val maxOffsetPx = with(density) { 150.dp.toPx() }
+    val thresholdPx = with(density) { PULL_SEARCH_THRESHOLD.toPx() }
+    val maxOffsetPx = with(density) { PULL_SEARCH_MAX_OFFSET.toPx() }
 
     // Тактильный отклик при пересечении порога активации поиска (100.dp)
     val isPastThreshold = pullOffset.value >= thresholdPx
@@ -330,11 +348,11 @@ fun ThingsHomePanel(
                     // наряду с запуском возвращающей анимации
                     val triggered = currentOffset >= thresholdPx
                     if (triggered) {
-                        val searchResistance = (currentOffset * 0.32f).coerceAtMost(with(density) { 32.dp.toPx() })
+                        val searchResistance = (currentOffset * 0.32f).coerceAtMost(with(density) { PULL_SEARCH_RESISTANCE_MAX.toPx() })
                         val sOffset = if (lazyListState.firstVisibleItemIndex > 0) {
-                            with(density) { 68.dp.toPx() }
+                            with(density) { homeSearchBlockHeightDp.toPx() }
                         } else {
-                            lazyListState.firstVisibleItemScrollOffset.toFloat().coerceAtMost(with(density) { 68.dp.toPx() })
+                            lazyListState.firstVisibleItemScrollOffset.toFloat().coerceAtMost(with(density) { homeSearchBlockHeightDp.toPx() })
                         }
                         onSearchClick(searchFieldBoundsAt(searchResistance - sOffset), true)
                     }
@@ -401,7 +419,7 @@ fun ThingsHomePanel(
         }
         val currentTree by rememberUpdatedState(flattenedTree)
         // Высота промежутка до его появления — по ней первый раз выбирается место
-        val fabDefaultGapPx = with(androidx.compose.ui.platform.LocalDensity.current) { 46.dp.toPx() }
+        val fabDefaultGapPx = with(androidx.compose.ui.platform.LocalDensity.current) { MaterialTheme.dimens.homeRowHeight.toPx() }
         val currentLocalProjects by rememberUpdatedState(localProjects)
 
         fun dropFab(): Boolean {
@@ -518,19 +536,19 @@ fun ThingsHomePanel(
                 .nestedScroll(nestedScrollConnection)
                 .graphicsLayer { translationY = pullOffset.value }
                 // [ИЗМЕНЕНИЕ]: Уменьшено расстояние от левой и правой стороны экрана до списков с 20.dp до 14.dp
-                .padding(horizontal = 14.dp)
+                .padding(horizontal = MaterialTheme.dimens.homeListGutter)
                 .onGloballyPositioned { listCoordinates = it },
-            verticalArrangement = Arrangement.spacedBy(0.dp)
+            verticalArrangement = Arrangement.Top
         ) {
         // Search Filter placeholder spacer to reserve space for the top search capsule
         item {
-            Spacer(modifier = Modifier.fillMaxWidth().height(68.dp))
+            Spacer(modifier = Modifier.fillMaxWidth().height(MaterialTheme.dimens.homeSearchBlockHeight))
         }
 
         // Smart Lists Grid
         // TODO: Сделать названия адаптивными под системный язык (локализация)
         item {
-            Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
+            Column(verticalArrangement = Arrangement.spacedBy(MaterialTheme.dimens.homeSmartListSpacing)) {
                 SmartListRow(
                     title = stringResource(R.string.category_inbox),
                     // Используем кастомную иконку AppIcons.Inbox
@@ -543,7 +561,7 @@ fun ThingsHomePanel(
                     isGrayCountAndNoBg = true, // [ИЗМЕНЕНИЕ]: Количество задач серого цвета и без фона
                     onClick = { onSmartListClick(ActiveScreen.INBOX) }
                 )
-                Spacer(modifier = Modifier.height(12.dp))
+                Spacer(modifier = Modifier.height(ThingsSpacing.M))
                 SmartListRow(
                     title = stringResource(R.string.category_today),
                     // Используем кастомную иконку AppIcons.Today
@@ -596,16 +614,16 @@ fun ThingsHomePanel(
                     onClick = { onSmartListClick(ActiveScreen.LOGBOOK) }
                 )
             }
-            Spacer(modifier = Modifier.height(16.dp))
+            Spacer(modifier = Modifier.height(ThingsSpacing.L))
         }
 
         // [ИЗМЕНЕНИЕ]: Горизонтальный разделитель между списком умных категорий и началом списка проектов/областей
         item(key = HomeListKeys.ROOT_DIVIDER) {
             HorizontalDivider(
                 color = dividerColor,
-                modifier = Modifier.padding(horizontal = 6.dp)
+                modifier = Modifier.padding(horizontal = MaterialTheme.dimens.homeRowInset)
             )
-            Spacer(modifier = Modifier.height(12.dp))
+            Spacer(modifier = Modifier.height(ThingsSpacing.M))
         }
 
 
@@ -620,8 +638,8 @@ fun ThingsHomePanel(
                         modifier = Modifier
                             .animateItem()
                             .fillMaxWidth()
-                            .height(46.dp)
-                            .padding(vertical = 4.dp)
+                            .height(MaterialTheme.dimens.homeRowHeight)
+                            .padding(vertical = ThingsSpacing.XS)
                             .background(ThingsTheme.colors.homeDropPlaceholder, ThingsTheme.shapes.chipShape)
                     )
                 }
@@ -665,17 +683,17 @@ fun ThingsHomePanel(
                         label = "areaDragScale_${area.id}"
                     )
                     val areaDragElev by animateDpAsState(
-                        targetValue = if (isAreaDragging) 8.dp else 0.dp,
+                        targetValue = if (isAreaDragging) ThingsElevation.CARD else ThingsElevation.NONE,
                         animationSpec = tween(
                             durationMillis = ThingsMotion.MEDIUM,
                             easing = FastOutSlowInEasing
                         ),
                         label = "areaDragElev_${area.id}"
                     )
-                    val areaZIndex = if (isAreaDragging || areaDragElev > 0.dp) 100f else 0f
+                    val areaZIndex = if (isAreaDragging || areaDragElev > ThingsElevation.NONE) 100f else 0f
 
                     Column(
-                        modifier = (if (!isAreaDragging && areaDragElev == 0.dp) {
+                        modifier = (if (!isAreaDragging && areaDragElev == ThingsElevation.NONE) {
                             Modifier.animateItem(
                                 placementSpec = tween(durationMillis = ThingsMotion.BASE, easing = FastOutSlowInEasing)
                             )
@@ -686,12 +704,12 @@ fun ThingsHomePanel(
                             .zIndex(areaZIndex)
                     ) {
                         if (treeItem.showTopDivider) {
-                            Spacer(modifier = Modifier.height(13.dp))
+                            Spacer(modifier = Modifier.height(MaterialTheme.dimens.homeAreaDividerGap))
                             HorizontalDivider(
                                 color = dividerColor,
-                                modifier = Modifier.padding(horizontal = 6.dp)
+                                modifier = Modifier.padding(horizontal = MaterialTheme.dimens.homeRowInset)
                             )
-                            Spacer(modifier = Modifier.height(13.dp))
+                            Spacer(modifier = Modifier.height(MaterialTheme.dimens.homeAreaDividerGap))
                         }
 
                         // Title block for Area
@@ -722,10 +740,10 @@ fun ThingsHomePanel(
                                         this.clip = false
                                     }
                                     .fillMaxWidth()
-                                    .height(46.dp)
+                                    .height(MaterialTheme.dimens.homeRowHeight)
                                     .clip(areaChipShape)
                                     .background(
-                                        if (isAreaDragging || areaDragElev > 0.dp) cardSurfaceColor
+                                        if (isAreaDragging || areaDragElev > ThingsElevation.NONE) cardSurfaceColor
                                         else if (isAreaEditing) ThingsTheme.colors.accent.copy(alpha = ThingsAlpha.SUBTLE)
                                         else Color.Transparent
                                     )
@@ -740,15 +758,15 @@ fun ThingsHomePanel(
                                         onAreasReordered = onAreasReordered
                                     )
                                     .clickable(enabled = !isAreaEditing && !isAreaDragging) { onAreaClick(area) }
-                                    .padding(horizontal = 6.dp),
+                                    .padding(horizontal = MaterialTheme.dimens.homeRowInset),
                                 verticalAlignment = Alignment.CenterVertically
                             ) {
                             AreaIconAnimated(
                                 isClosed = hasProjects && !isExpanded,
                                 onToggle = {},
-                                modifier = Modifier.size(width = 20.dp, height = 28.dp)
+                                modifier = Modifier.size(width = MaterialTheme.dimens.homeRowIconSize, height = MaterialTheme.dimens.homeAreaIconHeight)
                             )
-                            Spacer(modifier = Modifier.width(7.dp))
+                            Spacer(modifier = Modifier.width(MaterialTheme.dimens.homeRowIconTextGap))
 
                             if (isAreaEditing) {
                                 var textState by remember { mutableStateOf(area.title) }
@@ -836,7 +854,7 @@ fun ThingsHomePanel(
                             if (hasProjects) {
                                 IconButton(
                                     onClick = { expandedStates[area.id] = !isExpanded },
-                                    modifier = Modifier.size(44.dp)
+                                    modifier = Modifier.size(MaterialTheme.dimens.homeAreaToggleSize)
                                 ) {
                                     Icon(
                                         imageVector = Icons.AutoMirrored.Filled.KeyboardArrowRight,
@@ -848,7 +866,7 @@ fun ThingsHomePanel(
                                     )
                                 }
                             } else {
-                                Spacer(modifier = Modifier.width(44.dp))
+                                Spacer(modifier = Modifier.width(MaterialTheme.dimens.homeAreaToggleSize))
                             }
                         }
                     }
@@ -862,11 +880,11 @@ fun ThingsHomePanel(
             Card(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .padding(top = 18.dp, bottom = 32.dp),
+                    .padding(top = MaterialTheme.dimens.homeSyncCardTopPadding, bottom = ThingsSpacing.XXL),
                 colors = CardDefaults.cardColors(containerColor = cardSurfaceColor),
                 shape = ThingsTheme.shapes.cardShape
             ) {
-                Column(modifier = Modifier.padding(16.dp)) {
+                Column(modifier = Modifier.padding(ThingsSpacing.L)) {
                     Row(
                         modifier = Modifier
                             .fillMaxWidth()
@@ -881,8 +899,8 @@ fun ThingsHomePanel(
                     ) {
                         Row(verticalAlignment = Alignment.CenterVertically) {
                             Icon(Icons.Default.CloudSync, contentDescription = stringResource(R.string.cd_google_sync), tint = ThingsTheme.colors.inbox, modifier = Modifier.size(ThingsIconSize.L))
-                            Spacer(modifier = Modifier.width(10.dp))
-                            Text(stringResource(R.string.ui_google_tasks_sync_settings), style = ThingsTheme.type.bodyMedium.copy(fontWeight = FontWeight.SemiBold, color = textPrimaryColor))
+                            Spacer(modifier = Modifier.width(MaterialTheme.dimens.homeSyncInnerGap))
+                            Text(stringResource(R.string.ui_google_tasks_sync_settings), style = ThingsTheme.type.settingsTitle.copy(color = textPrimaryColor))
                         }
                         Icon(
                             imageVector = if (isSyncConfigExpanded) Icons.Default.ExpandLess else Icons.Default.ExpandMore,
@@ -892,12 +910,12 @@ fun ThingsHomePanel(
                     }
 
                     AnimatedVisibility(visible = isSyncConfigExpanded) {
-                        Column(modifier = Modifier.padding(top = 12.dp)) {
+                        Column(modifier = Modifier.padding(top = ThingsSpacing.M)) {
                             Text(
                                 stringResource(R.string.ui_enter_an_oauth_access_token_to),
                                 style = ThingsTheme.type.caption.copy(color = textSecondaryColor)
                             )
-                            Spacer(modifier = Modifier.height(10.dp))
+                            Spacer(modifier = Modifier.height(MaterialTheme.dimens.homeSyncInnerGap))
 
                             OutlinedTextField(
                                 value = rawTokenInput,
@@ -916,14 +934,14 @@ fun ThingsHomePanel(
                                 )
                             )
 
-                            Spacer(modifier = Modifier.height(12.dp))
+                            Spacer(modifier = Modifier.height(ThingsSpacing.M))
 
                             if (syncError != null) {
                                 Text(
                                     stringResource(R.string.ui_sync_error, syncError.ifBlank { stringResource(R.string.sync_error_unknown) }),
                                     color = ThingsTheme.colors.danger,
-                                    style = ThingsTheme.type.caption.copy(fontWeight = FontWeight.Medium),
-                                    modifier = Modifier.padding(bottom = 8.dp)
+                                    style = ThingsTheme.type.caption,
+                                    modifier = Modifier.padding(bottom = ThingsSpacing.S)
                                 )
                             }
 
@@ -937,9 +955,9 @@ fun ThingsHomePanel(
                                 enabled = !isSyncing
                             ) {
                                 if (isSyncing) {
-                                    CircularProgressIndicator(modifier = Modifier.size(18.dp), color = ThingsTheme.colors.onAccent)
+                                    CircularProgressIndicator(modifier = Modifier.size(ThingsIconSize.S), color = ThingsTheme.colors.onAccent)
                                 } else {
-                                    Text(stringResource(R.string.ui_sync_tasks_now), color = ThingsTheme.colors.onAccent, fontWeight = FontWeight.Bold)
+                                    Text(stringResource(R.string.ui_sync_tasks_now), color = ThingsTheme.colors.onAccent, style = ThingsTheme.type.settingsAction)
                                 }
                             }
                         }
@@ -967,7 +985,7 @@ fun ThingsHomePanel(
 
         // Движение поля поиска с сопротивлением (до ~32dp при максимальной оттяжке)
         val searchResistanceOffset = if (pullOffset.value <= 0f) 0f else {
-            (pullOffset.value * 0.32f).coerceAtMost(with(density) { 32.dp.toPx() })
+            (pullOffset.value * 0.32f).coerceAtMost(with(density) { PULL_SEARCH_RESISTANCE_MAX.toPx() })
         }
 
         // Дискретное переключение темы цвета (_selected) строго на пороге с коротким кроссфейдом 100 мс
@@ -995,21 +1013,22 @@ fun ThingsHomePanel(
             label = "homeSearchArrowColor"
         )
 
-        val searchHeightPx = with(density) { 68.dp.toPx() }
+        val searchHeightPx = with(density) { homeSearchBlockHeightDp.toPx() }
         val scrollOffset = if (lazyListState.firstVisibleItemIndex > 0) {
             searchHeightPx
         } else {
             lazyListState.firstVisibleItemScrollOffset.toFloat().coerceAtMost(searchHeightPx)
         }
 
+        val searchRowInset = MaterialTheme.dimens.homeRowInset
         Box(
             modifier = Modifier
-                .padding(horizontal = 14.dp)
+                .padding(horizontal = MaterialTheme.dimens.homeListGutter)
                 // До слоя: положение поля без сдвига; сама капсула — за вычетом внутренних отступов 6/4 dp
                 .onGloballyPositioned { coords ->
                     val outer = Rect(coords.positionInRoot(), coords.size.toSize())
-                    val insetX = with(density) { 6.dp.toPx() }
-                    val insetY = with(density) { 4.dp.toPx() }
+                    val insetX = with(density) { searchRowInset.toPx() }
+                    val insetY = with(density) { ThingsSpacing.XS.toPx() }
                     searchFieldRestBounds = Rect(
                         outer.left + insetX, outer.top + insetY, outer.right - insetX, outer.bottom - insetY
                     )
@@ -1019,8 +1038,8 @@ fun ThingsHomePanel(
                     alpha = if (isSearchOverlayActive) searchCapsuleAlpha else 1f
                 }
                 .fillMaxWidth()
-                .padding(horizontal = 6.dp, vertical = 4.dp)
-                .height(44.dp)
+                .padding(horizontal = MaterialTheme.dimens.homeRowInset, vertical = ThingsSpacing.XS)
+                .height(MaterialTheme.dimens.homeSearchFieldHeight)
                 .clip(ThingsTheme.shapes.capsuleShape)
                 .background(inputBackground)
                 .draggable(
@@ -1046,7 +1065,7 @@ fun ThingsHomePanel(
                     }
                 )
                 .clickable(enabled = !isSearchOverlayActive) { onSearchClick(searchFieldBoundsAt(searchResistanceOffset - scrollOffset), false) }
-                .padding(horizontal = 14.dp)
+                .padding(horizontal = MaterialTheme.dimens.homeListGutter)
                 .testTag("home_search_input"),
             contentAlignment = Alignment.CenterStart
         ) {
@@ -1065,7 +1084,7 @@ fun ThingsHomePanel(
                             rotationZ = iconRotation
                         }
                 )
-                Spacer(modifier = Modifier.width(8.dp))
+                Spacer(modifier = Modifier.width(ThingsSpacing.S))
                 Text(
                     text = stringResource(R.string.ui_quick_find),
                     color = textTint,
@@ -1081,28 +1100,28 @@ fun ThingsHomePanel(
         if (pullOffset.value > 0f && !isSearchOverlayActive) {
             val fontScale = density.fontScale
             val arrowAlpha = pullProgress
-            val currentBaseGap = with(density) { (10.dp * fontScale).toPx() } * pullProgress
-            val dynamicGap = currentBaseGap + with(density) { (30.dp * fontScale).toPx() } * overPullProgress
-            val capsuleBottomY = searchResistanceOffset - scrollOffset + with(density) { 52.dp.toPx() }
+            val currentBaseGap = with(density) { (PULL_ARROW_BASE_GAP * fontScale).toPx() } * pullProgress
+            val dynamicGap = currentBaseGap + with(density) { (PULL_ARROW_OVERPULL_GAP * fontScale).toPx() } * overPullProgress
+            val capsuleBottomY = searchResistanceOffset - scrollOffset + with(density) { PULL_ARROW_CAPSULE_BOTTOM.toPx() }
             // Округление смещения до целого пикселя
             val pixelArrowTranslationY = kotlin.math.round(capsuleBottomY + dynamicGap)
 
             Canvas(
                 modifier = Modifier
                     .align(Alignment.TopCenter)
-                    .padding(bottom = 2.dp)
-                    .size(width = 32.dp * fontScale, height = 14.dp * fontScale)
+                    .padding(bottom = ThingsSpacing.XXS)
+                    .size(width = PULL_ARROW_WIDTH * fontScale, height = PULL_ARROW_HEIGHT * fontScale)
                     .graphicsLayer {
                         translationY = pixelArrowTranslationY
                         alpha = arrowAlpha
                     }
             ) {
-                val strokeWidth = (3.dp * fontScale).toPx()
+                val strokeWidth = (PULL_ARROW_STROKE * fontScale).toPx()
                 // Нативная геометрия 32×14 pt: точки (3, 3) -> (16, 11.75) -> (29, 3)
                 val arrowPath = Path().apply {
-                    moveTo((3.dp * fontScale).toPx(), (3.dp * fontScale).toPx())
-                    lineTo((16.dp * fontScale).toPx(), (11.75.dp * fontScale).toPx())
-                    lineTo((29.dp * fontScale).toPx(), (3.dp * fontScale).toPx())
+                    moveTo((PULL_ARROW_EDGE_X * fontScale).toPx(), (PULL_ARROW_EDGE_Y * fontScale).toPx())
+                    lineTo((PULL_ARROW_TIP_X * fontScale).toPx(), (PULL_ARROW_TIP_Y * fontScale).toPx())
+                    lineTo(((PULL_ARROW_WIDTH - PULL_ARROW_EDGE_X) * fontScale).toPx(), (PULL_ARROW_EDGE_Y * fontScale).toPx())
                 }
 
                 drawPath(
@@ -1158,20 +1177,20 @@ private fun LazyItemScope.ProjectItemRow(
         label = "projDragScale_${project.id}"
     )
     val dragElev by animateDpAsState(
-        targetValue = if (isDragging) 8.dp else 0.dp,
+        targetValue = if (isDragging) ThingsElevation.CARD else ThingsElevation.NONE,
         animationSpec = tween(
             durationMillis = ThingsMotion.MEDIUM,
             easing = FastOutSlowInEasing
         ),
         label = "projDragElev_${project.id}"
     )
-    val zIndexVal = if (isDragging || dragElev > 0.dp) 100f else 0f
+    val zIndexVal = if (isDragging || dragElev > ThingsElevation.NONE) 100f else 0f
 
     Box(
         modifier = Modifier
             .zIndex(zIndexVal)
             .then(
-                if (!isDragging && dragElev == 0.dp) {
+                if (!isDragging && dragElev == ThingsElevation.NONE) {
                     Modifier.animateItem(
                         placementSpec = tween(durationMillis = ThingsMotion.BASE, easing = FastOutSlowInEasing)
                     )
@@ -1179,7 +1198,7 @@ private fun LazyItemScope.ProjectItemRow(
                     Modifier
                 }
             )
-            .height(46.dp)
+            .height(MaterialTheme.dimens.homeRowHeight)
             .fillMaxWidth()
     ) {
         // Подложка на физическом месте проекта при перетаскивании (placeholder slot)
@@ -1207,10 +1226,10 @@ private fun LazyItemScope.ProjectItemRow(
                     this.clip = false
                 }
                 .fillMaxWidth()
-                .height(46.dp)
+                .height(MaterialTheme.dimens.homeRowHeight)
                 .clip(projectChipShape)
                 .background(
-                    if (isDragging || dragElev > 0.dp) cardSurfaceColor
+                    if (isDragging || dragElev > ThingsElevation.NONE) cardSurfaceColor
                     else if (isEditing) ThingsTheme.colors.accent.copy(alpha = ThingsAlpha.SUBTLE)
                     else Color.Transparent
                 )
@@ -1226,20 +1245,20 @@ private fun LazyItemScope.ProjectItemRow(
                     onExpandArea = onExpandArea
                 )
                 .clickable(enabled = !isEditing && !isDragging) { onProjectClick(project) }
-                .padding(horizontal = 6.dp),
+                .padding(horizontal = MaterialTheme.dimens.homeRowInset),
             verticalAlignment = Alignment.CenterVertically
         ) {
             Box(
-                modifier = Modifier.size(20.dp),
+                modifier = Modifier.size(MaterialTheme.dimens.homeRowIconSize),
                 contentAlignment = Alignment.Center
             ) {
                 ProjectProgressArc(
                     completed = completedCount,
                     total = totalCount,
-                    modifier = Modifier.size(20.dp)
+                    modifier = Modifier.size(MaterialTheme.dimens.homeRowIconSize)
                 )
             }
-            Spacer(modifier = Modifier.width(7.dp))
+            Spacer(modifier = Modifier.width(MaterialTheme.dimens.homeRowIconTextGap))
             if (isEditing) {
                 var textState by remember { mutableStateOf(project.title) }
                 var hasFocused by remember { mutableStateOf(false) }
@@ -1250,10 +1269,7 @@ private fun LazyItemScope.ProjectItemRow(
                 BasicTextField(
                     value = textState,
                     onValueChange = { textState = it },
-                    textStyle = ThingsTheme.type.listTitle.copy(
-                        color = textPrimaryColor,
-                        fontWeight = FontWeight.Normal
-                    ),
+                    textStyle = ThingsTheme.type.listItem.copy(color = textPrimaryColor),
                     cursorBrush = SolidColor(if (isFinishing) Color.Unspecified else ThingsTheme.colors.accent),
                     modifier = Modifier
                         .weight(1f)
@@ -1302,10 +1318,7 @@ private fun LazyItemScope.ProjectItemRow(
                             if (textState.isEmpty()) {
                                 Text(
                                     text = stringResource(R.string.ui_new_project),
-                                    style = ThingsTheme.type.listTitle.copy(
-                                        color = textSecondaryColor.copy(alpha = ThingsAlpha.HINT),
-                                        fontWeight = FontWeight.Normal
-                                    )
+                                    style = ThingsTheme.type.listItem.copy(color = textSecondaryColor.copy(alpha = ThingsAlpha.HINT))
                                 )
                             }
                             innerTextField()
@@ -1319,10 +1332,7 @@ private fun LazyItemScope.ProjectItemRow(
             } else {
                 Text(
                     text = project.title,
-                    style = ThingsTheme.type.listTitle.copy(
-                        color = textPrimaryColor,
-                        fontWeight = FontWeight.Normal
-                    ),
+                    style = ThingsTheme.type.listItem.copy(color = textPrimaryColor),
                     modifier = Modifier.weight(1f),
                     maxLines = 1,
                     overflow = TextOverflow.Ellipsis

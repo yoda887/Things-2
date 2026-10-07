@@ -57,7 +57,32 @@ data class AppDimens(
     /** Расстояние между иконками действий в тулбаре раскрытой задачи и окне быстрого добавления */
     val taskEditorActionIconsSpacing: Dp = 16.dp,
     /** Отступ между чек-листом и тулбаром действий в раскрытом редакторе задачи (Things 3 эталон) */
-    val taskEditorChecklistToToolbarSpacer: Dp = 30.dp
+    val taskEditorChecklistToToolbarSpacer: Dp = 30.dp,
+
+    // Главный экран
+    /** Поле списка главного экрана от краёв экрана */
+    val homeListGutter: Dp = 14.dp,
+    /** Строка раздела, проекта, области и плашка места вставки */
+    val homeRowHeight: Dp = 46.dp,
+    /** Внутренний отступ строки и разделителей главного экрана */
+    val homeRowInset: Dp = 6.dp,
+    /** Иконка строки (прогресс проекта, значок области) — до названия */
+    val homeRowIconSize: Dp = 20.dp,
+    val homeRowIconTextGap: Dp = 7.dp,
+    /** Значок области — высота (ширина homeRowIconSize) */
+    val homeAreaIconHeight: Dp = 28.dp,
+    /** Промежуток между разделами Входящие / Сегодня / … */
+    val homeSmartListSpacing: Dp = 10.dp,
+    /** Отступ до и после разделителя перед областью */
+    val homeAreaDividerGap: Dp = 13.dp,
+    /** Кнопка сворачивания области */
+    val homeAreaToggleSize: Dp = 44.dp,
+    /** Поле Quick Find на главном экране и блок над списком под него */
+    val homeSearchFieldHeight: Dp = 44.dp,
+    val homeSearchBlockHeight: Dp = 68.dp,
+    /** Карточка синхронизации Google Tasks */
+    val homeSyncCardTopPadding: Dp = 18.dp,
+    val homeSyncInnerGap: Dp = 10.dp
 )
 
 val LocalAppDimens = staticCompositionLocalOf { AppDimens() }

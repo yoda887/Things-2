@@ -173,6 +173,36 @@ class DesignSystemEnforcementTest {
         )
     }
 
+    /**
+     * Экраны, переведённые на шкалы целиком: в них нет ни одного числа в dp и ни одного
+     * начертания поверх стиля — только ThingsSpacing / ThingsElevation / ThingsIconSize,
+     * MaterialTheme.dimens, роли ThingsTheme.type или именованные константы файла (`private val X = N.dp`).
+     * Список растёт по мере перевода экранов.
+     */
+    private val fullyMigratedFiles = setOf("HomePanel.kt")
+
+    @Test
+    fun migratedScreensHaveNoDpLiteralsOrWeightOverrides() {
+        val dpLiteral = Regex("""(?<![\w.])\d+(\.\d+)?\.dp\b""")
+        val weightOverride = Regex("""fontWeight\s*=\s*FontWeight\.""")
+        val violations = mutableListOf<String>()
+        getUiFilesToValidate().filter { it.name in fullyMigratedFiles }.forEach { file ->
+            file.readLines().forEachIndexed { index, line ->
+                val code = line.substringBefore("//").trim()
+                if (code.startsWith("private val ") || code.startsWith("private const val ") || code.startsWith("*")) return@forEachIndexed
+                if (dpLiteral.containsMatchIn(code) || weightOverride.containsMatchIn(code)) {
+                    violations.add("${file.name}:${index + 1}: ${line.trim()}")
+                }
+            }
+        }
+        assertTrue(
+            "В переведённом на шкалы экране число в dp или начертание поверх стиля. " +
+                "Используйте ThingsSpacing / ThingsElevation / ThingsIconSize, MaterialTheme.dimens, роль ThingsTheme.type " +
+                "или именованную константу файла:\n" + violations.joinToString("\n"),
+            violations.isEmpty()
+        )
+    }
+
     @Test
     fun paletteParsedFromColorKt() {
         assertTrue("Не удалось прочитать константы палитры из Color.kt", rawPaletteConstants.size > 10)

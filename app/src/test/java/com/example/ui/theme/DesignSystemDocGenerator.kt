@@ -151,6 +151,9 @@ object DesignSystemDocGenerator {
         TypeToken("tagChip", { it.tagChip }, "Название тега в чипе редактора задачи и окна быстрого добавления.", "Things"),
         TypeToken("badge", { it.badge }, "Компактные бейджи даты и приоритета в строке задачи.", "TODAY"),
         TypeToken("listTitle", { it.listTitle }, "Название в строке главного экрана: раздел, проект, область.", "Things 2"),
+        TypeToken("listItem", { it.listItem }, "Название проекта в строке главного экрана — обычное начертание.", "Things 2"),
+        TypeToken("settingsTitle", { it.settingsTitle }, "Заголовок карточки настроек на главном экране (синхронизация Google Tasks).", "Google Tasks"),
+        TypeToken("settingsAction", { it.settingsAction }, "Текст кнопки действия в карточке настроек.", "Sync Tasks Now"),
         TypeToken("heroEmoji", { it.heroEmoji }, "Эмодзи перед крупным названием проекта или области.", "🎯"),
         TypeToken("overline", { it.overline }, "Надпись капителью над группой: «PROJECTS», «TASKS», «NEW HEADING».", "PROJECTS")
     )

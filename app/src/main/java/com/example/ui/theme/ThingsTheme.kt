@@ -299,6 +299,12 @@ data class ThingsTypography(
     val largeTitle: TextStyle,
     /** Кнопка подтверждения / действия (17 sp SemiBold) */
     val button: TextStyle,
+    /** Название проекта в строке главного экрана (19 sp Regular) */
+    val listItem: TextStyle,
+    /** Заголовок карточки настроек на главном экране (14 sp SemiBold) */
+    val settingsTitle: TextStyle,
+    /** Текст кнопки действия в карточке настроек (14 sp Bold) */
+    val settingsAction: TextStyle,
     /** Название в строке главного экрана: раздел, проект, область (19 sp Medium) */
     val listTitle: TextStyle,
     /** Эмодзи перед крупным названием проекта или области (30 sp) */
@@ -332,6 +338,9 @@ internal fun thingsTypography(scale: Float = 1f) = ThingsTypography(
     largeTitle = TextStyle(fontFamily = FontFamily.Default, fontWeight = FontWeight.Bold, fontSize = (32 * scale).sp),
     button = TextStyle(fontFamily = FontFamily.Default, fontWeight = FontWeight.SemiBold, fontSize = (17 * scale).sp),
     listTitle = TextStyle(fontFamily = FontFamily.Default, fontWeight = FontWeight.Medium, fontSize = (19 * scale).sp),
+    listItem = TextStyle(fontFamily = FontFamily.Default, fontWeight = FontWeight.Normal, fontSize = (19 * scale).sp),
+    settingsTitle = TextStyle(fontFamily = FontFamily.Default, fontWeight = FontWeight.SemiBold, fontSize = (14 * scale).sp),
+    settingsAction = TextStyle(fontFamily = FontFamily.Default, fontWeight = FontWeight.Bold, fontSize = (14 * scale).sp),
     heroEmoji = TextStyle(fontFamily = FontFamily.Default, fontWeight = FontWeight.Normal, fontSize = (30 * scale).sp),
     overline = TextStyle(fontFamily = FontFamily.Default, fontWeight = FontWeight.Bold, fontSize = (11 * scale).sp, letterSpacing = 1.sp),
 )

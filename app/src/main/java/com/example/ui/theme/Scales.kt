@@ -54,3 +54,28 @@ object ThingsIconSize {
     val L = 22.dp
     val XL = 24.dp
 }
+
+/**
+ * Шкала отступов (сетка 4 dp). Общие отступы и промежутки — отсюда; геометрия конкретного
+ * экрана (высота строки, поле списка) — в [AppDimens] (`MaterialTheme.dimens`).
+ */
+object ThingsSpacing {
+    val XXS = 2.dp
+    val XS = 4.dp
+    val S = 8.dp
+    val M = 12.dp
+    val L = 16.dp
+    val XL = 24.dp
+    val XXL = 32.dp
+}
+
+/** Тени: что оторвано от листа (см. «Формы и тени» в брендбуке) */
+object ThingsElevation {
+    val NONE = 0.dp
+    /** Раскрытый редактор и перетаскиваемая карточка, строка или область */
+    val CARD = 8.dp
+    /** Кнопка «+» в покое */
+    val FAB = 6.dp
+    /** Кнопка «+», пока её тянут */
+    val FAB_LIFTED = 18.dp
+}
