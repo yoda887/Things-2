@@ -724,7 +724,6 @@ fun ThingsSearchOverlay(
                             )
 
                             Column(
-                                verticalArrangement = Arrangement.spacedBy(4.dp),
                                 modifier = Modifier.fillMaxWidth()
                             ) {
                                 validRecentItems.take(5).forEach { result ->
@@ -789,8 +788,8 @@ fun ThingsSearchOverlay(
                             }
                         } else {
                             // Список отфильтрованных пунктов
+                            // Строки результатов вплотную друг к другу, как в Things 3
                             LazyColumn(
-                                verticalArrangement = Arrangement.spacedBy(2.dp),
                                 modifier = Modifier
                                     .fillMaxWidth()
                                     .heightIn(max = 350.dp)
@@ -990,7 +989,7 @@ fun SearchResultRow(
             val isSomeday = result.project.isSomeday
             val baseArcColor = if (isSomeday) ThingsTheme.colors.someday else ThingsTheme.colors.project
             val arcColor = if (isHighlighted) androidx.compose.ui.graphics.lerp(baseArcColor, accentColor, 0.45f) else baseArcColor
-            val rowBg = if (isHighlighted) accentColor.copy(alpha = 0.12f) else Color.Transparent
+            val rowBg = if (isHighlighted) accentColor.copy(alpha = 0.3f) else Color.Transparent
 
             Row(
                 modifier = Modifier
@@ -1035,7 +1034,7 @@ fun SearchResultRow(
             }
         }
         else -> {
-            val rowBg = if (isHighlighted) accentColor.copy(alpha = 0.12f) else Color.Transparent
+            val rowBg = if (isHighlighted) accentColor.copy(alpha = 0.3f) else Color.Transparent
 
             val title = when (result) {
                 is SearchResultItem.SmartListResult -> result.title

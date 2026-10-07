@@ -29,6 +29,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.drawBehind
+import androidx.compose.ui.graphics.drawOutline
 import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.graphicsLayer
@@ -141,25 +142,33 @@ fun TaskItemRow(
     val scale by androidx.compose.animation.core.animateFloatAsState(if (isDragging) 1.04f else 1.0f)
     val elevation by androidx.compose.animation.core.animateDpAsState(if (isDragging) 6.dp else 0.dp)
 
-    // Найденная в Quick Find задача: после паузы (переход на экран и прокрутка к ней) строка
-    // окрашивается в светло-жёлтый и коротко увеличивается вместе со всем содержимым
-    var foundGlow by remember { mutableStateOf(false) }
+    // Найденная в Quick Find задача, по кадрам эталона Things 3: после паузы строка за 160 мс
+    // заливается светло-жёлтым и почти сразу (60 мс) вырастает до 1.05 вместе со всем содержимым,
+    // затем за ~650 мс плавно возвращается к своему размеру, а жёлтый за ~720 мс растворяется
+    val foundGlow = remember { androidx.compose.animation.core.Animatable(0f) }
     val foundScale = remember { androidx.compose.animation.core.Animatable(1f) }
     LaunchedEffect(isFound) {
         if (isFound) {
             delay(FOUND_HIGHLIGHT_DELAY_MS)
-            foundGlow = true
-            foundScale.animateTo(1.04f, androidx.compose.animation.core.tween(180, easing = androidx.compose.animation.core.FastOutSlowInEasing))
-            foundScale.animateTo(1f, androidx.compose.animation.core.spring(dampingRatio = 0.6f, stiffness = androidx.compose.animation.core.Spring.StiffnessMediumLow))
+            launch {
+                foundGlow.animateTo(1f, androidx.compose.animation.core.tween(160, easing = androidx.compose.animation.core.LinearEasing))
+                delay(80)
+                foundGlow.animateTo(0f, androidx.compose.animation.core.tween(720, easing = androidx.compose.animation.core.LinearOutSlowInEasing))
+            }
+            delay(40)
+            foundScale.animateTo(1.05f, androidx.compose.animation.core.tween(60, easing = androidx.compose.animation.core.LinearEasing))
+            foundScale.animateTo(1f, androidx.compose.animation.core.tween(650, easing = androidx.compose.animation.core.LinearOutSlowInEasing))
         } else {
-            foundGlow = false
+            foundGlow.snapTo(0f)
             foundScale.snapTo(1f)
         }
     }
 
+    val foundGlowColor = ThingsTheme.colors.searchMatchHighlight
+    val rowShapeForGlow = ThingsTheme.shapes.rowShape
     val highlightColor = when {
-        isHighlighted -> ThingsTheme.colors.accent.copy(alpha = 0.15f)
-        foundGlow -> ThingsTheme.colors.searchMatchHighlight.copy(alpha = 0.6f)
+        // Выделенная строка результатов Quick Find — 30 % акцента
+        isHighlighted -> ThingsTheme.colors.accent.copy(alpha = 0.3f)
         else -> Color.Transparent
     }
 
@@ -213,6 +222,10 @@ fun TaskItemRow(
             }
             .shadow(elevation, ThingsTheme.shapes.rowShape)
             .background(animatedRowBgColor, ThingsTheme.shapes.rowShape)
+            // Жёлтый найденной задачи — поверх, по кадрам своей анимации (без сглаживания фона)
+            .drawBehind {
+                if (foundGlow.value > 0f) drawOutline(rowShapeForGlow.createOutline(size, layoutDirection, this), foundGlowColor.copy(alpha = foundGlow.value))
+            }
             .clip(ThingsTheme.shapes.rowShape)
             .drawBehind {
                 if (localCompleted && completionFillProgress > 0f && !isSearchLogbookStyle) {
