@@ -118,7 +118,11 @@ fun MainCategoryHeader(
     Row(
         modifier = modifier
             .fillMaxWidth()
-            .padding(top = MaterialTheme.dimens.mainHeaderPaddingTop, bottom = MaterialTheme.dimens.mainHeaderPaddingBottom)
+            // У проекта под названием сразу идут его свойства и заметки — отступ меньше, как в Things
+            .padding(
+                top = MaterialTheme.dimens.mainHeaderPaddingTop,
+                bottom = if (screen == ActiveScreen.PROJECT_DETAIL) ThingsSpacing.S else MaterialTheme.dimens.mainHeaderPaddingBottom
+            )
             .graphicsLayer { alpha = globalDimAlpha },
         verticalAlignment = Alignment.CenterVertically
     ) {

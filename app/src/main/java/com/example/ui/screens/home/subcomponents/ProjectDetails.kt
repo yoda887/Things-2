@@ -14,6 +14,9 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
+import com.example.ui.theme.ThingsStroke
+import androidx.compose.material3.HorizontalDivider
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.text.BasicTextField
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
@@ -61,6 +64,18 @@ import com.example.ui.theme.dimens
 import kotlinx.coroutines.delay
 import java.util.Calendar
 
+/**
+ * Выбранное в «Когда» для проекта — по сохранённым полям старта. [Item.section] здесь не годится: это
+ * раздел списка, и дедлайн на сегодня переносит туда даже проект «Когда-нибудь».
+ */
+private val Item.startSection: TaskSection
+    get() = when {
+        start == Item.START_SOMEDAY -> TaskSection.SOMEDAY
+        startDate != null -> TaskSection.UPCOMING
+        start == Item.START_TODAY -> TaskSection.TODAY
+        else -> TaskSection.ANYTIME
+    }
+
 /** Пункты меню опций проекта, которые открывают окно или выполняют действие над проектом. */
 enum class ProjectAction { COMPLETE, WHEN, TAGS, DEADLINE, MOVE, DUPLICATE, SHARE }
 
@@ -98,102 +113,127 @@ fun ProjectDetailsBlock(
     modifier: Modifier = Modifier
 ) {
     val view = LocalView.current
+    // Строки свойств — только заданные; между ними, над первой и под последней — тонкие разделители
+    val section = project.startSection
+    val startDate = project.startDate
+    val hasStart = startDate != null || section == TaskSection.TODAY || section == TaskSection.SOMEDAY
+    val dueDate = project.dueDate
+    val rows = buildList<@Composable () -> Unit> {
+        if (project.tags.isNotEmpty()) add { ProjectTagsRow(project.tags) { onAction(ProjectAction.TAGS) } }
+        if (hasStart) add { ProjectStartRow(project, textPrimaryColor) { onAction(ProjectAction.WHEN) } }
+        if (dueDate != null) add { ProjectDeadlineRow(dueDate) { onAction(ProjectAction.DEADLINE) } }
+    }
     Column(modifier = modifier.fillMaxWidth()) {
-        // Теги
-        val tags = project.tags
-        if (tags.isNotEmpty()) {
-            FlowRow(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(vertical = MaterialTheme.dimens.taskEditorTagsVerticalPadding),
-                horizontalArrangement = Arrangement.spacedBy(ThingsSpacing.S),
-                verticalArrangement = Arrangement.spacedBy(ThingsSpacing.XS_PLUS)
-            ) {
-                tags.forEach { tag ->
-                    Box(
-                        modifier = Modifier
-                            .clip(ThingsTheme.shapes.chipShape)
-                            .background(ThingsTheme.colors.tagChipBackground)
-                            .clickable {
-                                view.performHapticFeedback(HapticFeedbackConstants.CLOCK_TICK)
-                                onAction(ProjectAction.TAGS)
-                            }
-                            .padding(horizontal = ThingsSpacing.S_PLUS, vertical = ThingsSpacing.XS)
-                    ) {
-                        Text(text = tag, style = ThingsTheme.type.tagChip.copy(color = ThingsTheme.colors.tagChipText))
-                    }
-                }
-            }
+        rows.forEach { row ->
+            ProjectDetailsDivider()
+            row()
         }
-
-        // «Когда»: сегодня, вечер, дата или «Когда-нибудь»
-        val section = project.section
-        val startDate = project.startDate
-        val hasStart = startDate != null || section == TaskSection.TODAY || section == TaskSection.SOMEDAY
-        if (hasStart) {
-            val isToday = (startDate != null && isTodayDateOrPast(startDate)) || (startDate == null && section == TaskSection.TODAY)
-            val icon = when {
-                section == TaskSection.SOMEDAY -> AppIcons.Someday
-                isToday -> if (project.isTonight) AppIcons.Evening else AppIcons.Today
-                else -> AppIcons.Upcoming
-            }
-            val tint = when {
-                section == TaskSection.SOMEDAY -> ThingsTheme.colors.someday
-                isToday && !project.isTonight -> ThingsTheme.colors.today
-                else -> Color.Unspecified
-            }
-            Row(
-                verticalAlignment = Alignment.CenterVertically,
-                modifier = Modifier
-                    .clickable {
-                        view.performHapticFeedback(HapticFeedbackConstants.CLOCK_TICK)
-                        onAction(ProjectAction.WHEN)
-                    }
-                    .padding(vertical = MaterialTheme.dimens.taskEditorIndicatorVerticalPadding)
-            ) {
-                Icon(imageVector = icon, contentDescription = stringResource(R.string.cd_change_date), tint = tint, modifier = Modifier.size(ThingsIconSize.S))
-                Spacer(modifier = Modifier.width(ThingsSpacing.XS_PLUS))
-                Text(
-                    text = formatStartDateLabel(startDate, section, project.isTonight),
-                    maxLines = 1,
-                    overflow = TextOverflow.Ellipsis,
-                    style = ThingsTheme.type.editorDateStrong.copy(color = textPrimaryColor)
-                )
-            }
-        }
-
-        // Дедлайн: дата и сколько осталось; сегодня и просроченный — цветом danger
-        val dueDate = project.dueDate
-        if (dueDate != null) {
-            val delta = remember(dueDate) { deadlineDeltaDays(dueDate) }
-            val dateText = remember(dueDate) {
-                java.text.SimpleDateFormat("EEE, d MMMM", java.util.Locale.getDefault())
-                    .format(java.util.Date(dueDate)).lowercase()
-            }
-            val color = if (delta <= 0) ThingsTheme.colors.danger else ThingsTheme.colors.editorText
-            Row(
-                verticalAlignment = Alignment.CenterVertically,
-                modifier = Modifier
-                    .clickable {
-                        view.performHapticFeedback(HapticFeedbackConstants.CLOCK_TICK)
-                        onAction(ProjectAction.DEADLINE)
-                    }
-                    .padding(vertical = MaterialTheme.dimens.taskEditorIndicatorVerticalPadding)
-            ) {
-                Icon(imageVector = AppIcons.Deadline, contentDescription = stringResource(R.string.cd_deadline_flag), tint = color, modifier = Modifier.size(ThingsIconSize.S))
-                Spacer(modifier = Modifier.width(ThingsSpacing.XS_PLUS))
-                Text(text = dateText, maxLines = 1, style = ThingsTheme.type.editorDateStrong.copy(color = color))
-                Spacer(modifier = Modifier.width(ThingsSpacing.XS))
-                Text(
-                    text = relativeDueText(delta),
-                    maxLines = 1,
-                    overflow = TextOverflow.Ellipsis,
-                    style = ThingsTheme.type.editorDate.copy(color = ThingsTheme.colors.textSecondary)
-                )
-            }
-        }
-
+        if (rows.isNotEmpty()) ProjectDetailsDivider()
         ProjectNotesField(project = project, onNotesChange = onNotesChange)
+        // Заметки отделены от списка задач заметным промежутком
+        Spacer(modifier = Modifier.height(ThingsSpacing.XL))
+    }
+}
+
+@Composable
+private fun ProjectDetailsDivider() {
+    HorizontalDivider(color = ThingsTheme.colors.divider, thickness = ThingsStroke.DIVIDER)
+}
+
+/** Нажатие на строку свойства — с тактильным откликом, как в редакторе задачи. */
+@Composable
+private fun Modifier.detailsRowClick(onClick: () -> Unit): Modifier {
+    val view = LocalView.current
+    return clickable {
+        view.performHapticFeedback(HapticFeedbackConstants.CLOCK_TICK)
+        onClick()
+    }
+}
+
+@OptIn(ExperimentalLayoutApi::class)
+@Composable
+private fun ProjectTagsRow(tags: List<String>, onClick: () -> Unit) {
+    FlowRow(
+        modifier = Modifier
+            .fillMaxWidth()
+            .detailsRowClick(onClick)
+            .padding(vertical = ThingsSpacing.S_PLUS),
+        horizontalArrangement = Arrangement.spacedBy(ThingsSpacing.S),
+        verticalArrangement = Arrangement.spacedBy(ThingsSpacing.XS_PLUS)
+    ) {
+        tags.forEach { tag ->
+            Box(
+                modifier = Modifier
+                    .clip(ThingsTheme.shapes.chipShape)
+                    .background(ThingsTheme.colors.tagChipBackground)
+                    .padding(horizontal = ThingsSpacing.S_PLUS, vertical = ThingsSpacing.XS)
+            ) {
+                Text(text = tag, style = ThingsTheme.type.tagChip.copy(color = ThingsTheme.colors.tagChipText))
+            }
+        }
+    }
+}
+
+/** «Когда»: сегодня, вечер, дата или «Когда-нибудь». */
+@Composable
+private fun ProjectStartRow(project: Item, textPrimaryColor: Color, onClick: () -> Unit) {
+    val section = project.startSection
+    val startDate = project.startDate
+    val isToday = (startDate != null && isTodayDateOrPast(startDate)) || (startDate == null && section == TaskSection.TODAY)
+    val icon = when {
+        section == TaskSection.SOMEDAY -> AppIcons.Someday
+        isToday -> if (project.isTonight) AppIcons.Evening else AppIcons.Today
+        else -> AppIcons.Upcoming
+    }
+    val tint = when {
+        section == TaskSection.SOMEDAY -> ThingsTheme.colors.someday
+        isToday && !project.isTonight -> ThingsTheme.colors.today
+        else -> Color.Unspecified
+    }
+    Row(
+        verticalAlignment = Alignment.CenterVertically,
+        modifier = Modifier
+            .fillMaxWidth()
+            .detailsRowClick(onClick)
+            .padding(vertical = ThingsSpacing.S_PLUS)
+    ) {
+        Icon(imageVector = icon, contentDescription = stringResource(R.string.cd_change_date), tint = tint, modifier = Modifier.size(ThingsIconSize.S))
+        Spacer(modifier = Modifier.width(ThingsSpacing.XS_PLUS))
+        Text(
+            text = formatStartDateLabel(startDate, section, project.isTonight),
+            maxLines = 1,
+            overflow = TextOverflow.Ellipsis,
+            style = ThingsTheme.type.editorDateStrong.copy(color = textPrimaryColor)
+        )
+    }
+}
+
+/** Дедлайн: дата и сколько осталось; сегодня и просроченный — цветом danger. */
+@Composable
+private fun ProjectDeadlineRow(dueDate: Long, onClick: () -> Unit) {
+    val delta = remember(dueDate) { deadlineDeltaDays(dueDate) }
+    val dateText = remember(dueDate) {
+        java.text.SimpleDateFormat("EEE, d MMMM", java.util.Locale.getDefault())
+            .format(java.util.Date(dueDate)).lowercase()
+    }
+    val color = if (delta <= 0) ThingsTheme.colors.danger else ThingsTheme.colors.editorText
+    Row(
+        verticalAlignment = Alignment.CenterVertically,
+        modifier = Modifier
+            .fillMaxWidth()
+            .detailsRowClick(onClick)
+            .padding(vertical = ThingsSpacing.S_PLUS)
+    ) {
+        Icon(imageVector = AppIcons.Deadline, contentDescription = stringResource(R.string.cd_deadline_flag), tint = color, modifier = Modifier.size(ThingsIconSize.S))
+        Spacer(modifier = Modifier.width(ThingsSpacing.XS_PLUS))
+        Text(text = dateText, maxLines = 1, style = ThingsTheme.type.editorDateStrong.copy(color = color))
+        Spacer(modifier = Modifier.width(ThingsSpacing.XS))
+        Text(
+            text = relativeDueText(delta),
+            maxLines = 1,
+            overflow = TextOverflow.Ellipsis,
+            style = ThingsTheme.type.editorDate.copy(color = ThingsTheme.colors.textSecondary)
+        )
     }
 }
 
@@ -267,7 +307,7 @@ fun ProjectDialogs(
     when (openDialog) {
         ProjectAction.WHEN -> {
             var startDate by remember(project.id) { mutableStateOf(project.startDate) }
-            var section by remember(project.id) { mutableStateOf(project.section) }
+            var section by remember(project.id) { mutableStateOf(project.startSection) }
             var isTonight by remember(project.id) { mutableStateOf(project.isTonight) }
             ThingsWhenDialog(
                 startDate = startDate,
