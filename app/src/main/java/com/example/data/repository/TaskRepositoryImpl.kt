@@ -173,8 +173,9 @@ class TaskRepositoryImpl @Inject constructor(
      * Создание, переименование и перенос тега. Названия уникальны без учёта регистра:
      * новый тег с уже занятым названием не создаётся, а переименование в занятое название
      * сливает тег с существующим — иначе задачи расходились бы между двумя одинаковыми тегами.
+     * Новый тег встаёт в конец списка, а с [atTop] — в начало: так его сразу видно в окне тегов.
      */
-    private suspend fun saveTag(tag: Tag): Tag? {
+    private suspend fun saveTag(tag: Tag, atTop: Boolean = false): Tag? {
         val title = tag.title.trim()
         if (title.isEmpty()) return null
         val allTags = localDataSource.getAllTags()
@@ -185,7 +186,11 @@ class TaskRepositoryImpl @Inject constructor(
             if (clash != null) return clash
             val created = tag.copy(
                 title = title,
-                sortOrder = (allTags.maxOfOrNull { it.sortOrder } ?: -1) + 1
+                sortOrder = if (atTop) {
+                    (allTags.minOfOrNull { it.sortOrder } ?: 1) - 1
+                } else {
+                    (allTags.maxOfOrNull { it.sortOrder } ?: -1) + 1
+                }
             )
             localDataSource.insertTag(created)
             return created
@@ -231,7 +236,7 @@ class TaskRepositoryImpl @Inject constructor(
     }
 
     override suspend fun createTagInGroup(tagName: String, parentId: String?): Tag = withContext(Dispatchers.IO) {
-        inTransaction { saveTag(Tag(title = tagName, parentId = parentId)) } ?: Tag(title = tagName, parentId = parentId)
+        inTransaction { saveTag(Tag(title = tagName, parentId = parentId), atTop = true) } ?: Tag(title = tagName, parentId = parentId)
     }
 
     override suspend fun moveTagToGroup(tagId: String, newGroupId: String?): Unit = withContext(Dispatchers.IO) {

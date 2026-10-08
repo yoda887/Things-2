@@ -594,7 +594,7 @@ fun ThingsHomeScreen(viewModel: ThingsViewModel = hiltViewModel()) {
                                     navigateTo(ActiveScreen.TAG_DETAIL, event.tag.id)
                                 }
                                 is ThingsCategoryListEvent.CreateTag -> {
-                                    viewModel.insertTag(event.title, event.parentId)
+                                    viewModel.createTagInGroup(event.title, event.parentId)
                                 }
                                 is ThingsCategoryListEvent.DeleteTag -> {
                                     viewModel.deleteTag(event.tag)
