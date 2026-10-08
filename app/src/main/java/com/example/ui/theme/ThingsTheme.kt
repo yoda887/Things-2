@@ -265,28 +265,40 @@ data class ThingsTypography(
     val dialogBody: TextStyle,
     /** Кнопка действия в диалоге: Cancel, Delete, Clear */
     val dialogButton: TextStyle,
+    /** Подпись «Перемістити» на плавающей панели действий. */
+    val dialogButtonStrong: TextStyle,
     /** Пункт выпадающего меню: «New To-Do», «Delete Project», меню подзаголовка */
     val menuItem: TextStyle,
     /** Название задачи в строке списка и в редакторе */
     val taskTitle: TextStyle,
     /** Подпись под задачей (проект, дата) */
     val taskSubtitle: TextStyle,
+    /** Выделенная подпись под задачей: срок. */
+    val taskSubtitleStrong: TextStyle,
     /** Заметки в раскрытом редакторе */
     val editorNotes: TextStyle,
     /** Пункты чек-листа в раскрытом редакторе */
     val editorChecklist: TextStyle,
+    /** Назначение в нижней панели окна быстрого добавления. */
+    val editorChecklistStrong: TextStyle,
     /** Строка даты и дедлайна в редакторе */
     val editorDate: TextStyle,
+    /** Выделенная дата в редакторе и окне быстрого добавления: «Сьогодні», срок. */
+    val editorDateStrong: TextStyle,
     /** Заголовок секции результатов поиска */
     val sectionHeader: TextStyle,
     /** Заголовок верхней панели навигации (TopAppBar) */
     val topAppBarTitle: TextStyle,
     /** Мелкие метки и бейджи */
     val caption: TextStyle,
+    /** Чип «Все» и чипы тегов в строке фильтра по тегам. */
+    val captionStrong: TextStyle,
     /** Чип тега в редакторе задачи и окне быстрого добавления (14 sp Medium) */
     val tagChip: TextStyle,
     /** Текст бейджа даты */
     val badge: TextStyle,
+    /** Метка уровня приоритета в панели приоритета. */
+    val badgeStrong: TextStyle,
     /** Мелкий пояснительный текст (13 sp) */
     val bodySmall: TextStyle,
     /** Стандартный вспомогательный текст (14 sp) */
@@ -295,6 +307,8 @@ data class ThingsTypography(
     val bodyLarge: TextStyle,
     /** Подзаголовок средней жирности (16 sp SemiBold) */
     val headline: TextStyle,
+    /** Заголовок дня и месяца в «Планах»: название дня, месяц (16 sp Bold) */
+    val headlineStrong: TextStyle,
     /** Вспомогательный подзаголовок (15 sp) */
     val subhead: TextStyle,
     /** Вспомогательный подзаголовок средней жирности (15 sp Medium) */
@@ -303,6 +317,8 @@ data class ThingsTypography(
     val largeTitle: TextStyle,
     /** Кнопка подтверждения / действия (17 sp SemiBold) */
     val button: TextStyle,
+    /** Выделенная строка: «Продовжити пошук», подзаголовок проекта (19 sp SemiBold) */
+    val listTitleStrong: TextStyle,
     /** Название проекта в строке главного экрана (19 sp Regular) */
     val listItem: TextStyle,
     /** Заголовок карточки настроек на главном экране (14 sp SemiBold) */
@@ -324,26 +340,34 @@ internal fun thingsTypography(scale: Float = 1f) = ThingsTypography(
     dialogRowAction = TextStyle(fontFamily = FontFamily.Default, fontWeight = FontWeight.Medium, fontSize = (19 * scale).sp),
     dialogBody = TextStyle(fontFamily = FontFamily.Default, fontWeight = FontWeight.Normal, fontSize = (15 * scale).sp),
     dialogButton = TextStyle(fontFamily = FontFamily.Default, fontWeight = FontWeight.Normal, fontSize = (18 * scale).sp),
+    dialogButtonStrong = TextStyle(fontFamily = FontFamily.Default, fontWeight = FontWeight.Bold, fontSize = (18 * scale).sp),
     menuItem = TextStyle(fontFamily = FontFamily.Default, fontWeight = FontWeight.Normal, fontSize = (18 * scale).sp),
     taskTitle = TextStyle(fontFamily = FontFamily.Default, fontWeight = FontWeight.Normal, fontSize = (19 * scale).sp),
     taskSubtitle = TextStyle(fontFamily = FontFamily.Default, fontWeight = FontWeight.Normal, fontSize = (15 * scale).sp),
+    taskSubtitleStrong = TextStyle(fontFamily = FontFamily.Default, fontWeight = FontWeight.SemiBold, fontSize = (15 * scale).sp),
     editorNotes = TextStyle(fontFamily = FontFamily.Default, fontWeight = FontWeight.Normal, fontSize = (18 * scale).sp),
     editorChecklist = TextStyle(fontFamily = FontFamily.Default, fontWeight = FontWeight.Normal, fontSize = (17.2f * scale).sp),
+    editorChecklistStrong = TextStyle(fontFamily = FontFamily.Default, fontWeight = FontWeight.Medium, fontSize = (17.2f * scale).sp),
     editorDate = TextStyle(fontFamily = FontFamily.Default, fontWeight = FontWeight.Normal, fontSize = (18 * scale).sp),
+    editorDateStrong = TextStyle(fontFamily = FontFamily.Default, fontWeight = FontWeight.Medium, fontSize = (18 * scale).sp),
     sectionHeader = TextStyle(fontFamily = FontFamily.Default, fontWeight = FontWeight.Medium, fontSize = (19 * scale).sp),
     topAppBarTitle = TextStyle(fontFamily = FontFamily.Default, fontWeight = FontWeight.SemiBold, fontSize = (20 * scale).sp),
     caption = TextStyle(fontFamily = FontFamily.Default, fontWeight = FontWeight.Medium, fontSize = (12 * scale).sp),
+    captionStrong = TextStyle(fontFamily = FontFamily.Default, fontWeight = FontWeight.Bold, fontSize = (12 * scale).sp),
     tagChip = TextStyle(fontFamily = FontFamily.Default, fontWeight = FontWeight.Medium, fontSize = (14 * scale).sp),
     badge = TextStyle(fontFamily = FontFamily.Default, fontWeight = FontWeight.Medium, fontSize = (11 * scale).sp),
+    badgeStrong = TextStyle(fontFamily = FontFamily.Default, fontWeight = FontWeight.Bold, fontSize = (11 * scale).sp),
     bodySmall = TextStyle(fontFamily = FontFamily.Default, fontWeight = FontWeight.Normal, fontSize = (13 * scale).sp),
     bodyMedium = TextStyle(fontFamily = FontFamily.Default, fontWeight = FontWeight.Normal, fontSize = (14 * scale).sp),
     bodyLarge = TextStyle(fontFamily = FontFamily.Default, fontWeight = FontWeight.Normal, fontSize = (16 * scale).sp),
     headline = TextStyle(fontFamily = FontFamily.Default, fontWeight = FontWeight.SemiBold, fontSize = (16 * scale).sp),
+    headlineStrong = TextStyle(fontFamily = FontFamily.Default, fontWeight = FontWeight.Bold, fontSize = (16 * scale).sp),
     subhead = TextStyle(fontFamily = FontFamily.Default, fontWeight = FontWeight.Normal, fontSize = (15 * scale).sp),
     subheadMedium = TextStyle(fontFamily = FontFamily.Default, fontWeight = FontWeight.Medium, fontSize = (15 * scale).sp),
     largeTitle = TextStyle(fontFamily = FontFamily.Default, fontWeight = FontWeight.Bold, fontSize = (32 * scale).sp),
     button = TextStyle(fontFamily = FontFamily.Default, fontWeight = FontWeight.SemiBold, fontSize = (17 * scale).sp),
     listTitle = TextStyle(fontFamily = FontFamily.Default, fontWeight = FontWeight.Medium, fontSize = (19 * scale).sp),
+    listTitleStrong = TextStyle(fontFamily = FontFamily.Default, fontWeight = FontWeight.SemiBold, fontSize = (19 * scale).sp),
     listItem = TextStyle(fontFamily = FontFamily.Default, fontWeight = FontWeight.Normal, fontSize = (19 * scale).sp),
     settingsTitle = TextStyle(fontFamily = FontFamily.Default, fontWeight = FontWeight.SemiBold, fontSize = (14 * scale).sp),
     settingsAction = TextStyle(fontFamily = FontFamily.Default, fontWeight = FontWeight.Bold, fontSize = (14 * scale).sp),

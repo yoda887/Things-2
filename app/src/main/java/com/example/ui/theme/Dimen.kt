@@ -59,6 +59,16 @@ data class AppDimens(
     /** Отступ между чек-листом и тулбаром действий в раскрытом редакторе задачи (Things 3 эталон) */
     val taskEditorChecklistToToolbarSpacer: Dp = 30.dp,
 
+    // Общие размеры
+    /** Строка списка: задача, проект, раздел, строка диалога */
+    val rowHeight: Dp = 46.dp,
+    /** Минимальная зона нажатия кнопки-иконки */
+    val minTouchTarget: Dp = 48.dp,
+    /** Круглые кнопки в шапке диалога и окна (закрыть, назад) */
+    val dialogHeaderButtonSize: Dp = 36.dp,
+    /** Подзаголовок проекта — высота строки */
+    val headingRowHeight: Dp = 40.dp,
+
     // Главный экран
     /** Поле списка главного экрана от краёв экрана */
     val homeListGutter: Dp = 14.dp,
@@ -82,7 +92,21 @@ data class AppDimens(
     val homeSearchBlockHeight: Dp = 68.dp,
     /** Карточка синхронизации Google Tasks */
     val homeSyncCardTopPadding: Dp = 18.dp,
-    val homeSyncInnerGap: Dp = 10.dp
+    val homeSyncInnerGap: Dp = 10.dp,
+
+    // Quick Find
+    /** Карточка от краёв экрана и поле ввода внутри неё */
+    val quickFindCardMargin: Dp = 14.dp,
+    /** Отступ карточки сверху и снизу и шапки до поля */
+    val quickFindCardPadding: Dp = 20.dp,
+    val quickFindCardMaxWidth: Dp = 480.dp,
+    /** Поле ввода, кнопка ✕ и строка результата */
+    val quickFindRowHeight: Dp = 44.dp,
+    val quickFindResultsMaxHeight: Dp = 350.dp,
+    /** Промежуток между заголовком раздела и разделителем в результатах */
+    val quickFindSectionGap: Dp = 6.dp,
+    /** Подсказка пустого окна — отступ сверху */
+    val quickFindHintTop: Dp = 18.dp
 )
 
 val LocalAppDimens = staticCompositionLocalOf { AppDimens() }
