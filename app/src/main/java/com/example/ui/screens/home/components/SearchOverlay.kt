@@ -359,17 +359,8 @@ fun ThingsSearchOverlay(
                 }
             }
 
-            // 2. Поиск по областям ответственности (только активные, неудаленные)
-            val matchedAreas = areas.filter { !it.trashed && it.title.contains(query, ignoreCase = true) }
-            results.addAll(matchedAreas.map { SearchResultItem.AreaResult(it) })
-
-            // 2.1 Поиск по тегам (отображаются карточкой, аналогичной области)
-            val matchedTags = allSavedTagObjects.filter {
-                it.title.isNotBlank() && it.title.contains(query, ignoreCase = true)
-            }
-            results.addAll(matchedTags.map { SearchResultItem.TagResult(it) })
-
-            // 3. Поиск по проектам (только активные по названию, заметкам; исключая удаленные и завершенные/отмененные)
+            // 2. Проекты, области, теги — в том же порядке, что на экране поиска
+            // Проекты: только открытые, по названию и заметкам
             val matchedProjects = projects.filter {
                 it.type == Item.TYPE_PROJECT && !it.trashed && !it.isCompleted && it.status != Item.STATUS_CANCELLED && (
                     it.title.contains(query, ignoreCase = true) ||
@@ -378,7 +369,17 @@ fun ThingsSearchOverlay(
             }
             results.addAll(matchedProjects.map { SearchResultItem.ProjectResult(it) })
 
-            // 4. Поиск по задачам (только активные по названию, заметкам, чеклистам; исключая удаленные и завершенные/отмененные)
+            // Области — только неудалённые
+            val matchedAreas = areas.filter { !it.trashed && it.title.contains(query, ignoreCase = true) }
+            results.addAll(matchedAreas.map { SearchResultItem.AreaResult(it) })
+
+            // Теги — карточкой, как у области
+            val matchedTags = allSavedTagObjects.filter {
+                it.title.isNotBlank() && it.title.contains(query, ignoreCase = true)
+            }
+            results.addAll(matchedTags.map { SearchResultItem.TagResult(it) })
+
+            // 3. Поиск по задачам (только активные по названию, заметкам, чеклистам; исключая удаленные и завершенные/отмененные)
             val matchedTasks = allTasks.filter { wrapper ->
                 wrapper.item.type == Item.TYPE_TASK && !wrapper.item.trashed && !wrapper.item.isCompleted && wrapper.item.status != Item.STATUS_CANCELLED && (
                     wrapper.item.title.contains(query, ignoreCase = true) ||
@@ -394,14 +395,6 @@ fun ThingsSearchOverlay(
 
     // В эталоне Things 3 кнопка "Continue Search" отображается всегда при наличии любого поискового запроса
     val showContinueSearch = searchQuery.isNotBlank()
-
-    // Имя первого доступного проекта для отображения в "Recent"
-    val recentProjectName = remember(projects) {
-        projects.firstOrNull { it.type == Item.TYPE_PROJECT && !it.trashed && !it.isCompleted && it.status != Item.STATUS_CANCELLED }?.title ?: "Vacation in Rome"
-    }
-    val recentProject = remember(projects) {
-        projects.firstOrNull { it.type == Item.TYPE_PROJECT && !it.trashed && !it.isCompleted && it.status != Item.STATUS_CANCELLED }
-    }
 
     // Ход анимации формы (220 мс, пружина ζ = 0.8) и проявления контента (154 мс, functionByExpanding: 0.7)
     val morphRaw = transformProgress.value

@@ -911,6 +911,8 @@ fun ThingsHomeScreen(viewModel: ThingsViewModel = hiltViewModel()) {
                     recentSearchItems = recentSearchItems,
                     onContinueSearchClick = {
                         isSearchOverlayActive = false
+                        // Фильтр по тегу общий для списков: в поиске он молча отсекал бы результаты
+                        viewModel.selectTag(null)
                         navigateTo(ActiveScreen.SEARCH)
                     }
                 )

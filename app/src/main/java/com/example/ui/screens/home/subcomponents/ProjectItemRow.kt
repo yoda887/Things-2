@@ -53,6 +53,8 @@ fun ProjectItemRow(
     val progress = projectProgressMap[project.id]
     val completedCount = progress?.completed ?: tasks.filter { it.item.projectId == project.id }.count { it.item.isCompleted }
     val totalCount = progress?.total ?: tasks.count { it.item.projectId == project.id }
+    // Выполненный или отменённый проект (в Logbook поиска) — кольцо полное, как у закрытого проекта
+    val isDone = project.isCompleted || project.status == Item.STATUS_CANCELLED
     val shouldDim = inlineExpandedTaskId != null
     val dimAlpha by animateFloatAsState(
         targetValue = if (shouldDim) 0.3f else 1f,
@@ -80,8 +82,8 @@ fun ProjectItemRow(
             contentAlignment = Alignment.Center
         ) {
             ProjectProgressArc(
-                completed = completedCount,
-                total = totalCount,
+                completed = if (isDone) maxOf(totalCount, 1) else completedCount,
+                total = if (isDone) maxOf(totalCount, 1) else totalCount,
                 color = ThingsTheme.colors.project,
                 modifier = Modifier.requiredSize(ThingsIconSize.M)
             )
