@@ -89,11 +89,8 @@ import com.example.ui.theme.*
 // Окно Quick Find: уход вниз при закрытии и тень карточки
 private val QuickFindDismissSlide = 110.dp
 private val QuickFindCardElevation = 12.dp
-/** Кнопка очистки запроса внутри поля */
-private val QuickFindClearBadgeSize = 18.dp
 
 private const val FOCUS_AFTER_OPEN_DELAY_MS = 110L
-private val CLEAR_BADGE_ICON_SIZE = 11.dp
 private val RESULT_ICON_SIZE = 19.dp
 private const val EMPTY_HINT_ALPHA = 0.8f
 private const val ARC_ACCENT_TINT_ALPHA = 0.45f
@@ -632,7 +629,7 @@ fun ThingsSearchOverlay(
                                 Box(
                                     contentAlignment = Alignment.Center,
                                     modifier = Modifier
-                                        .size(QuickFindClearBadgeSize)
+                                        .size(MaterialTheme.dimens.clearBadgeSize)
                                         .clip(CircleShape)
                                         .background(textSecondary.copy(alpha = ThingsAlpha.HALF))
                                         .clickable { onSearchQueryChange("") }
@@ -641,7 +638,7 @@ fun ThingsSearchOverlay(
                                         imageVector = Icons.Default.Close,
                                         contentDescription = stringResource(R.string.cd_clear),
                                         tint = currentInputBg,
-                                        modifier = Modifier.size(CLEAR_BADGE_ICON_SIZE)
+                                        modifier = Modifier.size(MaterialTheme.dimens.clearBadgeIconSize)
                                     )
                                 }
                             }

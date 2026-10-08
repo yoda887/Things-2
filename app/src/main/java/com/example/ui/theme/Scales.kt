@@ -22,6 +22,11 @@ object ThingsMotion {
     const val SLOW = 400
     /** Пауза перед уходом выполненной задачи и подобные выдержки */
     const val LONG = 500
+
+    /** Окно-диалог появляется, вырастая из этой доли размера, */
+    const val DIALOG_ENTER_SCALE = 0.85f
+    /** и закрывается, сжимаясь до этой доли и угасая. */
+    const val DIALOG_EXIT_SCALE = 0.9f
 }
 
 /**

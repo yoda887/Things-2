@@ -106,7 +106,19 @@ data class AppDimens(
     /** Промежуток между заголовком раздела и разделителем в результатах */
     val quickFindSectionGap: Dp = 6.dp,
     /** Подсказка пустого окна — отступ сверху */
-    val quickFindHintTop: Dp = 18.dp
+    val quickFindHintTop: Dp = 18.dp,
+
+    // Окна-диалоги
+    /** Окно тегов по эталону Things: доля ширины и высоты экрана, по центру */
+    val dialogWidthFraction: Float = 0.89f,
+    val dialogHeightFraction: Float = 0.67f,
+    /** Однострочное поле ввода в окне (название тега) — залитая плашка без рамки */
+    val dialogFieldHeight: Dp = 40.dp,
+    /** Маленькие круглые кнопки в строке окна (изменить, удалить) */
+    val dialogRowButtonSize: Dp = 28.dp,
+    /** Круглая кнопка очистки поля ввода и крестик в ней — в Quick Find и в окне тегов */
+    val clearBadgeSize: Dp = 18.dp,
+    val clearBadgeIconSize: Dp = 11.dp
 )
 
 val LocalAppDimens = staticCompositionLocalOf { AppDimens() }
