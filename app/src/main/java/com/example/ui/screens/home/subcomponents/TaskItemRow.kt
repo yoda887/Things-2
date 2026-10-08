@@ -395,7 +395,12 @@ fun TaskItemRow(
                             if (dateBadge != null && !badgeBesideBothLines) {
                                 DateBadge(text = dateBadge)
                                 Spacer(modifier = Modifier.width(ThingsSpacing.XS_PLUS))
-                            } else if ((screen == ActiveScreen.PROJECT_DETAIL || screen == ActiveScreen.AREA_DETAIL) && dateIndicator != null) {
+                            } else if (dateIndicator != null && (
+                                    screen == ActiveScreen.PROJECT_DETAIL || screen == ActiveScreen.AREA_DETAIL ||
+                                        // В поиске открытые задачи стоят под проектом или областью — срок виден в строке
+                                        (screen == ActiveScreen.SEARCH && !isSearchLogbookStyle)
+                                )
+                            ) {
                                 when (dateIndicator) {
                                     is DateIndicatorResult.IconIndicator -> {
                                         Icon(
