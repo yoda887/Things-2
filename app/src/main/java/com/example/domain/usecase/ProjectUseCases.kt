@@ -9,5 +9,7 @@ import javax.inject.Inject
 class ProjectUseCases @Inject constructor(
     val addProject: AddProjectUseCase,
     val updateProject: UpdateProjectUseCase,
-    val deleteProject: DeleteProjectUseCase
+    val deleteProject: DeleteProjectUseCase,
+    val completeProject: CompleteProjectUseCase,
+    val duplicateProject: DuplicateProjectUseCase
 )

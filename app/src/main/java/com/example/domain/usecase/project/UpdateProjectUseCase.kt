@@ -10,9 +10,12 @@ import javax.inject.Inject
 class UpdateProjectUseCase @Inject constructor(private val repository: ITaskRepository) {
 
     /**
-     * Обновляет переданный проект.
+     * Обновляет переданный проект и, как у задачи, пересобирает его связи с тегами по строке тегов.
      */
     suspend operator fun invoke(project: Item) {
-        repository.insertProject(project)
+        repository.inTransaction {
+            repository.insertProject(project)
+            repository.setItemTagsByTitles(project.id, project.tags)
+        }
     }
 }

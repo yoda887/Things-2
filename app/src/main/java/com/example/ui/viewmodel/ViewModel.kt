@@ -722,6 +722,24 @@ class ThingsViewModel @Inject constructor(
         }
     }
 
+    /** Завершает проект вместе с его открытыми задачами. */
+    fun completeProject(project: Item) {
+        viewModelScope.launch {
+            projectUseCases.completeProject(project, tasks.value.filter { it.item.projectId == project.id })
+        }
+    }
+
+    /** Дублирует проект с заголовками и задачами. */
+    fun duplicateProject(project: Item) {
+        viewModelScope.launch {
+            projectUseCases.duplicateProject(
+                project,
+                headings.value.filter { it.projectId == project.id && !it.trashed },
+                tasks.value.filter { it.item.projectId == project.id && !it.item.trashed }
+            )
+        }
+    }
+
     // Сценарии работы со сферами
     fun addArea(title: String) {
         viewModelScope.launch {
