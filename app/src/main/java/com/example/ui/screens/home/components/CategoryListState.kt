@@ -372,11 +372,11 @@ fun rememberUpcomingSchedule(
 }
 
 /** Вид заголовка секции в результатах поиска. */
-enum class SearchSectionKind { TAGS, PROJECT, AREA, LOGBOOK }
+enum class SearchSectionKind { PROJECT, AREA, LOGBOOK }
 
 /**
- * Заголовок секции результатов поиска: найденные теги, задачи конкретного проекта или области, Logbook.
- * Найденные проекты и области идут строками без заголовка.
+ * Заголовок секции результатов поиска: задачи конкретного проекта или области, Logbook.
+ * Найденные проекты, области и теги идут строками без заголовка.
  */
 data class SearchSectionHeaderItem(
     val key: String,
@@ -414,9 +414,8 @@ fun rememberFlattenedList(
     searchQuery: String = "",
     headings: List<Item> = emptyList()
 ): List<Any> {
-    val headerTags = stringResource(R.string.tag_dialog_title)
     val headerLogbook = stringResource(R.string.category_logbook)
-    return remember(screen, standardToday, eveningToday, headerTags, headerLogbook, draggedItemKey, upcomingDays, upcomingMonths, projects, area, displayTasks, isLaterItemsHidden, tag, allTasks, areas, savedTags, searchQuery, headings) {
+    return remember(screen, standardToday, eveningToday, headerLogbook, draggedItemKey, upcomingDays, upcomingMonths, projects, area, displayTasks, isLaterItemsHidden, tag, allTasks, areas, savedTags, searchQuery, headings) {
         buildList<Any> {
             if (screen == ActiveScreen.TODAY) {
                 addAll(standardToday)
@@ -516,7 +515,7 @@ fun rememberFlattenedList(
                     }
                 }
             } else if (screen == ActiveScreen.SEARCH) {
-                addSearchResults(displayTasks, projects, areas, savedTags, searchQuery, headerTags, headerLogbook)
+                addSearchResults(displayTasks, projects, areas, savedTags, searchQuery, headerLogbook)
             } else {
                 addAll(displayTasks)
             }
@@ -525,7 +524,7 @@ fun rememberFlattenedList(
 }
 
 /**
- * Результаты поиска: открытые задачи без проекта и области, найденные проекты, области и теги,
+ * Результаты поиска: открытые задачи без проекта и области, найденные проекты, области и теги (строками, без заголовка),
  * открытые задачи по проектам и областям — в порядке главного экрана, затем выполненное (Logbook).
  */
 private fun MutableList<Any>.addSearchResults(
@@ -534,7 +533,6 @@ private fun MutableList<Any>.addSearchResults(
     areas: List<Area>,
     savedTags: List<Tag>,
     searchQuery: String,
-    headerTags: String,
     headerLogbook: String
 ) {
     val q = searchQuery.trim()
@@ -557,7 +555,7 @@ private fun MutableList<Any>.addSearchResults(
     // Сюда же — задачи, чьих проекта или области больше нет: иначе они пропали бы из поиска
     addAll(active.filter { it.projectOrNull() == null && it.areaOrNull() == null })
 
-    // 2. Найденные открытые проекты и области — строками без заголовка секции, затем теги
+    // 2. Найденные открытые проекты, области и теги — строками, без заголовка секции
     val matchedProjects = projects.filter {
         it.type == Item.TYPE_PROJECT && !it.trashed && !it.isDone() &&
             (it.title.contains(q, ignoreCase = true) || it.notes.contains(q, ignoreCase = true))
@@ -566,10 +564,7 @@ private fun MutableList<Any>.addSearchResults(
     val matchedAreas = areas.filter { !it.trashed && it.title.contains(q, ignoreCase = true) }
     addAll(matchedAreas.map { SearchAreaItem(it) })
     val matchedTags = savedTags.filter { it.title.isNotBlank() && it.title.contains(q, ignoreCase = true) }
-    if (matchedTags.isNotEmpty()) {
-        add(SearchSectionHeaderItem("search_hdr_tags", headerTags, SearchSectionKind.TAGS))
-        addAll(matchedTags.map { SearchTagItem(it) })
-    }
+    addAll(matchedTags.map { SearchTagItem(it) })
 
     // 3. Открытые задачи по проектам и областям — в порядке главного экрана: сначала проекты
     // без области, затем каждая область — её задачи без проекта, потом её проекты

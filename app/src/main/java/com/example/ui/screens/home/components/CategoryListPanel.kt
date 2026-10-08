@@ -1661,12 +1661,6 @@ private fun SearchSectionIcon(
             tint = ThingsTheme.colors.area,
             modifier = iconModifier
         )
-        SearchSectionKind.TAGS -> Icon(
-            imageVector = AppIcons.Tag,
-            contentDescription = null,
-            tint = ThingsTheme.colors.someday,
-            modifier = iconModifier
-        )
         SearchSectionKind.PROJECT -> {
             val progress = header.project?.let { projectProgressMap[it.id] }
             ProjectProgressArc(
