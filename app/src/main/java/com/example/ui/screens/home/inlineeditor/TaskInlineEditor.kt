@@ -741,15 +741,22 @@ fun DeadlineDatePickerDialog(
     onDateSelected: (Long?) -> Unit,
     onDismiss: () -> Unit
 ) {
+    // Календарь работает в UTC — переводим местный день туда и обратно (см. localDayToUtcMidnight)
     val datePickerState = rememberDatePickerState(
-        initialSelectedDateMillis = initialSelectedDateMillis ?: System.currentTimeMillis()
+        initialSelectedDateMillis = com.example.ui.screens.home.inlineeditor.utils.localDayToUtcMidnight(
+            initialSelectedDateMillis ?: System.currentTimeMillis()
+        )
     )
     DatePickerDialog(
         onDismissRequest = onDismiss,
         confirmButton = {
             TextButton(
                 onClick = {
-                    onDateSelected(datePickerState.selectedDateMillis)
+                    onDateSelected(
+                        datePickerState.selectedDateMillis?.let {
+                            com.example.ui.screens.home.inlineeditor.utils.utcMidnightToLocalDay(it)
+                        }
+                    )
                     onDismiss()
                 }
             ) {

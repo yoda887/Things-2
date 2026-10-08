@@ -1,6 +1,7 @@
 package com.example.ui.screens.home.inlineeditor.utils
 
 import java.util.Calendar
+import java.util.TimeZone
 
 fun isPastDate(year: Int, month: Int, day: Int, today: java.util.Calendar): Boolean {
     val todayYear = today.get(Calendar.YEAR)
@@ -112,4 +113,26 @@ fun formatStartDateLabel(
         isCurrentYear -> java.text.SimpleDateFormat("d MMM", locale).format(targetCal.time)
         else -> java.text.SimpleDateFormat("yyyy", locale).format(targetCal.time)
     }
+}
+
+/**
+ * Календарь Material (DatePicker) считает даты в UTC: день — это полночь UTC. Приложение хранит даты
+ * по местному времени. Эти два перевода сохраняют календарный день: без них ночью, когда дата в UTC
+ * ещё вчерашняя (в 1:25 по Киеву в UTC 22:25 прошлого дня), окно отмечало вчерашний день.
+ */
+fun localDayToUtcMidnight(localMillis: Long, zone: TimeZone = TimeZone.getDefault()): Long {
+    val local = Calendar.getInstance(zone).apply { timeInMillis = localMillis }
+    return Calendar.getInstance(TimeZone.getTimeZone("UTC")).apply {
+        clear()
+        set(local.get(Calendar.YEAR), local.get(Calendar.MONTH), local.get(Calendar.DAY_OF_MONTH))
+    }.timeInMillis
+}
+
+/** Обратный перевод: выбранный в календаре день (полночь UTC) — в местную полночь того же дня. */
+fun utcMidnightToLocalDay(utcMillis: Long, zone: TimeZone = TimeZone.getDefault()): Long {
+    val utc = Calendar.getInstance(TimeZone.getTimeZone("UTC")).apply { timeInMillis = utcMillis }
+    return Calendar.getInstance(zone).apply {
+        clear()
+        set(utc.get(Calendar.YEAR), utc.get(Calendar.MONTH), utc.get(Calendar.DAY_OF_MONTH))
+    }.timeInMillis
 }
