@@ -118,6 +118,7 @@ fun ThingsTaskInlineEditor(
     // по прогрессу раскрытия). Нужна, чтобы подтянуть список, если редактор не помещается над нижним краем
     onFullHeightMeasured: (Int) -> Unit = {},
     onWhenDialogVisibilityChange: (Boolean) -> Unit = {},
+    onTagDialogVisibilityChange: (Boolean) -> Unit = {},
     areas: List<com.example.data.model.Area> = emptyList(),
     onNavigateToProject: ((Item) -> Unit)? = null,
     onNavigateToArea: ((com.example.data.model.Area) -> Unit)? = null,
@@ -152,6 +153,10 @@ fun ThingsTaskInlineEditor(
 
     LaunchedEffect(showWhenDialog) {
         onWhenDialogVisibilityChange(showWhenDialog)
+    }
+
+    LaunchedEffect(showTagDialog) {
+        onTagDialogVisibilityChange(showTagDialog)
     }
 
     val currentTitle by rememberUpdatedState(title)

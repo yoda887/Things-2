@@ -131,6 +131,7 @@ fun AnimatedTaskItem(
     onLocalTasksListChange: (List<ItemWithChecklist>) -> Unit,
     lazyListState: LazyListState,
     onWhenDialogVisibilityChange: (Boolean) -> Unit = {},
+    onTagDialogVisibilityChange: (Boolean) -> Unit = {},
     isSelectionMode: Boolean = false,
     isSelected: Boolean = false,
     isDragSelecting: Boolean = false,
@@ -637,6 +638,7 @@ fun AnimatedTaskItem(
                             onEvent(ThingsCategoryListEvent.ChangeInlineExpandedTaskId(null))
                         },
                         onWhenDialogVisibilityChange = onWhenDialogVisibilityChange,
+                        onTagDialogVisibilityChange = onTagDialogVisibilityChange,
                         areas = areas,
                         onNavigateToProject = { project ->
                             onEvent(ThingsCategoryListEvent.ChangeInlineExpandedTaskId(null))

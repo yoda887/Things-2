@@ -256,6 +256,8 @@ fun ThingsCategoryListPanel(
     var searchFieldAutoFocused by rememberSaveable(screen) { mutableStateOf(false) }
     var showDeleteConfirm by remember { mutableStateOf(false) }
     var isWhenDialogOpen by remember { mutableStateOf(false) }
+    // Окно тегов редактора: пока оно открыто, нижняя панель действий над задачей спрятана
+    var isTagDialogOpen by remember { mutableStateOf(false) }
     var swipeWhenTask by remember { mutableStateOf<ItemWithChecklist?>(null) }
     // Смещение строки, по которой сделали свайп, от центра экрана: из неё вырастает диалог When
     var swipeWhenOrigin by remember { mutableStateOf<androidx.compose.ui.geometry.Offset?>(null) }
@@ -283,10 +285,10 @@ fun ThingsCategoryListPanel(
     }
     
     LaunchedEffect(
-        showMoveDialog, showDeleteConfirm, isWhenDialogOpen, swipeWhenTask != null,
+        showMoveDialog, showDeleteConfirm, isWhenDialogOpen, isTagDialogOpen, swipeWhenTask != null,
         showBatchWhenDialog, showBatchMoveDialog, showBatchDeleteConfirm, showBatchTagDialog, showBatchDeadlineDialog
     ) {
-        val anyActive = showMoveDialog || showDeleteConfirm || isWhenDialogOpen || swipeWhenTask != null ||
+        val anyActive = showMoveDialog || showDeleteConfirm || isWhenDialogOpen || isTagDialogOpen || swipeWhenTask != null ||
                 showBatchWhenDialog || showBatchMoveDialog || showBatchDeleteConfirm || showBatchTagDialog || showBatchDeadlineDialog
         onDialogsActiveChange(anyActive)
     }
@@ -970,6 +972,7 @@ fun ThingsCategoryListPanel(
                                 onLocalTasksListChange = { localTasksList = it },
                                 lazyListState = lazyListState,
                                 onWhenDialogVisibilityChange = { isWhenDialogOpen = it },
+                                onTagDialogVisibilityChange = { isTagDialogOpen = it },
                                 isSelectionMode = state.isSelectionMode,
                                 isSelected = state.selectedTaskIds.contains(item.item.id),
                                 isDragSelecting = isDragSelecting,
@@ -1434,7 +1437,7 @@ fun ThingsCategoryListPanel(
     }
 
     FloatingBottomCapsuleToolbar(
-        visible = inlineExpandedTaskId != null && activeTask != null && !isWhenDialogOpen && swipeWhenTask == null,
+        visible = inlineExpandedTaskId != null && activeTask != null && !isWhenDialogOpen && !isTagDialogOpen && swipeWhenTask == null,
         onMoveClick = { showMoveDialog = true },
         onDeleteClick = { showDeleteConfirm = true },
         onDuplicateClick = {
