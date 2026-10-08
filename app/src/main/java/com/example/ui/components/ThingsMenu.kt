@@ -8,6 +8,7 @@ import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
+import androidx.compose.foundation.layout.padding
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
@@ -81,5 +82,15 @@ fun ThingsMenuItem(
         },
         onClick = onClick,
         enabled = enabled
+    )
+}
+
+/** Тонкий разделитель групп пунктов меню, как в меню опций проекта Things. */
+@Composable
+fun ThingsMenuDivider() {
+    androidx.compose.material3.HorizontalDivider(
+        modifier = Modifier.padding(vertical = com.example.ui.theme.ThingsSpacing.XS),
+        color = ThingsTheme.colors.overlayDivider,
+        thickness = com.example.ui.theme.ThingsStroke.HAIRLINE
     )
 }

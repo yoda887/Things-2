@@ -656,6 +656,9 @@ fun ThingsHomeScreen(viewModel: ThingsViewModel = hiltViewModel()) {
                                     navController.popBackStack()
                                     selectedProject = null
                                 }
+                                is ThingsCategoryListEvent.UpdateProject -> viewModel.updateProject(event.project)
+                                is ThingsCategoryListEvent.CompleteProject -> viewModel.completeProject(event.project)
+                                is ThingsCategoryListEvent.DuplicateProject -> viewModel.duplicateProject(event.project)
                                 is ThingsCategoryListEvent.DeleteArea -> {
                                     viewModel.deleteArea(event.area)
                                     navController.popBackStack()

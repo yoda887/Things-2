@@ -169,4 +169,13 @@
     <string name="cd_save">Сохранить</string>
     <string name="untitled_task">Задача без названия</string>
     <string name="sync_error_unknown">Неизвестная ошибка синхронизации</string>
+    <string name="move_no_area">Без области</string>
+    <string name="project_complete">Завершить проект</string>
+    <string name="project_complete_title">Завершить проект?</string>
+    <plurals name="project_complete_message_tasks">
+        <item quantity="one">В проекте «%1$s» есть %2$d невыполненная задача. Она тоже будет отмечена выполненной.</item>
+        <item quantity="few">В проекте «%1$s» есть %2$d невыполненные задачи. Они тоже будут отмечены выполненными.</item>
+        <item quantity="many">В проекте «%1$s» есть %2$d невыполненных задач. Они тоже будут отмечены выполненными.</item>
+        <item quantity="other">В проекте «%1$s» есть %2$d невыполненной задачи. Они тоже будут отмечены выполненными.</item>
+    </plurals>
 </resources>

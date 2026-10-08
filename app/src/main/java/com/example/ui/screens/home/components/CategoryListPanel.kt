@@ -1,5 +1,9 @@
 package com.example.ui.screens.home.components
 
+import com.example.ui.screens.home.subcomponents.projectShareText
+import com.example.ui.screens.home.subcomponents.ProjectDialogs
+import com.example.ui.screens.home.subcomponents.ProjectDetailsBlock
+import com.example.ui.screens.home.subcomponents.ProjectAction
 import com.example.R
 import androidx.compose.ui.res.pluralStringResource
 import androidx.compose.ui.res.stringResource
@@ -258,6 +262,8 @@ fun ThingsCategoryListPanel(
     var isWhenDialogOpen by remember { mutableStateOf(false) }
     // Окно тегов редактора: пока оно открыто, нижняя панель действий над задачей спрятана
     var isTagDialogOpen by remember { mutableStateOf(false) }
+    // Открытое окно из меню опций проекта («Когда», теги, дедлайн, перемещение, завершение)
+    var projectDialog by remember { mutableStateOf<ProjectAction?>(null) }
     var swipeWhenTask by remember { mutableStateOf<ItemWithChecklist?>(null) }
     // Смещение строки, по которой сделали свайп, от центра экрана: из неё вырастает диалог When
     var swipeWhenOrigin by remember { mutableStateOf<androidx.compose.ui.geometry.Offset?>(null) }
@@ -826,7 +832,45 @@ fun ThingsCategoryListPanel(
                         globalDimAlpha = globalDimAlpha,
                         onDeleteProject = { onEvent(ThingsCategoryListEvent.DeleteProject(it)) },
                         onAddHeading = { addHeading() },
-                        onDeleteArea = { onEvent(ThingsCategoryListEvent.DeleteArea(it)) }
+                        onDeleteArea = { onEvent(ThingsCategoryListEvent.DeleteArea(it)) },
+                        onProjectAction = { projectAction ->
+                            val currentProject = project ?: return@MainCategoryHeader
+                            when (projectAction) {
+                                ProjectAction.DUPLICATE -> onEvent(ThingsCategoryListEvent.DuplicateProject(currentProject))
+                                ProjectAction.SHARE -> {
+                                    val sendIntent = android.content.Intent().apply {
+                                        action = android.content.Intent.ACTION_SEND
+                                        putExtra(android.content.Intent.EXTRA_TEXT, projectShareText(currentProject, state.headings, state.allTasks))
+                                        type = "text/plain"
+                                    }
+                                    context.startActivity(android.content.Intent.createChooser(sendIntent, null))
+                                }
+                                // Без открытых задач подтверждать нечего — проект завершается сразу
+                                ProjectAction.COMPLETE -> if (state.allTasks.none { it.item.projectId == currentProject.id && it.item.status == Item.STATUS_OPEN }) {
+                                    onEvent(ThingsCategoryListEvent.CompleteProject(currentProject))
+                                } else {
+                                    projectDialog = projectAction
+                                }
+                                else -> projectDialog = projectAction
+                            }
+                        }
+                    )
+                }
+            }
+
+            // Свойства проекта под названием: теги, «Когда», дедлайн, заметки
+            if (screen == ActiveScreen.PROJECT_DETAIL && project != null) {
+                item(key = TaskListKeys.PROJECT_DETAILS) {
+                    ProjectDetailsBlock(
+                        project = project,
+                        textPrimaryColor = textPrimaryColor,
+                        onAction = { projectDialog = it },
+                        onNotesChange = { notes ->
+                            onEvent(ThingsCategoryListEvent.UpdateProject(project.copy(notes = notes, modificationDate = System.currentTimeMillis())))
+                        },
+                        modifier = Modifier
+                            .padding(horizontal = ThingsSpacing.S)
+                            .graphicsLayer { alpha = headerScrollAlpha * globalDimAlpha }
                     )
                 }
             }
@@ -1513,6 +1557,25 @@ fun ThingsCategoryListPanel(
                 showBatchDeleteConfirm = false
                 onEvent(ThingsCategoryListEvent.BatchDeleteTasks)
             }
+        )
+    }
+
+    if (project != null && projectDialog != null) {
+        ProjectDialogs(
+            project = project,
+            openDialog = projectDialog,
+            onClose = { projectDialog = null },
+            allTasks = state.allTasks,
+            projects = projects,
+            areas = areasState,
+            allSavedTags = allSavedTags,
+            allSavedTagObjects = allSavedTagObjects,
+            onNewTagCreated = { name, parentId -> onEvent(ThingsCategoryListEvent.CreateTag(name, parentId)) },
+            onDeleteTag = { tag -> onEvent(ThingsCategoryListEvent.DeleteTag(tag)) },
+            onUpdateTag = { tag -> onEvent(ThingsCategoryListEvent.UpdateTag(tag)) },
+            onUpdateTagsOrder = { tags -> onEvent(ThingsCategoryListEvent.UpdateTagsOrder(tags)) },
+            onUpdateProject = { onEvent(ThingsCategoryListEvent.UpdateProject(it)) },
+            onCompleteProject = { onEvent(ThingsCategoryListEvent.CompleteProject(it)) }
         )
     }
 

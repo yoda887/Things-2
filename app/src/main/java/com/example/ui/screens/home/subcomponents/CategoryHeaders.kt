@@ -1,5 +1,11 @@
 package com.example.ui.screens.home.subcomponents
 
+import com.example.ui.theme.AppIcons
+import com.example.ui.components.ThingsMenuDivider
+import androidx.compose.material.icons.filled.Share
+import androidx.compose.material.icons.filled.ContentCopy
+import androidx.compose.material.icons.automirrored.filled.ArrowForward
+import androidx.compose.material.icons.outlined.CheckCircle
 import com.example.R
 import androidx.compose.ui.res.pluralStringResource
 import androidx.compose.ui.res.stringResource
@@ -65,6 +71,7 @@ fun MainCategoryHeader(
     onDeleteProject: (Item) -> Unit = {},
     onDeleteArea: (Area) -> Unit = {},
     onAddHeading: () -> Unit = {},
+    onProjectAction: (ProjectAction) -> Unit = {},
     modifier: Modifier = Modifier
 ) {
     val headerEmojiFontSize = ThingsTheme.type.heroEmoji.fontSize
@@ -201,8 +208,10 @@ fun MainCategoryHeader(
                 )
             }
             ActiveScreen.PROJECT_DETAIL -> {
-                val completedCount = tasks.count { it.item.projectId == project?.id && it.item.isCompleted }
-                val totalCount = tasks.count { it.item.projectId == project?.id }
+                // Завершённый проект — кольцо полное, даже если задач в нём нет
+                val projectDone = project != null && (project.isCompleted || project.status == Item.STATUS_CANCELLED)
+                val totalCount = tasks.count { it.item.projectId == project?.id }.let { if (projectDone) maxOf(it, 1) else it }
+                val completedCount = if (projectDone) totalCount else tasks.count { it.item.projectId == project?.id && it.item.isCompleted }
                 // Иконка проекта (ProgressArc) окрашена в синий цвет и выровнена по верхнему краю заголовка с компенсационным отступом
                 ProjectProgressArc(
                     completed = completedCount,
@@ -254,14 +263,30 @@ fun MainCategoryHeader(
                                 expanded = showOptionsMenu,
                                 onDismissRequest = { showOptionsMenu = false }
                             ) {
+                                // Пункты и их порядок — как в меню опций проекта Things
+                                fun action(a: ProjectAction) {
+                                    showOptionsMenu = false
+                                    onProjectAction(a)
+                                }
+                                if (project?.isCompleted != true) {
+                                    ThingsMenuItem(stringResource(R.string.project_complete), Icons.Outlined.CheckCircle, onClick = { action(ProjectAction.COMPLETE) })
+                                }
+                                ThingsMenuItem(stringResource(R.string.batch_action_when), AppIcons.Upcoming, onClick = { action(ProjectAction.WHEN) })
+                                ThingsMenuItem(stringResource(R.string.batch_action_set_tags), AppIcons.Tag, onClick = { action(ProjectAction.TAGS) })
+                                ThingsMenuItem(stringResource(R.string.batch_action_set_deadline), AppIcons.Deadline, onClick = { action(ProjectAction.DEADLINE) })
                                 ThingsMenuItem(stringResource(R.string.ui_add_heading), Icons.Default.Add, onClick = {
                                     showOptionsMenu = false
                                     onAddHeading()
                                 })
+                                ThingsMenuDivider()
+                                ThingsMenuItem(stringResource(R.string.batch_action_move), Icons.AutoMirrored.Filled.ArrowForward, onClick = { action(ProjectAction.MOVE) })
+                                ThingsMenuItem(stringResource(R.string.batch_action_duplicate), Icons.Default.ContentCopy, onClick = { action(ProjectAction.DUPLICATE) })
                                 ThingsMenuItem(stringResource(R.string.ui_delete_project), Icons.Default.Delete, destructive = true, onClick = {
                                     showOptionsMenu = false
                                     showDeleteConfirmDialog = true
                                 })
+                                ThingsMenuDivider()
+                                ThingsMenuItem(stringResource(R.string.batch_action_share), Icons.Default.Share, onClick = { action(ProjectAction.SHARE) })
                             }
                         }
                     }

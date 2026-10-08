@@ -164,4 +164,11 @@
     <string name="cd_save">Save</string>
     <string name="untitled_task">Untitled To-Do</string>
     <string name="sync_error_unknown">Unknown sync error</string>
+    <string name="move_no_area">No Area</string>
+    <string name="project_complete">Complete Project</string>
+    <string name="project_complete_title">Complete Project?</string>
+    <plurals name="project_complete_message_tasks">
+        <item quantity="one">The project “%1$s” has %2$d open to-do. It will be marked as completed too.</item>
+        <item quantity="other">The project “%1$s” has %2$d open to-dos. They will be marked as completed too.</item>
+    </plurals>
 </resources>

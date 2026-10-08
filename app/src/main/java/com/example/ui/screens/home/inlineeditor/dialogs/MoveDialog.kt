@@ -51,6 +51,7 @@ import com.example.ui.theme.dimens
  * [ИЗМЕНЕНИЕ]: Диалог выбора назначения перемещения ("Move") для задачи.
  * Стиль полностью унифицирован с ThingsTagDialog, включая цвета, размеры, круглый крестик.
  * Список содержит "Inbox", "No project", далее разделитель, проекты без области и проекты, разбитые по областям.
+ * С [areasOnly] — для перемещения самого проекта: только «Без области» и области, без «Входящих» и проектов.
  */
 @Composable
 fun ThingsMoveDialog(
@@ -61,7 +62,8 @@ fun ThingsMoveDialog(
     areas: List<Area>,
     allTasks: List<ItemWithChecklist>,
     onMove: (projectId: String?, areaId: String?, moveToInbox: Boolean) -> Unit,
-    onDismissRequest: () -> Unit
+    onDismissRequest: () -> Unit,
+    areasOnly: Boolean = false
 ) {
     Dialog(
         onDismissRequest = onDismissRequest,
@@ -150,7 +152,7 @@ fun ThingsMoveDialog(
                         verticalArrangement = Arrangement.spacedBy(ThingsSpacing.XXS)
                     ) {
                         // 1. Inbox Option
-                        item {
+                        if (!areasOnly) item {
                             val isSelected = currentProjectId == null && currentAreaId == null && currentIsInbox
                             MoveDialogRow(
                                 title = stringResource(R.string.category_inbox),
@@ -167,7 +169,7 @@ fun ThingsMoveDialog(
                         item {
                             val isSelected = currentProjectId == null && currentAreaId == null && !currentIsInbox
                             MoveDialogRow(
-                                title = stringResource(R.string.move_no_project),
+                                title = stringResource(if (areasOnly) R.string.move_no_area else R.string.move_no_project),
                                 icon = Icons.Default.Block,
                                 iconColor = ThingsTheme.colors.overlayContentSecondary,
                                 isSelected = isSelected,
@@ -190,7 +192,7 @@ fun ThingsMoveDialog(
                         val projectsWithNoArea = projects.filter { it.areaId.isNullOrBlank() }
 
                         // 3. Projects without Area
-                        if (projectsWithNoArea.isNotEmpty()) {
+                        if (!areasOnly && projectsWithNoArea.isNotEmpty()) {
                             items(projectsWithNoArea, key = { "proj_no_area_${it.id}" }) { project ->
                                 val isSelected = currentProjectId == project.id
                                 val projectTasks = allTasks.filter { it.item.projectId == project.id }
@@ -238,7 +240,7 @@ fun ThingsMoveDialog(
                             }
 
                             // Projects belonging to this Area
-                            val areaProjects = projects.filter { it.areaId == area.id }
+                            val areaProjects = if (areasOnly) emptyList() else projects.filter { it.areaId == area.id }
                             items(areaProjects, key = { "proj_${area.id}_${it.id}" }) { project ->
                                 val isSelected = currentProjectId == project.id
                                 val projectTasks = allTasks.filter { it.item.projectId == project.id }

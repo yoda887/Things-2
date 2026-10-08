@@ -86,6 +86,9 @@ object TaskListKeys {
     /** Заголовок экрана */
     const val MAIN_HEADER = "main_header"
 
+    /** Свойства проекта под заголовком: теги, «Когда», дедлайн, заметки */
+    const val PROJECT_DETAILS = "project_details"
+
     /** Заголовок вечерней секции экрана «Сегодня» */
     const val EVENING_HEADER = "evening_header"
 
@@ -745,6 +748,10 @@ sealed interface ThingsCategoryListEvent {
     data class ReorderTasks(val items: List<Item>) : ThingsCategoryListEvent
     // Удаление проекта и области
     data class DeleteProject(val project: Item) : ThingsCategoryListEvent
+    /** Сохранить изменённый проект: заметки, «Когда», дедлайн, теги, область. */
+    data class UpdateProject(val project: Item) : ThingsCategoryListEvent
+    data class CompleteProject(val project: Item) : ThingsCategoryListEvent
+    data class DuplicateProject(val project: Item) : ThingsCategoryListEvent
     data class DeleteArea(val area: Area) : ThingsCategoryListEvent
 
     // Заголовки проекта
