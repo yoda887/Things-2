@@ -1,5 +1,6 @@
 package com.example.ui.screens.home.subcomponents
 
+import com.example.ui.theme.ThingsStroke
 import androidx.compose.material.icons.filled.RemoveDone
 import androidx.compose.material.icons.filled.DoneAll
 import androidx.compose.material.icons.filled.Add
@@ -236,7 +237,7 @@ fun CategoryListTopAppBar(
             .drawWithContent {
                 drawContent()
                 if (dividerAlpha > 0f) {
-                    val strokeWidth = 1.dp.toPx()
+                    val strokeWidth = ThingsStroke.THIN.toPx()
                     val y = size.height - strokeWidth / 2
                     drawLine(
                         color = textSecondaryColor.copy(alpha = dividerAlpha),
@@ -282,8 +283,7 @@ private fun CategoryTopAppBarTitleContent(
                 Text(
                     text = stringResource(R.string.category_today),
                     style = ThingsTheme.type.topAppBarTitle,
-                    color = textPrimaryColor,
-                    fontWeight = FontWeight.SemiBold
+                    color = textPrimaryColor
                 )
             }
             ActiveScreen.INBOX -> {
@@ -297,8 +297,7 @@ private fun CategoryTopAppBarTitleContent(
                 Text(
                     text = stringResource(R.string.category_inbox),
                     style = ThingsTheme.type.topAppBarTitle,
-                    color = textPrimaryColor,
-                    fontWeight = FontWeight.SemiBold
+                    color = textPrimaryColor
                 )
             }
             ActiveScreen.UPCOMING -> {
@@ -312,8 +311,7 @@ private fun CategoryTopAppBarTitleContent(
                 Text(
                     text = stringResource(R.string.category_upcoming),
                     style = ThingsTheme.type.topAppBarTitle,
-                    color = textPrimaryColor,
-                    fontWeight = FontWeight.SemiBold
+                    color = textPrimaryColor
                 )
             }
             ActiveScreen.ANYTIME -> {
@@ -327,8 +325,7 @@ private fun CategoryTopAppBarTitleContent(
                 Text(
                     text = stringResource(R.string.category_anytime),
                     style = ThingsTheme.type.topAppBarTitle,
-                    color = textPrimaryColor,
-                    fontWeight = FontWeight.SemiBold
+                    color = textPrimaryColor
                 )
             }
             ActiveScreen.SOMEDAY -> {
@@ -342,8 +339,7 @@ private fun CategoryTopAppBarTitleContent(
                 Text(
                     text = stringResource(R.string.category_someday),
                     style = ThingsTheme.type.topAppBarTitle,
-                    color = textPrimaryColor,
-                    fontWeight = FontWeight.SemiBold
+                    color = textPrimaryColor
                 )
             }
             ActiveScreen.LOGBOOK -> {
@@ -357,8 +353,7 @@ private fun CategoryTopAppBarTitleContent(
                 Text(
                     text = stringResource(R.string.category_logbook),
                     style = ThingsTheme.type.topAppBarTitle,
-                    color = textPrimaryColor,
-                    fontWeight = FontWeight.SemiBold
+                    color = textPrimaryColor
                 )
             }
             ActiveScreen.PROJECT_DETAIL -> {
@@ -375,7 +370,6 @@ private fun CategoryTopAppBarTitleContent(
                     text = project?.name ?: stringResource(R.string.fallback_project),
                     style = ThingsTheme.type.topAppBarTitle,
                     color = textPrimaryColor,
-                    fontWeight = FontWeight.SemiBold,
                     maxLines = 1,
                     overflow = TextOverflow.Ellipsis
                 )
@@ -392,7 +386,6 @@ private fun CategoryTopAppBarTitleContent(
                     text = area?.title ?: stringResource(R.string.fallback_area),
                     style = ThingsTheme.type.topAppBarTitle,
                     color = textPrimaryColor,
-                    fontWeight = FontWeight.SemiBold,
                     maxLines = 1,
                     overflow = TextOverflow.Ellipsis
                 )
@@ -409,7 +402,6 @@ private fun CategoryTopAppBarTitleContent(
                     text = tag?.title ?: stringResource(R.string.fallback_tag),
                     style = ThingsTheme.type.topAppBarTitle,
                     color = textPrimaryColor,
-                    fontWeight = FontWeight.SemiBold,
                     maxLines = 1,
                     overflow = TextOverflow.Ellipsis
                 )
@@ -425,8 +417,7 @@ private fun CategoryTopAppBarTitleContent(
                 Text(
                     text = stringResource(R.string.cd_search),
                     style = ThingsTheme.type.topAppBarTitle,
-                    color = textPrimaryColor,
-                    fontWeight = FontWeight.SemiBold
+                    color = textPrimaryColor
                 )
             }
             else -> {}

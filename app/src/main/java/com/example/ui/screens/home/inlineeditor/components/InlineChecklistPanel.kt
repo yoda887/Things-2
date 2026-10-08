@@ -1,5 +1,7 @@
 package com.example.ui.screens.home.inlineeditor.components
 
+import com.example.ui.theme.ThingsElevation
+import com.example.ui.theme.ThingsSpacing
 import com.example.ui.theme.ThingsTheme
 import android.view.HapticFeedbackConstants
 import androidx.compose.animation.*
@@ -82,6 +84,10 @@ import kotlinx.coroutines.launch
 import kotlin.math.PI
 import kotlin.math.abs
 
+// Скругление подсветки пункта и отступ строки чек-листа
+private val CHECKLIST_ROW_CORNER = 4.dp
+private val CHECKLIST_START_PADDING = 24.dp
+
 private const val ROW_SETTLE_MS = 160L
 private const val ROW_LIFT_MS = 130
 private const val HANDLE_HIDE_MS = 180
@@ -146,7 +152,7 @@ fun InlineChecklistPanel(
     val clipExtraPx = with(density) { (clipEnd - highlightMargin).toPx() }
     // Подсветка, фон и тень поднятой строки — без этого запаса справа
     val rowShape = remember(clipExtraPx, density) {
-        val corner = with(density) { 4.dp.toPx() }
+        val corner = with(density) { CHECKLIST_ROW_CORNER.toPx() }
         GenericShape { size, _ ->
             addRoundRect(RoundRect(0f, 0f, size.width - clipExtraPx, size.height, CornerRadius(corner)))
         }
@@ -267,7 +273,7 @@ fun InlineChecklistPanel(
         }
     }
     // Серая (правка) и голубая (перетаскивание) подсветка — по строке: чуть левее кружка и чуть правее ручки ≡
-    val cornerPx = with(density) { 4.dp.toPx() }
+    val cornerPx = with(density) { CHECKLIST_ROW_CORNER.toPx() }
 
     // Перетаскивание за ≡. Пока палец держит строку, порядок строк живёт в dragOrder, а в чек-лист
     // уходит после отпускания. dragRawOffset — смещение пальца от места поднятой строки,
@@ -385,7 +391,7 @@ fun InlineChecklistPanel(
         id != null && (id == focusedId || id == draggingId || id == settlingId || id in movingIds)
     val displayRows = dragOrder?.mapNotNull { id -> rows.firstOrNull { it.id == id } } ?: rows
 
-    val startPadding = 24.dp
+    val startPadding = CHECKLIST_START_PADDING
 
     AnimatedVisibility(
         visible = showPanel,
@@ -404,7 +410,7 @@ fun InlineChecklistPanel(
         Column(
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(start = startPadding - highlightMargin, top = 8.dp)
+                .padding(start = startPadding - highlightMargin, top = ThingsSpacing.S)
                 // Любое касание панели, кроме смахивания и нажатия на саму кнопку, укатывает кнопку удаления
                 .pointerInput(Unit) {
                     awaitEachGesture {
@@ -479,7 +485,7 @@ fun InlineChecklistPanel(
                             .graphicsLayer {
                                 translationY = if (draggingId == item.id) dragShownOffset.floatValue
                                 else placementOffset.value
-                                shadowElevation = 6.dp.toPx() * lift
+                                shadowElevation = ThingsElevation.FAB.toPx() * lift
                                 shape = rowShape
                                 // Сжатие при отметке — к середине строки (без запаса справа)
                                 scaleX = press.value

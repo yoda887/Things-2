@@ -1,5 +1,7 @@
 package com.example.ui.screens.home.subcomponents
 
+import com.example.ui.theme.dimens
+import com.example.ui.theme.ThingsSpacing
 import com.example.ui.theme.ThingsIconSize
 import com.example.ui.theme.ThingsAlpha
 import androidx.compose.foundation.background
@@ -42,11 +44,11 @@ fun SmartListRow(
             .fillMaxWidth()
             .clip(ThingsTheme.shapes.chipShape)
             .clickable { onClick() }
-            .padding(vertical = 6.dp, horizontal = 6.dp),
+            .padding(vertical = ThingsSpacing.XS_PLUS, horizontal = ThingsSpacing.XS_PLUS),
         verticalAlignment = Alignment.CenterVertically
     ) {
         Icon(icon, contentDescription = title, tint = iconColor, modifier = Modifier.size(ThingsIconSize.L))
-        Spacer(modifier = Modifier.width(7.dp))
+        Spacer(modifier = Modifier.width(MaterialTheme.dimens.homeRowIconTextGap))
         Text(title, style = ThingsTheme.type.listTitle.copy(color = textPrimaryColor), modifier = Modifier.weight(1f))
         
         if (count > 0) {
@@ -61,7 +63,7 @@ fun SmartListRow(
                     modifier = Modifier
                         .clip(ThingsTheme.shapes.chipShape)
                         .background(iconColor.copy(alpha = ThingsAlpha.SUBTLE))
-                        .padding(horizontal = 8.dp, vertical = 2.dp)
+                        .padding(horizontal = ThingsSpacing.S, vertical = ThingsSpacing.XXS)
                 ) {
                     Text(
                         count.toString(),

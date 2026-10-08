@@ -1,5 +1,7 @@
 package com.example.ui.screens.home.subcomponents
 
+import com.example.ui.theme.ThingsStroke
+import com.example.ui.theme.ThingsSpacing
 import com.example.ui.theme.ThingsIconSize
 import com.example.ui.theme.ThingsAlpha
 import com.example.R
@@ -35,6 +37,9 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import com.example.ui.theme.ThingsTheme
 import com.example.ui.theme.dimens
+
+private val CHEVRON_GAP = 3.dp
+private val SEARCH_EMPTY_VERTICAL_PADDING = 56.dp
 
 private val TAG_BADGE_ICON_SIZE = 11.dp
 private val EMPTY_STATE_ICON_SIZE = 60.dp
@@ -89,7 +94,7 @@ fun SearchQueryField(
             .height(SEARCH_FIELD_HEIGHT)
             .clip(ThingsTheme.shapes.capsuleShape)
             .background(fieldBackground)
-            .padding(horizontal = 14.dp)
+            .padding(horizontal = ThingsSpacing.M_PLUS)
     ) {
         Icon(
             imageVector = Icons.Default.Search,
@@ -97,7 +102,7 @@ fun SearchQueryField(
             tint = textSecondaryColor,
             modifier = Modifier.size(ThingsIconSize.M)
         )
-        Spacer(modifier = Modifier.width(8.dp))
+        Spacer(modifier = Modifier.width(ThingsSpacing.S))
         Box(modifier = Modifier.weight(1f)) {
             if (query.isEmpty()) {
                 Text(
@@ -125,7 +130,7 @@ fun SearchQueryField(
             Box(
                 contentAlignment = Alignment.Center,
                 modifier = Modifier
-                    .size(18.dp)
+                    .size(ThingsIconSize.S)
                     .clip(CircleShape)
                     .background(textSecondaryColor.copy(alpha = ThingsAlpha.HALF))
                     .clickable {
@@ -161,7 +166,7 @@ fun SearchSectionHeader(
     Column(
         modifier = modifier
             .fillMaxWidth()
-            .padding(top = SEARCH_SECTION_TOP_SPACING, bottom = 6.dp)
+            .padding(top = SEARCH_SECTION_TOP_SPACING, bottom = ThingsSpacing.XS_PLUS)
     ) {
         Row(
             modifier = Modifier
@@ -171,8 +176,8 @@ fun SearchSectionHeader(
                 .padding(
                     start = MaterialTheme.dimens.taskRowStartPadding,
                     end = MaterialTheme.dimens.taskRowEndPadding,
-                    top = 4.dp,
-                    bottom = 6.dp
+                    top = ThingsSpacing.XS,
+                    bottom = ThingsSpacing.XS_PLUS
                 ),
             verticalAlignment = Alignment.CenterVertically
         ) {
@@ -191,7 +196,7 @@ fun SearchSectionHeader(
                 modifier = Modifier.weight(1f, fill = false)
             )
             if (showChevron) {
-                Spacer(modifier = Modifier.width(3.dp))
+                Spacer(modifier = Modifier.width(CHEVRON_GAP))
                 Icon(
                     imageVector = Icons.AutoMirrored.Filled.KeyboardArrowRight,
                     contentDescription = null,
@@ -207,7 +212,7 @@ fun SearchSectionHeader(
                     start = MaterialTheme.dimens.taskRowStartPadding,
                     end = MaterialTheme.dimens.taskRowEndPadding
                 )
-                .height(0.6.dp)
+                .height(ThingsStroke.DIVIDER)
                 .background(dividerColor)
         )
     }
@@ -227,7 +232,7 @@ fun SearchEntityRow(
     Row(
         modifier = modifier
             .fillMaxWidth()
-            .height(46.dp)
+            .height(MaterialTheme.dimens.rowHeight)
             .clip(ThingsTheme.shapes.rowShape)
             .clickable { onClick() }
             .padding(
@@ -245,15 +250,14 @@ fun SearchEntityRow(
         Spacer(modifier = Modifier.width(MaterialTheme.dimens.taskSpacingToTextDefault))
         Text(
             text = title,
-            style = ThingsTheme.type.taskTitle.copy(
-                color = textPrimaryColor,
-                fontWeight = FontWeight.Medium
+            style = ThingsTheme.type.listTitle.copy(
+                color = textPrimaryColor
             ),
             maxLines = 1,
             overflow = TextOverflow.Ellipsis,
             modifier = Modifier.weight(1f, fill = false)
         )
-        Spacer(modifier = Modifier.width(3.dp))
+        Spacer(modifier = Modifier.width(CHEVRON_GAP))
         Icon(
             imageVector = Icons.AutoMirrored.Filled.KeyboardArrowRight,
             contentDescription = null,
@@ -276,7 +280,7 @@ fun SearchEmptyState(
     Box(
         modifier = modifier
             .fillMaxWidth()
-            .padding(vertical = 56.dp),
+            .padding(vertical = SEARCH_EMPTY_VERTICAL_PADDING),
         contentAlignment = Alignment.Center
     ) {
         Column(horizontalAlignment = Alignment.CenterHorizontally) {
@@ -286,7 +290,7 @@ fun SearchEmptyState(
                 tint = textSecondaryColor.copy(alpha = ThingsAlpha.LOW),
                 modifier = Modifier.size(EMPTY_STATE_ICON_SIZE)
             )
-            Spacer(modifier = Modifier.height(12.dp))
+            Spacer(modifier = Modifier.height(ThingsSpacing.M))
             Text(
                 text = text,
                 color = textSecondaryColor,

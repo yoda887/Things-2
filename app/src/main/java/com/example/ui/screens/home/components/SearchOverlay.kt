@@ -1,5 +1,6 @@
 package com.example.ui.screens.home.components
 
+import com.example.ui.theme.ThingsStroke
 import com.example.R
 import androidx.compose.ui.res.stringResource
 import com.example.ui.theme.ThingsTheme
@@ -84,6 +85,12 @@ import com.example.ui.components.ProjectProgressArc
 import com.example.ui.components.HideTextSelectionHandles
 import com.example.ui.components.hideSoftKeyboardNow
 import com.example.ui.theme.*
+
+// Окно Quick Find: уход вниз при закрытии и тень карточки
+private val QuickFindDismissSlide = 110.dp
+private val QuickFindCardElevation = 12.dp
+/** Кнопка очистки запроса внутри поля */
+private val QuickFindClearBadgeSize = 18.dp
 
 private const val FOCUS_AFTER_OPEN_DELAY_MS = 110L
 private val CLEAR_BADGE_ICON_SIZE = 11.dp
@@ -415,7 +422,7 @@ fun ThingsSearchOverlay(
 
     // Карточка всегда раскладывается в своём итоговом месте, путь от источника к нему
     // целиком задаётся преобразованием слоя
-    val currentHorizontalMargin = 14.dp
+    val currentHorizontalMargin = MaterialTheme.dimens.quickFindCardMargin
     val density = LocalDensity.current
     // Радиус плавающей карточки — общий с Quick Add
     val morphFinalCornerRadius = ThingsTheme.shapes.floatingCard
@@ -423,7 +430,7 @@ fun ThingsSearchOverlay(
 
     // Высота шапки (поле ввода и ✕) в раскладке — нужна, чтобы содержимое шло сразу под несжатой шапкой
     var headerHeightPx by remember { mutableStateOf(0) }
-    val headerTopPaddingPx = with(density) { 20.dp.toPx() }
+    val headerTopPaddingPx = with(density) { MaterialTheme.dimens.quickFindCardPadding.toPx() }
     var layerTranslationX = 0f
     var layerTranslationY = 0f
     var layerScaleX = 1f
@@ -458,7 +465,7 @@ fun ThingsSearchOverlay(
             radiusY = radius / layerScaleY
         )
     }
-    val dismissSlidePx = with(density) { 110.dp.toPx() }
+    val dismissSlidePx = with(density) { QuickFindDismissSlide.toPx() }
     val dismissVal = dismissProgress.value.coerceIn(0f, 1f)
     val finalTranslationX = if (isMorphClosing) 0f else layerTranslationX
     val finalTranslationY = if (isMorphClosing) dismissVal * dismissSlidePx else layerTranslationY
@@ -477,25 +484,25 @@ fun ThingsSearchOverlay(
             }
         }
         else lerpF(MORPH_START_ALPHA, 1f, (progress / MORPH_FADE_IN_FRACTION).coerceIn(0f, 1f))
-    val currentElevation = 12.dp
+    val currentElevation = QuickFindCardElevation
 
     // Из поля стартового экрана поле окна в первом кадре занимает всю капсулу:
     // отступы от краёв карточки нарастают от 0.
     val fieldMorph = if (isMorphClosing) 1f else morphRaw.coerceAtLeast(0f)
     val innerHorizontalPadding = if (morphFromWideField && !isMorphClosing) {
-        androidx.compose.ui.unit.lerp(0.dp, 14.dp, fieldMorph.coerceAtMost(1f))
+        androidx.compose.ui.unit.lerp(ThingsSpacing.NONE, MaterialTheme.dimens.quickFindCardMargin, fieldMorph.coerceAtMost(1f))
     } else {
-        14.dp
+        MaterialTheme.dimens.quickFindCardMargin
     }
-    val innerTopPadding = 20.dp
+    val innerTopPadding = MaterialTheme.dimens.quickFindCardPadding
 
     val backdropAlpha = if (isMorphClosing) ((1f - dismissVal) * 0.45f).coerceIn(0f, 0.45f)
         else (morphRaw * 0.45f).coerceIn(0f, 0.45f)
     val closeButtonAlpha = if (isMorphClosing) (1f - dismissVal).coerceIn(0f, 1f)
         else (opacityProgress.value / 0.7f).coerceIn(0f, 1f)
     // Из поля стартового экрана ✕ раздвигается и отодвигает правый край поля
-    val closeButtonWidth = if (morphFromWideField && !isMorphClosing) androidx.compose.ui.unit.lerp(0.dp, 44.dp, fieldMorph.coerceAtMost(1f)) else 44.dp
-    val closeButtonSpacer = if (morphFromWideField && !isMorphClosing) androidx.compose.ui.unit.lerp(0.dp, 12.dp, fieldMorph.coerceAtMost(1f)) else 12.dp
+    val closeButtonWidth = if (morphFromWideField && !isMorphClosing) androidx.compose.ui.unit.lerp(ThingsSpacing.NONE, MaterialTheme.dimens.quickFindRowHeight, fieldMorph.coerceAtMost(1f)) else MaterialTheme.dimens.quickFindRowHeight
+    val closeButtonSpacer = if (morphFromWideField && !isMorphClosing) androidx.compose.ui.unit.lerp(ThingsSpacing.NONE, ThingsSpacing.M, fieldMorph.coerceAtMost(1f)) else ThingsSpacing.M
 
     Box(
         modifier = modifier
@@ -515,8 +522,8 @@ fun ThingsSearchOverlay(
             elevation = CardDefaults.cardElevation(defaultElevation = currentElevation),
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(start = currentHorizontalMargin, end = currentHorizontalMargin, top = 20.dp, bottom = 20.dp)
-                .widthIn(max = 480.dp)
+                .padding(start = currentHorizontalMargin, end = currentHorizontalMargin, top = MaterialTheme.dimens.quickFindCardPadding, bottom = MaterialTheme.dimens.quickFindCardPadding)
+                .widthIn(max = MaterialTheme.dimens.quickFindCardMaxWidth)
                 // Координаты до слоя — итоговое место карточки без учёта морфинга
                 .onGloballyPositioned {
                     val wasMeasured = cardBoundsInRoot != null
@@ -578,10 +585,10 @@ fun ThingsSearchOverlay(
                             verticalAlignment = Alignment.CenterVertically,
                             modifier = Modifier
                                 .weight(1f)
-                                .height(44.dp)
+                                .height(MaterialTheme.dimens.quickFindRowHeight)
                                 .clip(ThingsTheme.shapes.capsuleShape)
                                 .background(currentInputBg)
-                                .padding(horizontal = 14.dp)
+                                .padding(horizontal = MaterialTheme.dimens.quickFindCardMargin)
                         ) {
                             val currentIconTint = textSecondary
                             Icon(
@@ -590,7 +597,7 @@ fun ThingsSearchOverlay(
                                 tint = currentIconTint,
                                 modifier = Modifier.size(ThingsIconSize.M)
                             )
-                            Spacer(modifier = Modifier.width(8.dp))
+                            Spacer(modifier = Modifier.width(ThingsSpacing.S))
                             Box(modifier = Modifier.weight(1f)) {
                                 if (searchQuery.isEmpty()) {
                                     val currentTextTint = textSecondary.copy(alpha = ThingsAlpha.HINT)
@@ -625,7 +632,7 @@ fun ThingsSearchOverlay(
                                 Box(
                                     contentAlignment = Alignment.Center,
                                     modifier = Modifier
-                                        .size(18.dp)
+                                        .size(QuickFindClearBadgeSize)
                                         .clip(CircleShape)
                                         .background(textSecondary.copy(alpha = ThingsAlpha.HALF))
                                         .clickable { onSearchQueryChange("") }
@@ -646,7 +653,7 @@ fun ThingsSearchOverlay(
                             Box(
                                 contentAlignment = Alignment.Center,
                                 modifier = Modifier
-                                    .size(closeButtonWidth, 44.dp)
+                                    .size(closeButtonWidth, MaterialTheme.dimens.quickFindRowHeight)
                                     .graphicsLayer {
                                         alpha = closeButtonAlpha
                                     }
@@ -665,7 +672,7 @@ fun ThingsSearchOverlay(
                     }
                 }
 
-                Spacer(modifier = Modifier.height(16.dp))
+                Spacer(modifier = Modifier.height(ThingsSpacing.L))
 
                 // Контент: Либо "Recent", либо "Результаты поиска" (с плавным проявлением и микросдвигом)
                 Column(
@@ -681,7 +688,7 @@ fun ThingsSearchOverlay(
                                 translationY = shiftOnScreen / layerScaleY
                             }
                         }
-                        .padding(horizontal = 14.dp)
+                        .padding(horizontal = MaterialTheme.dimens.quickFindCardMargin)
                 ) {
                     if (searchQuery.isBlank()) {
                         // Валидация списка Recent: исключаем удаленные/помещенные в корзину задачи, проекты, области и теги,
@@ -725,12 +732,12 @@ fun ThingsSearchOverlay(
                                 text = stringResource(R.string.ui_recent),
                                 color = textSecondary,
                                 style = ThingsTheme.type.subheadMedium,
-                                modifier = Modifier.padding(start = 4.dp, bottom = 6.dp)
+                                modifier = Modifier.padding(start = ThingsSpacing.XS, bottom = MaterialTheme.dimens.quickFindSectionGap)
                             )
                             HorizontalDivider(
                                 color = dividerColor,
-                                thickness = 0.5.dp,
-                                modifier = Modifier.padding(bottom = 6.dp)
+                                thickness = ThingsStroke.HAIRLINE,
+                                modifier = Modifier.padding(bottom = MaterialTheme.dimens.quickFindSectionGap)
                             )
 
                             Column(
@@ -764,10 +771,10 @@ fun ThingsSearchOverlay(
                                 }
                             }
 
-                            Spacer(modifier = Modifier.height(24.dp))
+                            Spacer(modifier = Modifier.height(ThingsSpacing.XL))
                         } else {
                             // При пустой истории даем аккуратный отступ сверху
-                            Spacer(modifier = Modifier.height(18.dp))
+                            Spacer(modifier = Modifier.height(MaterialTheme.dimens.quickFindHintTop))
                         }
 
                         // Подпись внизу
@@ -779,7 +786,7 @@ fun ThingsSearchOverlay(
                             textAlign = TextAlign.Center,
                             modifier = Modifier
                                 .fillMaxWidth()
-                                .padding(bottom = 20.dp)
+                                .padding(bottom = MaterialTheme.dimens.quickFindCardPadding)
                         )
                     } else {
                         // РЕЖИМ 2: Экран результатов поиска
@@ -788,7 +795,7 @@ fun ThingsSearchOverlay(
                             Column(
                                 modifier = Modifier
                                     .fillMaxWidth()
-                                    .padding(vertical = 8.dp)
+                                    .padding(vertical = ThingsSpacing.S)
                             ) {
                                 ContinueSearchTaskRow(
                                     onClick = onContinueSearchClick,
@@ -802,8 +809,8 @@ fun ThingsSearchOverlay(
                             LazyColumn(
                                 modifier = Modifier
                                     .fillMaxWidth()
-                                    .heightIn(max = 350.dp)
-                                    .padding(bottom = 12.dp)
+                                    .heightIn(max = MaterialTheme.dimens.quickFindResultsMaxHeight)
+                                    .padding(bottom = ThingsSpacing.M)
                             ) {
                                 val visibleResults = searchResults.take(15)
                                 itemsIndexed(visibleResults) { index, result ->
@@ -814,8 +821,8 @@ fun ThingsSearchOverlay(
                                     if (isFirstTask) {
                                         HorizontalDivider(
                                             color = dividerColor,
-                                            thickness = 0.5.dp,
-                                            modifier = Modifier.padding(vertical = 6.dp)
+                                            thickness = ThingsStroke.HAIRLINE,
+                                            modifier = Modifier.padding(vertical = MaterialTheme.dimens.quickFindSectionGap)
                                         )
                                     }
 
@@ -841,7 +848,7 @@ fun ThingsSearchOverlay(
                                 // [ИЗМЕНЕНИЕ]: Отображаем кнопку "Continue Search" в конце прокручиваемого списка результатов поиска в качестве элемента, аналогичного задаче, если showContinueSearch — true
                                 if (showContinueSearch) {
                                     item {
-                                        Spacer(modifier = Modifier.height(4.dp))
+                                        Spacer(modifier = Modifier.height(ThingsSpacing.XS))
                                         ContinueSearchTaskRow(
                                             onClick = onContinueSearchClick,
                                             textPrimary = textPrimary,
@@ -871,10 +878,10 @@ fun ContinueSearchTaskRow(
         verticalAlignment = Alignment.CenterVertically,
         modifier = modifier
             .fillMaxWidth()
-            .height(44.dp)
+            .height(MaterialTheme.dimens.quickFindRowHeight)
             .clip(ThingsTheme.shapes.capsuleShape)
             .clickable(onClick = onClick)
-            .padding(start = 8.dp, end = 4.dp)
+            .padding(start = ThingsSpacing.S, end = ThingsSpacing.XS)
     ) {
         Box(
             modifier = Modifier.size(MaterialTheme.dimens.searchLeftColumnWidth),
@@ -890,9 +897,8 @@ fun ContinueSearchTaskRow(
         Spacer(modifier = Modifier.width(MaterialTheme.dimens.searchSpacingToText))
         Text(
             text = stringResource(R.string.ui_continue_search),
-            style = ThingsTheme.type.taskTitle.copy(
-                color = textPrimary,
-                fontWeight = FontWeight.SemiBold
+            style = ThingsTheme.type.listTitleStrong.copy(
+                color = textPrimary
             ),
             maxLines = 1,
             overflow = TextOverflow.Ellipsis,
@@ -913,10 +919,10 @@ fun RecentRow(
         verticalAlignment = Alignment.CenterVertically,
         modifier = Modifier
             .fillMaxWidth()
-            .height(44.dp)
+            .height(MaterialTheme.dimens.quickFindRowHeight)
             .clip(ThingsTheme.shapes.capsuleShape)
             .clickable(onClick = onClick)
-            .padding(start = 8.dp, end = 12.dp)
+            .padding(start = ThingsSpacing.S, end = ThingsSpacing.M)
     ) {
         Box(
             modifier = Modifier.size(MaterialTheme.dimens.searchLeftColumnWidth),
@@ -927,9 +933,8 @@ fun RecentRow(
         Spacer(modifier = Modifier.width(MaterialTheme.dimens.searchSpacingToText))
         Text(
             text = title,
-            style = ThingsTheme.type.taskTitle.copy(
-                color = textPrimary,
-                fontWeight = FontWeight.Medium
+            style = ThingsTheme.type.listTitle.copy(
+                color = textPrimary
             ),
             modifier = Modifier.weight(1f),
             maxLines = 1,
@@ -1004,11 +1009,11 @@ fun SearchResultRow(
             Row(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .height(44.dp)
+                    .height(MaterialTheme.dimens.quickFindRowHeight)
                     .clip(ThingsTheme.shapes.capsuleShape)
                     .background(rowBg)
                     .clickable { onProjectClick(result.project) }
-                    .padding(start = 8.dp, end = 12.dp),
+                    .padding(start = ThingsSpacing.S, end = ThingsSpacing.M),
                 verticalAlignment = Alignment.CenterVertically
             ) {
                 Box(
@@ -1019,15 +1024,14 @@ fun SearchResultRow(
                         completed = completedCount,
                         total = totalCount,
                         color = arcColor,
-                        modifier = Modifier.size(20.dp)
+                        modifier = Modifier.size(ThingsIconSize.M)
                     )
                 }
                 Spacer(modifier = Modifier.width(MaterialTheme.dimens.searchSpacingToText))
                 Text(
                     text = result.project.title,
-                    style = ThingsTheme.type.taskTitle.copy(
-                        color = textPrimary,
-                        fontWeight = FontWeight.Medium
+                    style = ThingsTheme.type.listTitle.copy(
+                        color = textPrimary
                     ),
                     modifier = Modifier.weight(1f),
                     maxLines = 1,
@@ -1058,7 +1062,7 @@ fun SearchResultRow(
                 verticalAlignment = Alignment.CenterVertically,
                 modifier = Modifier
                     .fillMaxWidth()
-                    .height(44.dp)
+                    .height(MaterialTheme.dimens.quickFindRowHeight)
                     .clip(ThingsTheme.shapes.capsuleShape)
                     .background(rowBg)
                     .clickable {
@@ -1070,7 +1074,7 @@ fun SearchResultRow(
                             else -> {}
                         }
                     }
-                    .padding(start = 8.dp, end = 12.dp)
+                    .padding(start = ThingsSpacing.S, end = ThingsSpacing.M)
             ) {
                 Box(
                     modifier = Modifier.size(MaterialTheme.dimens.searchLeftColumnWidth),
@@ -1138,9 +1142,8 @@ fun SearchResultRow(
 
                 Text(
                     text = title,
-                    style = ThingsTheme.type.taskTitle.copy(
-                        color = textPrimary,
-                        fontWeight = FontWeight.Medium
+                    style = ThingsTheme.type.listTitle.copy(
+                        color = textPrimary
                     ),
                     modifier = Modifier.weight(1f),
                     maxLines = 1,

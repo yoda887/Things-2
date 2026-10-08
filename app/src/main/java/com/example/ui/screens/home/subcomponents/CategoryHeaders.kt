@@ -41,6 +41,12 @@ import com.example.ui.screens.home.components.TaskListKeys
 import com.example.ui.screens.home.ActiveScreen
 import com.example.ui.theme.*
 
+// Отступы над подзаголовками: секция области, проекты/задачи области, день и месяц в «Планах»
+private val AREA_SECTION_TOP = 22.dp
+private val AREA_GROUP_TOP = 48.dp
+private val UPCOMING_DAY_TOP = 36.dp
+private val UPCOMING_MONTH_TOP = 40.dp
+
 private const val OPTIONS_ICON_ALPHA = 0.45f
 
 /**
@@ -121,11 +127,7 @@ fun MainCategoryHeader(
                 Spacer(modifier = Modifier.width((10 * scaleFactor).dp))
                 Text(
                     text = androidx.compose.ui.res.stringResource(com.example.R.string.category_today),
-                    style = TextStyle(
-                        fontSize = headerTitleFontSize,
-                        fontWeight = FontWeight.Bold,
-                        color = textPrimaryColor
-                    )
+                    style = ThingsTheme.type.largeTitle.copy(color = textPrimaryColor)
                 )
             }
             ActiveScreen.INBOX -> {
@@ -139,11 +141,7 @@ fun MainCategoryHeader(
                 Spacer(modifier = Modifier.width((10 * scaleFactor).dp))
                 Text(
                     text = androidx.compose.ui.res.stringResource(com.example.R.string.category_inbox),
-                    style = TextStyle(
-                        fontSize = headerTitleFontSize,
-                        fontWeight = FontWeight.Bold,
-                        color = textPrimaryColor
-                    )
+                    style = ThingsTheme.type.largeTitle.copy(color = textPrimaryColor)
                 )
             }
             ActiveScreen.UPCOMING -> {
@@ -157,11 +155,7 @@ fun MainCategoryHeader(
                 Spacer(modifier = Modifier.width((10 * scaleFactor).dp))
                 Text(
                     text = androidx.compose.ui.res.stringResource(com.example.R.string.category_upcoming),
-                    style = TextStyle(
-                        fontSize = headerTitleFontSize,
-                        fontWeight = FontWeight.Bold,
-                        color = textPrimaryColor
-                    )
+                    style = ThingsTheme.type.largeTitle.copy(color = textPrimaryColor)
                 )
             }
             ActiveScreen.ANYTIME -> {
@@ -175,11 +169,7 @@ fun MainCategoryHeader(
                 Spacer(modifier = Modifier.width((10 * scaleFactor).dp))
                 Text(
                     text = androidx.compose.ui.res.stringResource(com.example.R.string.category_anytime),
-                    style = TextStyle(
-                        fontSize = headerTitleFontSize,
-                        fontWeight = FontWeight.Bold,
-                        color = textPrimaryColor
-                    )
+                    style = ThingsTheme.type.largeTitle.copy(color = textPrimaryColor)
                 )
             }
             ActiveScreen.SOMEDAY -> {
@@ -193,11 +183,7 @@ fun MainCategoryHeader(
                 Spacer(modifier = Modifier.width((10 * scaleFactor).dp))
                 Text(
                     text = androidx.compose.ui.res.stringResource(com.example.R.string.category_someday),
-                    style = TextStyle(
-                        fontSize = headerTitleFontSize,
-                        fontWeight = FontWeight.Bold,
-                        color = textPrimaryColor
-                    )
+                    style = ThingsTheme.type.largeTitle.copy(color = textPrimaryColor)
                 )
             }
             ActiveScreen.LOGBOOK -> {
@@ -211,11 +197,7 @@ fun MainCategoryHeader(
                 Spacer(modifier = Modifier.width((10 * scaleFactor).dp))
                 Text(
                     text = androidx.compose.ui.res.stringResource(com.example.R.string.category_logbook),
-                    style = TextStyle(
-                        fontSize = headerTitleFontSize,
-                        fontWeight = FontWeight.Bold,
-                        color = textPrimaryColor
-                    )
+                    style = ThingsTheme.type.largeTitle.copy(color = textPrimaryColor)
                 )
             }
             ActiveScreen.PROJECT_DETAIL -> {
@@ -231,7 +213,7 @@ fun MainCategoryHeader(
                         .align(Alignment.Top)
                         .padding(top = (4 * scaleFactor).dp)
                 )
-                Spacer(modifier = Modifier.width(12.dp))
+                Spacer(modifier = Modifier.width(ThingsSpacing.M))
 
                 val projectNameText = project?.name ?: stringResource(R.string.fallback_project)
                 val projectTitleAnnotated = remember(projectNameText) {
@@ -288,11 +270,7 @@ fun MainCategoryHeader(
                 Text(
                     text = projectTitleAnnotated,
                     inlineContent = inlineContentMap,
-                    style = TextStyle(
-                        fontSize = headerTitleFontSize,
-                        fontWeight = FontWeight.Bold,
-                        color = textPrimaryColor
-                    ),
+                    style = ThingsTheme.type.largeTitle.copy(color = textPrimaryColor),
                     modifier = Modifier.weight(1f, fill = false)
                 )
             }
@@ -306,7 +284,7 @@ fun MainCategoryHeader(
                         .align(Alignment.Top)
                         .padding(top = (2 * scaleFactor).dp)
                 )
-                Spacer(modifier = Modifier.width(12.dp))
+                Spacer(modifier = Modifier.width(ThingsSpacing.M))
 
                 val areaTitleText = area?.title ?: stringResource(R.string.fallback_area)
                 val areaTitleAnnotated = remember(areaTitleText) {
@@ -361,11 +339,7 @@ fun MainCategoryHeader(
                 Text(
                     text = areaTitleAnnotated,
                     inlineContent = areaInlineContentMap,
-                    style = TextStyle(
-                        fontSize = headerTitleFontSize,
-                        fontWeight = FontWeight.Bold,
-                        color = textPrimaryColor
-                    ),
+                    style = ThingsTheme.type.largeTitle.copy(color = textPrimaryColor),
                     modifier = Modifier.weight(1f, fill = false)
                 )
             }
@@ -379,14 +353,10 @@ fun MainCategoryHeader(
                         .align(Alignment.Top)
                         .padding(top = (2 * scaleFactor).dp)
                 )
-                Spacer(modifier = Modifier.width(12.dp))
+                Spacer(modifier = Modifier.width(ThingsSpacing.M))
                 Text(
                     text = tag?.title ?: stringResource(R.string.fallback_tag),
-                    style = TextStyle(
-                        fontSize = headerTitleFontSize,
-                        fontWeight = FontWeight.Bold,
-                        color = textPrimaryColor
-                    ),
+                    style = ThingsTheme.type.largeTitle.copy(color = textPrimaryColor),
                     modifier = Modifier.weight(1f, fill = false)
                 )
             }
@@ -400,11 +370,7 @@ fun MainCategoryHeader(
                 Spacer(modifier = Modifier.width((10 * scaleFactor).dp))
                 Text(
                     text = stringResource(R.string.cd_search),
-                    style = TextStyle(
-                        fontSize = headerTitleFontSize,
-                        fontWeight = FontWeight.Bold,
-                        color = textPrimaryColor
-                    )
+                    style = ThingsTheme.type.largeTitle.copy(color = textPrimaryColor)
                 )
             }
             else -> {}
@@ -431,17 +397,17 @@ fun SubCategoryHeader(
             modifier = modifier
                 .fillMaxWidth()
                 .graphicsLayer { alpha = dimAlpha }
-                .padding(top = 22.dp, bottom = 10.dp)
+                .padding(top = AREA_SECTION_TOP, bottom = ThingsSpacing.S_PLUS)
         ) {
             Text(
                 text = stringResource(R.string.ui_projects),
                 style = ThingsTheme.type.overline.copy(color = textSecondaryColor.copy(alpha = ThingsAlpha.HALF)),
-                modifier = Modifier.padding(bottom = 6.dp)
+                modifier = Modifier.padding(bottom = ThingsSpacing.XS_PLUS)
             )
             Box(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .height(1.dp)
+                    .height(ThingsStroke.THIN)
                     .background(dividerColor)
             )
         }
@@ -450,17 +416,17 @@ fun SubCategoryHeader(
             modifier = modifier
                 .fillMaxWidth()
                 .graphicsLayer { alpha = dimAlpha }
-                .padding(top = 22.dp, bottom = 10.dp)
+                .padding(top = AREA_SECTION_TOP, bottom = ThingsSpacing.S_PLUS)
         ) {
             Text(
                 text = stringResource(R.string.ui_tasks),
                 style = ThingsTheme.type.overline.copy(color = textSecondaryColor.copy(alpha = ThingsAlpha.HALF)),
-                modifier = Modifier.padding(bottom = 6.dp)
+                modifier = Modifier.padding(bottom = ThingsSpacing.XS_PLUS)
             )
             Box(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .height(1.dp)
+                    .height(ThingsStroke.THIN)
                     .background(dividerColor)
             )
         }
@@ -469,10 +435,10 @@ fun SubCategoryHeader(
             modifier = modifier
                 .fillMaxWidth()
                 .graphicsLayer { alpha = dimAlpha }
-                .padding(top = 48.dp, bottom = 6.dp)
+                .padding(top = AREA_GROUP_TOP, bottom = ThingsSpacing.XS_PLUS)
         ) {
             Row(
-                modifier = Modifier.padding(start = MaterialTheme.dimens.taskRowStartPadding, bottom = 6.dp),
+                modifier = Modifier.padding(start = MaterialTheme.dimens.taskRowStartPadding, bottom = ThingsSpacing.XS_PLUS),
                 verticalAlignment = Alignment.CenterVertically
             ) {
                 Box(
@@ -485,7 +451,7 @@ fun SubCategoryHeader(
                         imageVector = AppIcons.Upcoming,
                         contentDescription = null,
                         tint = Color.Unspecified,
-                        modifier = Modifier.requiredSize(20.dp)
+                        modifier = Modifier.requiredSize(ThingsIconSize.M)
                     )
                 }
                 Spacer(modifier = Modifier.width(MaterialTheme.dimens.taskSpacingToTextDefault))
@@ -503,7 +469,7 @@ fun SubCategoryHeader(
                         start = MaterialTheme.dimens.taskRowStartPadding,
                         end = MaterialTheme.dimens.taskRowEndPadding
                     )
-                    .height(0.6.dp)
+                    .height(ThingsStroke.DIVIDER)
                     .background(dividerColor)
             )
         }
@@ -512,10 +478,10 @@ fun SubCategoryHeader(
             modifier = modifier
                 .fillMaxWidth()
                 .graphicsLayer { alpha = dimAlpha }
-                .padding(top = 48.dp, bottom = 6.dp)
+                .padding(top = AREA_GROUP_TOP, bottom = ThingsSpacing.XS_PLUS)
         ) {
             Row(
-                modifier = Modifier.padding(start = MaterialTheme.dimens.taskRowStartPadding, bottom = 6.dp),
+                modifier = Modifier.padding(start = MaterialTheme.dimens.taskRowStartPadding, bottom = ThingsSpacing.XS_PLUS),
                 verticalAlignment = Alignment.CenterVertically
             ) {
                 Box(
@@ -526,7 +492,7 @@ fun SubCategoryHeader(
                         imageVector = AppIcons.Someday,
                         contentDescription = null,
                         tint = Color.Unspecified,
-                        modifier = Modifier.requiredSize(20.dp)
+                        modifier = Modifier.requiredSize(ThingsIconSize.M)
                     )
                 }
                 Spacer(modifier = Modifier.width(MaterialTheme.dimens.taskSpacingToTextDefault))
@@ -544,7 +510,7 @@ fun SubCategoryHeader(
                         start = MaterialTheme.dimens.taskRowStartPadding,
                         end = MaterialTheme.dimens.taskRowEndPadding
                     )
-                    .height(0.6.dp)
+                    .height(ThingsStroke.DIVIDER)
                     .background(dividerColor)
             )
         }
@@ -553,7 +519,7 @@ fun SubCategoryHeader(
             modifier = modifier
                 .fillMaxWidth()
                 .graphicsLayer { alpha = dimAlpha }
-                .padding(start = MaterialTheme.dimens.taskRowStartPadding, top = 20.dp, bottom = 12.dp)
+                .padding(start = MaterialTheme.dimens.taskRowStartPadding, top = ThingsSpacing.L_PLUS, bottom = ThingsSpacing.M)
         ) {
             Text(
                 text = androidx.compose.ui.res.stringResource(
@@ -577,11 +543,11 @@ fun SubCategoryHeader(
                 .graphicsLayer { alpha = dimAlpha }
         ) {
             // Свободное пространство сверху увеличено на 16.dp по запросу пользователя.
-            Spacer(modifier = Modifier.height(MaterialTheme.dimens.eveningSectionSpacing + 16.dp))
+            Spacer(modifier = Modifier.height(MaterialTheme.dimens.eveningSectionSpacing + ThingsSpacing.L))
             Row(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .padding(vertical = 6.dp),
+                    .padding(vertical = ThingsSpacing.XS_PLUS),
                 verticalAlignment = Alignment.CenterVertically
             ) {
                 // Иконка "Вечер" с автоматическим подбором цвета и размера
@@ -590,7 +556,7 @@ fun SubCategoryHeader(
                     contentDescription = stringResource(R.string.category_this_evening),
                     tint = Color.Unspecified,
                     modifier = Modifier
-                        .padding(end = 8.dp)
+                        .padding(end = ThingsSpacing.S)
                         .size(ThingsIconSize.M)
                 )
                 Text(
@@ -603,11 +569,11 @@ fun SubCategoryHeader(
             Box(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .height(1.dp)
+                    .height(ThingsStroke.THIN)
                     .background(dividerColor)
             )
             // Свободное пространство в 8.dp снизу от разделительной линии по запросу пользователя.
-            Spacer(modifier = Modifier.height(8.dp))
+            Spacer(modifier = Modifier.height(ThingsSpacing.S))
         }
     }
 }
@@ -627,35 +593,30 @@ fun UpcomingDateHeader(
     Row(
         modifier = modifier
             .fillMaxWidth()
-            .padding(top = 36.dp, bottom = 10.dp),
+            .padding(top = UPCOMING_DAY_TOP, bottom = ThingsSpacing.S_PLUS),
         verticalAlignment = Alignment.Bottom
     ) {
         Text(
             text = dayOfMonth,
-            style = ThingsTheme.type.largeTitle.copy(
-                fontWeight = FontWeight.Bold,
-                color = textPrimaryColor
-            )
+            style = ThingsTheme.type.largeTitle.copy(color = textPrimaryColor)
         )
-        Spacer(modifier = Modifier.width(8.dp))
+        Spacer(modifier = Modifier.width(ThingsSpacing.S))
         Column(
             modifier = Modifier
                 .weight(1f)
                 .align(Alignment.Bottom)
-                .padding(bottom = 4.dp)
+                .padding(bottom = ThingsSpacing.XS)
         ) {
             Box(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .height(0.6.dp)
+                    .height(ThingsStroke.DIVIDER)
                     .background(dividerColor)
             )
-            Spacer(modifier = Modifier.height(4.dp))
+            Spacer(modifier = Modifier.height(ThingsSpacing.XS))
             Text(
                 text = dayOfWeekLabel,
-                style = ThingsTheme.type.headline.copy(
-                    fontWeight = FontWeight.Bold,
-                    color = textSecondaryColor.copy(alpha = ThingsAlpha.HALF)
+                style = ThingsTheme.type.headlineStrong.copy(color = textSecondaryColor.copy(alpha = ThingsAlpha.HALF)
                 )
             )
         }
@@ -675,20 +636,18 @@ fun UpcomingMonthHeader(
     Column(
         modifier = modifier
             .fillMaxWidth()
-            .padding(top = 40.dp, bottom = 8.dp)
+            .padding(top = UPCOMING_MONTH_TOP, bottom = ThingsSpacing.S)
     ) {
         Box(
             modifier = Modifier
                 .fillMaxWidth()
-                .height(0.6.dp)
+                .height(ThingsStroke.DIVIDER)
                 .background(dividerColor)
         )
-        Spacer(modifier = Modifier.height(6.dp))
+        Spacer(modifier = Modifier.height(ThingsSpacing.XS_PLUS))
         Text(
             text = monthLabel,
-            style = ThingsTheme.type.headline.copy(
-                fontWeight = FontWeight.Bold,
-                color = textPrimaryColor
+            style = ThingsTheme.type.headlineStrong.copy(color = textPrimaryColor
             )
         )
     }

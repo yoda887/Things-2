@@ -29,7 +29,7 @@ fun ThingsDropdownMenu(
     expanded: Boolean,
     onDismissRequest: () -> Unit,
     modifier: Modifier = Modifier,
-    offset: DpOffset = DpOffset(0.dp, 0.dp),
+    offset: DpOffset = DpOffset.Zero,
     content: @Composable ColumnScope.() -> Unit
 ) {
     val surface = ThingsTheme.colors.overlaySurface
@@ -67,7 +67,7 @@ fun ThingsMenuItem(
         text = {
             Text(
                 text = text,
-                style = ThingsTheme.type.menuItem.copy(fontWeight = FontWeight.Normal),
+                style = ThingsTheme.type.menuItem,
                 color = textColor.copy(alpha = alpha)
             )
         },

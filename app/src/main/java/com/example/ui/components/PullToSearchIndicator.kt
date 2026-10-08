@@ -22,6 +22,22 @@ import androidx.compose.ui.unit.dp
 import com.example.ui.theme.ThingsTheme
 import com.example.ui.theme.*
 
+// Оттяжка списка к Quick Find: предел хода, высота индикатора и отступ
+private val PULL_MAX_OFFSET = 150.dp
+private val PULL_INDICATOR_HEIGHT = 36.dp
+private val PULL_INDICATOR_TOP = 20.dp
+private val PULL_INDICATOR_BOX_WIDTH = 60.dp
+private val PULL_INDICATOR_BOX_HEIGHT = 140.dp
+// Геометрия круга с лупой и стрелки (на fontScale)
+private val PULL_ARROW_BASE_GAP = 10.dp
+private val PULL_ARROW_OVERPULL_GAP = 30.dp
+private val PULL_STROKE = 3.dp
+private val PULL_LENS_RADIUS = 12.5.dp
+private val PULL_HANDLE_LENGTH = 10.dp
+private val PULL_LENS_OFFSET = 1.5.dp
+private val PULL_ARROW_HALF_WIDTH = 13.dp
+private val PULL_ARROW_DEPTH = 8.75.dp
+
 // Круг индикатора: центр внутри холста и радиус. Нужны и для отрисовки,
 // и чтобы Quick Find вырастал ровно из этого круга
 val PULL_TO_SEARCH_CIRCLE_CENTER_Y = 32.dp
@@ -32,12 +48,12 @@ val PULL_TO_SEARCH_CIRCLE_RADIUS = 26.dp
  * Индикатор сразу выезжает 1:1, а вытянувшись, плавно смещается к центру зоны растяжения.
  */
 fun pullToSearchIndicatorTranslationY(pullOffset: Float, density: Density): Float = with(density) {
-    val maxOffsetPx = 150.dp.toPx()
-    val indicatorHeightPx = 36.dp.toPx()
+    val maxOffsetPx = PULL_MAX_OFFSET.toPx()
+    val indicatorHeightPx = PULL_INDICATOR_HEIGHT.toPx()
     if (pullOffset <= indicatorHeightPx) {
         pullOffset
     } else {
-        val centeredY = pullOffset / 2f + indicatorHeightPx / 2f + 20.dp.toPx()
+        val centeredY = pullOffset / 2f + indicatorHeightPx / 2f + PULL_INDICATOR_TOP.toPx()
         val excessProgress = ((pullOffset - indicatorHeightPx) / (maxOffsetPx - indicatorHeightPx)).coerceIn(0f, 1f)
         pullOffset + (centeredY - pullOffset) * excessProgress
     }
@@ -59,7 +75,7 @@ fun PullToSearchIndicator(
     modifier: Modifier = Modifier
 ) {
     val density = androidx.compose.ui.platform.LocalDensity.current
-    val maxOffsetPx = with(density) { 150.dp.toPx() }
+    val maxOffsetPx = with(density) { PULL_MAX_OFFSET.toPx() }
 
     val progress = if (thresholdPx > 0f) (pullOffset / thresholdPx).coerceIn(0f, 1f) else 0f
     val isTriggered = pullOffset >= thresholdPx
@@ -85,7 +101,7 @@ fun PullToSearchIndicator(
 
         Canvas(
             modifier = modifier
-                .size(width = 60.dp, height = 140.dp)
+                .size(width = PULL_INDICATOR_BOX_WIDTH, height = PULL_INDICATOR_BOX_HEIGHT)
                 .graphicsLayer {
                     scaleX = 1f
                     scaleY = 1f
@@ -103,11 +119,11 @@ fun PullToSearchIndicator(
             // В эталоне до порога срабатывания зазор стабилен (~10 dp),
             // а при перетяжке за порог круг демпфируется, и стрелка отъезжает вниз (до ~40 dp).
             val circleBottomY = circleCenterY + circleRadius
-            val baseGap = (10.dp * fontScale).toPx()
+            val baseGap = (PULL_ARROW_BASE_GAP * fontScale).toPx()
             val excessOffset = (pullOffset - thresholdPx).coerceAtLeast(0f)
             val maxExcess = (maxOffsetPx - thresholdPx).coerceAtLeast(1f)
             val stretchProgress = (excessOffset / maxExcess).coerceIn(0f, 1f)
-            val dynamicGap = baseGap + (30.dp * fontScale).toPx() * stretchProgress
+            val dynamicGap = baseGap + (PULL_ARROW_OVERPULL_GAP * fontScale).toPx() * stretchProgress
             val arrowBaseY = circleBottomY + dynamicGap
 
             // --- 1. КРУГ ---
@@ -120,14 +136,14 @@ fun PullToSearchIndicator(
             // --- 2. ЛУПА (PullToSearchLoupe) ---
             // Диаметр линзы ~25 dp (радиус 12.5 dp), обводка 3 dp, ручка 3 dp длиной 10 dp.
             // Фиксированный масштаб 100% на протяжении всей протяжки (без масштабирования).
-            val ringStrokeWidth = (3.dp * fontScale).toPx()
-            val handleStrokeWidth = (3.dp * fontScale).toPx()
-            val lensRadius = (12.5.dp * fontScale).toPx()
-            val fullHandleLength = (10.dp * fontScale).toPx()
+            val ringStrokeWidth = (PULL_STROKE * fontScale).toPx()
+            val handleStrokeWidth = (PULL_STROKE * fontScale).toPx()
+            val lensRadius = (PULL_LENS_RADIUS * fontScale).toPx()
+            val fullHandleLength = (PULL_HANDLE_LENGTH * fontScale).toPx()
 
             // Центр линзы слегка смещен от центра круга вверх-влево для балансировки ручки под 45°
-            val magnifierCenterX = circleCenterX - (1.5.dp * fontScale).toPx()
-            val magnifierCenterY = circleCenterY - (1.5.dp * fontScale).toPx()
+            val magnifierCenterX = circleCenterX - (PULL_LENS_OFFSET * fontScale).toPx()
+            val magnifierCenterY = circleCenterY - (PULL_LENS_OFFSET * fontScale).toPx()
 
             // Геометрия аутентичного смыкания Things:
             // Края дуги кольца лупы смыкаются слева вверху (-135° / 10:30), а не возле ручки (45°).
@@ -172,12 +188,12 @@ fun PullToSearchIndicator(
             }
 
             // --- 3. СТРЕЛКА (PullArrow) ---
-            val arrowStrokeWidth = (3.dp * fontScale).toPx()
+            val arrowStrokeWidth = (PULL_STROKE * fontScale).toPx()
             val arrowCenterX = size.width / 2f
             // Округление смещения до целого пикселя
             val pixelArrowY = kotlin.math.round(arrowBaseY)
-            val halfWidthPx = (13.dp * fontScale).toPx()
-            val arrowDepthPx = (8.75.dp * fontScale).toPx()
+            val halfWidthPx = (PULL_ARROW_HALF_WIDTH * fontScale).toPx()
+            val arrowDepthPx = (PULL_ARROW_DEPTH * fontScale).toPx()
 
             val arrowPath = Path().apply {
                 moveTo(arrowCenterX - halfWidthPx, pixelArrowY)

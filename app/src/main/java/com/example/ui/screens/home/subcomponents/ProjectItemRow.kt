@@ -29,6 +29,10 @@ import com.example.data.model.ItemWithChecklist
 import com.example.ui.components.ProjectProgressArc
 import com.example.ui.theme.dimens
 
+// Название → значок заметок → шеврон
+private val NOTES_ICON_GAP = 5.dp
+private val CHEVRON_GAP = 3.dp
+
 private val NOTES_ICON_SIZE = 14.dp
 
 /**
@@ -58,7 +62,7 @@ fun ProjectItemRow(
     Row(
         modifier = modifier
             .fillMaxWidth()
-            .height(46.dp)
+            .height(MaterialTheme.dimens.rowHeight)
             .clip(ThingsTheme.shapes.rowShape)
             .clickable { onProjectClick(project) }
             .graphicsLayer { alpha = dimAlpha }
@@ -79,7 +83,7 @@ fun ProjectItemRow(
                 completed = completedCount,
                 total = totalCount,
                 color = ThingsTheme.colors.project,
-                modifier = Modifier.requiredSize(20.dp)
+                modifier = Modifier.requiredSize(ThingsIconSize.M)
             )
         }
         Spacer(modifier = Modifier.width(MaterialTheme.dimens.taskSpacingToTextDefault))
@@ -90,15 +94,14 @@ fun ProjectItemRow(
             Text(
                 text = project.title,
                 style = ThingsTheme.type.listTitle.copy(
-                    color = textPrimaryColor,
-                    fontWeight = FontWeight.Medium
+                    color = textPrimaryColor
                 ),
                 maxLines = 1,
                 overflow = TextOverflow.Ellipsis,
                 modifier = Modifier.weight(1f, fill = false)
             )
             if (project.notes.isNotBlank()) {
-                Spacer(modifier = Modifier.width(5.dp))
+                Spacer(modifier = Modifier.width(NOTES_ICON_GAP))
                 Icon(
                     imageVector = Icons.Outlined.Description,
                     contentDescription = stringResource(R.string.cd_has_notes),
@@ -106,7 +109,7 @@ fun ProjectItemRow(
                     modifier = Modifier.size(NOTES_ICON_SIZE)
                 )
             }
-            Spacer(modifier = Modifier.width(3.dp))
+            Spacer(modifier = Modifier.width(CHEVRON_GAP))
             Icon(
                 imageVector = Icons.AutoMirrored.Filled.KeyboardArrowRight,
                 contentDescription = null,

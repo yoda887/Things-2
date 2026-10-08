@@ -71,6 +71,8 @@ import androidx.navigation.compose.rememberNavController
 import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.toRoute
 
+private val FAB_SIZE = 56.dp
+
 private const val FAB_SHOW_FADE_MS = 220
 private const val FAB_HIDE_FADE_MS = 180
 // Переход из Quick Find к найденной задаче — экран проступает под гаснущим окном
@@ -400,7 +402,7 @@ fun ThingsHomeScreen(viewModel: ThingsViewModel = hiltViewModel()) {
                     isEditorOpen = { inlineExpandedTaskId != null },
                     // Отступы 16 dp от краёв (Material Design 3) задаёт слот Scaffold
                     modifier = Modifier
-                        .size(56.dp)
+                        .size(FAB_SIZE)
                         .testTag("add_task_fab")
                 )
             }
@@ -951,7 +953,7 @@ fun ThingsHomeScreen(viewModel: ThingsViewModel = hiltViewModel()) {
                         ),
                         modifier = Modifier
                             .align(Alignment.BottomCenter)
-                            .padding(bottom = 32.dp, start = 16.dp, end = 16.dp)
+                            .padding(bottom = ThingsSpacing.XXL, start = ThingsSpacing.L, end = ThingsSpacing.L)
                             .fillMaxWidth()
                             .wrapContentHeight()
                     ) {
@@ -959,8 +961,8 @@ fun ThingsHomeScreen(viewModel: ThingsViewModel = hiltViewModel()) {
                             modifier = Modifier
                                 .fillMaxWidth()
                                 .background(ThingsTheme.colors.overlaySurface, shape = ThingsTheme.shapes.menuShape)
-                                .border(1.dp, ThingsTheme.colors.overlayContent.copy(alpha = ThingsAlpha.FAINT), ThingsTheme.shapes.menuShape)
-                                .padding(vertical = 4.dp)
+                                .border(ThingsStroke.THIN, ThingsTheme.colors.overlayContent.copy(alpha = ThingsAlpha.FAINT), ThingsTheme.shapes.menuShape)
+                                .padding(vertical = ThingsSpacing.XS)
                         ) {
                             // 1. New To-Do
                             Row(
@@ -970,13 +972,13 @@ fun ThingsHomeScreen(viewModel: ThingsViewModel = hiltViewModel()) {
                                         showFabMenu = false
                                         showAddDialog = true
                                     }
-                                    .padding(16.dp),
+                                    .padding(ThingsSpacing.L),
                                 verticalAlignment = Alignment.Top
                             ) {
                                 Box(
                                     modifier = Modifier
-                                        .size(24.dp)
-                                        .padding(top = 2.dp),
+                                        .size(ThingsIconSize.XL)
+                                        .padding(top = ThingsSpacing.XXS),
                                     contentAlignment = Alignment.Center
                                 ) {
                                     Icon(
@@ -986,13 +988,13 @@ fun ThingsHomeScreen(viewModel: ThingsViewModel = hiltViewModel()) {
                                         modifier = Modifier.size(ThingsIconSize.M)
                                     )
                                 }
-                                Spacer(modifier = Modifier.width(16.dp))
+                                Spacer(modifier = Modifier.width(ThingsSpacing.L))
                                 Column {
                                     Text(
                                         text = stringResource(R.string.ui_new_to_do),
                                         style = ThingsTheme.type.menuItem.copy(color = ThingsTheme.colors.overlayContent)
                                     )
-                                    Spacer(modifier = Modifier.height(2.dp))
+                                    Spacer(modifier = Modifier.height(ThingsSpacing.XXS))
                                     Text(
                                         text = stringResource(R.string.ui_quickly_add_a_to_do_to),
                                         style = ThingsTheme.type.bodySmall.copy(
@@ -1005,8 +1007,8 @@ fun ThingsHomeScreen(viewModel: ThingsViewModel = hiltViewModel()) {
                             Spacer(
                                 modifier = Modifier
                                     .fillMaxWidth()
-                                    .padding(horizontal = 16.dp)
-                                    .height(0.5.dp)
+                                    .padding(horizontal = ThingsSpacing.L)
+                                    .height(ThingsStroke.HAIRLINE)
                                     .background(ThingsTheme.colors.overlayContent.copy(alpha = ThingsAlpha.FAINT))
                             )
 
@@ -1026,13 +1028,13 @@ fun ThingsHomeScreen(viewModel: ThingsViewModel = hiltViewModel()) {
                                         viewModel.updateProject(newProject)
                                         editingProjectId = newProjectId
                                     }
-                                    .padding(16.dp),
+                                    .padding(ThingsSpacing.L),
                                 verticalAlignment = Alignment.Top
                             ) {
                                 Box(
                                     modifier = Modifier
-                                        .size(24.dp)
-                                        .padding(top = 2.dp),
+                                        .size(ThingsIconSize.XL)
+                                        .padding(top = ThingsSpacing.XXS),
                                     contentAlignment = Alignment.Center
                                 ) {
                                     Icon(
@@ -1042,13 +1044,13 @@ fun ThingsHomeScreen(viewModel: ThingsViewModel = hiltViewModel()) {
                                         modifier = Modifier.size(ThingsIconSize.M)
                                     )
                                 }
-                                Spacer(modifier = Modifier.width(16.dp))
+                                Spacer(modifier = Modifier.width(ThingsSpacing.L))
                                 Column {
                                     Text(
                                         text = stringResource(R.string.ui_new_project),
                                         style = ThingsTheme.type.menuItem.copy(color = ThingsTheme.colors.overlayContent)
                                     )
-                                    Spacer(modifier = Modifier.height(2.dp))
+                                    Spacer(modifier = Modifier.height(ThingsSpacing.XXS))
                                     Text(
                                         text = stringResource(R.string.ui_define_a_goal_then_work_towards),
                                         style = ThingsTheme.type.bodySmall.copy(
@@ -1061,8 +1063,8 @@ fun ThingsHomeScreen(viewModel: ThingsViewModel = hiltViewModel()) {
                             Spacer(
                                 modifier = Modifier
                                     .fillMaxWidth()
-                                    .padding(horizontal = 16.dp)
-                                    .height(0.5.dp)
+                                    .padding(horizontal = ThingsSpacing.L)
+                                    .height(ThingsStroke.HAIRLINE)
                                     .background(ThingsTheme.colors.overlayContent.copy(alpha = ThingsAlpha.FAINT))
                             )
 
@@ -1080,13 +1082,13 @@ fun ThingsHomeScreen(viewModel: ThingsViewModel = hiltViewModel()) {
                                         viewModel.updateArea(newArea)
                                         editingAreaId = newAreaId
                                     }
-                                    .padding(16.dp),
+                                    .padding(ThingsSpacing.L),
                                 verticalAlignment = Alignment.Top
                             ) {
                                 Box(
                                     modifier = Modifier
-                                        .size(24.dp)
-                                        .padding(top = 2.dp),
+                                        .size(ThingsIconSize.XL)
+                                        .padding(top = ThingsSpacing.XXS),
                                     contentAlignment = Alignment.Center
                                 ) {
                                     Icon(
@@ -1096,13 +1098,13 @@ fun ThingsHomeScreen(viewModel: ThingsViewModel = hiltViewModel()) {
                                         modifier = Modifier.size(ThingsIconSize.M)
                                     )
                                 }
-                                Spacer(modifier = Modifier.width(16.dp))
+                                Spacer(modifier = Modifier.width(ThingsSpacing.L))
                                 Column {
                                     Text(
                                         text = stringResource(R.string.ui_new_area),
                                         style = ThingsTheme.type.menuItem.copy(color = ThingsTheme.colors.overlayContent)
                                     )
-                                    Spacer(modifier = Modifier.height(2.dp))
+                                    Spacer(modifier = Modifier.height(ThingsSpacing.XXS))
                                     Text(
                                         text = stringResource(R.string.ui_group_projects_and_to_dos_based),
                                         style = ThingsTheme.type.bodySmall.copy(

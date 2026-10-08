@@ -1,5 +1,6 @@
 package com.example.ui.screens.home.subcomponents
 
+import com.example.ui.theme.ThingsSpacing
 import com.example.ui.theme.ThingsIconSize
 import com.example.ui.components.ThingsDropdownMenu
 import com.example.ui.components.ThingsMenuItem
@@ -39,6 +40,9 @@ import androidx.compose.ui.unit.dp
 import com.example.R
 import com.example.ui.theme.AppIcons
 import com.example.ui.theme.dimens
+
+/** Радиус круглого отклика на нажатие кнопки панели */
+private val ICON_RIPPLE_RADIUS = 24.dp
 
 private const val DISABLED_ICON_ALPHA = 0.35f
 
@@ -88,12 +92,12 @@ fun BatchActionToolbar(
                 .height(MaterialTheme.dimens.floatingToolbarHeight)
                 .clip(ThingsTheme.shapes.toolbarShape)
                 .background(ThingsTheme.colors.overlaySurface)
-                .padding(horizontal = 16.dp),
+                .padding(horizontal = ThingsSpacing.L),
             contentAlignment = Alignment.Center
         ) {
             Row(
                 verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.spacedBy(16.dp)
+                horizontalArrangement = Arrangement.spacedBy(ThingsSpacing.L)
             ) {
                 // 1. When (Календарь)
                 CapsuleToolbarIconButton(
@@ -190,12 +194,12 @@ private fun CapsuleToolbarIconButton(
 ) {
     Box(
         modifier = modifier
-            .sizeIn(minWidth = 48.dp, minHeight = 48.dp)
+            .sizeIn(minWidth = MaterialTheme.dimens.minTouchTarget, minHeight = MaterialTheme.dimens.minTouchTarget)
             .clip(CircleShape)
             .clickable(
                 enabled = enabled,
                 interactionSource = remember { MutableInteractionSource() },
-                indication = rememberRipple(bounded = false, radius = 24.dp)
+                indication = rememberRipple(bounded = false, radius = ICON_RIPPLE_RADIUS)
             ) {
                 onClick()
             },

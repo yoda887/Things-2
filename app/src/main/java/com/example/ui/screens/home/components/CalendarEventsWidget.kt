@@ -25,6 +25,12 @@ import java.util.Date
 import java.util.Locale
 import kotlin.math.abs
 
+// Полоска цвета календаря у события и колонка времени
+private val EVENT_BAR_WIDTH = 3.dp
+private val EVENT_BAR_HEIGHT = 11.dp
+private val EVENT_BAR_GAP = 1.dp
+private val EVENT_TIME_COLUMN = 72.dp
+
 /**
  * CalendarEventsWidget: Отображает карточку со списком синхронизованных событий календаря.
  * 
@@ -60,11 +66,11 @@ fun CalendarEventsWidget(
         modifier = modifier.fillMaxWidth(),
         shape = ThingsTheme.shapes.chipShape,
         colors = CardDefaults.cardColors(containerColor = cardBackground),
-        elevation = CardDefaults.cardElevation(defaultElevation = 0.dp)
+        elevation = CardDefaults.cardElevation(defaultElevation = ThingsElevation.NONE)
     ) {
         Column(
-            modifier = Modifier.padding(10.dp),
-            verticalArrangement = Arrangement.spacedBy(2.dp)
+            modifier = Modifier.padding(ThingsSpacing.S_PLUS),
+            verticalArrangement = Arrangement.spacedBy(ThingsSpacing.XXS)
         ) {
             // Ограничиваем список максимум пятью событиями во избежание чрезмерного растягивания карточки
             events.take(10).forEach { event ->
@@ -109,20 +115,20 @@ fun CalendarEventsWidget(
                 }
 
                 Row(
-                    modifier = Modifier.fillMaxWidth().padding(vertical = 2.dp),
+                    modifier = Modifier.fillMaxWidth().padding(vertical = ThingsSpacing.XXS),
                     verticalAlignment = Alignment.CenterVertically
                 ) {
                     // Вертикальный цветной индикатор слева (маркер календаря)
                     if (!hasTime) {
                         Box(
                             modifier = Modifier
-                                .width(3.dp)
-                                .height(11.dp)
+                                .width(EVENT_BAR_WIDTH)
+                                .height(EVENT_BAR_HEIGHT)
                                 .clip(ThingsTheme.shapes.indicatorShape)
                                 // Используем markerColor вместо baseColor, чтобы прошедшие события тускнели
                                 .background(baseColor) 
                         )
-                        Spacer(modifier = Modifier.width(1.dp))
+                        Spacer(modifier = Modifier.width(EVENT_BAR_GAP))
                     }
 
                     // Если событие привязано к конкретному времени дня, отображаем его форматированную метку
@@ -136,7 +142,7 @@ fun CalendarEventsWidget(
                             style = ThingsTheme.type.subhead.copy(color = timeColor),
                         )
                     } 
-                    Spacer(modifier = Modifier.width(4.dp))
+                    Spacer(modifier = Modifier.width(ThingsSpacing.XS))
 
                     // Заголовок события с длинным текстом обрезается троеточием во избежание разрывов разметки
                     Text(
@@ -202,13 +208,13 @@ fun UpcomingCalendarEventRow(
         Row(
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(vertical = 2.dp, horizontal = 4.dp),
+                .padding(vertical = ThingsSpacing.XXS, horizontal = ThingsSpacing.XS),
             verticalAlignment = Alignment.CenterVertically
         ) {
             Text(
                 text = datePrefix,
                 style = ThingsTheme.type.subhead.copy(color = baseColor),
-                modifier = Modifier.padding(end = 8.dp)
+                modifier = Modifier.padding(end = ThingsSpacing.S)
             )
             Text(
                 text = event.title,
@@ -224,7 +230,7 @@ fun UpcomingCalendarEventRow(
     Row(
         modifier = Modifier
             .fillMaxWidth()
-            .padding(vertical = 2.dp, horizontal = 4.dp),
+            .padding(vertical = ThingsSpacing.XXS, horizontal = ThingsSpacing.XS),
         verticalAlignment = Alignment.CenterVertically
     ) {
         if (hasTime) {
@@ -234,9 +240,9 @@ fun UpcomingCalendarEventRow(
             Text(
                 text = timeString,
                 style = ThingsTheme.type.subhead.copy(color = baseColor),
-                modifier = Modifier.width(72.dp)
+                modifier = Modifier.width(EVENT_TIME_COLUMN)
             )
-            Spacer(modifier = Modifier.width(4.dp))
+            Spacer(modifier = Modifier.width(ThingsSpacing.XS))
             Text(
                 text = event.title,
                 style = ThingsTheme.type.subhead.copy(color = textPrimaryColor),
@@ -248,12 +254,12 @@ fun UpcomingCalendarEventRow(
             // All-day событие отображается зеленой вертикальной линией и текстом без времени
             Box(
                 modifier = Modifier
-                    .width(3.dp)
-                    .height(11.dp)
+                    .width(EVENT_BAR_WIDTH)
+                    .height(EVENT_BAR_HEIGHT)
                     .clip(ThingsTheme.shapes.indicatorShape)
                     .background(baseColor)
             )
-            Spacer(modifier = Modifier.width(8.dp))
+            Spacer(modifier = Modifier.width(ThingsSpacing.S))
             Text(
                 text = event.title,
                 style = ThingsTheme.type.subhead.copy(color = textPrimaryColor),

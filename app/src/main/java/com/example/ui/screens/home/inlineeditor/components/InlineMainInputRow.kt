@@ -1,5 +1,6 @@
 package com.example.ui.screens.home.inlineeditor.components
 
+import com.example.ui.theme.ThingsSpacing
 import com.example.ui.theme.ThingsAlpha
 import com.example.R
 import androidx.compose.ui.res.stringResource
@@ -37,6 +38,12 @@ import com.example.ui.theme.dimens
 import com.example.ui.components.HideTextSelectionHandles
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.focus.focusRequester
+
+/** Минимальная высота заметок, пока под ними нет чек-листа */
+private val NOTES_MIN_HEIGHT = 44.dp
+
+// Свёрнутая строка: отступ сверху до названия (как taskCollapsedTopPadding)
+private val COLLAPSED_TOP_PADDING = 13.dp
 
 /**
  * @param showCursor при `false` курсор и его маркер не рисуются, но поле остаётся в фокусе.
@@ -108,7 +115,7 @@ private fun InlineMainInputRowContent(
     val notesFontSize = ThingsTheme.type.editorNotes.fontSize
     val subFontSize = ThingsTheme.type.taskSubtitle.fontSize
 
-    val titleSpacing = 8.dp
+    val titleSpacing = ThingsSpacing.S
     val configuration = androidx.compose.ui.platform.LocalConfiguration.current
     val density = LocalDensity.current
     val expandedStartPadding = MaterialTheme.dimens.taskEditorExpandedStartPadding
@@ -133,7 +140,7 @@ private fun InlineMainInputRowContent(
             onCheckedChange = { onCheckboxClick() },
             size = MaterialTheme.dimens.mainCheckboxSize,
             uncheckedColor = ThingsTheme.colors.checkboxBorder,
-            modifier = Modifier.padding(end = titleSpacing, top = 2.dp)
+            modifier = Modifier.padding(end = titleSpacing, top = ThingsSpacing.XXS)
         )
 
         // Title and Notes Fields (Always black text on white background)
@@ -212,12 +219,12 @@ private fun InlineMainInputRowContent(
                 // что раскрытие панели чек-листа (expandVertically), чтобы строка под ними не дёргалась.
                 val notesFontDp = with(LocalDensity.current) { notesFontSize.toDp() }
                 val notesMinHeight by animateDpAsState(
-                    targetValue = if (checklistBelow) 0.dp else 44.dp,
+                    targetValue = if (checklistBelow) ThingsSpacing.NONE else NOTES_MIN_HEIGHT,
                     animationSpec = spring(stiffness = Spring.StiffnessMediumLow),
                     label = "notes_min_height"
                 )
                 val notesGapBelow by animateDpAsState(
-                    targetValue = if (checklistBelow) notesFontDp * 0.725f else 0.dp,
+                    targetValue = if (checklistBelow) notesFontDp * 0.725f else ThingsSpacing.NONE,
                     animationSpec = spring(stiffness = Spring.StiffnessMediumLow),
                     label = "notes_gap_below"
                 )
@@ -298,8 +305,8 @@ fun TitleSubtitleLayout(
         // --- Calculate Y offsets ---
         // At progress = 0, we want the content (simulatedFullHeight) to be vertically centered in 46.dp.
         // The Layout itself is placed at topPadding (13.dp) inside the Card.
-        val cardHeightPx = 46.dp.toPx()
-        val topPaddingPx = 13.dp.toPx()
+        val cardHeightPx = com.example.ui.screens.home.inlineeditor.EDITOR_COLLAPSED_HEIGHT.toPx()
+        val topPaddingPx = COLLAPSED_TOP_PADDING.toPx()
         
         // Absolute Y position in the Card where the content should start:
         val targetAbsoluteY = (cardHeightPx - simulatedFullHeight.toFloat()) / 2f

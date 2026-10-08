@@ -48,6 +48,11 @@ import com.example.ui.theme.*
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 
+// Колонка чекбокса от края строки; кружок выбора и зазор кольца отметки
+private val ROW_CHECKBOX_COLUMN_START = 10.dp
+private val SELECTION_CIRCLE_SIZE = 28.dp
+private val SELECTION_RING_GAP = 2.dp
+
 private const val COMPLETION_FILL_MS = 350
 // Подсветка найденной задачи — по кадрам эталона Things 3
 private const val FOUND_GLOW_IN_MS = 160
@@ -159,7 +164,7 @@ fun TaskItemRow(
     )
 
     val scale by androidx.compose.animation.core.animateFloatAsState(if (isDragging) 1.04f else 1.0f)
-    val elevation by androidx.compose.animation.core.animateDpAsState(if (isDragging) 6.dp else 0.dp)
+    val elevation by androidx.compose.animation.core.animateDpAsState(if (isDragging) ThingsElevation.FAB else ThingsElevation.NONE)
 
     // Найденная в Quick Find задача, по кадрам эталона Things 3: после паузы строка за 160 мс
     // заливается светло-жёлтым и почти сразу (60 мс) вырастает до 1.05 вместе со всем содержимым,
@@ -235,7 +240,7 @@ fun TaskItemRow(
     Row(
         modifier = modifier
             .fillMaxWidth()
-            .height(46.dp)
+            .height(MaterialTheme.dimens.rowHeight)
             .graphicsLayer {
                 translationY = dragOffsetY
                 scaleX = scale * cardScale * foundScale.value
@@ -250,7 +255,7 @@ fun TaskItemRow(
             .clip(ThingsTheme.shapes.rowShape)
             .drawBehind {
                 if (localCompleted && completionFillProgress > 0f && !isSearchLogbookStyle) {
-                    val centerX = (10.dp + leftColumnWidth / 2f).toPx()
+                    val centerX = (ROW_CHECKBOX_COLUMN_START + leftColumnWidth / 2f).toPx()
                     val centerY = size.height / 2f
                     val maxRadius = kotlin.math.hypot(size.width - centerX, centerY)
                     val currentRadius = maxRadius * completionFillProgress
@@ -322,7 +327,7 @@ fun TaskItemRow(
                                 }
                             }
                         },
-                        size = 16.dp,
+                        size = ThingsIconSize.XS,
                         checkedColor = if (isSearchLogbookStyle) searchLogbookCheckColor() else ThingsTheme.colors.accent,
                         uncheckedColor = checkboxUncheckedColor,
                         isDashed = task.start == Item.START_SOMEDAY && !localCompleted && !isSearchLogbookStyle,
@@ -357,7 +362,7 @@ fun TaskItemRow(
             ) {
                 if (badgeBesideBothLines) {
                     DateBadge(text = dateBadge!!)
-                    Spacer(modifier = Modifier.width(6.dp))
+                    Spacer(modifier = Modifier.width(ThingsSpacing.XS_PLUS))
                 }
 
                 // Дата завершения — отдельной колонкой слева от названия и подзаголовка,
@@ -367,14 +372,13 @@ fun TaskItemRow(
                     val dateText = remember(completedAt) { formatSearchLogbookDate(completedAt) }
                     Text(
                         text = dateText,
-                        style = ThingsTheme.type.taskSubtitle.copy(
+                        style = ThingsTheme.type.taskSubtitleStrong.copy(
                             fontSize = ThingsTheme.type.taskTitle.fontSize * 0.9f,
-                            fontWeight = FontWeight.SemiBold,
                             color = searchLogbookDateColor()
                         ),
                         maxLines = 1
                     )
-                    Spacer(modifier = Modifier.width(8.dp))
+                    Spacer(modifier = Modifier.width(ThingsSpacing.S))
                 }
 
                 Column(modifier = Modifier.weight(1f)) {
@@ -388,7 +392,7 @@ fun TaskItemRow(
                         ) {
                             if (dateBadge != null && !badgeBesideBothLines) {
                                 DateBadge(text = dateBadge)
-                                Spacer(modifier = Modifier.width(6.dp))
+                                Spacer(modifier = Modifier.width(ThingsSpacing.XS_PLUS))
                             } else if ((screen == ActiveScreen.PROJECT_DETAIL || screen == ActiveScreen.AREA_DETAIL) && dateIndicator != null) {
                                 when (dateIndicator) {
                                     is DateIndicatorResult.IconIndicator -> {
@@ -409,7 +413,7 @@ fun TaskItemRow(
                                         DateBadge(text = displayText)
                                     }
                                 }
-                                Spacer(modifier = Modifier.width(6.dp))
+                                Spacer(modifier = Modifier.width(ThingsSpacing.XS_PLUS))
                             }
 
                             Text(
@@ -434,9 +438,9 @@ fun TaskItemRow(
 
                         // Inline note/subtask icons representation
                         if (task.notes.isNotBlank() || task.checklistItemsCount > 0 || task.cachedTags.isNotBlank()) {
-                            Spacer(modifier = Modifier.width(6.dp))
+                            Spacer(modifier = Modifier.width(ThingsSpacing.XS_PLUS))
                             Row(
-                                horizontalArrangement = Arrangement.spacedBy(4.dp),
+                                horizontalArrangement = Arrangement.spacedBy(ThingsSpacing.XS),
                                 verticalAlignment = Alignment.CenterVertically
                             ) {
                                 if (task.notes.isNotBlank()) {
@@ -495,10 +499,10 @@ fun TaskItemRow(
                         val isOverdueOrToday = delta <= 0
                         val color = if (isOverdueOrToday) ThingsTheme.colors.danger else textSecondaryColor.copy(alpha = DUE_TEXT_ALPHA)
 
-                        Spacer(modifier = Modifier.width(8.dp))
+                        Spacer(modifier = Modifier.width(ThingsSpacing.S))
                         Row(
                             verticalAlignment = Alignment.CenterVertically,
-                            modifier = Modifier.padding(end = 4.dp)
+                            modifier = Modifier.padding(end = ThingsSpacing.XS)
                         ) {
                             Icon(
                                 imageVector = AppIcons.Deadline,
@@ -506,7 +510,7 @@ fun TaskItemRow(
                                 tint = color,
                                 modifier = Modifier.size(DUE_ICON_SIZE)
                             )
-                            Spacer(modifier = Modifier.width(4.dp))
+                            Spacer(modifier = Modifier.width(ThingsSpacing.XS))
                             Text(
                                 text = relativeText,
                                 style = ThingsTheme.type.taskSubtitle.copy(
@@ -593,11 +597,11 @@ fun TaskItemRow(
             }
 
             Row(verticalAlignment = Alignment.CenterVertically) {
-                Spacer(modifier = Modifier.width(8.dp))
+                Spacer(modifier = Modifier.width(ThingsSpacing.S))
                 val view = androidx.compose.ui.platform.LocalView.current
                 Box(
                     modifier = Modifier
-                        .size(28.dp)
+                        .size(SELECTION_CIRCLE_SIZE)
                         .graphicsLayer {
                             scaleX = iconBounceScale.value * animatedDragSelectScale
                             scaleY = iconBounceScale.value * animatedDragSelectScale
@@ -613,9 +617,9 @@ fun TaskItemRow(
                 ) {
                     val selectionFill = ThingsTheme.colors.accent
                     androidx.compose.foundation.Canvas(
-                        modifier = Modifier.size(24.dp)
+                        modifier = Modifier.size(ThingsIconSize.XL)
                     ) {
-                        val strokeWidth = 2.dp.toPx()
+                        val strokeWidth = ThingsStroke.BOLD.toPx()
                         val radius = size.minDimension / 2f
                         
                         // 1. Внешняя окружность с плавным переходом цвета
@@ -628,7 +632,7 @@ fun TaskItemRow(
                         // 2. Анимированное заполнение при выборе задачи (spring bounce)
                         if (animatedCheckScale > 0.001f) {
                             // Центральная синяя заливка с пружинным масштабированием
-                            val targetInnerRadius = (radius - strokeWidth) - 2.dp.toPx()
+                            val targetInnerRadius = (radius - strokeWidth) - SELECTION_RING_GAP.toPx()
                             val currentInnerRadius = targetInnerRadius * animatedCheckScale
                             if (currentInnerRadius > 0f) {
                                 drawCircle(
@@ -669,7 +673,7 @@ private fun DateBadge(text: String) {
                 color = ThingsTheme.colors.badgeBackground,
                 shape = ThingsTheme.shapes.badgeShape
             )
-            .padding(horizontal = 6.dp, vertical = 2.dp)
+            .padding(horizontal = ThingsSpacing.XS_PLUS, vertical = ThingsSpacing.XXS)
     )
 }
 

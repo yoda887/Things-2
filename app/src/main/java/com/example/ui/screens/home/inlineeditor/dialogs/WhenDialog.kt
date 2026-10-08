@@ -1,5 +1,8 @@
 package com.example.ui.screens.home.inlineeditor.dialogs
 
+import com.example.ui.theme.dimens
+import com.example.ui.theme.ThingsStroke
+import com.example.ui.theme.ThingsSpacing
 import com.example.ui.theme.ThingsIconSize
 import com.example.R
 import androidx.compose.ui.res.stringResource
@@ -56,6 +59,9 @@ import java.text.SimpleDateFormat
 import java.util.*
 import android.view.HapticFeedbackConstants
 import androidx.compose.ui.platform.LocalView
+
+private val WHEN_DIALOG_WIDTH = 336.dp
+private val WHEN_DIALOG_VERTICAL_PADDING = 18.dp
 
 sealed class CalendarCell {
     object Empty : CalendarCell()
@@ -279,16 +285,16 @@ fun ThingsWhenDialog(
                         )
                     }
                 }
-                .width(336.dp)
+                .width(WHEN_DIALOG_WIDTH)
                 .wrapContentHeight()
         ) {
             Column(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .padding(horizontal = 16.dp, vertical = 18.dp),
+                    .padding(horizontal = ThingsSpacing.L, vertical = WHEN_DIALOG_VERTICAL_PADDING),
                 // Промежутки между блоками задаются поштучно: у ячеек календаря и у текстов свои
                 // внутренние поля, поэтому при одинаковом spacedBy расстояния выглядели разными
-                verticalArrangement = Arrangement.spacedBy(0.dp)
+                verticalArrangement = Arrangement.spacedBy(ThingsSpacing.NONE)
             ) {
                 // Top bar: "When?" and Close "✕" Button
                 Row(
@@ -311,7 +317,7 @@ fun ThingsWhenDialog(
                     ) {
                         Box(
                             modifier = Modifier
-                                .size(36.dp)
+                                .size(MaterialTheme.dimens.dialogHeaderButtonSize)
                                 .clip(CircleShape)
                                 .background(ThingsTheme.colors.overlayControl)
                                 .clickable { requestClose() },
@@ -342,7 +348,7 @@ fun ThingsWhenDialog(
                             onShowCalendarHelperChange(true)
                             requestClose()
                         }
-                        .height(46.dp),
+                        .height(MaterialTheme.dimens.rowHeight),
                     verticalAlignment = Alignment.CenterVertically
                 ) {
                     Box(
@@ -390,7 +396,7 @@ fun ThingsWhenDialog(
                             onShowCalendarHelperChange(true)
                             requestClose()
                         }
-                        .height(46.dp),
+                        .height(MaterialTheme.dimens.rowHeight),
                     verticalAlignment = Alignment.CenterVertically
                 ) {
                     Box(
@@ -428,7 +434,7 @@ fun ThingsWhenDialog(
                 // Calendar section (Weekdays + 4 rows of dates) with tight vertical spacing
                 Column(
                     modifier = Modifier.fillMaxWidth(),
-                    verticalArrangement = Arrangement.spacedBy(2.dp)
+                    verticalArrangement = Arrangement.spacedBy(ThingsSpacing.XXS)
                 ) {
                     // Weekday headers: Mon Tue Wed Thu Fri Sat Sun
                     Row(
@@ -565,7 +571,7 @@ fun ThingsWhenDialog(
                                                 .clip(ThingsTheme.shapes.smallShape)
                                                 .then(
                                                     if (isSelected) {
-                                                        Modifier.border(1.5.dp, ThingsTheme.colors.accent, ThingsTheme.shapes.smallShape)
+                                                        Modifier.border(ThingsStroke.FOCUS, ThingsTheme.colors.accent, ThingsTheme.shapes.smallShape)
                                                     } else {
                                                         Modifier
                                                     }
@@ -648,7 +654,7 @@ fun ThingsWhenDialog(
                             onShowCalendarHelperChange(true)
                             requestClose()
                         }
-                        .height(46.dp),
+                        .height(MaterialTheme.dimens.rowHeight),
                     verticalAlignment = Alignment.CenterVertically
                 ) {
                     Box(
@@ -687,7 +693,7 @@ fun ThingsWhenDialog(
                 Row(
                     modifier = Modifier
                         .fillMaxWidth()
-                        .height(46.dp),
+                        .height(MaterialTheme.dimens.rowHeight),
                     verticalAlignment = Alignment.CenterVertically
                 ) {
                     Box(

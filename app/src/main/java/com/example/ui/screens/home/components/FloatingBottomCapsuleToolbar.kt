@@ -1,5 +1,6 @@
 package com.example.ui.screens.home.components
 
+import com.example.ui.theme.ThingsSpacing
 import com.example.ui.theme.ThingsIconSize
 import com.example.R
 import androidx.compose.ui.res.stringResource
@@ -83,23 +84,23 @@ fun FloatingBottomCapsuleToolbar(
                 .height(MaterialTheme.dimens.floatingToolbarHeight)
                 .clip(ThingsTheme.shapes.toolbarShape)
                 .background(ThingsTheme.colors.overlaySurface)
-                .padding(horizontal = 16.dp),
+                .padding(horizontal = ThingsSpacing.L),
             contentAlignment = Alignment.Center
         ) {
             Row(
                 verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.spacedBy(16.dp)
+                horizontalArrangement = Arrangement.spacedBy(ThingsSpacing.L)
             ) {
                 // 1. Кнопка перемещения
                 Row(
                     modifier = Modifier
-                        .sizeIn(minWidth = 48.dp, minHeight = 48.dp)
+                        .sizeIn(minWidth = MaterialTheme.dimens.minTouchTarget, minHeight = MaterialTheme.dimens.minTouchTarget)
                         .clip(ThingsTheme.shapes.rowShape)
                         .clickable {
                             view.performHapticFeedback(HapticFeedbackConstants.CLOCK_TICK)
                             onMoveClick()
                         }
-                        .padding(horizontal = 8.dp),
+                        .padding(horizontal = ThingsSpacing.S),
                     verticalAlignment = Alignment.CenterVertically
                 ) {
                     Icon(
@@ -108,18 +109,18 @@ fun FloatingBottomCapsuleToolbar(
                         tint = ThingsTheme.colors.overlayContent,
                         modifier = Modifier.size(ThingsIconSize.L)
                     )
-                    Spacer(modifier = Modifier.width(6.dp))
+                    Spacer(modifier = Modifier.width(ThingsSpacing.XS_PLUS))
                     Text(
                         text = stringResource(R.string.batch_action_move),
                         color = ThingsTheme.colors.overlayContent,
-                        style = ThingsTheme.type.dialogButton.copy(fontWeight = FontWeight.Bold)
+                        style = ThingsTheme.type.dialogButtonStrong
                     )
                 }
 
                 // 2. Кнопка удаления (Trash)
                 Box(
                     modifier = Modifier
-                        .sizeIn(minWidth = 48.dp, minHeight = 48.dp)
+                        .sizeIn(minWidth = MaterialTheme.dimens.minTouchTarget, minHeight = MaterialTheme.dimens.minTouchTarget)
                         .clip(CircleShape)
                         .clickable {
                             view.performHapticFeedback(HapticFeedbackConstants.CLOCK_TICK)
@@ -139,7 +140,7 @@ fun FloatingBottomCapsuleToolbar(
                 Box {
                     Box(
                         modifier = Modifier
-                            .sizeIn(minWidth = 48.dp, minHeight = 48.dp)
+                            .sizeIn(minWidth = MaterialTheme.dimens.minTouchTarget, minHeight = MaterialTheme.dimens.minTouchTarget)
                             .clip(CircleShape)
                             .clickable {
                                 view.performHapticFeedback(HapticFeedbackConstants.CLOCK_TICK)

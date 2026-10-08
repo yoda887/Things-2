@@ -1,5 +1,6 @@
 package com.example.ui.components
 
+import com.example.ui.theme.ThingsIconSize
 import com.example.ui.theme.ThingsTheme
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.spring
@@ -23,6 +24,12 @@ import androidx.compose.ui.unit.dp
 import android.view.HapticFeedbackConstants
 import androidx.compose.ui.platform.LocalView
 
+// Минимальные толщины рамки и галочки, шаг пунктира
+private val CHECKBOX_MIN_BORDER = 1.dp
+private val CHECKBOX_MIN_MARK = 1.5.dp
+private val CHECKBOX_DASH = 3.dp
+private val CHECKBOX_DASH_GAP = 2.5.dp
+
 /**
  * ThingsCheckbox: A high-fidelity, custom-designed checkbox that mimics the Things app's aesthetics.
  * Animated using vectors, hand-drawn paths, and spring-based kinetics.
@@ -32,7 +39,7 @@ fun ThingsCheckbox(
     checked: Boolean,
     onCheckedChange: () -> Unit,
     modifier: Modifier = Modifier,
-    size: Dp = 22.dp,
+    size: Dp = ThingsIconSize.L,
     checkedColor: Color = ThingsTheme.colors.accent,
     uncheckedColor: Color = ThingsTheme.colors.checkboxBorder,
     isDashed: Boolean = false,
@@ -83,7 +90,7 @@ fun ThingsCheckbox(
         val width = this.size.width
         val height = this.size.height
         val cornerRadius = (size * 0.23f).toPx()
-        val strokeWidth = (size * 0.07f).toPx().coerceAtLeast(1.dp.toPx())
+        val strokeWidth = (size * 0.07f).toPx().coerceAtLeast(CHECKBOX_MIN_BORDER.toPx())
 
         // Векторный путь самой галочки (или крестика у отменённой задачи) внутри квадрата
         val checkPath = Path().apply {
@@ -103,7 +110,7 @@ fun ThingsCheckbox(
         val strokeStyle = if (isDashed) {
             Stroke(
                 width = strokeWidth,
-                pathEffect = PathEffect.dashPathEffect(floatArrayOf(3.dp.toPx(), 2.5.dp.toPx()), 0f)
+                pathEffect = PathEffect.dashPathEffect(floatArrayOf(CHECKBOX_DASH.toPx(), CHECKBOX_DASH_GAP.toPx()), 0f)
             )
         } else {
             Stroke(width = strokeWidth)
@@ -136,7 +143,7 @@ fun ThingsCheckbox(
                 path = checkPath,
                 color = onAccent.copy(alpha = checkDrawProgress.coerceIn(0f, 1f)),
                 style = Stroke(
-                    width = (size * 0.09f).toPx().coerceAtLeast(1.5.dp.toPx()),
+                    width = (size * 0.09f).toPx().coerceAtLeast(CHECKBOX_MIN_MARK.toPx()),
                     cap = androidx.compose.ui.graphics.StrokeCap.Round
                 )
             )
@@ -157,7 +164,7 @@ fun ThingsCheckbox(
                 path = partialPath,
                 color = onAccent,
                 style = Stroke(
-                    width = (size * 0.09f).toPx().coerceAtLeast(1.5.dp.toPx()),
+                    width = (size * 0.09f).toPx().coerceAtLeast(CHECKBOX_MIN_MARK.toPx()),
                     cap = androidx.compose.ui.graphics.StrokeCap.Round,
                     join = androidx.compose.ui.graphics.StrokeJoin.Round
                 )

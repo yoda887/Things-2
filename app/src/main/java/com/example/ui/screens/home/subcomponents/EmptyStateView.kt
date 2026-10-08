@@ -1,5 +1,6 @@
 package com.example.ui.screens.home.subcomponents
 
+import com.example.ui.theme.ThingsSpacing
 import com.example.ui.theme.ThingsAlpha
 import com.example.R
 import androidx.compose.ui.res.stringResource
@@ -14,6 +15,8 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.unit.dp
 import com.example.ui.theme.ThingsTheme
+
+private val EMPTY_STATE_VERTICAL_PADDING = 56.dp
 
 private val EMPTY_STATE_ICON_SIZE = 60.dp
 
@@ -32,7 +35,7 @@ fun EmptyStateView(
     Box(
         modifier = modifier
             .fillMaxWidth()
-            .padding(vertical = 56.dp)
+            .padding(vertical = EMPTY_STATE_VERTICAL_PADDING)
             .testTag("empty_state_view"),
         contentAlignment = Alignment.Center
     ) {
@@ -43,7 +46,7 @@ fun EmptyStateView(
                 tint = textSecondaryColor.copy(alpha = ThingsAlpha.LOW),
                 modifier = Modifier.size(EMPTY_STATE_ICON_SIZE)
             )
-            Spacer(modifier = Modifier.height(12.dp))
+            Spacer(modifier = Modifier.height(ThingsSpacing.M))
             Text(
                 text = stringResource(R.string.ui_all_clear_here_enjoy_your_day),
                 color = textSecondaryColor,

@@ -1,5 +1,9 @@
 package com.example.ui.screens.home.subcomponents
 
+import androidx.compose.material3.MaterialTheme
+import com.example.ui.theme.dimens
+import com.example.ui.theme.ThingsStroke
+import com.example.ui.theme.ThingsSpacing
 import com.example.ui.theme.ThingsAlpha
 import com.example.R
 import androidx.compose.ui.res.stringResource
@@ -53,7 +57,7 @@ private val HEADING_OPTIONS_ICON_SIZE = 26.dp
 
 // Тот же размер, что у остальных подзаголовков экранов («Вечер», «Планы», «Когда-нибудь»)
 private val headingTitleStyle: TextStyle
-    @Composable get() = ThingsTheme.type.sectionHeader.copy(color = ThingsTheme.colors.project, fontWeight = FontWeight.SemiBold)
+    @Composable get() = ThingsTheme.type.listTitleStrong.copy(color = ThingsTheme.colors.project)
 
 /**
  * Заголовок внутри проекта, как в Things: голубое название, «•••» с меню и линия под ним.
@@ -81,14 +85,14 @@ fun ProjectHeadingRow(
         Row(
             modifier = Modifier
                 .fillMaxWidth()
-                .height(40.dp)
+                .height(MaterialTheme.dimens.headingRowHeight)
                 .clickable(
                     enabled = !isEditing,
                     interactionSource = remember { MutableInteractionSource() },
                     indication = null,
                     onClick = onStartEditing
                 )
-                .padding(horizontal = 8.dp),
+                .padding(horizontal = ThingsSpacing.S),
             verticalAlignment = Alignment.CenterVertically
         ) {
             Box(modifier = Modifier.weight(1f)) {
@@ -123,9 +127,9 @@ fun ProjectHeadingRow(
         }
         Box(
             modifier = Modifier
-                .padding(horizontal = 8.dp)
+                .padding(horizontal = ThingsSpacing.S)
                 .fillMaxWidth()
-                .height(0.6.dp)
+                .height(ThingsStroke.DIVIDER)
                 .background(dividerColor)
         )
     }

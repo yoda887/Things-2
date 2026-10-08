@@ -25,6 +25,8 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import com.example.ui.theme.*
 
+private val PANEL_START_PADDING = 28.dp
+
 private val PRIORITY_ICON_SIZE = 14.dp
 
 @Composable
@@ -62,10 +64,10 @@ fun InlinePriorityPanel(
         Row(
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(start = 28.dp, top = 10.dp)
+                .padding(start = PANEL_START_PADDING, top = ThingsSpacing.S_PLUS)
                 .clip(ThingsTheme.shapes.smallShape)
                 .background(helperBgColor)
-                .padding(horizontal = 8.dp, vertical = 6.dp),
+                .padding(horizontal = ThingsSpacing.S, vertical = ThingsSpacing.XS_PLUS),
             verticalAlignment = Alignment.CenterVertically
         ) {
             Icon(
@@ -74,7 +76,7 @@ fun InlinePriorityPanel(
                 tint = priorityColor,
                 modifier = Modifier.size(ThingsIconSize.XS)
             )
-            Spacer(modifier = Modifier.width(8.dp))
+            Spacer(modifier = Modifier.width(ThingsSpacing.S))
             Text(
                 text = priorityName,
                 style = ThingsTheme.type.caption.copy(color = textPrimaryColor),
@@ -83,51 +85,47 @@ fun InlinePriorityPanel(
             
             // Quick Action Buttons to choose priority level
             Row(
-                horizontalArrangement = Arrangement.spacedBy(6.dp),
+                horizontalArrangement = Arrangement.spacedBy(ThingsSpacing.XS_PLUS),
                 verticalAlignment = Alignment.CenterVertically
             ) {
                 Text(
                     text = stringResource(R.string.ui_no),
-                    style = ThingsTheme.type.badge.copy(
-                        color = if (priority == Item.PRIORITY_NONE) ThingsTheme.colors.accent else ThingsTheme.colors.someday,
-                        fontWeight = FontWeight.Bold
+                    style = ThingsTheme.type.badgeStrong.copy(
+                        color = if (priority == Item.PRIORITY_NONE) ThingsTheme.colors.accent else ThingsTheme.colors.someday
                     ),
                     modifier = Modifier
                         .clickable { onPriorityChange(Item.PRIORITY_NONE) }
-                        .padding(horizontal = 4.dp, vertical = 2.dp)
+                        .padding(horizontal = ThingsSpacing.XS, vertical = ThingsSpacing.XXS)
                 )
                 Text(
                     text = stringResource(R.string.ui_low),
-                    style = ThingsTheme.type.badge.copy(
-                        color = if (priority == Item.PRIORITY_LOW) ThingsTheme.colors.anytime else ThingsTheme.colors.someday,
-                        fontWeight = FontWeight.Bold
+                    style = ThingsTheme.type.badgeStrong.copy(
+                        color = if (priority == Item.PRIORITY_LOW) ThingsTheme.colors.anytime else ThingsTheme.colors.someday
                     ),
                     modifier = Modifier
                         .clickable { onPriorityChange(Item.PRIORITY_LOW) }
-                        .padding(horizontal = 4.dp, vertical = 2.dp)
+                        .padding(horizontal = ThingsSpacing.XS, vertical = ThingsSpacing.XXS)
                 )
                 Text(
                     text = stringResource(R.string.ui_med),
-                    style = ThingsTheme.type.badge.copy(
-                        color = if (priority == Item.PRIORITY_MEDIUM) ThingsTheme.colors.today else ThingsTheme.colors.someday,
-                        fontWeight = FontWeight.Bold
+                    style = ThingsTheme.type.badgeStrong.copy(
+                        color = if (priority == Item.PRIORITY_MEDIUM) ThingsTheme.colors.today else ThingsTheme.colors.someday
                     ),
                     modifier = Modifier
                         .clickable { onPriorityChange(Item.PRIORITY_MEDIUM) }
-                        .padding(horizontal = 4.dp, vertical = 2.dp)
+                        .padding(horizontal = ThingsSpacing.XS, vertical = ThingsSpacing.XXS)
                 )
                 Text(
                     text = stringResource(R.string.ui_high),
-                    style = ThingsTheme.type.badge.copy(
-                        color = if (priority == Item.PRIORITY_HIGH) ThingsTheme.colors.upcoming else ThingsTheme.colors.someday,
-                        fontWeight = FontWeight.Bold
+                    style = ThingsTheme.type.badgeStrong.copy(
+                        color = if (priority == Item.PRIORITY_HIGH) ThingsTheme.colors.upcoming else ThingsTheme.colors.someday
                     ),
                     modifier = Modifier
                         .clickable { onPriorityChange(Item.PRIORITY_HIGH) }
-                        .padding(horizontal = 4.dp, vertical = 2.dp)
+                        .padding(horizontal = ThingsSpacing.XS, vertical = ThingsSpacing.XXS)
                 )
             }
-            Spacer(modifier = Modifier.width(8.dp))
+            Spacer(modifier = Modifier.width(ThingsSpacing.S))
             Icon(
                 imageVector = Icons.Default.Close,
                 contentDescription = stringResource(R.string.cd_close_priority),

@@ -1,5 +1,6 @@
 package com.example.ui.screens.home.inlineeditor.components
 
+import com.example.ui.theme.ThingsSpacing
 import com.example.ui.theme.ThingsIconSize
 import com.example.R
 import androidx.compose.ui.res.stringResource
@@ -85,7 +86,7 @@ fun InlineEditorToolbar(
                         view.performHapticFeedback(HapticFeedbackConstants.CLOCK_TICK)
                         onShowWhenDialogChange(true)
                     }
-                    .padding(vertical = 4.dp)
+                    .padding(vertical = ThingsSpacing.XS)
             ) {
                 Icon(
                     imageVector = activeDateIcon,
@@ -93,14 +94,13 @@ fun InlineEditorToolbar(
                     tint = activeDateColor,
                     modifier = Modifier.size(ThingsIconSize.S)
                 )
-                Spacer(modifier = Modifier.width(6.dp))
+                Spacer(modifier = Modifier.width(ThingsSpacing.XS_PLUS))
                 Text(
                     text = activeDateLabel,
                     maxLines = 1,
                     overflow = TextOverflow.Ellipsis,
-                    style = ThingsTheme.type.editorDate.copy(
-                        color = textPrimaryColor,
-                        fontWeight = FontWeight.Medium
+                    style = ThingsTheme.type.editorDateStrong.copy(
+                        color = textPrimaryColor
                     )
                 )
             }

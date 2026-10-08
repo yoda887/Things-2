@@ -56,6 +56,10 @@ import androidx.compose.ui.platform.LocalView
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.zIndex
 
+// Кружки «отмена» и «во Входящие», пока тянут «+»: размер и отступ от края
+private val FAB_ACTION_SIZE = 44.dp
+private val FAB_ACTION_EDGE = 20.dp
+
 private const val FAB_SETTLE_MS = 180
 private val FAB_PLUS_ICON_SIZE = 28.dp
 
@@ -256,8 +260,8 @@ private fun BoxScope.FabCancelButton(controller: FabDragController) {
 fun BoxScope.FabDragActions(controller: FabDragController) {
     var origin by remember { mutableStateOf(Offset.Zero) }
     val density = androidx.compose.ui.platform.LocalDensity.current
-    val sizePx = with(density) { 44.dp.roundToPx() }
-    val startPx = with(density) { 20.dp.roundToPx() }
+    val sizePx = with(density) { FAB_ACTION_SIZE.roundToPx() }
+    val startPx = with(density) { FAB_ACTION_EDGE.roundToPx() }
     Box(modifier = Modifier.matchParentSize().onGloballyPositioned { origin = it.positionInRoot() }) {
         FabActionButton(
             visible = controller.isDragging,
@@ -286,7 +290,7 @@ private fun FabActionButton(
     ) {
         Box(
             modifier = Modifier
-                .size(44.dp)
+                .size(FAB_ACTION_SIZE)
                 .onGloballyPositioned { onBounds(it.boundsInRoot()) }
                 .background(ThingsTheme.colors.overlaySurface, CircleShape),
             contentAlignment = Alignment.Center

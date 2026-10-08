@@ -1,5 +1,7 @@
 package com.example.ui.screens.home.inlineeditor.dialogs
 
+import com.example.ui.theme.ThingsStroke
+import com.example.ui.theme.ThingsSpacing
 import com.example.ui.theme.ThingsIconSize
 import com.example.R
 import androidx.compose.ui.res.stringResource
@@ -104,13 +106,13 @@ fun ThingsMoveDialog(
                             .padding(
                                 start = MaterialTheme.dimens.dialogInnerContentPadding,
                                 end = MaterialTheme.dimens.dialogInnerContentPadding,
-                                bottom = 12.dp
+                                bottom = ThingsSpacing.M
                             ),
                         horizontalArrangement = Arrangement.SpaceBetween,
                         verticalAlignment = Alignment.CenterVertically
                     ) {
                         // Invisible placeholder for centering
-                        Box(modifier = Modifier.size(36.dp))
+                        Box(modifier = Modifier.size(MaterialTheme.dimens.dialogHeaderButtonSize))
 
                         Text(
                             text = stringResource(R.string.batch_action_move),
@@ -123,7 +125,7 @@ fun ThingsMoveDialog(
                         // Cancel 'X' Button in Circle
                         Box(
                             modifier = Modifier
-                                .size(36.dp)
+                                .size(MaterialTheme.dimens.dialogHeaderButtonSize)
                                 .clip(CircleShape)
                                 .background(ThingsTheme.colors.overlayControl)
                                 .clickable { onDismissRequest() },
@@ -143,9 +145,9 @@ fun ThingsMoveDialog(
                         modifier = Modifier
                             .fillMaxWidth()
                             .weight(1f)
-                            .padding(horizontal = 6.dp),
-                        contentPadding = PaddingValues(vertical = 4.dp),
-                        verticalArrangement = Arrangement.spacedBy(2.dp)
+                            .padding(horizontal = ThingsSpacing.XS_PLUS),
+                        contentPadding = PaddingValues(vertical = ThingsSpacing.XS),
+                        verticalArrangement = Arrangement.spacedBy(ThingsSpacing.XXS)
                     ) {
                         // 1. Inbox Option
                         item {
@@ -178,9 +180,9 @@ fun ThingsMoveDialog(
                         // Horizontal Divider
                         item {
                             HorizontalDivider(
-                                modifier = Modifier.padding(vertical = 8.dp),
+                                modifier = Modifier.padding(vertical = ThingsSpacing.S),
                                 color = ThingsTheme.colors.overlayDivider,
-                                thickness = 1.dp
+                                thickness = ThingsStroke.THIN
                             )
                         }
 
@@ -202,7 +204,7 @@ fun ThingsMoveDialog(
                                     isProject = true,
                                     completed = completedCount,
                                     total = totalCount,
-                                    indentation = 0.dp,
+                                    indentation = ThingsSpacing.NONE,
                                     onClick = {
                                         onMove(project.id, null, false)
                                     }
@@ -215,9 +217,9 @@ fun ThingsMoveDialog(
                             // Horizontal divider before each area
                             item(key = "divider_${area.id}") {
                                 HorizontalDivider(
-                                    modifier = Modifier.padding(top = 12.dp, bottom = 4.dp, start = 12.dp, end = 12.dp),
+                                    modifier = Modifier.padding(top = ThingsSpacing.M, bottom = ThingsSpacing.XS, start = ThingsSpacing.M, end = ThingsSpacing.M),
                                     color = ThingsTheme.colors.overlayDivider,
-                                    thickness = 1.dp
+                                    thickness = ThingsStroke.THIN
                                 )
                             }
                             // Header of Area Group (renders Area as clickable as well)
@@ -250,7 +252,7 @@ fun ThingsMoveDialog(
                                     isProject = true,
                                     completed = completedCount,
                                     total = totalCount,
-                                    indentation = 0.dp,
+                                    indentation = ThingsSpacing.NONE,
                                     onClick = {
                                         onMove(project.id, area.id, false)
                                     }
@@ -273,7 +275,7 @@ private fun MoveDialogRow(
     icon: androidx.compose.ui.graphics.vector.ImageVector?,
     iconColor: Color,
     isSelected: Boolean,
-    indentation: androidx.compose.ui.unit.Dp = 0.dp,
+    indentation: androidx.compose.ui.unit.Dp = ThingsSpacing.NONE,
     isAreaHeader: Boolean = false,
     isProject: Boolean = false,
     completed: Int = 0,
@@ -287,21 +289,21 @@ private fun MoveDialogRow(
             .clip(ThingsTheme.shapes.rowShape)
             .background(if (isSelected) ThingsTheme.colors.overlayRowSelected else Color.Transparent)
             .clickable { onClick() }
-            .padding(horizontal = 12.dp, vertical = 10.dp),
+            .padding(horizontal = ThingsSpacing.M, vertical = ThingsSpacing.S_PLUS),
         verticalAlignment = Alignment.CenterVertically
     ) {
         if (isProject) {
             Box(
-                modifier = Modifier.size(20.dp),
+                modifier = Modifier.size(ThingsIconSize.M),
                 contentAlignment = Alignment.Center
             ) {
                 ProjectProgressArc(
                     completed = completed,
                     total = total,
-                    modifier = Modifier.size(20.dp)
+                    modifier = Modifier.size(ThingsIconSize.M)
                 )
             }
-            Spacer(modifier = Modifier.width(12.dp))
+            Spacer(modifier = Modifier.width(ThingsSpacing.M))
         } else if (icon != null) {
             Icon(
                 imageVector = icon,
@@ -309,7 +311,7 @@ private fun MoveDialogRow(
                 tint = iconColor,
                 modifier = Modifier.size(ThingsIconSize.M)
             )
-            Spacer(modifier = Modifier.width(12.dp))
+            Spacer(modifier = Modifier.width(ThingsSpacing.M))
         }
         Text(
             text = title,

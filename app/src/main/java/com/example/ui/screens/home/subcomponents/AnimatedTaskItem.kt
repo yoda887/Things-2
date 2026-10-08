@@ -1,5 +1,8 @@
 package com.example.ui.screens.home.subcomponents
 
+import com.example.ui.theme.ThingsStroke
+import com.example.ui.theme.ThingsElevation
+import com.example.ui.theme.ThingsSpacing
 import com.example.ui.theme.ThingsIconSize
 import com.example.ui.theme.ThingsMotion
 import com.example.ui.theme.ThingsTheme
@@ -84,6 +87,11 @@ import androidx.compose.material.icons.outlined.ChevronRight
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.outlined.FormatListBulleted
 import com.example.ui.components.swipe.SwipeableTaskContainer
+
+// Стопка при групповом перетаскивании: сдвиг второго и третьего слоя; промежуток вокруг редактора
+private val STACK_LAYER_2_OFFSET = 8.dp
+private val STACK_LAYER_3_OFFSET = 4.dp
+private val EDITOR_EXTRA_PADDING = 10.dp
 
 // Раскрытие новой задачи из кнопки «+»
 private const val FAB_REVEAL_MS = 160
@@ -238,7 +246,7 @@ fun AnimatedTaskItem(
         if (!focusTitleOnOpen) return@LaunchedEffect
         // Новая задача появилась уже раскрытой, подтягивать по прогрессу нечего. Зато выезжает клавиатура:
         // список едет вместе с ней, чтобы карточка осталась над клавиатурой, а не ушла под неё.
-        val gapPx = with(density) { 12.dp.toPx() }
+        val gapPx = with(density) { ThingsSpacing.M.toPx() }
         val startNanos = withFrameNanos { it }
         // Тот же ход, что у обычного раскрытия задачи по тапу: ту же длительность и кривую
         // имеет подтяжка списка. Время идёт от первого кадра с замеренной карточкой.
@@ -357,7 +365,7 @@ fun AnimatedTaskItem(
     )
     // Высота тени тоже читается только при отрисовке слоя (см. graphicsLayer карточки ниже).
     val dragElevationState = animateDpAsState(
-        targetValue = if (isDragTask || showEditor) 8.dp else 0.dp,
+        targetValue = if (isDragTask || showEditor) ThingsElevation.CARD else ThingsElevation.NONE,
         animationSpec = tween(
             durationMillis = com.example.ui.theme.AnimationConstants.TASK_EXPANSION_DURATION_MS.toInt(),
             easing = FastOutSlowInEasing
@@ -365,7 +373,7 @@ fun AnimatedTaskItem(
         label = "dragElev_${task.id}"
     )
     val hasElevation by remember(dragElevationState) {
-        derivedStateOf { dragElevationState.value > 0.dp }
+        derivedStateOf { dragElevationState.value > ThingsElevation.NONE }
     }
     val zIndexValToUse = if (isDragTask) 100f else (if (showEditor) 1f else 0f)
 
@@ -416,17 +424,17 @@ fun AnimatedTaskItem(
                             .graphicsLayer {
                                 val currentTranslationY = if (isDragTask) dragDropState.visualDragOffsetY(task.id) else 0f
                                 val currentTranslationX = if (isDragTask) dragDropState.dragAccumulatedX else 0f
-                                translationX = currentTranslationX + 8.dp.toPx()
-                                translationY = currentTranslationY + 8.dp.toPx()
+                                translationX = currentTranslationX + STACK_LAYER_2_OFFSET.toPx()
+                                translationY = currentTranslationY + STACK_LAYER_2_OFFSET.toPx()
                                 scaleX = dragScale
                                 scaleY = dragScale
                                 rotationZ = 3.2f
-                                shadowElevation = 4.dp.toPx()
+                                shadowElevation = ThingsElevation.STACK_3.toPx()
                                 shape = dragCornerShape
                                 clip = true
                             }
                             .background(stackCardBg, dragCornerShape)
-                            .border(0.5.dp, stackBorderColor, dragCornerShape)
+                            .border(ThingsStroke.HAIRLINE, stackBorderColor, dragCornerShape)
                     )
                 }
 
@@ -437,17 +445,17 @@ fun AnimatedTaskItem(
                         .graphicsLayer {
                             val currentTranslationY = if (isDragTask) dragDropState.visualDragOffsetY(task.id) else 0f
                             val currentTranslationX = if (isDragTask) dragDropState.dragAccumulatedX else 0f
-                            translationX = currentTranslationX + 4.dp.toPx()
-                            translationY = currentTranslationY + 4.dp.toPx()
+                            translationX = currentTranslationX + STACK_LAYER_3_OFFSET.toPx()
+                            translationY = currentTranslationY + STACK_LAYER_3_OFFSET.toPx()
                             scaleX = dragScale
                             scaleY = dragScale
                             rotationZ = 1.6f
-                            shadowElevation = 6.dp.toPx()
+                            shadowElevation = ThingsElevation.FAB.toPx()
                             shape = dragCornerShape
                             clip = true
                         }
                         .background(stackCardBg, dragCornerShape)
-                        .border(0.5.dp, stackBorderColor, dragCornerShape)
+                        .border(ThingsStroke.HAIRLINE, stackBorderColor, dragCornerShape)
                 )
             }
 
@@ -475,7 +483,7 @@ fun AnimatedTaskItem(
                 }
                 .progressPadding(
                     progress = expansionProgress,
-                    collapsed = PaddingValues(0.dp),
+                    collapsed = PaddingValues(ThingsSpacing.NONE),
                     expanded = PaddingValues(vertical = verticalGapLimit)
                 )
         ) {
@@ -501,7 +509,7 @@ fun AnimatedTaskItem(
                         }
                     }
                     .layout { measurable, constraints ->
-                        val extraPaddingPx = (10.dp * expansionProgress()).roundToPx()
+                        val extraPaddingPx = (EDITOR_EXTRA_PADDING * expansionProgress()).roundToPx()
                         val extendedConstraints = constraints.copy(
                             minWidth = (constraints.minWidth + extraPaddingPx * 2).coerceAtMost(constraints.maxWidth + extraPaddingPx * 2),
                             maxWidth = (constraints.maxWidth + extraPaddingPx * 2)
@@ -517,7 +525,7 @@ fun AnimatedTaskItem(
                         val elevation = dragElevationState.value
                         shadowElevation = elevation.toPx()
                         shape = RoundedCornerShape(cornerRadius())
-                        clip = elevation > 0.dp
+                        clip = elevation > ThingsElevation.NONE
                     }
                     .drawBehind {
                         // То же, что background(containerBgColor, shape) со скруглением текущего радиуса.
@@ -732,7 +740,7 @@ fun AnimatedTaskItem(
                         modifier = Modifier
                             .fillMaxWidth()
                             .layout { measurable, constraints ->
-                                val extraPaddingPx = (10.dp * expansionProgress()).roundToPx()
+                                val extraPaddingPx = (EDITOR_EXTRA_PADDING * expansionProgress()).roundToPx()
                                 val extendedConstraints = constraints.copy(
                                     minWidth = (constraints.minWidth + extraPaddingPx * 2).coerceAtMost(constraints.maxWidth + extraPaddingPx * 2),
                                     maxWidth = (constraints.maxWidth + extraPaddingPx * 2)
@@ -742,7 +750,7 @@ fun AnimatedTaskItem(
                                     placeable.place(-extraPaddingPx, 0)
                                 }
                             }
-                            .padding(top = 10.dp, bottom = 4.dp, end = 16.dp),
+                            .padding(top = ThingsSpacing.S_PLUS, bottom = ThingsSpacing.XS, end = ThingsSpacing.L),
                         horizontalArrangement = Arrangement.End,
                         verticalAlignment = Alignment.CenterVertically
                     ) {
@@ -759,7 +767,7 @@ fun AnimatedTaskItem(
                                         onEvent(ThingsCategoryListEvent.ClickArea(currentArea))
                                     }
                                 }
-                                .padding(start = 8.dp, top = 4.dp, end = 0.dp, bottom = 4.dp),
+                                .padding(start = ThingsSpacing.S, top = ThingsSpacing.XS, end = ThingsSpacing.NONE, bottom = ThingsSpacing.XS),
                             verticalAlignment = Alignment.CenterVertically
                         ) {
                             if (currentProject != null) {
@@ -767,7 +775,7 @@ fun AnimatedTaskItem(
                                     completed = completedCount,
                                     total = totalCount,
                                     color = pillContentColor,
-                                    modifier = Modifier.size(16.dp)
+                                    modifier = Modifier.size(ThingsIconSize.XS)
                                 )
                             } else {
                                 Icon(
@@ -777,15 +785,14 @@ fun AnimatedTaskItem(
                                     modifier = Modifier.size(ThingsIconSize.XS)
                                 )
                             }
-                            Spacer(modifier = Modifier.width(6.dp))
+                            Spacer(modifier = Modifier.width(ThingsSpacing.XS_PLUS))
                             Text(
                                 text = currentProject?.title ?: currentArea?.title ?: "",
                                 style = ThingsTheme.type.editorChecklist.copy(
-                                    color = pillContentColor,
-                                    fontWeight = FontWeight.Normal
+                                    color = pillContentColor
                                 )
                             )
-                            Spacer(modifier = Modifier.width(2.dp))
+                            Spacer(modifier = Modifier.width(ThingsSpacing.XXS))
                             Icon(
                                 imageVector = androidx.compose.material.icons.Icons.Outlined.ChevronRight,
                                 contentDescription = null,

@@ -116,6 +116,22 @@ import com.example.ui.screens.home.inlineeditor.dialogs.ThingsTagDialog
 import androidx.activity.compose.BackHandler
 import androidx.compose.ui.platform.LocalContext
 
+// Плашка места вставки «+», промежуток и подзаголовок проекта при перетаскивании
+private val FAB_GAP_HEIGHT = 44.dp
+private val NEW_HEADING_TEXT_ZONE = 22.dp
+private val NEW_HEADING_TEXT_BOTTOM = 3.dp
+private val HEADING_TOP_SPACING = 22.dp
+private val CALENDAR_LAST_EVENT_GAP = 11.dp
+// Оттяжка списка к Quick Find
+private val PULL_THRESHOLD = 100.dp
+private val PULL_MAX_OFFSET = 150.dp
+private val PULL_ZONE_EXTRA = 96.dp
+private val PULL_INDICATOR_WIDTH = 60.dp
+// Запас прокрутки снизу и поле тулбара
+private val LIST_BOTTOM_PADDING = 100.dp
+private val TOOLBAR_EXTRA_MARGIN = 16.dp
+private val EVENING_HEADER_GAP = 16.dp
+
 private val TOP_APP_BAR_HEIGHT = 56.dp
 
 /**
@@ -324,7 +340,7 @@ fun ThingsCategoryListPanel(
     val fabDrag = LocalFabDragController.current
     val acceptsFabDrop = screen in FAB_DROP_SCREENS && !state.isSelectionMode
     // Высота промежутка до его появления — по ней первый раз выбирается место
-    val fabDefaultGapPx = with(androidx.compose.ui.platform.LocalDensity.current) { 44.dp.toPx() }
+    val fabDefaultGapPx = with(androidx.compose.ui.platform.LocalDensity.current) { FAB_GAP_HEIGHT.toPx() }
     var listCoordinates by remember { mutableStateOf<androidx.compose.ui.layout.LayoutCoordinates?>(null) }
     var fabSlot by remember { mutableStateOf<FabSlot?>(null) }
     // Раздвигание после сброса: промежуток вырастает до высоты раскрытой задачи, и только потом создаётся задача
@@ -684,10 +700,10 @@ fun ThingsCategoryListPanel(
 
     val coroutineScope = rememberCoroutineScope()
     val pullOffset = remember { Animatable(0f) }
-    val thresholdPx = with(density) { 100.dp.toPx() }
+    val thresholdPx = with(density) { PULL_THRESHOLD.toPx() }
     // Контейнер индикатора оттяжки в координатах корня: из его круга вырастает Quick Find
     var pullIndicatorBoxBounds by remember { mutableStateOf<Rect?>(null) }
-    val maxOffsetPx = with(density) { 150.dp.toPx() }
+    val maxOffsetPx = with(density) { PULL_MAX_OFFSET.toPx() }
 
     // Тактильный отклик при пересечении порога активации поиска (100.dp)
     val isPastThreshold = pullOffset.value >= thresholdPx
@@ -756,7 +772,7 @@ fun ThingsCategoryListPanel(
 
     val toolbarHeightPx = with(density) { TOP_APP_BAR_HEIGHT.toPx() }
     val statusBarHeightPx = WindowInsets.statusBars.getTop(density)
-    val toolbarExtraMarginPx = with(density) { 16.dp.toPx() }
+    val toolbarExtraMarginPx = with(density) { TOOLBAR_EXTRA_MARGIN.toPx() }
     val toolbarOffsetY by animateFloatAsState(
         targetValue = if (anyExpanded) -(toolbarHeightPx + statusBarHeightPx + toolbarExtraMarginPx) else 0f,
         animationSpec = androidx.compose.animation.core.tween(
@@ -785,16 +801,16 @@ fun ThingsCategoryListPanel(
                     })
                 }
                 // [ИЗМЕНЕНИЕ]: Установлен аккуратный отступ 10.dp от края экрана до карточек задач
-                .padding(horizontal = 10.dp)
+                .padding(horizontal = ThingsSpacing.S_PLUS)
                 .onGloballyPositioned { listCoordinates = it }
                 .testTag("tasks_lazy_list"),
-            contentPadding = PaddingValues(top = topPaddingTotal, bottom = 100.dp)
+            contentPadding = PaddingValues(top = topPaddingTotal, bottom = LIST_BOTTOM_PADDING)
         ) {
             item(key = TaskListKeys.MAIN_HEADER) {
                 // Извлеченный подкомпонент заголовка
                 Box(
                     modifier = Modifier
-                        .padding(horizontal = 8.dp)
+                        .padding(horizontal = ThingsSpacing.S)
                         .graphicsLayer { alpha = headerScrollAlpha }
                 ) {
                     MainCategoryHeader(
@@ -823,10 +839,10 @@ fun ThingsCategoryListPanel(
                         textPrimaryColor = textPrimaryColor,
                         textSecondaryColor = textSecondaryColor,
                         modifier = Modifier
-                            .padding(horizontal = 8.dp)
+                            .padding(horizontal = ThingsSpacing.S)
                             .graphicsLayer { alpha = globalDimAlpha }
                     )
-                    Spacer(modifier = Modifier.height(12.dp))
+                    Spacer(modifier = Modifier.height(ThingsSpacing.M))
                 }
             }
 
@@ -836,7 +852,7 @@ fun ThingsCategoryListPanel(
                         events = todayCalendarEvents,
                         textSecondaryColor = textSecondaryColor,
                         modifier = Modifier
-                            .padding(horizontal = 8.dp)
+                            .padding(horizontal = ThingsSpacing.S)
                             .graphicsLayer { alpha = globalDimAlpha }
                     )
                     Spacer(modifier = Modifier.height(MaterialTheme.dimens.calendarBetweenSectionSpacing))
@@ -853,7 +869,7 @@ fun ThingsCategoryListPanel(
                         dividerColor = dividerColor,
                         onTagSelect = { onEvent(ThingsCategoryListEvent.SelectTag(it)) },
                         modifier = Modifier
-                            .padding(horizontal = 8.dp)
+                            .padding(horizontal = ThingsSpacing.S)
                             .graphicsLayer { alpha = globalDimAlpha }
                     )
                     Spacer(modifier = Modifier.height(MaterialTheme.dimens.tagsBetweenSectionSpacing))
@@ -897,7 +913,7 @@ fun ThingsCategoryListPanel(
                 }
             } else if (!hasTasks && screen != ActiveScreen.SEARCH && shownFabSlot == null) {
                 item(key = TaskListKeys.EMPTY_STATE) {
-                    Box(modifier = Modifier.padding(horizontal = 8.dp)) {
+                    Box(modifier = Modifier.padding(horizontal = ThingsSpacing.S)) {
                         EmptyStateView(textSecondaryColor = textSecondaryColor)
                     }
                 }
@@ -1005,7 +1021,7 @@ fun ThingsCategoryListPanel(
                                 textSecondaryColor = textSecondaryColor,
                                 dividerColor = dividerColor,
                                 modifier = Modifier
-                                    .padding(horizontal = 8.dp)
+                                    .padding(horizontal = ThingsSpacing.S)
                                     .animateItem(
                                         placementSpec = placementSpec
                                     )
@@ -1024,7 +1040,7 @@ fun ThingsCategoryListPanel(
                                 textPrimaryColor = textPrimaryColor,
                                 dividerColor = dividerColor,
                                 modifier = Modifier
-                                    .padding(horizontal = 8.dp)
+                                    .padding(horizontal = ThingsSpacing.S)
                                     .animateItem(
                                         placementSpec = placementSpec
                                     )
@@ -1078,7 +1094,7 @@ fun ThingsCategoryListPanel(
                                 modifier = Modifier
                                     .zIndex(if (isLifted) 1f else 0f)
                                     .then(if (!isLifted) Modifier.animateItem(placementSpec = placementSpec) else Modifier)
-                                    .padding(top = 22.dp, bottom = 4.dp)
+                                    .padding(top = HEADING_TOP_SPACING, bottom = ThingsSpacing.XS)
                             ) {
                                 if (isDragged && dragDropState.isInteracting) {
                                     // Место, куда встанет заголовок с задачами, — та же серая плашка, что
@@ -1114,7 +1130,7 @@ fun ThingsCategoryListPanel(
                                                     clip = true
                                                 }
                                                 .background(bkgColor, chipShape)
-                                                .border(0.5.dp, stackBorder, chipShape)
+                                                .border(ThingsStroke.HAIRLINE, stackBorder, chipShape)
                                         )
                                     }
                                 }
@@ -1154,7 +1170,7 @@ fun ThingsCategoryListPanel(
                                             val scale = 1f + 0.03f * lift
                                             scaleX = scale
                                             scaleY = scale
-                                            shadowElevation = 8.dp.toPx() * lift
+                                            shadowElevation = ThingsElevation.CARD.toPx() * lift
                                             shape = chipShape
                                             clip = false
                                         }
@@ -1211,10 +1227,10 @@ fun ThingsCategoryListPanel(
                                 targetValue = if (shouldDim) 0.3f else 1f,
                                 label = "dimAlpha_ev_${event.id}"
                             )
-                            val bottomSpacing = if (item.isLastBeforeTasks) 11.dp else 0.dp
+                            val bottomSpacing = if (item.isLastBeforeTasks) CALENDAR_LAST_EVENT_GAP else ThingsSpacing.NONE
                             Column(
                                 modifier = Modifier
-                                    .padding(horizontal = 8.dp)
+                                    .padding(horizontal = ThingsSpacing.S)
                                     .padding(bottom = bottomSpacing)
                                     .animateItem(
                                         placementSpec = placementSpec
@@ -1234,7 +1250,7 @@ fun ThingsCategoryListPanel(
                             if (headerText == TaskListKeys.AREA_PROJECTS_SPACER) {
                                 Spacer(
                                     modifier = Modifier
-                                        .height(16.dp)
+                                        .height(EVENING_HEADER_GAP)
                                         .animateItem(placementSpec = placementSpec)
                                 )
                             } else {
@@ -1257,7 +1273,7 @@ fun ThingsCategoryListPanel(
                                         Modifier.animateItem(placementSpec = placementSpec)
                                     } else {
                                         Modifier
-                                            .padding(horizontal = 8.dp)
+                                            .padding(horizontal = ThingsSpacing.S)
                                             .animateItem(placementSpec = placementSpec)
                                     }
                                 )
@@ -1327,7 +1343,7 @@ fun ThingsCategoryListPanel(
         Box(
             modifier = Modifier
                 .fillMaxWidth()
-                .height(with(density) { pullOffset.value.toDp() } + 96.dp)
+                .height(with(density) { pullOffset.value.toDp() } + PULL_ZONE_EXTRA)
                 .offset(y = (-96).dp)
                 .onGloballyPositioned { coords ->
                     pullIndicatorBoxBounds = Rect(coords.positionInRoot(), coords.size.toSize())
@@ -1536,8 +1552,8 @@ fun ThingsCategoryListPanel(
             modifier = Modifier
                 .align(Alignment.TopEnd)
                 .fillMaxHeight()
-                .width(60.dp)
-                .padding(top = topPaddingTotal, bottom = 100.dp)
+                .width(PULL_INDICATOR_WIDTH)
+                .padding(top = topPaddingTotal, bottom = LIST_BOTTOM_PADDING)
                 .pointerInput(state.isSelectionMode) {
                     awaitEachGesture {
                         val down = awaitFirstDown(requireUnconsumed = false)
@@ -1703,33 +1719,33 @@ private fun FabGapRow(asHeading: Boolean, extraPx: () -> Float, modifier: Modifi
         Box(
             modifier = modifier
                 .fillMaxWidth()
-                .height(44.dp)
+                .height(FAB_GAP_HEIGHT)
         ) {
             androidx.compose.foundation.Canvas(modifier = Modifier.fillMaxSize()) {
                 drawLine(
                     color = lineColor,
                     start = androidx.compose.ui.geometry.Offset(0f, size.height / 2f),
                     end = androidx.compose.ui.geometry.Offset(size.width, size.height / 2f),
-                    strokeWidth = 2.dp.toPx(),
+                    strokeWidth = ThingsStroke.BOLD.toPx(),
                     pathEffect = androidx.compose.ui.graphics.PathEffect.dashPathEffect(floatArrayOf(18f, 12f))
                 )
             }
             Box(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .height(22.dp),
+                    .height(NEW_HEADING_TEXT_ZONE),
                 contentAlignment = Alignment.BottomCenter
             ) {
                 Text(
                     text = stringResource(R.string.ui_new_heading),
                     style = ThingsTheme.type.overline.copy(color = ThingsTheme.colors.newHeadingText),
-                    modifier = Modifier.padding(bottom = 3.dp)
+                    modifier = Modifier.padding(bottom = NEW_HEADING_TEXT_BOTTOM)
                 )
             }
         }
     } else {
         val density = androidx.compose.ui.platform.LocalDensity.current
-        val baseHeightPx = with(density) { 44.dp.roundToPx() }
+        val baseHeightPx = with(density) { FAB_GAP_HEIGHT.roundToPx() }
         Box(
             modifier = modifier
                 .fillMaxWidth()
@@ -1747,7 +1763,7 @@ private fun FabGapRow(asHeading: Boolean, extraPx: () -> Float, modifier: Modifi
             Box(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .height(44.dp)
+                    .height(FAB_GAP_HEIGHT)
                     // Плашка тает по мере раздвигания: на её месте раскроется задача
                     .graphicsLayer { alpha = 0.5f * (1f - extraPx() / (baseHeightPx * 3f)).coerceIn(0f, 1f) }
                     .background(plateColor, ThingsTheme.shapes.rowShape)

@@ -174,29 +174,29 @@ class DesignSystemEnforcementTest {
     }
 
     /**
-     * Экраны, переведённые на шкалы целиком: в них нет ни одного числа в dp и ни одного
-     * начертания поверх стиля — только ThingsSpacing / ThingsElevation / ThingsIconSize,
-     * MaterialTheme.dimens, роли ThingsTheme.type или именованные константы файла (`private val X = N.dp`).
-     * Список растёт по мере перевода экранов.
+     * Во всём интерфейсе нет ни одного числа в dp и ни одного начертания поверх стиля — только
+     * ThingsSpacing / ThingsElevation / ThingsIconSize / ThingsStroke, MaterialTheme.dimens, роли
+     * ThingsTheme.type или именованные константы файла (`private val X = N.dp`, `val UPPER_CASE = N.dp`).
      */
-    private val fullyMigratedFiles = setOf("HomePanel.kt", "ThingsTagDialog.kt")
-
     @Test
-    fun migratedScreensHaveNoDpLiteralsOrWeightOverrides() {
+    fun noDpLiteralsOrWeightOverridesInUiComponents() {
         val dpLiteral = Regex("""(?<![\w.])\d+(\.\d+)?\.dp\b""")
         val weightOverride = Regex("""fontWeight\s*=\s*FontWeight\.""")
+        val namedConstant = Regex("""^(private |internal )?(const )?val [A-Z][A-Z_0-9]* = """)
         val violations = mutableListOf<String>()
-        getUiFilesToValidate().filter { it.name in fullyMigratedFiles }.forEach { file ->
+        getUiFilesToValidate().forEach { file ->
             file.readLines().forEachIndexed { index, line ->
                 val code = line.substringBefore("//").trim()
-                if (code.startsWith("private val ") || code.startsWith("private const val ") || code.startsWith("*")) return@forEachIndexed
+                if (code.startsWith("private val ") || code.startsWith("private const val ") || code.startsWith("*") ||
+                    namedConstant.containsMatchIn(code)
+                ) return@forEachIndexed
                 if (dpLiteral.containsMatchIn(code) || weightOverride.containsMatchIn(code)) {
                     violations.add("${file.name}:${index + 1}: ${line.trim()}")
                 }
             }
         }
         assertTrue(
-            "В переведённом на шкалы экране число в dp или начертание поверх стиля. " +
+            "Число в dp или начертание поверх стиля. " +
                 "Используйте ThingsSpacing / ThingsElevation / ThingsIconSize, MaterialTheme.dimens, роль ThingsTheme.type " +
                 "или именованную константу файла:\n" + violations.joinToString("\n"),
             violations.isEmpty()

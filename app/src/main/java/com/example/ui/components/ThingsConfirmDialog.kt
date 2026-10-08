@@ -1,5 +1,6 @@
 package com.example.ui.components
 
+import com.example.ui.theme.ThingsSpacing
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -21,6 +22,8 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.Dialog
 import com.example.ui.theme.ThingsTheme
+
+private val CONFIRM_DIALOG_WIDTH = 300.dp
 
 /**
  * Единый диалог подтверждения (ConfirmDialog в брендбуке) — светлый, по теме приложения: фон `background`
@@ -45,13 +48,13 @@ fun ThingsConfirmDialog(
             shape = ThingsTheme.shapes.dialogShape,
             colors = CardDefaults.cardColors(containerColor = ThingsTheme.colors.background),
             modifier = Modifier
-                .width(300.dp)
-                .padding(16.dp)
+                .width(CONFIRM_DIALOG_WIDTH)
+                .padding(ThingsSpacing.L)
         ) {
             Column(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .padding(16.dp),
+                    .padding(ThingsSpacing.L),
                 horizontalAlignment = Alignment.CenterHorizontally
             ) {
                 Text(
@@ -60,14 +63,14 @@ fun ThingsConfirmDialog(
                     style = ThingsTheme.type.dialogTitle,
                     textAlign = TextAlign.Center
                 )
-                Spacer(modifier = Modifier.height(12.dp))
+                Spacer(modifier = Modifier.height(ThingsSpacing.M))
                 Text(
                     text = message,
                     color = ThingsTheme.colors.textSecondary,
                     style = ThingsTheme.type.dialogBody,
                     textAlign = TextAlign.Center
                 )
-                Spacer(modifier = Modifier.height(20.dp))
+                Spacer(modifier = Modifier.height(ThingsSpacing.L_PLUS))
                 Row(
                     modifier = Modifier.fillMaxWidth(),
                     horizontalArrangement = Arrangement.SpaceBetween

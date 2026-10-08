@@ -18,6 +18,11 @@ import androidx.compose.ui.graphics.drawscope.translate
 import androidx.compose.ui.graphics.vector.PathParser
 import androidx.compose.ui.unit.dp
 
+// Значок области: холст 24 × 34, корзина поднята на 4 над центром
+private val AREA_ICON_CANVAS_WIDTH = 24.dp
+private val AREA_ICON_CANVAS_HEIGHT = 34.dp
+private val AREA_ICON_LIFT = 4.dp
+
 // Особые длительности анимации крышки (сверены с Things)
 private const val LID_FILL_OPEN_MS = 195
 private const val LID_STROKE_OPEN_MS = 175
@@ -125,12 +130,12 @@ fun AreaIconAnimated(
     val FillColor = ThingsTheme.colors.background
     Canvas(
         modifier = modifier
-            .size(24.dp, 34.dp)
+            .size(AREA_ICON_CANVAS_WIDTH, AREA_ICON_CANVAS_HEIGHT)
             .clickable(interactionSource = interactionSource, indication = null) { onToggle() }
     ) {
         val scale = minOf(size.width / 24f, size.height / 34f)
         val dx = (size.width - 24f * scale) / 2f
-        val dy = (size.height - 34f * scale) / 2f - 4.dp.toPx()
+        val dy = (size.height - 34f * scale) / 2f - AREA_ICON_LIFT.toPx()
 
         translate(left = dx, top = dy) {
             scale(scale, scale, pivot = Offset.Zero) {

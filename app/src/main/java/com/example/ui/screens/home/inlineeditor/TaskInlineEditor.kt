@@ -1,5 +1,7 @@
 package com.example.ui.screens.home.inlineeditor
 
+import com.example.ui.theme.ThingsElevation
+import com.example.ui.theme.ThingsSpacing
 import com.example.ui.theme.ThingsIconSize
 import com.example.R
 import androidx.compose.ui.res.stringResource
@@ -300,7 +302,7 @@ fun ThingsTaskInlineEditor(
             },
         shape = ThingsTheme.shapes.rowShape,
         colors = CardDefaults.cardColors(containerColor = Color.Transparent),
-        elevation = CardDefaults.cardElevation(defaultElevation = 0.dp)
+        elevation = CardDefaults.cardElevation(defaultElevation = ThingsElevation.NONE)
     ) {
         // Линейная интерполяция отступов: при p=0 совпадают с TaskItemRow.padding,
         // при p=1 — дизайнерские отступы развёрнутого редактора
@@ -454,8 +456,8 @@ fun ThingsTaskInlineEditor(
                             modifier = Modifier
                                 .fillMaxWidth()
                                 .padding(vertical = MaterialTheme.dimens.taskEditorTagsVerticalPadding),
-                            horizontalArrangement = Arrangement.spacedBy(8.dp),
-                            verticalArrangement = Arrangement.spacedBy(6.dp)
+                            horizontalArrangement = Arrangement.spacedBy(ThingsSpacing.S),
+                            verticalArrangement = Arrangement.spacedBy(ThingsSpacing.XS_PLUS)
                         ) {
                             activeTags.forEach { tag ->
                                 Box(
@@ -466,7 +468,7 @@ fun ThingsTaskInlineEditor(
                                             view.performHapticFeedback(HapticFeedbackConstants.CLOCK_TICK)
                                             showTagDialog = true
                                         }
-                                        .padding(horizontal = 10.dp, vertical = 4.dp)
+                                        .padding(horizontal = ThingsSpacing.S_PLUS, vertical = ThingsSpacing.XS)
                                 ) {
                                     Text(
                                         text = tag,
@@ -500,14 +502,13 @@ fun ThingsTaskInlineEditor(
                                 tint = activeDateColor,
                                 modifier = Modifier.size(ThingsIconSize.S)
                             )
-                            Spacer(modifier = Modifier.width(6.dp))
+                            Spacer(modifier = Modifier.width(ThingsSpacing.XS_PLUS))
                             Text(
                                 text = activeDateLabel,
                                 maxLines = 1,
                                 overflow = TextOverflow.Ellipsis,
-                                style = ThingsTheme.type.editorDate.copy(
-                                    color = textPrimaryColor,
-                                    fontWeight = FontWeight.Medium
+                                style = ThingsTheme.type.editorDateStrong.copy(
+                                    color = textPrimaryColor
                                 )
                             )
                         }
@@ -569,17 +570,16 @@ fun ThingsTaskInlineEditor(
                                 tint = primaryColor,
                                 modifier = Modifier.size(ThingsIconSize.S)
                             )
-                            Spacer(modifier = Modifier.width(6.dp))
+                            Spacer(modifier = Modifier.width(ThingsSpacing.XS_PLUS))
                             Text(
                                 text = dateText,
                                 maxLines = 1,
                                 overflow = TextOverflow.Ellipsis,
-                                style = ThingsTheme.type.editorDate.copy(
-                                    color = primaryColor,
-                                    fontWeight = FontWeight.Medium
+                                style = ThingsTheme.type.editorDateStrong.copy(
+                                    color = primaryColor
                                 )
                             )
-                            Spacer(modifier = Modifier.width(4.dp))
+                            Spacer(modifier = Modifier.width(ThingsSpacing.XS))
                             Text(
                                 text = relativeText,
                                 maxLines = 1,
@@ -592,12 +592,12 @@ fun ThingsTaskInlineEditor(
                     }
                 }
 
-                Spacer(modifier = Modifier.width(16.dp))
+                Spacer(modifier = Modifier.width(ThingsSpacing.L))
 
                 // Action Icons Row on the right
                 Row(
                     verticalAlignment = Alignment.CenterVertically,
-                    modifier = Modifier.padding(bottom = 4.dp) // Align slightly with indicator row text/icon padding
+                    modifier = Modifier.padding(bottom = ThingsSpacing.XS) // Align slightly with indicator row text/icon padding
                 ) {
                     androidx.compose.animation.AnimatedVisibility(
                         visible = !hasActiveDate,
@@ -761,7 +761,7 @@ fun DeadlineDatePickerDialog(
                 ) {
                     Text(stringResource(R.string.cd_clear), color = ThingsTheme.colors.danger)
                 }
-                Spacer(modifier = Modifier.width(8.dp))
+                Spacer(modifier = Modifier.width(ThingsSpacing.S))
                 TextButton(
                     onClick = onDismiss
                 ) {

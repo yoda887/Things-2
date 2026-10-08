@@ -1,5 +1,7 @@
 package com.example.ui.screens.home.subcomponents
 
+import com.example.ui.theme.ThingsStroke
+import com.example.ui.theme.ThingsSpacing
 import com.example.R
 import androidx.compose.ui.res.stringResource
 import androidx.compose.foundation.background
@@ -17,6 +19,8 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import com.example.ui.theme.ThingsTheme
 
+private val TAG_CHIP_VERTICAL_PADDING = 5.dp
+
 /**
  * Строка фильтрации по тегам.
  */
@@ -32,8 +36,8 @@ fun TagFilterRow(
     LazyRow(
         modifier = modifier
             .fillMaxWidth()
-            .padding(vertical = 4.dp),
-        horizontalArrangement = Arrangement.spacedBy(6.dp)
+            .padding(vertical = ThingsSpacing.XS),
+        horizontalArrangement = Arrangement.spacedBy(ThingsSpacing.XS_PLUS)
     ) {
         item {
             val isAllSelected = selectedTag == null
@@ -41,14 +45,14 @@ fun TagFilterRow(
                 modifier = Modifier
                     .clip(ThingsTheme.shapes.tagFilterShape)
                     .background(if (isAllSelected) ThingsTheme.colors.accent else Color.Transparent)
-                    .border(1.dp, if (isAllSelected) ThingsTheme.colors.accent else dividerColor, ThingsTheme.shapes.tagFilterShape)
+                    .border(ThingsStroke.THIN, if (isAllSelected) ThingsTheme.colors.accent else dividerColor, ThingsTheme.shapes.tagFilterShape)
                     .clickable { onTagSelect(null) }
-                    .padding(horizontal = 10.dp, vertical = 5.dp)
+                    .padding(horizontal = ThingsSpacing.S_PLUS, vertical = TAG_CHIP_VERTICAL_PADDING)
             ) {
                 Text(
                     text = stringResource(R.string.ui_all),
                     color = if (isAllSelected) ThingsTheme.colors.onAccent else textSecondaryColor,
-                    style = ThingsTheme.type.caption.copy(fontWeight = FontWeight.Bold)
+                    style = ThingsTheme.type.captionStrong
                 )
             }
         }
@@ -59,9 +63,9 @@ fun TagFilterRow(
                 modifier = Modifier
                     .clip(ThingsTheme.shapes.tagFilterShape)
                     .background(if (isSelected) ThingsTheme.colors.accent else Color.Transparent)
-                    .border(1.dp, if (isSelected) ThingsTheme.colors.accent else dividerColor, ThingsTheme.shapes.tagFilterShape)
+                    .border(ThingsStroke.THIN, if (isSelected) ThingsTheme.colors.accent else dividerColor, ThingsTheme.shapes.tagFilterShape)
                     .clickable { onTagSelect(if (isSelected) null else tag) }
-                    .padding(horizontal = 10.dp, vertical = 5.dp)
+                    .padding(horizontal = ThingsSpacing.S_PLUS, vertical = TAG_CHIP_VERTICAL_PADDING)
             ) {
                 Text(
                     text = tag,

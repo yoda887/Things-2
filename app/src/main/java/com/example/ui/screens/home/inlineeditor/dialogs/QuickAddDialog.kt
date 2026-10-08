@@ -61,6 +61,17 @@ import kotlinx.coroutines.launch
 import java.text.SimpleDateFormat
 import java.util.*
 
+// Окно быстрой задачи: путь появления и ухода, поля карточки и нижней панели
+private val QUICK_ADD_START_OFFSET = 380.dp
+private val QUICK_ADD_DISMISS_DROP = 220.dp
+private val QUICK_ADD_CARD_TOP = 26.dp
+private val QUICK_ADD_CARD_BOTTOM = 18.dp
+private val QUICK_ADD_TITLE_END = 40.dp
+private val QUICK_ADD_INDICATORS_START = 24.dp
+private val QUICK_ADD_FOOTER_START = 22.dp
+private val QUICK_ADD_FOOTER_END = 18.dp
+private val QUICK_ADD_FOOTER_BUTTON_HEIGHT = 36.dp
+
 // Закрытие окна: подскок, уход вниз и растворение
 private const val DISMISS_NUDGE_MS = 90
 private const val DISMISS_DROP_MS = 260
@@ -144,9 +155,9 @@ fun QuickAddDialog(
     }
 
     val density = LocalDensity.current
-    val startOffsetPx = remember(density) { with(density) { 380.dp.toPx() } }
+    val startOffsetPx = remember(density) { with(density) { QUICK_ADD_START_OFFSET.toPx() } }
     val dismissNudgePx = remember(density) { with(density) { (-12).dp.toPx() } }
-    val dismissDropPx = remember(density) { with(density) { 220.dp.toPx() } }
+    val dismissDropPx = remember(density) { with(density) { QUICK_ADD_DISMISS_DROP.toPx() } }
 
     val coroutineScope = rememberCoroutineScope()
     val offsetY = remember { Animatable(startOffsetPx) }
@@ -260,14 +271,14 @@ fun QuickAddDialog(
         Card(
             shape = ThingsTheme.shapes.floatingCardShape,
             colors = CardDefaults.cardColors(containerColor = ThingsTheme.colors.background),
-            elevation = CardDefaults.cardElevation(defaultElevation = 8.dp),
+            elevation = CardDefaults.cardElevation(defaultElevation = ThingsElevation.CARD),
             modifier = Modifier
                 .graphicsLayer {
                     translationY = offsetY.value
                     this.alpha = alpha.value
                 }
                 .statusBarsPadding()
-                .padding(top = 4.dp)
+                .padding(top = ThingsSpacing.XS)
                 .fillMaxWidth()
                 .wrapContentHeight()
                 .clickable(
@@ -280,7 +291,7 @@ fun QuickAddDialog(
                     Column(
                         modifier = Modifier
                             .fillMaxWidth()
-                            .padding(start = 20.dp, end = 16.dp, top = 26.dp, bottom = 18.dp)
+                            .padding(start = ThingsSpacing.L_PLUS, end = ThingsSpacing.L, top = QUICK_ADD_CARD_TOP, bottom = QUICK_ADD_CARD_BOTTOM)
                     ) {
                         // 1. Верхний ряд: Чекбокс + Заголовок (Title)
                         Row(
@@ -292,13 +303,13 @@ fun QuickAddDialog(
                                 onCheckedChange = { /* В режиме создания нового чекбокс пассивный */ },
                                 size = MaterialTheme.dimens.mainCheckboxSize,
                                 uncheckedColor = ThingsTheme.colors.checkboxBorder,
-                                modifier = Modifier.padding(end = 10.dp, top = 2.dp)
+                                modifier = Modifier.padding(end = ThingsSpacing.S_PLUS, top = ThingsSpacing.XXS)
                             )
                             
                             Column(
                                 modifier = Modifier
                                     .weight(1f)
-                                    .padding(end = 40.dp)
+                                    .padding(end = QUICK_ADD_TITLE_END)
                             ) {
                                 Box(modifier = Modifier.fillMaxWidth()) {
                                     if (title.isEmpty()) {
@@ -357,10 +368,10 @@ fun QuickAddDialog(
                             }
                         }
 
-                        Spacer(modifier = Modifier.height(16.dp))
+                        Spacer(modifier = Modifier.height(ThingsSpacing.L))
 
                         // 3. Чеклист (InlineChecklistPanel)
-                        Box(modifier = Modifier.fillMaxWidth().padding(end = 40.dp)) {
+                        Box(modifier = Modifier.fillMaxWidth().padding(end = QUICK_ADD_TITLE_END)) {
                             HideTextSelectionHandles(hidden = isClosing) {
                                 InlineChecklistPanel(
                                     itemId = "",
@@ -372,7 +383,7 @@ fun QuickAddDialog(
                             }
                         }
 
-                        Spacer(modifier = Modifier.height(32.dp))
+                        Spacer(modifier = Modifier.height(ThingsSpacing.XXL))
                         // 4. Панель индикаторов (активные теги, дата, дедлайн) + Панель инструментов (иконки действий)
                     val textPrimaryColor = ThingsTheme.colors.editorText
                     val iconInactiveColor = ThingsTheme.colors.checkboxBorder
@@ -409,7 +420,7 @@ fun QuickAddDialog(
                         }
                     } else Color.Unspecified
 
-                    val startRelativePadding = 24.dp
+                    val startRelativePadding = QUICK_ADD_INDICATORS_START
 
                     Row(
                         modifier = Modifier.fillMaxWidth(),
@@ -432,9 +443,9 @@ fun QuickAddDialog(
                                 FlowRow(
                                     modifier = Modifier
                                         .fillMaxWidth()
-                                        .padding(top = 4.dp, bottom = 12.dp),
-                                    horizontalArrangement = Arrangement.spacedBy(8.dp),
-                                    verticalArrangement = Arrangement.spacedBy(6.dp)
+                                        .padding(top = ThingsSpacing.XS, bottom = ThingsSpacing.M),
+                                    horizontalArrangement = Arrangement.spacedBy(ThingsSpacing.S),
+                                    verticalArrangement = Arrangement.spacedBy(ThingsSpacing.XS_PLUS)
                                 ) {
                                     activeTags.forEach { tag ->
                                         Box(
@@ -442,7 +453,7 @@ fun QuickAddDialog(
                                                 .clip(ThingsTheme.shapes.chipShape)
                                                 .background(ThingsTheme.colors.tagChipBackground) // light-teal background
                                                 .clickable { showTagDialog = true }
-                                                .padding(horizontal = 10.dp, vertical = 4.dp)
+                                                .padding(horizontal = ThingsSpacing.S_PLUS, vertical = ThingsSpacing.XS)
                                         ) {
                                             Text(
                                                 text = tag,
@@ -461,7 +472,7 @@ fun QuickAddDialog(
                                     verticalAlignment = Alignment.CenterVertically,
                                     modifier = Modifier
                                         .clickable { showWhenDialog = true }
-                                        .padding(vertical = 6.dp)
+                                        .padding(vertical = ThingsSpacing.XS_PLUS)
                                 ) {
                                     Icon(
                                         imageVector = activeDateIcon,
@@ -469,21 +480,20 @@ fun QuickAddDialog(
                                         tint = activeDateColor,
                                         modifier = Modifier.size(ThingsIconSize.S)
                                     )
-                                    Spacer(modifier = Modifier.width(6.dp))
+                                    Spacer(modifier = Modifier.width(ThingsSpacing.XS_PLUS))
                                     Text(
                                         text = activeDateLabel,
                                         maxLines = 1,
                                         overflow = TextOverflow.Ellipsis,
-                                        style = ThingsTheme.type.editorDate.copy(
-                                            color = textPrimaryColor,
-                                            fontWeight = FontWeight.Medium
+                                        style = ThingsTheme.type.editorDateStrong.copy(
+                                            color = textPrimaryColor
                                         )
                                     )
                                 }
                             }
 
                             if (hasActiveDate && dueDate != null) {
-                                Spacer(modifier = Modifier.height(12.dp))
+                                Spacer(modifier = Modifier.height(ThingsSpacing.M))
                             }
 
                             // Индикатор установленного дедлайна (Due Date)
@@ -526,7 +536,7 @@ fun QuickAddDialog(
                                     verticalAlignment = Alignment.CenterVertically,
                                     modifier = Modifier
                                         .clickable { showDatePicker = true }
-                                        .padding(vertical = 6.dp)
+                                        .padding(vertical = ThingsSpacing.XS_PLUS)
                                 ) {
                                     Icon(
                                         imageVector = AppIcons.Deadline,
@@ -534,36 +544,34 @@ fun QuickAddDialog(
                                         tint = primaryColor,
                                         modifier = Modifier.size(ThingsIconSize.S)
                                     )
-                                    Spacer(modifier = Modifier.width(6.dp))
+                                    Spacer(modifier = Modifier.width(ThingsSpacing.XS_PLUS))
                                     Text(
                                         text = dateText,
                                         maxLines = 1,
                                         overflow = TextOverflow.Ellipsis,
-                                        style = ThingsTheme.type.editorDate.copy(
-                                            color = primaryColor,
-                                            fontWeight = FontWeight.Medium
+                                        style = ThingsTheme.type.editorDateStrong.copy(
+                                            color = primaryColor
                                         )
                                     )
-                                    Spacer(modifier = Modifier.width(4.dp))
+                                    Spacer(modifier = Modifier.width(ThingsSpacing.XS))
                                     Text(
                                         text = relativeText,
                                         maxLines = 1,
                                         overflow = TextOverflow.Ellipsis,
                                         style = ThingsTheme.type.editorDate.copy(
-                                            color = ThingsTheme.colors.textSecondary,
-                                            fontWeight = FontWeight.Normal
+                                            color = ThingsTheme.colors.textSecondary
                                         )
                                     )
                                 }
                             }
                         }
 
-                        Spacer(modifier = Modifier.width(16.dp))
+                        Spacer(modifier = Modifier.width(ThingsSpacing.L))
 
                         // Справа: ряд иконок тулбара (Когда, Теги, Чеклист, Дедлайн)
                         Row(
                             verticalAlignment = Alignment.CenterVertically,
-                            modifier = Modifier.padding(end = 10.dp, bottom = 4.dp)
+                            modifier = Modifier.padding(end = ThingsSpacing.S_PLUS, bottom = ThingsSpacing.XS)
                         ) {
                             // Иконка Когда (Календарь)
                             AnimatedVisibility(
@@ -645,7 +653,7 @@ fun QuickAddDialog(
                         modifier = Modifier
                             .fillMaxWidth()
                             .background(ThingsTheme.colors.surface)
-                            .padding(start = 22.dp, end = 18.dp, top = 8.dp, bottom = 10.dp),
+                            .padding(start = QUICK_ADD_FOOTER_START, end = QUICK_ADD_FOOTER_END, top = ThingsSpacing.S, bottom = ThingsSpacing.S_PLUS),
                         horizontalArrangement = Arrangement.SpaceBetween,
                         verticalAlignment = Alignment.CenterVertically
                     ) {
@@ -654,7 +662,7 @@ fun QuickAddDialog(
                             modifier = Modifier
                                 .clip(ThingsTheme.shapes.rowShape)
                                 .clickable { showMoveDialog = true }
-                                .padding(horizontal = 6.dp, vertical = 6.dp),
+                                .padding(horizontal = ThingsSpacing.XS_PLUS, vertical = ThingsSpacing.XS_PLUS),
                             verticalAlignment = Alignment.CenterVertically
                         ) {
                             Icon(
@@ -663,12 +671,11 @@ fun QuickAddDialog(
                                 tint = ThingsTheme.colors.textSecondary,
                                 modifier = Modifier.size(ThingsIconSize.M)
                             )
-                            Spacer(modifier = Modifier.width(6.dp))
+                            Spacer(modifier = Modifier.width(ThingsSpacing.XS_PLUS))
                             Text(
                                 text = destinationName,
-                                style = ThingsTheme.type.editorChecklist.copy(
-                                    color = ThingsTheme.colors.textSecondary,
-                                    fontWeight = FontWeight.Medium
+                                style = ThingsTheme.type.editorChecklistStrong.copy(
+                                    color = ThingsTheme.colors.textSecondary
                                 )
                             )
                         }
@@ -681,8 +688,8 @@ fun QuickAddDialog(
                                 contentColor = ThingsTheme.colors.onAccent
                             ),
                             shape = ThingsTheme.shapes.capsuleShape,
-                            contentPadding = PaddingValues(horizontal = 24.dp, vertical = 6.dp),
-                            modifier = Modifier.height(36.dp)
+                            contentPadding = PaddingValues(horizontal = ThingsSpacing.XL, vertical = ThingsSpacing.XS_PLUS),
+                            modifier = Modifier.height(QUICK_ADD_FOOTER_BUTTON_HEIGHT)
                         ) {
                             Text(
                                 text = stringResource(R.string.tag_dialog_save),
@@ -696,8 +703,8 @@ fun QuickAddDialog(
                 Box(
                     modifier = Modifier
                         .align(Alignment.TopEnd)
-                        .padding(top = 16.dp, end = 16.dp)
-                        .size(36.dp)
+                        .padding(top = ThingsSpacing.L, end = ThingsSpacing.L)
+                        .size(MaterialTheme.dimens.dialogHeaderButtonSize)
                         .clip(CircleShape)
                         .background(ThingsTheme.colors.divider)
                         .clickable { handleDismiss() },

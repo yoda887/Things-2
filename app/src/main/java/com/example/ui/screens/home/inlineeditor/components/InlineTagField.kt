@@ -1,5 +1,6 @@
 package com.example.ui.screens.home.inlineeditor.components
 
+import com.example.ui.theme.ThingsSpacing
 import com.example.ui.theme.ThingsIconSize
 import com.example.ui.theme.ThingsAlpha
 import com.example.R
@@ -25,6 +26,8 @@ import androidx.compose.ui.graphics.SolidColor
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.unit.dp
 
+private val FIELD_START_PADDING = 28.dp
+
 private val TAG_FIELD_ICON_SIZE = 14.dp
 
 @Composable
@@ -49,10 +52,10 @@ fun InlineTagField(
         Row(
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(start = 28.dp, top = 10.dp)
+                .padding(start = FIELD_START_PADDING, top = ThingsSpacing.S_PLUS)
                 .clip(ThingsTheme.shapes.smallShape)
                 .background(helperBgColor)
-                .padding(horizontal = 8.dp, vertical = 4.dp),
+                .padding(horizontal = ThingsSpacing.S, vertical = ThingsSpacing.XS),
             verticalAlignment = Alignment.CenterVertically
         ) {
             Icon(
@@ -61,7 +64,7 @@ fun InlineTagField(
                 tint = ThingsTheme.colors.anytime,
                 modifier = Modifier.size(ThingsIconSize.XS)
             )
-            Spacer(modifier = Modifier.width(8.dp))
+            Spacer(modifier = Modifier.width(ThingsSpacing.S))
             BasicTextField(
                 value = tagInput,
                 onValueChange = onTagInputChange,
@@ -78,7 +81,7 @@ fun InlineTagField(
                     innerTextField()
                 }
             )
-            Spacer(modifier = Modifier.width(6.dp))
+            Spacer(modifier = Modifier.width(ThingsSpacing.XS_PLUS))
             Icon(
                 imageVector = Icons.Default.Close,
                 contentDescription = stringResource(R.string.cd_close_tags),
