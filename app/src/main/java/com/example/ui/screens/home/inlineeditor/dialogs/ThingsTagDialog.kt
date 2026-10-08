@@ -1,6 +1,17 @@
 package com.example.ui.screens.home.inlineeditor.dialogs
 
 import com.example.ui.theme.ThingsElevation
+import com.example.ui.theme.dimens
+import kotlinx.coroutines.launch
+import androidx.compose.ui.window.DialogWindowProvider
+import androidx.compose.ui.draw.drawBehind
+import androidx.compose.animation.core.LinearEasing
+import androidx.compose.animation.core.FastOutSlowInEasing
+import androidx.compose.animation.core.Animatable
+import androidx.activity.compose.BackHandler
+import com.example.ui.theme.ThingsAlpha
+import androidx.compose.ui.graphics.SolidColor
+import androidx.compose.foundation.text.BasicTextField
 import com.example.ui.theme.ThingsSpacing
 import com.example.ui.theme.ThingsIconSize
 import com.example.ui.theme.ThingsMotion
@@ -81,24 +92,24 @@ private val DarkButtonBgColor @Composable get() = ThingsTheme.colors.overlayCont
 private val DeleteButtonBgColor @Composable get() = ThingsTheme.colors.danger
 
 // Private Dimensions
-private val DialogWidth = 320.dp
-private val DialogHeight = 480.dp
-private val InnerContentPadding = 16.dp
-private val RowPaddingStartNormal = 4.dp
+// Размеры — шкалы и AppDimens темы; своё у окна только смещение вложенного тега
+private val InnerContentPadding = ThingsSpacing.L
+private val RowPaddingStartNormal = ThingsSpacing.XS
+/** Вложенный тег сдвинут под название родителя: отступ строки + значок + промежуток */
 private val RowPaddingStartChild = 28.dp
-private val RowPaddingEnd = 4.dp
-private val RowPaddingTop = 8.dp
-private val RowPaddingBottom = 8.dp
-private val ButtonIconSize = 16.dp
-private val EditButtonSize = 28.dp
-private val DeleteButtonSize = 28.dp
+private val RowPaddingEnd = ThingsSpacing.XS
+private val RowPaddingTop = ThingsSpacing.S
+private val RowPaddingBottom = ThingsSpacing.S
+private val ButtonIconSize = ThingsIconSize.XS
+private val EditButtonSize @Composable get() = MaterialTheme.dimens.dialogRowButtonSize
+private val DeleteButtonSize @Composable get() = MaterialTheme.dimens.dialogRowButtonSize
 /** Круглые кнопки шапки (закрыть, сохранить, назад) */
-private val HeaderButtonSize = 36.dp
+private val HeaderButtonSize @Composable get() = MaterialTheme.dimens.dialogHeaderButtonSize
 /** Строка тега в списке — сверху и снизу */
-private val TagRowVerticalPadding = 10.dp
+private val TagRowVerticalPadding = ThingsSpacing.S_PLUS
 /** Кнопки «Управлять тегами» / «Новый тег» внизу: промежуток и вертикальный отступ */
-private val TagDialogButtonsGap = 10.dp
-private val TagDialogButtonVerticalPadding = 10.dp
+private val TagDialogButtonsGap = ThingsSpacing.S_PLUS
+private val TagDialogButtonVerticalPadding = ThingsSpacing.S_PLUS
 
 /**
  * Screen states for the ThingsTagDialog options.
@@ -208,6 +219,17 @@ fun ThingsTagDialog(
     var groupSelectionTargetScreen by remember { mutableStateOf(DialogScreen.CREATE) }
     val focusRequester = remember { FocusRequester() }
     val lazyListState = rememberLazyListState()
+    // Список выбора тегов и тег, к которому его прокрутить, когда тот появится, — только что созданный
+    val tagListState = rememberLazyListState()
+    var revealTagTitle by remember { mutableStateOf<String?>(null) }
+    LaunchedEffect(flatTagList, revealTagTitle) {
+        val key = revealTagTitle?.let(TagTitles::key) ?: return@LaunchedEffect
+        val index = flatTagList.indexOfFirst { TagTitles.key(it.first.title) == key }
+        if (index >= 0) {
+            tagListState.animateScrollToItem(index)
+            revealTagTitle = null
+        }
+    }
     // Перетаскивание — общим движком списков (как задачи, проекты и области), правила перестановки — в TagReorder
     val dragDropState = rememberGenericDragDropState(lazyListState)
     var localManageTags by remember { mutableStateOf<List<TagRow>>(flatTagList) }
@@ -300,8 +322,56 @@ fun ThingsTagDialog(
 
     Dialog(
         onDismissRequest = onDismissRequest,
-        properties = DialogProperties(usePlatformDefaultWidth = false)
+        // Окно во весь экран, без системных отступов: карточка встаёт ровно по центру экрана,
+        // а затемнение накрывает и полосу состояния. Нажатие мимо карточки ловит сам диалог
+        properties = DialogProperties(
+            usePlatformDefaultWidth = false,
+            decorFitsSystemWindows = false,
+            dismissOnClickOutside = false
+        )
     ) {
+        // Появление, закрытие и затемнение рисуем сами: системная анимация окна только гасит его,
+        // а эталон растёт при открытии и сжимается при закрытии. Затемнение — той же силы, что у системы
+        val dialogWindow = (LocalView.current.parent as? DialogWindowProvider)?.window
+        val dimAmount = remember(dialogWindow) {
+            val amount = dialogWindow?.attributes?.dimAmount ?: 0f
+            dialogWindow?.setWindowAnimations(R.style.DialogWindowAnimationNone)
+            dialogWindow?.clearFlags(android.view.WindowManager.LayoutParams.FLAG_DIM_BEHIND)
+            // Окно — на весь экран. Без этого система ставит его между полосой состояния и навигации: карточка уезжает
+            // ниже центра экрана, а полоса состояния остаётся незатемнённой
+            dialogWindow?.let { window ->
+                window.addFlags(android.view.WindowManager.LayoutParams.FLAG_LAYOUT_NO_LIMITS)
+                // и под вырезом камеры в полосе состояния
+                if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.R) {
+                    window.attributes = window.attributes.apply {
+                        fitInsetsTypes = 0
+                        layoutInDisplayCutoutMode = android.view.WindowManager.LayoutParams.LAYOUT_IN_DISPLAY_CUTOUT_MODE_ALWAYS
+                    }
+                } else if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.P) {
+                    window.attributes = window.attributes.apply {
+                        layoutInDisplayCutoutMode = android.view.WindowManager.LayoutParams.LAYOUT_IN_DISPLAY_CUTOUT_MODE_SHORT_EDGES
+                    }
+                }
+            }
+            amount
+        }
+        val appear = remember { Animatable(0f) }
+        var closing by remember { mutableStateOf(false) }
+        val scope = rememberCoroutineScope()
+        LaunchedEffect(Unit) {
+            appear.animateTo(1f, tween(ThingsMotion.QUICK, easing = FastOutSlowInEasing))
+        }
+
+        /** Закрывает окно: карточка сжимается и гаснет вместе с затемнением, затем окно убирается. */
+        fun closeWindow() {
+            if (closing) return
+            closing = true
+            scope.launch {
+                appear.animateTo(0f, tween(ThingsMotion.FAST, easing = LinearEasing))
+                onDismissRequest()
+            }
+        }
+
         // У диалога своё окно — со своими отступами клавиатуры и своим фокусом,
         // поэтому снятие курсора при сворачивании клавиатуры подключается здесь отдельно — с паузой
         // на хвост штатной анимации скрытия (управляемую окну диалога система не даёт)
@@ -337,6 +407,7 @@ fun ThingsTagDialog(
             }
             selectedTags = selectedTags + title
             deletedTags = deletedTags - title
+            revealTagTitle = title
             closeCreateScreen()
         }
 
@@ -344,6 +415,17 @@ fun ThingsTagDialog(
             dialogView.hideSoftKeyboardNow()
             currentScreen = DialogScreen.MANAGE
             editingTag = null
+        }
+
+        // «Назад» — на уровень вверх, как крестик или стрелка экрана; окно закрывает только со списка
+        BackHandler {
+            when (currentScreen) {
+                DialogScreen.CREATE -> closeCreateScreen()
+                DialogScreen.EDIT -> closeEditScreen()
+                DialogScreen.SELECT_GROUP -> currentScreen = groupSelectionTargetScreen
+                DialogScreen.MANAGE -> currentScreen = DialogScreen.LIST
+                DialogScreen.LIST -> closeWindow()
+            }
         }
 
         fun saveEditedTag() {
@@ -366,35 +448,49 @@ fun ThingsTagDialog(
             dialogView.hideSoftKeyboardThen { onUpdateTag(updated) }
             closeEditScreen()
         }
-        Box(
+        val scrimColor = ThingsTheme.colors.scrim
+        BoxWithConstraints(
             modifier = Modifier
                 .fillMaxSize()
+                .drawBehind { drawRect(scrimColor, alpha = dimAmount * appear.value) }
                 .pointerInput(Unit) {
-                    // Окно диалога исчезает сразу — сначала дожидаемся скрытия клавиатуры
-                    detectTapGestures(onTap = { dialogView.hideSoftKeyboardThen(onDismissRequest) })
+                    // Окно диалога уходит вместе с клавиатурой — сначала дожидаемся её скрытия
+                    detectTapGestures(onTap = { dialogView.hideSoftKeyboardThen { closeWindow() } })
                 },
             contentAlignment = Alignment.Center
         ) {
+            val dialogHeight = maxHeight * MaterialTheme.dimens.dialogHeightFraction
             Card(
                 shape = ThingsTheme.shapes.dialogShape,
                 colors = CardDefaults.cardColors(
                     containerColor = DialogBackgroundColor
                 ),
                 modifier = Modifier
-                    .width(DialogWidth)
+                    .graphicsLayer {
+                        val progress = appear.value
+                        val fromScale = if (closing) ThingsMotion.DIALOG_EXIT_SCALE else ThingsMotion.DIALOG_ENTER_SCALE
+                        val scale = fromScale + (1f - fromScale) * progress
+                        scaleX = scale
+                        scaleY = scale
+                        alpha = progress
+                    }
+                    .width(maxWidth * MaterialTheme.dimens.dialogWidthFraction)
                     .wrapContentHeight()
                     .pointerInput(Unit) { detectTapGestures() }
             ) {
             Box(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .height(DialogHeight)
+                    .height(dialogHeight)
             ) {
                 // ----------------------------------------------------
                 // SCREEN 1: Tags List Screen
                 // ----------------------------------------------------
+                // Пока поверх выезжает «Новый тег», открытый из списка, или «Управление тегами»,
+                // список остаётся на месте, как в эталоне
                 androidx.compose.animation.AnimatedVisibility(
-                    visible = currentScreen == DialogScreen.LIST,
+                    visible = currentScreen == DialogScreen.LIST || currentScreen == DialogScreen.MANAGE ||
+                        (currentScreen == DialogScreen.CREATE && createScreenReturnTarget == DialogScreen.LIST),
                     enter = fadeIn(animationSpec = tween(ThingsMotion.QUICK)),
                     exit = fadeOut(animationSpec = tween(ThingsMotion.QUICK))
                 ) {
@@ -428,7 +524,7 @@ fun ThingsTagDialog(
                                         if (hasChanges) {
                                             onTagsSelected(selectedTags.toList())
                                         }
-                                        onDismissRequest()
+                                        closeWindow()
                                     },
                                 contentAlignment = Alignment.Center
                             ) {
@@ -443,6 +539,7 @@ fun ThingsTagDialog(
 
                         // Tags List
                         LazyColumn(
+                            state = tagListState,
                             modifier = Modifier
                                 .fillMaxWidth()
                                 .weight(1f),
@@ -551,14 +648,15 @@ fun ThingsTagDialog(
                 // ----------------------------------------------------
                 androidx.compose.animation.AnimatedVisibility(
                     visible = currentScreen == DialogScreen.CREATE,
+                    // Непрозрачная панель выезжает снизу поверх списка и уезжает обратно, не угасая
                     enter = slideInVertically(
                         initialOffsetY = { it },
-                        animationSpec = tween(ThingsMotion.STANDARD)
-                    ) + fadeIn(animationSpec = tween(ThingsMotion.QUICK)),
+                        animationSpec = tween(ThingsMotion.MEDIUM)
+                    ),
                     exit = slideOutVertically(
                         targetOffsetY = { it },
-                        animationSpec = tween(ThingsMotion.STANDARD)
-                    ) + fadeOut(animationSpec = tween(ThingsMotion.QUICK)) +
+                        animationSpec = tween(ThingsMotion.MEDIUM)
+                    ) +
                         // Поле держится, пока клавиатура не скрыта полностью: в окне диалога она уходит штатной
                         // анимацией, дольше, чем в окне приложения (см. SOFT_KEYBOARD_SYSTEM_HIDE_SETTLE_MS)
                         holdForSoftKeyboardHide(SOFT_KEYBOARD_SYSTEM_HIDE_SETTLE_MS)
@@ -567,6 +665,8 @@ fun ThingsTagDialog(
                         modifier = Modifier
                             .fillMaxSize()
                             .background(DialogBackgroundColor)
+                            // Список под панелью не должен ловить нажатия
+                            .pointerInput(Unit) { detectTapGestures() }
                             .padding(InnerContentPadding),
                         verticalArrangement = Arrangement.spacedBy(ThingsSpacing.L)
                     ) {
@@ -616,34 +716,13 @@ fun ThingsTagDialog(
                             }
                         }
 
-                        // Frameless Tag Input Field with Dark Container.
-                        // Пока экран уезжает, фокус остаётся на поле — снять его до скрытия клавиатуры нельзя
-                        // (см. hideSoftKeyboardNow), поэтому курсор и маркеры прячем, как в редакторе задачи
-                        val leaving = currentScreen != DialogScreen.CREATE
-                        HideTextSelectionHandles(hidden = leaving) {
-                            OutlinedTextField(
-                                value = newTagName,
-                                onValueChange = { newTagName = it },
-                                keyboardOptions = KeyboardOptions(imeAction = ImeAction.Done),
-                                keyboardActions = KeyboardActions(onDone = { saveNewTag() }),
-                                placeholder = { Text(stringResource(id = R.string.tag_dialog_placeholder), color = ItemMutedColor) },
-                                singleLine = true,
-                                colors = OutlinedTextFieldDefaults.colors(
-                                    focusedContainerColor = DarkButtonBgColor,
-                                    unfocusedContainerColor = DarkButtonBgColor,
-                                    disabledContainerColor = DarkButtonBgColor,
-                                    focusedTextColor = ThingsTheme.colors.overlayContent,
-                                    unfocusedTextColor = ThingsTheme.colors.overlayContent,
-                                    focusedBorderColor = ThingsTheme.colors.accent,
-                                    unfocusedBorderColor = Color.Transparent,
-                                    cursorColor = if (leaving) Color.Transparent else ThingsTheme.colors.accent
-                                ),
-                                shape = ThingsTheme.shapes.rowShape,
-                                modifier = Modifier
-                                    .fillMaxWidth()
-                                    .focusRequester(focusRequester)
-                            )
-                        }
+                        TagNameField(
+                            value = newTagName,
+                            onValueChange = { newTagName = it },
+                            onDone = { saveNewTag() },
+                            leaving = currentScreen != DialogScreen.CREATE,
+                            focusRequester = focusRequester
+                        )
 
                         // "Group" Action Picker
                         Row(
@@ -788,19 +867,22 @@ fun ThingsTagDialog(
                 // ----------------------------------------------------
                 androidx.compose.animation.AnimatedVisibility(
                     visible = currentScreen == DialogScreen.MANAGE,
+                    // Как «Новый тег»: непрозрачная панель выезжает снизу поверх списка и съезжает обратно, не угасая
                     enter = slideInVertically(
                         initialOffsetY = { it },
-                        animationSpec = tween(ThingsMotion.STANDARD)
-                    ) + fadeIn(animationSpec = tween(ThingsMotion.QUICK)),
+                        animationSpec = tween(ThingsMotion.MEDIUM)
+                    ),
                     exit = slideOutVertically(
                         targetOffsetY = { it },
-                        animationSpec = tween(ThingsMotion.STANDARD)
-                    ) + fadeOut(animationSpec = tween(ThingsMotion.QUICK))
+                        animationSpec = tween(ThingsMotion.MEDIUM)
+                    )
                 ) {
                     Column(
                         modifier = Modifier
                             .fillMaxSize()
                             .background(DialogBackgroundColor)
+                            // Список под панелью не должен ловить нажатия
+                            .pointerInput(Unit) { detectTapGestures() }
                             .padding(InnerContentPadding),
                         verticalArrangement = Arrangement.spacedBy(ThingsSpacing.L)
                     ) {
@@ -1055,45 +1137,13 @@ fun ThingsTagDialog(
                             }
                         }
 
-                        // Frameless Tag Input Field with Dark Container.
-                        // Пока экран уезжает, фокус остаётся на поле — снять его до скрытия клавиатуры нельзя
-                        // (см. hideSoftKeyboardNow), поэтому курсор и маркеры прячем, как в редакторе задачи
-                        val leaving = currentScreen != DialogScreen.EDIT
-                        HideTextSelectionHandles(hidden = leaving) {
-                            OutlinedTextField(
-                                value = editTagName,
-                                onValueChange = { editTagName = it },
-                                keyboardOptions = KeyboardOptions(imeAction = ImeAction.Done),
-                                keyboardActions = KeyboardActions(onDone = { saveEditedTag() }),
-                                placeholder = { Text(stringResource(id = R.string.tag_dialog_placeholder), color = ItemMutedColor) },
-                                singleLine = true,
-                                colors = OutlinedTextFieldDefaults.colors(
-                                    focusedContainerColor = DarkButtonBgColor,
-                                    unfocusedContainerColor = DarkButtonBgColor,
-                                    disabledContainerColor = DarkButtonBgColor,
-                                    focusedTextColor = ThingsTheme.colors.overlayContent,
-                                    unfocusedTextColor = ThingsTheme.colors.overlayContent,
-                                    focusedBorderColor = ThingsTheme.colors.accent,
-                                    unfocusedBorderColor = Color.Transparent,
-                                    cursorColor = if (leaving) Color.Transparent else ThingsTheme.colors.accent
-                                ),
-                                trailingIcon = {
-                                    if (editTagName.isNotEmpty()) {
-                                        IconButton(onClick = { editTagName = "" }) {
-                                            Icon(
-                                                imageVector = Icons.Default.Close,
-                                                contentDescription = stringResource(R.string.cd_clear),
-                                                tint = ItemMutedColor
-                                            )
-                                        }
-                                    }
-                                },
-                                shape = ThingsTheme.shapes.rowShape,
-                                modifier = Modifier
-                                    .fillMaxWidth()
-                                    .focusRequester(focusRequester)
-                            )
-                        }
+                        TagNameField(
+                            value = editTagName,
+                            onValueChange = { editTagName = it },
+                            onDone = { saveEditedTag() },
+                            leaving = currentScreen != DialogScreen.EDIT,
+                            focusRequester = focusRequester
+                        )
 
                         // "Group" Action Picker
                         Row(
@@ -1135,6 +1185,72 @@ fun ThingsTagDialog(
                 }
             }
         }
+        }
+    }
+}
+
+/**
+ * Поле названия тега на экранах «Новый тег» и «Изменить тег»: залитая плашка без рамки,
+ * подсказка, пока пусто, и круглая кнопка очистки, когда есть текст.
+ * Пока экран уезжает ([leaving]), фокус остаётся на поле — снять его до скрытия клавиатуры нельзя
+ * (см. hideSoftKeyboardNow), поэтому курсор и маркеры прячем, как в редакторе задачи.
+ */
+@Composable
+private fun TagNameField(
+    value: String,
+    onValueChange: (String) -> Unit,
+    onDone: () -> Unit,
+    leaving: Boolean,
+    focusRequester: FocusRequester
+) {
+    Row(
+        verticalAlignment = Alignment.CenterVertically,
+        modifier = Modifier
+            .fillMaxWidth()
+            .height(MaterialTheme.dimens.dialogFieldHeight)
+            .clip(ThingsTheme.shapes.rowShape)
+            .background(DarkButtonBgColor)
+            .padding(horizontal = ThingsSpacing.M)
+    ) {
+        Box(modifier = Modifier.weight(1f), contentAlignment = Alignment.CenterStart) {
+            if (value.isEmpty()) {
+                Text(
+                    text = stringResource(id = R.string.tag_dialog_placeholder),
+                    style = ThingsTheme.type.dialogRow.copy(color = ItemMutedColor)
+                )
+            }
+            HideTextSelectionHandles(hidden = leaving) {
+                BasicTextField(
+                    value = value,
+                    onValueChange = onValueChange,
+                    textStyle = ThingsTheme.type.dialogRow.copy(color = ThingsTheme.colors.overlayContent),
+                    singleLine = true,
+                    keyboardOptions = KeyboardOptions(imeAction = ImeAction.Done),
+                    keyboardActions = KeyboardActions(onDone = { onDone() }),
+                    cursorBrush = SolidColor(if (leaving) Color.Transparent else ThingsTheme.colors.accent),
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .focusRequester(focusRequester)
+                )
+            }
+        }
+        if (value.isNotEmpty()) {
+            Spacer(modifier = Modifier.width(ThingsSpacing.S))
+            Box(
+                contentAlignment = Alignment.Center,
+                modifier = Modifier
+                    .size(MaterialTheme.dimens.clearBadgeSize)
+                    .clip(androidx.compose.foundation.shape.CircleShape)
+                    .background(ItemMutedColor.copy(alpha = ThingsAlpha.HALF))
+                    .clickable { onValueChange("") }
+            ) {
+                Icon(
+                    imageVector = Icons.Default.Close,
+                    contentDescription = stringResource(R.string.cd_clear),
+                    tint = DarkButtonBgColor,
+                    modifier = Modifier.size(MaterialTheme.dimens.clearBadgeIconSize)
+                )
+            }
         }
     }
 }

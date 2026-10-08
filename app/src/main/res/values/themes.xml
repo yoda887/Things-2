@@ -8,4 +8,10 @@
     <style name="DialogWindowAnimationGrowOpen" parent="@android:style/Animation.Dialog">
         <item name="android:windowEnterAnimation">@null</item>
     </style>
+
+    <!-- Стиль окна без системных анимаций: появление, закрытие и затемнение рисует Compose (окно тегов) -->
+    <style name="DialogWindowAnimationNone" parent="@android:style/Animation.Dialog">
+        <item name="android:windowEnterAnimation">@null</item>
+        <item name="android:windowExitAnimation">@null</item>
+    </style>
 </resources>
