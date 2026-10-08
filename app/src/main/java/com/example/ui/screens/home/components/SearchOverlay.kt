@@ -28,6 +28,7 @@ import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.BasicTextField
+import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.*
@@ -393,6 +394,20 @@ fun ThingsSearchOverlay(
         }
     }
 
+    /** Открывает первый (подсвеченный) результат — по «Go» на клавиатуре. */
+    fun openHighlightedResult() {
+        if (searchQuery.isBlank()) return
+        when (val first = searchResults.firstOrNull()) {
+            is SearchResultItem.TaskResult -> onTaskClick(first.taskWrapper)
+            is SearchResultItem.ProjectResult -> onProjectClick(first.project)
+            is SearchResultItem.AreaResult -> onAreaClick(first.area)
+            is SearchResultItem.TagResult -> onTagClick(first.tag)
+            is SearchResultItem.SmartListResult -> onSmartListClick(first.screen)
+            is SearchResultItem.SpecialResult -> onSmartListClick(ActiveScreen.INBOX)
+            null -> onContinueSearchClick()
+        }
+    }
+
     // В эталоне Things 3 кнопка "Continue Search" отображается всегда при наличии любого поискового запроса
     val showContinueSearch = searchQuery.isNotBlank()
 
@@ -607,7 +622,10 @@ fun ThingsSearchOverlay(
                                             color = textPrimary
                                         ),
                                         singleLine = true,
-                                        keyboardOptions = KeyboardOptions(imeAction = ImeAction.Search),
+                                        // «Go» открывает подсвеченный первый результат, как нажатие на него;
+                                        // без результатов — продолжает поиск
+                                        keyboardOptions = KeyboardOptions(imeAction = ImeAction.Go),
+                                        keyboardActions = KeyboardActions(onGo = { openHighlightedResult() }),
                                         cursorBrush = SolidColor(if (isMorphClosing || isClosing) Color.Unspecified else ThingsTheme.colors.accent),
                                         modifier = Modifier
                                             .fillMaxWidth()
