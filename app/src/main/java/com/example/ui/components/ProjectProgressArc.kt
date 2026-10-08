@@ -1,5 +1,6 @@
 package com.example.ui.components
 
+import androidx.compose.ui.graphics.PathEffect
 import com.example.ui.theme.ThingsAlpha
 import com.example.ui.theme.ThingsTheme
 import androidx.compose.foundation.Canvas
@@ -15,13 +16,19 @@ import androidx.compose.ui.unit.dp
  * Рисует тонкую целую окружность серого цвета (трек) и сплошной круговой сектор
  * внутри неё, отображающий процент выполнения задач по проекту.
  */
+
+/** Сколько штрихов у пунктирного контура проекта «Когда-нибудь». */
+private const val DASHED_RING_SEGMENTS = 12
+
 @Composable
 fun ProjectProgressArc(
     completed: Int,
     total: Int,
     modifier: Modifier = Modifier,
     // [ИЗМЕНЕНИЕ]: Добавлен параметр цвета, по умолчанию серый, для возможности кастомизации на экране проекта
-    color: Color = ThingsTheme.colors.textSecondary.copy(alpha = ThingsAlpha.HINT)
+    color: Color = ThingsTheme.colors.textSecondary.copy(alpha = ThingsAlpha.HINT),
+    // Проект «Когда-нибудь» — контур пунктиром, как чекбокс задачи «Когда-нибудь»
+    dashed: Boolean = false
 ) {
     val progress = if (total > 0) completed.toFloat() / total else 0f
     
@@ -49,7 +56,14 @@ fun ProjectProgressArc(
             useCenter = false,
             topLeft = androidx.compose.ui.geometry.Offset(xOffset, yOffset),
             size = androidx.compose.ui.geometry.Size(diameter - 2 * edgePadding, diameter - 2 * edgePadding),
-            style = Stroke(width = strokeWidth)
+            style = Stroke(
+                width = strokeWidth,
+                pathEffect = if (dashed) {
+                    // Окружность делится на равные штрихи и промежутки
+                    val dash = (Math.PI.toFloat() * (diameter - 2 * edgePadding)) / (DASHED_RING_SEGMENTS * 2)
+                    PathEffect.dashPathEffect(floatArrayOf(dash, dash))
+                } else null
+            )
         )
         
         // Заливаем круговой сектор серым цветом внутри контура

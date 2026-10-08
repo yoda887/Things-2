@@ -777,6 +777,7 @@ fun AnimatedTaskItem(
                                     completed = completedCount,
                                     total = totalCount,
                                     color = pillContentColor,
+                                    dashed = currentProject.start == com.example.data.model.Item.START_SOMEDAY,
                                     modifier = Modifier.size(ThingsIconSize.XS)
                                 )
                             } else {

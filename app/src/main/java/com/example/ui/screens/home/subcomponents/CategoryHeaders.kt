@@ -221,6 +221,7 @@ fun MainCategoryHeader(
                     completed = completedCount,
                     total = totalCount,
                     color = ThingsTheme.colors.project,
+                    dashed = project?.start == com.example.data.model.Item.START_SOMEDAY,
                     modifier = Modifier
                         .size((26 * scaleFactor).dp)
                         .align(Alignment.Top)

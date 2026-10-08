@@ -85,6 +85,7 @@ fun ProjectItemRow(
                 completed = if (isDone) maxOf(totalCount, 1) else completedCount,
                 total = if (isDone) maxOf(totalCount, 1) else totalCount,
                 color = ThingsTheme.colors.project,
+                dashed = project.start == Item.START_SOMEDAY,
                 modifier = Modifier.requiredSize(ThingsIconSize.M)
             )
         }

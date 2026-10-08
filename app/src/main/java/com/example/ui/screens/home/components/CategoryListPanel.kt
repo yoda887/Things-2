@@ -1730,6 +1730,7 @@ private fun SearchSectionIcon(
                 completed = progress?.completed ?: 0,
                 total = progress?.total ?: 0,
                 color = ThingsTheme.colors.project,
+                dashed = header.project?.start == com.example.data.model.Item.START_SOMEDAY,
                 modifier = iconModifier
             )
         }

@@ -363,6 +363,7 @@ private fun CategoryTopAppBarTitleContent(
                     completed = completedCount,
                     total = totalCount,
                     color = ThingsTheme.colors.project,
+                    dashed = project?.start == com.example.data.model.Item.START_SOMEDAY,
                     modifier = Modifier.size(PROJECT_PROGRESS_ARC_SIZE)
                 )
                 Spacer(modifier = Modifier.width(TOP_APP_BAR_SPACING))

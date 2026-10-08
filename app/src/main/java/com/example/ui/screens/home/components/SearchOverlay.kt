@@ -1032,6 +1032,7 @@ fun SearchResultRow(
                         completed = completedCount,
                         total = totalCount,
                         color = arcColor,
+                        dashed = result.project.start == com.example.data.model.Item.START_SOMEDAY,
                         modifier = Modifier.size(ThingsIconSize.M)
                     )
                 }

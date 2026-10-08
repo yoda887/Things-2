@@ -1255,6 +1255,7 @@ private fun LazyItemScope.ProjectItemRow(
                 ProjectProgressArc(
                     completed = completedCount,
                     total = totalCount,
+                    dashed = project.start == com.example.data.model.Item.START_SOMEDAY,
                     modifier = Modifier.size(MaterialTheme.dimens.homeRowIconSize)
                 )
             }

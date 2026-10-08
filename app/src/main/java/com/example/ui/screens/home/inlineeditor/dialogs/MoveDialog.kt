@@ -206,6 +206,7 @@ fun ThingsMoveDialog(
                                     isProject = true,
                                     completed = completedCount,
                                     total = totalCount,
+                                    dashed = project.start == Item.START_SOMEDAY,
                                     indentation = ThingsSpacing.NONE,
                                     onClick = {
                                         onMove(project.id, null, false)
@@ -254,6 +255,7 @@ fun ThingsMoveDialog(
                                     isProject = true,
                                     completed = completedCount,
                                     total = totalCount,
+                                    dashed = project.start == Item.START_SOMEDAY,
                                     indentation = ThingsSpacing.NONE,
                                     onClick = {
                                         onMove(project.id, area.id, false)
@@ -282,6 +284,7 @@ private fun MoveDialogRow(
     isProject: Boolean = false,
     completed: Int = 0,
     total: Int = 0,
+    dashed: Boolean = false,
     onClick: () -> Unit
 ) {
     Row(
@@ -302,6 +305,7 @@ private fun MoveDialogRow(
                 ProjectProgressArc(
                     completed = completed,
                     total = total,
+                    dashed = dashed,
                     modifier = Modifier.size(ThingsIconSize.M)
                 )
             }
