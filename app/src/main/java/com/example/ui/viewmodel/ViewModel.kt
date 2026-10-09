@@ -8,6 +8,8 @@ import com.example.ui.screens.home.components.InboxScreen
 import com.example.ui.screens.home.components.LogbookScreen
 import com.example.ui.screens.home.components.PlaceGroups
 import com.example.ui.screens.home.components.TagScreen
+import com.example.ui.screens.home.components.TodayScreen
+import com.example.ui.screens.home.components.UpcomingScreen
 import com.example.ui.screens.home.components.ProjectHeadings
 import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.viewModelScope
@@ -179,8 +181,8 @@ class ThingsViewModel @Inject constructor(
                 } else {
                     when (screen) {
                         ActiveScreen.INBOX -> InboxScreen.includes(task)
-                        ActiveScreen.TODAY -> bounds.isToday(task)
-                        ActiveScreen.UPCOMING -> bounds.isUpcoming(task)
+                        ActiveScreen.TODAY -> TodayScreen.includes(task, bounds)
+                        ActiveScreen.UPCOMING -> UpcomingScreen.includes(task, bounds)
                         ActiveScreen.ANYTIME -> bounds.isAnytime(task) && task.projectId !in somedayProjectIds
                         ActiveScreen.SOMEDAY -> bounds.isSomeday(task)
                         ActiveScreen.LOGBOOK -> LogbookScreen.includes(task)

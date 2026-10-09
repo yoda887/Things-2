@@ -316,8 +316,8 @@ fun ThingsCategoryListPanel(
     val upcomingMonths = upcomingSchedule.months
     val monthTaskBadges = upcomingSchedule.monthTaskBadges
 
-    val standardToday = remember(localTasksList) { localTasksList.filter { !it.item.isTonight } }
-    val eveningToday = remember(localTasksList) { localTasksList.filter { it.item.isTonight } }
+    val standardToday = remember(localTasksList) { TodayScreen.day(localTasksList) }
+    val eveningToday = remember(localTasksList) { TodayScreen.evening(localTasksList) }
 
     val displayTasks = localTasksList
     
@@ -928,8 +928,8 @@ fun ThingsCategoryListPanel(
             }
 
             val hasTasks = when (screen) {
-                ActiveScreen.TODAY -> standardToday.isNotEmpty() || eveningToday.isNotEmpty() || dragDropState.draggedItemKey != null
-                ActiveScreen.UPCOMING -> upcomingDays.isNotEmpty()
+                ActiveScreen.TODAY -> !TodayScreen.isEmpty(standardToday, eveningToday, isDragging = dragDropState.draggedItemKey != null)
+                ActiveScreen.UPCOMING -> !UpcomingScreen.isEmpty(upcomingSchedule)
                 ActiveScreen.AREA_DETAIL -> !AreaScreen.content(area?.id, displayTasks, projects).isEmpty
                 ActiveScreen.LOGBOOK -> LogbookScreen.rows(displayTasks, projects).isNotEmpty()
                 ActiveScreen.TAG_DETAIL -> !TagScreen.content(state.tag?.title, displayTasks, state.allTasks, projects).isEmpty
