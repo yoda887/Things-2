@@ -456,36 +456,7 @@ fun rememberFlattenedList(
                     }
                 }
             } else if (screen == ActiveScreen.AREA_DETAIL) {
-                val areaProjects = projects.filter { it.areaId == area?.id }
-                if (areaProjects.isNotEmpty()) {
-                    addAll(areaProjects)
-                }
-                val areaDirectTasks = displayTasks.filter { it.item.areaId == area?.id && (it.item.projectId == null || it.item.projectId == "") }
-                val bounds = DayBounds.now()
-                val currentTasks = areaDirectTasks.filter { !bounds.isUpcoming(it.item) && it.item.start != Item.START_SOMEDAY }
-                val upcomingTasks = areaDirectTasks.filter { bounds.isUpcoming(it.item) && it.item.start != Item.START_SOMEDAY }
-                val somedayTasks = areaDirectTasks.filter { it.item.start == Item.START_SOMEDAY }
-
-                if (areaProjects.isNotEmpty() && (currentTasks.isNotEmpty() || upcomingTasks.isNotEmpty() || somedayTasks.isNotEmpty())) {
-                    add(TaskListKeys.AREA_PROJECTS_SPACER)
-                }
-
-                addAll(currentTasks)
-
-                val hasLaterItems = upcomingTasks.isNotEmpty() || somedayTasks.isNotEmpty()
-                if (hasLaterItems) {
-                    if (!isLaterItemsHidden) {
-                        if (upcomingTasks.isNotEmpty()) {
-                            add(TaskListKeys.AREA_UPCOMING_HEADING)
-                            addAll(upcomingTasks)
-                        }
-                        if (somedayTasks.isNotEmpty()) {
-                            add(TaskListKeys.AREA_SOMEDAY_HEADING)
-                            addAll(somedayTasks)
-                        }
-                    }
-                    add(TaskListKeys.AREA_LATER_TOGGLE)
-                }
+                addAll(AreaScreen.rows(AreaScreen.content(area?.id, displayTasks, projects), isLaterItemsHidden))
             } else if (screen == ActiveScreen.TAG_DETAIL) {
                 val tagTitle = tag?.title ?: ""
                 val tagProjects = projects.filter { !it.trashed && !it.isCompleted && it.status != Item.STATUS_CANCELLED && it.tags.contains(tagTitle) }

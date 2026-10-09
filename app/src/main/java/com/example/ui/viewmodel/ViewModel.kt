@@ -3,6 +3,7 @@ package com.example.ui.viewmodel
 import androidx.lifecycle.ViewModel
 import com.example.domain.tag.TagTitles
 import com.example.domain.usecase.heading.HeadingUseCases
+import com.example.ui.screens.home.components.AreaScreen
 import com.example.ui.screens.home.components.PlaceGroups
 import com.example.ui.screens.home.components.ProjectHeadings
 import androidx.lifecycle.ViewModelProvider
@@ -210,6 +211,8 @@ class ThingsViewModel @Inject constructor(
                 // «В любое время» и «Когда-нибудь» сгруппированы по проектам и областям — список в том же порядке, что на экране
                 screen == ActiveScreen.ANYTIME || screen == ActiveScreen.SOMEDAY ->
                     PlaceGroups.order(listTasks, projectList, areaList)
+                // Экран области: задачи по разделам, как на экране (см. AreaScreen)
+                screen == ActiveScreen.AREA_DETAIL -> AreaScreen.order(listTasks, area?.id, bounds)
                 else -> listTasks
             }
 

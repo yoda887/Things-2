@@ -242,7 +242,7 @@ private fun planSwap(
     // На экране сферы секции задаются свойствами самой задачи, и обмен их не меняет: перенос
     // через заголовок только переставил бы задачу внутри её же секции в произвольное место.
     if (screen == ActiveScreen.AREA_DETAIL &&
-        hoveredTask.areaSection(bounds) != moved.areaSection(bounds)
+        AreaScreen.sectionOf(hoveredTask.item, bounds) != AreaScreen.sectionOf(moved.item, bounds)
     ) {
         return null
     }
@@ -292,13 +292,6 @@ private fun findInsertionIndexForSection(
     if (first != -1) return if (atStart) first else list.indexOfLast { inSection(it.item) } + 1
     return list.indexOfFirst { wrapper -> wrapper.item.startDate?.let { it >= sectionBoundaryMillis } == true }
         .takeIf { it != -1 } ?: list.size
-}
-
-/** Секция задачи на экране сферы — та же классификация, что и в rememberFlattenedList */
-private fun ItemWithChecklist.areaSection(bounds: DayBounds): Int = when {
-    item.start == Item.START_SOMEDAY -> 2
-    bounds.isUpcoming(item) -> 1
-    else -> 0
 }
 
 private fun Long.dayStart(): Long = Calendar.getInstance().run {

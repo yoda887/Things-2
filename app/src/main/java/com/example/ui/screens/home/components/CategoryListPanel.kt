@@ -930,11 +930,7 @@ fun ThingsCategoryListPanel(
             val hasTasks = when (screen) {
                 ActiveScreen.TODAY -> standardToday.isNotEmpty() || eveningToday.isNotEmpty() || dragDropState.draggedItemKey != null
                 ActiveScreen.UPCOMING -> upcomingDays.isNotEmpty()
-                ActiveScreen.AREA_DETAIL -> {
-                    val areaProjCount = projects.count { it.areaId == area?.id }
-                    val areaTasksCount = displayTasks.count { it.item.areaId == area?.id && (it.item.projectId == null || it.item.projectId == "") }
-                    areaProjCount > 0 || areaTasksCount > 0
-                }
+                ActiveScreen.AREA_DETAIL -> !AreaScreen.content(area?.id, displayTasks, projects).isEmpty
                 ActiveScreen.TAG_DETAIL -> {
                     val tagTitle = state.tag?.title ?: ""
                     val tagProjCount = projects.count { !it.trashed && !it.isCompleted && it.status != Item.STATUS_CANCELLED && it.tags.contains(tagTitle) }
