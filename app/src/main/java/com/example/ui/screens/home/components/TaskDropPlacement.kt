@@ -234,6 +234,8 @@ private fun planSwap(
 ): List<ItemWithChecklist>? {
     val toIndex = list.indexOfFirst { it.item.id == targetId }
     if (toIndex == -1 || toIndex == fromIndex) return null
+    // «Журнал» упорядочен по дате закрытия — переставлять там нечего
+    if (screen == ActiveScreen.LOGBOOK) return null
 
     val next = list.toMutableList()
     var moved = next.removeAt(fromIndex)

@@ -216,6 +216,8 @@ class ThingsViewModel @Inject constructor(
                     PlaceGroups.order(listTasks, projectList, areaList)
                 // Экран области: задачи по разделам, как на экране (см. AreaScreen)
                 screen == ActiveScreen.AREA_DETAIL -> AreaScreen.order(listTasks, area?.id, bounds)
+                // «Журнал»: свежие сверху
+                screen == ActiveScreen.LOGBOOK -> LogbookScreen.order(listTasks)
                 else -> listTasks
             }
 

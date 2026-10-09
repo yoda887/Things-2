@@ -222,7 +222,7 @@ fun ThingsHomePanel(
     var isTokenFieldFocused by remember { mutableStateOf(false) }
     val view = LocalView.current
 
-    val inboxCount = allTasks.count { it.item.isInbox && !it.item.isCompleted }
+    val inboxCount = allTasks.count { InboxScreen.includes(it.item) }
     val todayCount = allTasks.count { it.item.isToday }
 
     val tasksByProject = remember(allTasks) {

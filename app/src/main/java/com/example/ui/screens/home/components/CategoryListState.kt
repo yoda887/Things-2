@@ -457,6 +457,8 @@ fun rememberFlattenedList(
                 }
             } else if (screen == ActiveScreen.AREA_DETAIL) {
                 addAll(AreaScreen.rows(AreaScreen.content(area?.id, displayTasks, projects), isLaterItemsHidden))
+            } else if (screen == ActiveScreen.LOGBOOK) {
+                addAll(LogbookScreen.rows(displayTasks, projects))
             } else if (screen == ActiveScreen.TAG_DETAIL) {
                 addAll(TagScreen.rows(TagScreen.content(tag?.title, displayTasks, allTasks, projects)))
             } else if (screen == ActiveScreen.PROJECT_DETAIL && headings.isNotEmpty()) {

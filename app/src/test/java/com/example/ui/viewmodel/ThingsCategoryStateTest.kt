@@ -151,9 +151,9 @@ class ThingsCategoryStateTest {
     }
 
     @Test
-    fun `Logbook показывает только выполненные задачи`() {
+    fun `Logbook показывает выполненные и отменённые задачи`() {
         val tasks = listOf(task("done", status = 3), task("open"), task("cancelled", status = 2))
-        assertEquals(listOf("done"), ids(state(ActiveScreen.LOGBOOK, tasks)))
+        assertEquals(setOf("done", "cancelled"), ids(state(ActiveScreen.LOGBOOK, tasks)).toSet())
     }
 
     @Test
