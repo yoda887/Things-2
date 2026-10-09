@@ -3,7 +3,7 @@ package com.example.ui.screens.home.components
 import com.example.domain.lists.TodayList
 import com.example.data.model.ItemWithChecklist
 
-/** Строки экрана «Сегодня» (правила — в TodayList). Перенос между днём и вечером — в TaskDropPlacement. */
+/** Строки экрана «Сегодня» (правила — в TodayList). Перенос между днём и вечером — в TaskDrops. */
 object TodayScreen {
 
     /**

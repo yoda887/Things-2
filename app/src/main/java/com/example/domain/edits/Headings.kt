@@ -25,4 +25,12 @@ object Headings {
     /** Задачи под заголовком [headingId] (null — без заголовка). */
     fun assign(tasks: List<Item>, headingId: String?, now: Long = System.currentTimeMillis()): List<Item> =
         tasks.map { it.copy(headingId = headingId, modificationDate = now) }
+
+    /** Подзаголовки после переноса [draggedId] на место [targetId]; null — переносить нечего. */
+    fun move(headings: List<Item>, draggedId: String, targetId: String): List<Item>? {
+        val from = headings.indexOfFirst { it.id == draggedId }
+        val to = headings.indexOfFirst { it.id == targetId }
+        if (from == -1 || to == -1 || from == to) return null
+        return headings.toMutableList().apply { add(to, removeAt(from)) }
+    }
 }

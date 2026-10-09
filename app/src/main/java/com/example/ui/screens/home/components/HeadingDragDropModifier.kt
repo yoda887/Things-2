@@ -1,5 +1,6 @@
 package com.example.ui.screens.home.components
 
+import com.example.domain.edits.Headings
 import androidx.compose.ui.Modifier
 import com.example.data.model.Item
 import com.example.ui.components.dragdrop.GenericDragDropState
@@ -41,7 +42,7 @@ fun Modifier.headingDragAndDrop(
             ?: return@universalDragAndDrop false
         val targetId = (targetKey as? String)?.removePrefix(TaskListKeys.HEADING_PREFIX)
             ?: return@universalDragAndDrop false
-        val reordered = ProjectHeadings.moveHeading(headings, draggedId, targetId)
+        val reordered = Headings.move(headings, draggedId, targetId)
             ?: return@universalDragAndDrop false
         onHeadingsChange(reordered)
         true

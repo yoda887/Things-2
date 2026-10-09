@@ -1,6 +1,7 @@
 package com.example.ui.screens.home.components
 
 import com.example.domain.edits.SortOrders
+import com.example.domain.edits.TaskDrops
 import com.example.ui.viewmodel.ActiveScreen
 import androidx.compose.ui.Modifier
 import com.example.data.model.Item
@@ -75,7 +76,7 @@ fun Modifier.taskDragAndDrop(
             val targetId = targetKey as? String ?: return@universalDragAndDrop false
 
             // Направление жеста знает только геометрия списка LazyColumn; куда именно встанет
-            // задача, решает чистая функция planTaskDrop — её правила закреплены тестами
+            // задача, решают правила домена (TaskDrops через planTaskDrop) — они закреплены тестами
             val visibleItems = lazyListState.layoutInfo.visibleItemsInfo
             val draggedItemInfo = visibleItems.firstOrNull { it.key == draggedId }
                 ?: return@universalDragAndDrop false
@@ -121,26 +122,11 @@ fun Modifier.taskDragAndDrop(
 
                 if (leadingIdx != -1) {
                     val leadingTask = remainingList[leadingIdx]
-                    val targetTonight = leadingTask.item.isTonight
-                    val targetStartDate = leadingTask.item.startDate
-                    // В проекте вся группа встаёт под подзаголовок ведущей задачи. На других экранах
-                    // задачи группы могут быть из разных проектов — их подзаголовки не трогаем
-                    val targetHeadingId = leadingTask.item.headingId
-
+                    // Остальные задачи группы встают вслед за ведущей — по правилу домена
                     val orderedOtherBatch = batchKeys.drop(1).mapNotNull { key ->
                         localTasksList.firstOrNull { it.item.id == key }
                     }.map { wrapper ->
-                        var updated = wrapper
-                        if (screen == ActiveScreen.PROJECT_DETAIL && updated.item.headingId != targetHeadingId) {
-                            updated = updated.copy(item = updated.item.copy(headingId = targetHeadingId))
-                        }
-                        if (updated.item.isTonight != targetTonight) {
-                            updated = updated.copyWithTonight(targetTonight)
-                        }
-                        if (updated.item.startDate != targetStartDate) {
-                            updated = updated.copyWithStartDate(targetStartDate)
-                        }
-                        updated
+                        TaskDrops.follower(wrapper, leadingTask.item, inProject = screen == ActiveScreen.PROJECT_DETAIL)
                     }
                     remainingList.addAll(leadingIdx + 1, orderedOtherBatch)
                     remainingList

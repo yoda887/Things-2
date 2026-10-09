@@ -20,7 +20,7 @@ private const val UPCOMING_MONTHS_HORIZON = 4
 
 /**
  * Экран «Предстоящие»: расписание (неделя по дням, затем месяцы), строки списка и признак пустого
- * экрана; какие задачи на нём — UpcomingList. Перетаскивание по дням и месяцам — в TaskDropPlacement.
+ * экрана; какие задачи на нём — UpcomingList. Перетаскивание по дням и месяцам — в TaskDrops.
  * Закреплено тестами UpcomingScreenTest.
  */
 object UpcomingScreen {

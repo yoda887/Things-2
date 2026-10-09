@@ -2,6 +2,7 @@ package com.example.ui.screens.home.components
 
 import com.example.ui.viewmodel.ActiveScreen
 import com.example.data.model.DayBounds
+import com.example.domain.edits.MS_PER_DAY
 import com.example.data.model.Item
 import com.example.data.model.ItemWithChecklist
 import org.junit.Assert.assertEquals

@@ -5,7 +5,7 @@ import com.example.data.model.Item
 import com.example.data.model.ItemWithChecklist
 import com.example.domain.lists.HeadingOrder
 
-/** Строки экрана проекта (правила — в ProjectList). Перенос между заголовками — в ProjectHeadings. */
+/** Строки экрана проекта (правила — в ProjectList). Перенос между заголовками — в TaskDrops. */
 object ProjectScreen {
 
     /**
