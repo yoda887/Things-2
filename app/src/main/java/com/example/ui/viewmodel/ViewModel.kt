@@ -4,6 +4,8 @@ import androidx.lifecycle.ViewModel
 import com.example.domain.tag.TagTitles
 import com.example.domain.usecase.heading.HeadingUseCases
 import com.example.ui.screens.home.components.AreaScreen
+import com.example.ui.screens.home.components.InboxScreen
+import com.example.ui.screens.home.components.LogbookScreen
 import com.example.ui.screens.home.components.PlaceGroups
 import com.example.ui.screens.home.components.TagScreen
 import com.example.ui.screens.home.components.ProjectHeadings
@@ -176,12 +178,12 @@ class ThingsViewModel @Inject constructor(
                     true
                 } else {
                     when (screen) {
-                        ActiveScreen.INBOX -> task.isInbox && !task.isCompleted
+                        ActiveScreen.INBOX -> InboxScreen.includes(task)
                         ActiveScreen.TODAY -> bounds.isToday(task)
                         ActiveScreen.UPCOMING -> bounds.isUpcoming(task)
                         ActiveScreen.ANYTIME -> bounds.isAnytime(task) && task.projectId !in somedayProjectIds
                         ActiveScreen.SOMEDAY -> bounds.isSomeday(task)
-                        ActiveScreen.LOGBOOK -> task.isCompleted
+                        ActiveScreen.LOGBOOK -> LogbookScreen.includes(task)
                         ActiveScreen.PROJECT_DETAIL -> task.projectId == project?.id && !task.isCompleted
                         ActiveScreen.AREA_DETAIL -> task.areaId == area?.id && task.type == Item.TYPE_TASK && !task.isCompleted
                         ActiveScreen.TAG_DETAIL -> tag != null && TagScreen.isActiveTask(task, tag.title)
