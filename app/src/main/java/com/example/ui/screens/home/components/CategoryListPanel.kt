@@ -1,5 +1,13 @@
 package com.example.ui.screens.home.components
 
+import com.example.ui.viewmodel.ProjectProgress
+import com.example.ui.viewmodel.ThingsCategoryListState
+import com.example.ui.viewmodel.ActiveScreen
+import com.example.domain.lists.TagList
+import com.example.domain.lists.AreaList
+import com.example.domain.lists.LogbookList
+import com.example.domain.lists.SomedayList
+import com.example.domain.lists.TodayList
 import com.example.ui.screens.home.subcomponents.projectShareText
 import com.example.ui.screens.home.subcomponents.ProjectDialogs
 import com.example.ui.screens.home.subcomponents.ProjectDetailsBlock
@@ -84,7 +92,6 @@ import com.example.data.model.Area
 import com.example.data.model.Tag
 import com.example.ui.components.ProjectProgressArc
 import com.example.ui.components.dragdrop.rememberGenericDragDropState
-import com.example.ui.screens.home.ActiveScreen
 import com.example.ui.screens.home.subcomponents.TaskItemRow
 import com.example.ui.screens.home.subcomponents.ProjectHeadingRow
 import com.example.ui.screens.home.inlineeditor.ThingsTaskInlineEditor
@@ -175,9 +182,9 @@ fun ThingsCategoryListPanel(
     val inlineExpandedTaskId = state.inlineExpandedTaskId
     val selectedTag = state.selectedTagFilter
     val allTags = state.allTags
-    val textPrimaryColor = state.textPrimaryColor
-    val textSecondaryColor = state.textSecondaryColor
-    val dividerColor = state.dividerColor
+    val textPrimaryColor = ThingsTheme.colors.textPrimary
+    val textSecondaryColor = ThingsTheme.colors.textSecondary
+    val dividerColor = ThingsTheme.colors.divider
     val highlightedTaskId = state.highlightedTaskId
     val calendarEvents = state.calendarEvents
     val allSavedTags = state.allSavedTags
@@ -316,8 +323,8 @@ fun ThingsCategoryListPanel(
     val upcomingMonths = upcomingSchedule.months
     val monthTaskBadges = upcomingSchedule.monthTaskBadges
 
-    val standardToday = remember(localTasksList) { TodayScreen.day(localTasksList) }
-    val eveningToday = remember(localTasksList) { TodayScreen.evening(localTasksList) }
+    val standardToday = remember(localTasksList) { TodayList.day(localTasksList) }
+    val eveningToday = remember(localTasksList) { TodayList.evening(localTasksList) }
 
     val displayTasks = localTasksList
     
@@ -931,13 +938,13 @@ fun ThingsCategoryListPanel(
             val hasTasks = when (screen) {
                 ActiveScreen.TODAY -> !TodayScreen.isEmpty(standardToday, eveningToday, isDragging = dragDropState.draggedItemKey != null)
                 ActiveScreen.UPCOMING -> !UpcomingScreen.isEmpty(upcomingSchedule)
-                ActiveScreen.AREA_DETAIL -> !AreaScreen.content(area?.id, displayTasks, projects).isEmpty
-                ActiveScreen.LOGBOOK -> LogbookScreen.rows(displayTasks, projects).isNotEmpty()
-                ActiveScreen.TAG_DETAIL -> !TagScreen.content(state.tag?.title, displayTasks, state.allTasks, projects).isEmpty
+                ActiveScreen.AREA_DETAIL -> !AreaList.content(area?.id, displayTasks, projects).isEmpty
+                ActiveScreen.LOGBOOK -> LogbookList.entries(displayTasks, projects).isNotEmpty()
+                ActiveScreen.TAG_DETAIL -> !TagList.content(state.tag?.title, displayTasks, state.allTasks, projects).isEmpty
                 ActiveScreen.PROJECT_DETAIL -> !ProjectScreen.isEmpty(displayTasks, localHeadings)
-                ActiveScreen.ANYTIME -> !AnytimeScreen.isEmpty(displayTasks)
+                ActiveScreen.ANYTIME -> displayTasks.isNotEmpty()
                 // «Когда-нибудь» показывает и отложенные проекты — без задач экран не пуст
-                ActiveScreen.SOMEDAY -> !SomedayScreen.isEmpty(displayTasks, projects)
+                ActiveScreen.SOMEDAY -> SomedayList.hasContent(displayTasks, projects)
                 // Поиск показывает свою пустую заглушку отдельно; у главного экрана списка нет
                 ActiveScreen.INBOX, ActiveScreen.SEARCH, ActiveScreen.HOME -> displayTasks.isNotEmpty()
             }

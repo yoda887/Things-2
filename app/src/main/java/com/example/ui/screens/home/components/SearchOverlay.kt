@@ -1,5 +1,6 @@
 package com.example.ui.screens.home.components
 
+import com.example.ui.viewmodel.ActiveScreen
 import com.example.ui.theme.ThingsStroke
 import com.example.R
 import androidx.compose.ui.res.stringResource
@@ -79,7 +80,6 @@ import com.example.data.model.Area
 import com.example.data.model.Item
 import com.example.data.model.ItemWithChecklist
 import com.example.data.model.Tag
-import com.example.ui.screens.home.ActiveScreen
 import com.example.ui.theme.AppIcons
 import com.example.ui.screens.home.subcomponents.TaskItemRow
 import com.example.ui.components.ProjectProgressArc

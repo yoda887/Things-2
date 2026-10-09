@@ -1,5 +1,7 @@
 package com.example.ui.screens.home.components
 
+import com.example.ui.viewmodel.ActiveScreen
+import com.example.domain.lists.InboxList
 import com.example.R
 import androidx.compose.ui.res.pluralStringResource
 import androidx.compose.ui.res.stringResource
@@ -91,7 +93,6 @@ import com.example.data.model.ItemWithChecklist
 import com.example.data.model.TaskSection
 import com.example.ui.components.ProjectProgressArc
 import com.example.ui.components.AreaIconAnimated
-import com.example.ui.screens.home.ActiveScreen
 import com.example.ui.screens.home.subcomponents.SmartListRow
 import com.example.ui.theme.*
 
@@ -222,7 +223,7 @@ fun ThingsHomePanel(
     var isTokenFieldFocused by remember { mutableStateOf(false) }
     val view = LocalView.current
 
-    val inboxCount = allTasks.count { InboxScreen.includes(it.item) }
+    val inboxCount = allTasks.count { InboxList.includes(it.item) }
     val todayCount = allTasks.count { it.item.isToday }
 
     val tasksByProject = remember(allTasks) {

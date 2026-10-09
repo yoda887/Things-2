@@ -1,5 +1,6 @@
 package com.example.ui.screens.home.components
 
+import com.example.domain.lists.ProjectList
 import com.example.data.model.Item
 import com.example.data.model.ItemWithChecklist
 import org.junit.Assert.assertEquals
@@ -26,24 +27,24 @@ class ProjectScreenTest {
 
     @Test
     fun includes_openTasksOfTheProject() {
-        assertTrue(ProjectScreen.includes(task("a").item, "p"))
-        assertFalse(ProjectScreen.includes(task("b", project = "other").item, "p"))
-        assertFalse(ProjectScreen.includes(task("c", status = Item.STATUS_COMPLETED).item, "p"))
-        assertFalse(ProjectScreen.includes(task("d").item, null))
+        assertTrue(ProjectList.includes(task("a").item, "p"))
+        assertFalse(ProjectList.includes(task("b", project = "other").item, "p"))
+        assertFalse(ProjectList.includes(task("c", status = Item.STATUS_COMPLETED).item, "p"))
+        assertFalse(ProjectList.includes(task("d").item, null))
     }
 
     @Test
     fun headings_openOnlyInOrder() {
         val all = listOf(heading("h2", 2), heading("h1", 1), heading("done", 0, Item.STATUS_COMPLETED),
             heading("other", 0).copy(projectId = "x"))
-        assertEquals(listOf("h1", "h2"), ProjectScreen.headings(all, "p").map { it.id })
+        assertEquals(listOf("h1", "h2"), ProjectList.headings(all, "p").map { it.id })
     }
 
     @Test
     fun rows_looseThenHeadingsWithTasks_draggedHeadingCollapsed() {
         val headings = listOf(heading("h1", 1), heading("h2", 2))
         val tasks = listOf(task("x", "h2"), task("loose"), task("y", "h1"))
-        val ordered = ProjectScreen.order(tasks, headings)
+        val ordered = ProjectList.order(tasks, headings)
         assertEquals(listOf("loose", "H:h1", "y", "H:h2", "x"), ids(ProjectScreen.rows(ordered, headings, null)))
         assertEquals(listOf("loose", "H:h1", "H:h2", "x"),
             ids(ProjectScreen.rows(ordered, headings, TaskListKeys.HEADING_PREFIX + "h1")))

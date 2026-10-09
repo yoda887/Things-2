@@ -1,5 +1,7 @@
 package com.example.ui.screens.home.components
 
+import com.example.domain.lists.LogbookList
+import com.example.domain.lists.InboxList
 import com.example.data.model.Item
 import com.example.data.model.ItemWithChecklist
 import org.junit.Assert.assertEquals
@@ -14,25 +16,25 @@ class SimpleScreensTest {
 
     @Test
     fun inbox() {
-        assertTrue(InboxScreen.includes(inbox))
-        assertFalse(InboxScreen.includes(inbox.copy(status = Item.STATUS_COMPLETED)))
-        assertFalse(InboxScreen.includes(inbox.copy(status = Item.STATUS_CANCELLED)))
-        assertFalse(InboxScreen.includes(inbox.copy(trashed = true)))
-        assertFalse(InboxScreen.includes(inbox.copy(start = Item.START_ANYTIME)))
-        assertFalse(InboxScreen.includes(inbox.copy(startDate = 1L)))
-        assertFalse(InboxScreen.includes(inbox.copy(dueDate = 1L)))
-        assertFalse(InboxScreen.includes(inbox.copy(projectId = "p")))
-        assertFalse(InboxScreen.includes(inbox.copy(type = Item.TYPE_PROJECT)))
+        assertTrue(InboxList.includes(inbox))
+        assertFalse(InboxList.includes(inbox.copy(status = Item.STATUS_COMPLETED)))
+        assertFalse(InboxList.includes(inbox.copy(status = Item.STATUS_CANCELLED)))
+        assertFalse(InboxList.includes(inbox.copy(trashed = true)))
+        assertFalse(InboxList.includes(inbox.copy(start = Item.START_ANYTIME)))
+        assertFalse(InboxList.includes(inbox.copy(startDate = 1L)))
+        assertFalse(InboxList.includes(inbox.copy(dueDate = 1L)))
+        assertFalse(InboxList.includes(inbox.copy(projectId = "p")))
+        assertFalse(InboxList.includes(inbox.copy(type = Item.TYPE_PROJECT)))
     }
 
     @Test
     fun logbook_closedTasksOnly() {
-        assertTrue(LogbookScreen.includes(inbox.copy(status = Item.STATUS_COMPLETED)))
-        assertTrue(LogbookScreen.includes(inbox.copy(status = Item.STATUS_CANCELLED)))
-        assertFalse(LogbookScreen.includes(inbox))
-        assertFalse(LogbookScreen.includes(inbox.copy(status = Item.STATUS_COMPLETED, trashed = true)))
+        assertTrue(LogbookList.includes(inbox.copy(status = Item.STATUS_COMPLETED)))
+        assertTrue(LogbookList.includes(inbox.copy(status = Item.STATUS_CANCELLED)))
+        assertFalse(LogbookList.includes(inbox))
+        assertFalse(LogbookList.includes(inbox.copy(status = Item.STATUS_COMPLETED, trashed = true)))
         // Завершённый проект — не задача: он идёт в «Журнал» строкой проекта
-        assertFalse(LogbookScreen.includes(Item(id = "p", title = "p", type = Item.TYPE_PROJECT, status = Item.STATUS_COMPLETED)))
+        assertFalse(LogbookList.includes(Item(id = "p", title = "p", type = Item.TYPE_PROJECT, status = Item.STATUS_COMPLETED)))
     }
 
     @Test
@@ -41,8 +43,8 @@ class SimpleScreensTest {
         val new = ItemWithChecklist(Item(id = "new", title = "new", status = Item.STATUS_CANCELLED, stopDate = 300))
         val project = Item(id = "p", title = "p", type = Item.TYPE_PROJECT, status = Item.STATUS_COMPLETED, stopDate = 200)
         val openProject = Item(id = "open", title = "open", type = Item.TYPE_PROJECT)
-        val rows = LogbookScreen.rows(listOf(old, new), listOf(project, openProject))
+        val rows = LogbookList.entries(listOf(old, new), listOf(project, openProject))
         assertEquals(listOf("new", "project:p", "old"), rows.map { if (it is ItemWithChecklist) it.item.id else "project:" + (it as Item).id })
-        assertEquals(listOf("new", "old"), LogbookScreen.order(listOf(old, new)).map { it.item.id })
+        assertEquals(listOf("new", "old"), LogbookList.order(listOf(old, new)).map { it.item.id })
     }
 }

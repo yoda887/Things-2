@@ -1,5 +1,6 @@
 package com.example.ui.screens.home.inlineeditor
 
+import com.example.ui.viewmodel.ActiveScreen
 import com.example.ui.theme.ThingsElevation
 import com.example.ui.theme.ThingsSpacing
 import com.example.ui.theme.ThingsIconSize
@@ -122,7 +123,7 @@ fun ThingsTaskInlineEditor(
     areas: List<com.example.data.model.Area> = emptyList(),
     onNavigateToProject: ((Item) -> Unit)? = null,
     onNavigateToArea: ((com.example.data.model.Area) -> Unit)? = null,
-    screen: com.example.ui.screens.home.ActiveScreen = com.example.ui.screens.home.ActiveScreen.INBOX
+    screen: ActiveScreen = ActiveScreen.INBOX
 ) {
     var title by remember(task.item.id) { mutableStateOf<String>(task.item.title) }
     var notes by remember(task.item.id) { mutableStateOf<String>(task.item.notes) }
@@ -331,8 +332,8 @@ fun ThingsTaskInlineEditor(
             areas.firstOrNull { it.id == task.item.areaId }
         }
         val subtitleText = when {
-            currentProject != null && screen != com.example.ui.screens.home.ActiveScreen.PROJECT_DETAIL -> currentProject.name
-            currentProject == null && currentArea != null && screen != com.example.ui.screens.home.ActiveScreen.AREA_DETAIL -> currentArea.title
+            currentProject != null && screen != ActiveScreen.PROJECT_DETAIL -> currentProject.name
+            currentProject == null && currentArea != null && screen != ActiveScreen.AREA_DETAIL -> currentArea.title
             else -> null
         }
 

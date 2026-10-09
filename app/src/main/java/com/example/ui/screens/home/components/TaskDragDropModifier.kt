@@ -1,9 +1,9 @@
 package com.example.ui.screens.home.components
 
+import com.example.ui.viewmodel.ActiveScreen
 import androidx.compose.ui.Modifier
 import com.example.data.model.Item
 import com.example.data.model.ItemWithChecklist
-import com.example.ui.screens.home.ActiveScreen
 import com.example.ui.components.dragdrop.GenericDragDropState
 import com.example.ui.components.dragdrop.universalDragAndDrop
 

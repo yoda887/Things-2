@@ -1,5 +1,6 @@
 package com.example.ui.screens.home.subcomponents
 
+import com.example.ui.viewmodel.ActiveScreen
 import com.example.ui.theme.AppIcons
 import com.example.ui.components.ThingsMenuDivider
 import androidx.compose.material.icons.filled.Share
@@ -44,7 +45,6 @@ import com.example.data.model.Tag
 import androidx.compose.material.icons.outlined.LocalOffer
 import com.example.ui.components.ProjectProgressArc
 import com.example.ui.screens.home.components.TaskListKeys
-import com.example.ui.screens.home.ActiveScreen
 import com.example.ui.theme.*
 
 // Отступы над подзаголовками: секция области, проекты/задачи области, день и месяц в «Планах»

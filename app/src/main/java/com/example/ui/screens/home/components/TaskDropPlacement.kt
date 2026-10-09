@@ -1,9 +1,11 @@
 package com.example.ui.screens.home.components
 
+import com.example.ui.viewmodel.ActiveScreen
+import com.example.domain.lists.AreaList
+import com.example.domain.lists.PlaceGroups
 import com.example.data.model.DayBounds
 import com.example.data.model.Item
 import com.example.data.model.ItemWithChecklist
-import com.example.ui.screens.home.ActiveScreen
 import java.util.Calendar
 
 internal const val MS_PER_DAY = 24 * 3600 * 1000L
@@ -244,7 +246,7 @@ private fun planSwap(
     // На экране сферы секции задаются свойствами самой задачи, и обмен их не меняет: перенос
     // через заголовок только переставил бы задачу внутри её же секции в произвольное место.
     if (screen == ActiveScreen.AREA_DETAIL &&
-        AreaScreen.sectionOf(hoveredTask.item, bounds) != AreaScreen.sectionOf(moved.item, bounds)
+        AreaList.sectionOf(hoveredTask.item, bounds) != AreaList.sectionOf(moved.item, bounds)
     ) {
         return null
     }

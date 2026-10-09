@@ -1,5 +1,6 @@
 package com.example.ui.screens.home.subcomponents
 
+import com.example.ui.viewmodel.ProjectProgress
 import com.example.ui.theme.ThingsIconSize
 import com.example.ui.theme.ThingsAlpha
 import com.example.R
@@ -44,7 +45,7 @@ private val NOTES_ICON_SIZE = 14.dp
 fun ProjectItemRow(
     project: Item,
     tasks: List<ItemWithChecklist> = emptyList(),
-    projectProgressMap: Map<String, com.example.ui.screens.home.components.ProjectProgress> = emptyMap(),
+    projectProgressMap: Map<String, ProjectProgress> = emptyMap(),
     textPrimaryColor: Color,
     inlineExpandedTaskId: String?,
     onProjectClick: (Item) -> Unit,

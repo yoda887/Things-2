@@ -5,9 +5,6 @@ import com.example.data.model.ChecklistItem
 import com.example.data.model.Item
 import com.example.data.model.ItemWithChecklist
 import com.example.data.model.Tag
-import com.example.ui.screens.home.ActiveScreen
-import com.example.ui.screens.home.components.ProjectProgress
-import com.example.ui.screens.home.components.ThingsCategoryListState
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNull

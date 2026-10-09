@@ -1,5 +1,6 @@
 package com.example.ui.screens.home.components
 
+import com.example.domain.lists.AreaList
 import com.example.data.model.DayBounds
 import com.example.data.model.Item
 import com.example.data.model.ItemWithChecklist
@@ -35,14 +36,14 @@ class AreaScreenTest {
 
     @Test
     fun sections() {
-        assertEquals(AreaScreen.Section.CURRENT, AreaScreen.sectionOf(current.item, bounds))
-        assertEquals(AreaScreen.Section.UPCOMING, AreaScreen.sectionOf(later.item, bounds))
-        assertEquals(AreaScreen.Section.SOMEDAY, AreaScreen.sectionOf(someday.item, bounds))
+        assertEquals(AreaList.Section.CURRENT, AreaList.sectionOf(current.item, bounds))
+        assertEquals(AreaList.Section.UPCOMING, AreaList.sectionOf(later.item, bounds))
+        assertEquals(AreaList.Section.SOMEDAY, AreaList.sectionOf(someday.item, bounds))
     }
 
     @Test
     fun content_onlyOwnTasksOfTheArea() {
-        val content = AreaScreen.content("a", listOf(someday, inProject, current, otherArea, later), listOf(project), bounds)
+        val content = AreaList.content("a", listOf(someday, inProject, current, otherArea, later), listOf(project), bounds)
         assertEquals(listOf("now"), content.current.map { it.item.id })
         assertEquals(listOf("later"), content.upcoming.map { it.item.id })
         assertEquals(listOf("someday"), content.someday.map { it.item.id })
@@ -51,13 +52,13 @@ class AreaScreenTest {
 
     @Test
     fun order_ownTasksBySectionThenTheRest() {
-        val order = AreaScreen.order(listOf(someday, inProject, later, current), "a", bounds)
+        val order = AreaList.order(listOf(someday, inProject, later, current), "a", bounds)
         assertEquals(listOf("now", "later", "someday", "in-project"), order.map { it.item.id })
     }
 
     @Test
     fun rows_withLaterShown_andHidden() {
-        val content = AreaScreen.content("a", listOf(current, later, someday), listOf(project), bounds)
+        val content = AreaList.content("a", listOf(current, later, someday), listOf(project), bounds)
         assertEquals(
             listOf("project:p", TaskListKeys.AREA_PROJECTS_SPACER, "now",
                 TaskListKeys.AREA_UPCOMING_HEADING, "later", TaskListKeys.AREA_SOMEDAY_HEADING, "someday",
@@ -72,14 +73,14 @@ class AreaScreenTest {
 
     @Test
     fun rows_noSpacerWithoutTasks_noToggleWithoutLater() {
-        assertEquals(listOf("project:p"), ids(AreaScreen.rows(AreaScreen.content("a", emptyList(), listOf(project), bounds), false)))
-        assertEquals(listOf("now"), ids(AreaScreen.rows(AreaScreen.content("a", listOf(current), emptyList(), bounds), false)))
+        assertEquals(listOf("project:p"), ids(AreaScreen.rows(AreaList.content("a", emptyList(), listOf(project), bounds), false)))
+        assertEquals(listOf("now"), ids(AreaScreen.rows(AreaList.content("a", listOf(current), emptyList(), bounds), false)))
     }
 
     @Test
     fun isEmpty() {
-        assertTrue(AreaScreen.content("a", listOf(inProject, otherArea), emptyList(), bounds).isEmpty)
-        assertFalse(AreaScreen.content("a", emptyList(), listOf(project), bounds).isEmpty)
+        assertTrue(AreaList.content("a", listOf(inProject, otherArea), emptyList(), bounds).isEmpty)
+        assertFalse(AreaList.content("a", emptyList(), listOf(project), bounds).isEmpty)
     }
 
     @Test
@@ -87,8 +88,8 @@ class AreaScreenTest {
         val done = project.copy(id = "done", status = Item.STATUS_COMPLETED)
         val cancelled = project.copy(id = "cancelled", status = Item.STATUS_CANCELLED)
         val trashed = project.copy(id = "trashed", trashed = true)
-        val content = AreaScreen.content("a", emptyList(), listOf(project, done, cancelled, trashed), bounds)
+        val content = AreaList.content("a", emptyList(), listOf(project, done, cancelled, trashed), bounds)
         assertEquals(listOf("p"), content.projects.map { it.id })
-        assertTrue(AreaScreen.content("a", emptyList(), listOf(done), bounds).isEmpty)
+        assertTrue(AreaList.content("a", emptyList(), listOf(done), bounds).isEmpty)
     }
 }

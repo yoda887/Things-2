@@ -1,5 +1,6 @@
 package com.example.ui.screens.home.components
 
+import com.example.domain.lists.HeadingOrder
 import com.example.data.model.Item
 import com.example.data.model.ItemWithChecklist
 import org.junit.Assert.assertEquals
@@ -25,7 +26,7 @@ class ProjectHeadingsTest {
     @Test
     fun orderByHeading_putsLooseTasksFirstAndKeepsOrderInsideGroups() {
         val mixed = listOf(task("b1", "B"), task("a1", "A"), task("t1"), task("a2", "A"), task("x", "archived"))
-        assertEquals(listOf("t1", "x", "a1", "a2", "b1"), ids(ProjectHeadings.orderByHeading(mixed, headings) { it.item }))
+        assertEquals(listOf("t1", "x", "a1", "a2", "b1"), ids(HeadingOrder.orderByHeading(mixed, headings) { it.item }))
     }
 
     @Test

@@ -1,14 +1,14 @@
-package com.example.ui.screens.home.components
+package com.example.domain.lists
 
 import com.example.data.model.Item
 import com.example.data.model.ItemWithChecklist
 
 /**
- * «Журнал», как Logbook в Things: выполненные и отменённые задачи и завершённые и отменённые проекты
- * (строкой проекта), свежие сверху — по дате закрытия. Порядок задаётся датой, поэтому вручную
- * задачи здесь не переставляются. Закреплено тестами SimpleScreensTest.
+ * «Журнал», как Logbook в Things: выполненные и отменённые задачи и завершённые и отменённые проекты,
+ * свежие сверху — по дате закрытия. Порядок задаётся датой, поэтому вручную задачи здесь не
+ * переставляются. Закреплено тестами SimpleScreensTest.
  */
-object LogbookScreen {
+object LogbookList {
 
     /** Задача в «Журнале»: закрытая (выполненная или отменённая) и не удалённая. */
     fun includes(item: Item): Boolean = item.type == Item.TYPE_TASK && !item.trashed && ListRules.isClosed(item)
@@ -23,8 +23,8 @@ object LogbookScreen {
     /** Задачи в порядке экрана — свежие сверху. */
     fun order(tasks: List<ItemWithChecklist>): List<ItemWithChecklist> = tasks.sortedByDescending { closedAt(it.item) }
 
-    /** Строки экрана: задачи и проекты вместе, свежие сверху. */
-    fun rows(tasks: List<ItemWithChecklist>, projects: List<Item>): List<Any> =
+    /** Задачи ([ItemWithChecklist]) и проекты ([Item]) вместе, свежие сверху. */
+    fun entries(tasks: List<ItemWithChecklist>, projects: List<Item>): List<Any> =
         (tasks.map { it to closedAt(it.item) } + projects.filter(::includesProject).map { it to closedAt(it) })
             .sortedByDescending { it.second }
             .map { it.first }

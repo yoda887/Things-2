@@ -1,5 +1,7 @@
 package com.example.ui.screens.home.subcomponents
 
+import com.example.ui.viewmodel.ProjectProgress
+import com.example.ui.viewmodel.ActiveScreen
 import com.example.ui.theme.ThingsStroke
 import com.example.ui.theme.ThingsElevation
 import com.example.ui.theme.ThingsSpacing
@@ -50,7 +52,6 @@ import com.example.data.model.Tag
 import com.example.data.model.TaskSection
 import com.example.data.model.toStartVal
 import com.example.data.model.ChecklistItem
-import com.example.ui.screens.home.ActiveScreen
 import com.example.ui.screens.home.components.ThingsCategoryListEvent
 import com.example.ui.components.dragdrop.GenericDragDropState
 import com.example.ui.screens.home.components.taskDragAndDrop
@@ -82,7 +83,6 @@ import androidx.compose.ui.unit.sp
 import com.example.ui.components.ProjectProgressArc
 import com.example.ui.components.hideSoftKeyboardNow
 import androidx.compose.ui.platform.LocalView
-import com.example.ui.screens.home.components.ProjectProgress
 import androidx.compose.material.icons.outlined.ChevronRight
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.outlined.FormatListBulleted

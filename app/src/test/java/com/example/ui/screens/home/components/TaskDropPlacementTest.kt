@@ -1,9 +1,9 @@
 package com.example.ui.screens.home.components
 
+import com.example.ui.viewmodel.ActiveScreen
 import com.example.data.model.DayBounds
 import com.example.data.model.Item
 import com.example.data.model.ItemWithChecklist
-import com.example.ui.screens.home.ActiveScreen
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNull
 import org.junit.Test

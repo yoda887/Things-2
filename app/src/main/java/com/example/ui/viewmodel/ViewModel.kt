@@ -1,20 +1,18 @@
 package com.example.ui.viewmodel
 
+import com.example.domain.lists.SearchList
+import com.example.domain.lists.ProjectList
+import com.example.domain.lists.TagList
+import com.example.domain.lists.AreaList
+import com.example.domain.lists.LogbookList
+import com.example.domain.lists.SomedayList
+import com.example.domain.lists.AnytimeList
+import com.example.domain.lists.UpcomingList
+import com.example.domain.lists.TodayList
+import com.example.domain.lists.InboxList
 import androidx.lifecycle.ViewModel
 import com.example.domain.tag.TagTitles
 import com.example.domain.usecase.heading.HeadingUseCases
-import com.example.ui.screens.home.components.AreaScreen
-import com.example.ui.screens.home.components.AnytimeScreen
-import com.example.ui.screens.home.components.ProjectScreen
-import com.example.ui.screens.home.components.SearchScreen
-import com.example.ui.screens.home.components.SomedayScreen
-import com.example.ui.screens.home.components.InboxScreen
-import com.example.ui.screens.home.components.LogbookScreen
-import com.example.ui.screens.home.components.PlaceGroups
-import com.example.ui.screens.home.components.TagScreen
-import com.example.ui.screens.home.components.TodayScreen
-import com.example.ui.screens.home.components.UpcomingScreen
-import com.example.ui.screens.home.components.ProjectHeadings
 import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.viewModelScope
 import javax.inject.Inject
@@ -33,9 +31,6 @@ import com.example.domain.usecase.AreaUseCases
 import com.example.domain.usecase.SyncUseCases
 import com.example.domain.usecase.ChecklistUseCases
 import com.example.domain.usecase.QueryUseCases
-import com.example.ui.screens.home.ActiveScreen
-import com.example.ui.screens.home.components.ProjectProgress
-import com.example.ui.screens.home.components.ThingsCategoryListState
 import com.example.data.model.toStartVal
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.Flow
@@ -175,7 +170,7 @@ class ThingsViewModel @Inject constructor(
         ): ThingsCategoryListState {
             // Границы дня считаем один раз на весь список, а не в геттерах каждой задачи
             val bounds = DayBounds.now()
-            val somedayProjectIds = AnytimeScreen.somedayProjectIds(projectList)
+            val somedayProjectIds = AnytimeList.somedayProjectIds(projectList)
 
             // Все экраны перечислены явно (без else): новый экран компилятор заставит указать и здесь
             val listTasks = taskList.filter { wrapper ->
@@ -184,16 +179,16 @@ class ThingsViewModel @Inject constructor(
                     true
                 } else {
                     when (screen) {
-                        ActiveScreen.INBOX -> InboxScreen.includes(task)
-                        ActiveScreen.TODAY -> TodayScreen.includes(task, bounds)
-                        ActiveScreen.UPCOMING -> UpcomingScreen.includes(task, bounds)
-                        ActiveScreen.ANYTIME -> AnytimeScreen.includes(task, bounds, somedayProjectIds)
-                        ActiveScreen.SOMEDAY -> SomedayScreen.includes(task, bounds)
-                        ActiveScreen.LOGBOOK -> LogbookScreen.includes(task)
-                        ActiveScreen.PROJECT_DETAIL -> ProjectScreen.includes(task, project?.id)
-                        ActiveScreen.AREA_DETAIL -> AreaScreen.includes(task, area?.id)
-                        ActiveScreen.TAG_DETAIL -> tag != null && TagScreen.isActiveTask(task, tag.title)
-                        ActiveScreen.SEARCH -> SearchScreen.includes(wrapper, query)
+                        ActiveScreen.INBOX -> InboxList.includes(task)
+                        ActiveScreen.TODAY -> TodayList.includes(task, bounds)
+                        ActiveScreen.UPCOMING -> UpcomingList.includes(task, bounds)
+                        ActiveScreen.ANYTIME -> AnytimeList.includes(task, bounds, somedayProjectIds)
+                        ActiveScreen.SOMEDAY -> SomedayList.includes(task, bounds)
+                        ActiveScreen.LOGBOOK -> LogbookList.includes(task)
+                        ActiveScreen.PROJECT_DETAIL -> ProjectList.includes(task, project?.id)
+                        ActiveScreen.AREA_DETAIL -> AreaList.includes(task, area?.id)
+                        ActiveScreen.TAG_DETAIL -> tag != null && TagList.isActiveTask(task, tag.title)
+                        ActiveScreen.SEARCH -> SearchList.includes(wrapper, query)
                         // У главного экрана нет списка задач
                         ActiveScreen.HOME -> false
                     }
@@ -201,15 +196,15 @@ class ThingsViewModel @Inject constructor(
             }.sortedBy { it.item.sortOrder }
 
             // Заголовки экрана проекта
-            val projectHeadings = if (screen == ActiveScreen.PROJECT_DETAIL) ProjectScreen.headings(headingList, project?.id) else emptyList()
+            val projectHeadings = if (screen == ActiveScreen.PROJECT_DETAIL) ProjectList.headings(headingList, project?.id) else emptyList()
             // Задачи — в порядке экрана: перетаскивание работает по тому же списку, что виден.
             // Все экраны перечислены явно (без else): новый экран компилятор заставит указать и здесь
             val orderedTasks = when (screen) {
-                ActiveScreen.PROJECT_DETAIL -> ProjectScreen.order(listTasks, projectHeadings)
-                ActiveScreen.ANYTIME -> AnytimeScreen.order(listTasks, projectList, areaList)
-                ActiveScreen.SOMEDAY -> SomedayScreen.order(listTasks, projectList, areaList)
-                ActiveScreen.AREA_DETAIL -> AreaScreen.order(listTasks, area?.id, bounds)
-                ActiveScreen.LOGBOOK -> LogbookScreen.order(listTasks)
+                ActiveScreen.PROJECT_DETAIL -> ProjectList.order(listTasks, projectHeadings)
+                ActiveScreen.ANYTIME -> AnytimeList.order(listTasks, projectList, areaList)
+                ActiveScreen.SOMEDAY -> SomedayList.order(listTasks, projectList, areaList)
+                ActiveScreen.AREA_DETAIL -> AreaList.order(listTasks, area?.id, bounds)
+                ActiveScreen.LOGBOOK -> LogbookList.order(listTasks)
                 // Порядок экрана — общий порядок задач (sortOrder)
                 ActiveScreen.INBOX, ActiveScreen.TODAY, ActiveScreen.UPCOMING, ActiveScreen.TAG_DETAIL,
                 ActiveScreen.SEARCH, ActiveScreen.HOME -> listTasks

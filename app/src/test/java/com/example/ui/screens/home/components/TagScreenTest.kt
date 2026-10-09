@@ -1,5 +1,6 @@
 package com.example.ui.screens.home.components
 
+import com.example.domain.lists.TagList
 import com.example.data.model.Item
 import com.example.data.model.ItemWithChecklist
 import org.junit.Assert.assertEquals
@@ -26,12 +27,12 @@ class TagScreenTest {
 
     @Test
     fun isActiveTask() {
-        assertTrue(TagScreen.isActiveTask(task("a").item, "work"))
-        assertFalse(TagScreen.isActiveTask(task("b", tags = "home").item, "work"))
-        assertFalse(TagScreen.isActiveTask(task("c", status = Item.STATUS_COMPLETED).item, "work"))
-        assertFalse(TagScreen.isActiveTask(task("d", status = Item.STATUS_CANCELLED).item, "work"))
-        assertFalse(TagScreen.isActiveTask(task("e", trashed = true).item, "work"))
-        assertFalse(TagScreen.isActiveTask(project("p").copy(), "work"))
+        assertTrue(TagList.isActiveTask(task("a").item, "work"))
+        assertFalse(TagList.isActiveTask(task("b", tags = "home").item, "work"))
+        assertFalse(TagList.isActiveTask(task("c", status = Item.STATUS_COMPLETED).item, "work"))
+        assertFalse(TagList.isActiveTask(task("d", status = Item.STATUS_CANCELLED).item, "work"))
+        assertFalse(TagList.isActiveTask(task("e", trashed = true).item, "work"))
+        assertFalse(TagList.isActiveTask(project("p").copy(), "work"))
     }
 
     @Test
@@ -41,7 +42,7 @@ class TagScreenTest {
         val newCancelled = task("new", status = Item.STATUS_CANCELLED, stop = 200)
         val otherTagDone = task("other", tags = "home", status = Item.STATUS_COMPLETED, stop = 300)
         val trashedDone = task("trash", status = Item.STATUS_COMPLETED, trashed = true, stop = 400)
-        val content = TagScreen.content(
+        val content = TagList.content(
             "work",
             tasks = listOf(open),
             allTasks = listOf(open, oldDone, newCancelled, otherTagDone, trashedDone),
@@ -55,8 +56,8 @@ class TagScreenTest {
 
     @Test
     fun noSpacerWithoutOpenTasks_andEmpty() {
-        val onlyProject = TagScreen.content("work", emptyList(), emptyList(), listOf(project("p")))
+        val onlyProject = TagList.content("work", emptyList(), emptyList(), listOf(project("p")))
         assertEquals(listOf("project:p"), ids(TagScreen.rows(onlyProject)))
-        assertTrue(TagScreen.content("work", emptyList(), listOf(task("x", tags = "home")), emptyList()).isEmpty)
+        assertTrue(TagList.content("work", emptyList(), listOf(task("x", tags = "home")), emptyList()).isEmpty)
     }
 }

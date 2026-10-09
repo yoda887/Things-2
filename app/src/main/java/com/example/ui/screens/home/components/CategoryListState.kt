@@ -1,5 +1,11 @@
 package com.example.ui.screens.home.components
 
+import com.example.ui.viewmodel.ActiveScreen
+import com.example.domain.lists.TagList
+import com.example.domain.lists.AreaList
+import com.example.domain.lists.LogbookList
+import com.example.domain.lists.SomedayList
+import com.example.domain.lists.AnytimeList
 import com.example.data.model.Item
 import com.example.R
 import androidx.compose.ui.res.stringResource
@@ -13,7 +19,6 @@ import androidx.compose.ui.input.nestedscroll.NestedScrollConnection
 import androidx.compose.ui.input.nestedscroll.NestedScrollSource
 import androidx.compose.ui.unit.Velocity
 import com.example.data.model.*
-import com.example.ui.screens.home.ActiveScreen
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.launch
 import java.util.Calendar
@@ -190,12 +195,12 @@ fun rememberFlattenedList(
         when (screen) {
             ActiveScreen.TODAY -> TodayScreen.rows(standardToday, eveningToday, isDragging = draggedItemKey != null)
             ActiveScreen.UPCOMING -> UpcomingScreen.rows(upcomingDays, upcomingMonths)
-            ActiveScreen.AREA_DETAIL -> AreaScreen.rows(AreaScreen.content(area?.id, displayTasks, projects), isLaterItemsHidden)
-            ActiveScreen.LOGBOOK -> LogbookScreen.rows(displayTasks, projects)
-            ActiveScreen.TAG_DETAIL -> TagScreen.rows(TagScreen.content(tag?.title, displayTasks, allTasks, projects))
+            ActiveScreen.AREA_DETAIL -> AreaScreen.rows(AreaList.content(area?.id, displayTasks, projects), isLaterItemsHidden)
+            ActiveScreen.LOGBOOK -> LogbookList.entries(displayTasks, projects)
+            ActiveScreen.TAG_DETAIL -> TagScreen.rows(TagList.content(tag?.title, displayTasks, allTasks, projects))
             ActiveScreen.PROJECT_DETAIL -> ProjectScreen.rows(displayTasks, headings, draggedItemKey)
-            ActiveScreen.ANYTIME -> AnytimeScreen.rows(displayTasks, projects, areas)
-            ActiveScreen.SOMEDAY -> SomedayScreen.rows(displayTasks, projects, areas)
+            ActiveScreen.ANYTIME -> PlaceGroupRows.rows(AnytimeList.groups(displayTasks, projects, areas))
+            ActiveScreen.SOMEDAY -> PlaceGroupRows.rows(SomedayList.groups(displayTasks, projects, areas))
             ActiveScreen.SEARCH -> SearchScreen.rows(displayTasks, projects, areas, savedTags, searchQuery, headerLogbook)
             // «Входящие» — задачи как есть; у главного экрана списка нет
             ActiveScreen.INBOX, ActiveScreen.HOME -> displayTasks
@@ -264,44 +269,6 @@ fun rememberPullToSearchConnection(
     }
 }
 
-/**
- * Данные о прогрессе выполнения проекта (количество выполненных и общее количество задач).
- */
-data class ProjectProgress(
-    val completed: Int = 0,
-    val total: Int = 0
-)
-
-/**
- * Состояние экрана категорий приложения Things.
- */
-data class ThingsCategoryListState(
-    val screen: ActiveScreen = ActiveScreen.INBOX,
-    val project: Item? = null,
-    val area: Area? = null,
-    val tag: Tag? = null,
-    val inlineExpandedTaskId: String? = null,
-    val selectedTagFilter: String? = null,
-    val allTags: Set<String> = emptySet(),
-    val displayTasks: List<ItemWithChecklist> = emptyList(),
-    val calendarEvents: List<Item> = emptyList(),
-    val allSavedTags: List<String> = emptyList(),
-    val allSavedTagObjects: List<Tag> = emptyList(),
-    val areas: List<Area> = emptyList(),
-    val projects: List<Item> = emptyList(),
-    val highlightedTaskId: String? = null,
-    val textPrimaryColor: Color = Color.Unspecified,
-    val textSecondaryColor: Color = Color.Unspecified,
-    val dividerColor: Color = Color.Unspecified,
-    val allTasks: List<ItemWithChecklist> = emptyList(),
-    val projectProgressMap: Map<String, ProjectProgress> = emptyMap(),
-    val isSelectionMode: Boolean = false,
-    val selectedTaskIds: Set<String> = emptySet(),
-    // Текст запроса экрана поиска
-    val searchQuery: String = "",
-    // Активные заголовки проекта по порядку (экран проекта)
-    val headings: List<Item> = emptyList()
-)
 
 /**
  * События пользовательского интерфейса для CategoryListPanel.

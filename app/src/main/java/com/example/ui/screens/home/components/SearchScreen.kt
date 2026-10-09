@@ -1,26 +1,16 @@
 package com.example.ui.screens.home.components
 
+import com.example.domain.lists.SearchList
 import com.example.data.model.Area
 import com.example.data.model.Item
 import com.example.data.model.ItemWithChecklist
 import com.example.data.model.Tag
 
 /**
- * Экран «Поиск» — его правила в одном месте: какие задачи находятся (открытые, выполненные и отменённые —
- * по названию, заметкам и пунктам чек-листа) и строки результатов. Порядок результатов — свой,
+ * Строки результатов экрана «Поиск» (какие задачи находятся — SearchList). Порядок результатов — свой,
  * не правило групп «по месту». Быстрый поиск (Quick Find) строит свои результаты сам, в SearchOverlay.
  */
 object SearchScreen {
-
-    fun includes(task: ItemWithChecklist, query: String): Boolean {
-        val q = query.trim()
-        val item = task.item
-        return q.isNotEmpty() && item.type == Item.TYPE_TASK && !item.trashed && (
-            item.title.contains(q, ignoreCase = true) ||
-                item.notes.contains(q, ignoreCase = true) ||
-                task.checklist.any { it.title.contains(q, ignoreCase = true) }
-            )
-    }
 
     fun rows(
         matchedTasks: List<ItemWithChecklist>,

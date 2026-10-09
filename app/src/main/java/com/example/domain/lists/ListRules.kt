@@ -1,8 +1,8 @@
-package com.example.ui.screens.home.components
+package com.example.domain.lists
 
 import com.example.data.model.Item
 
-/** Общие правила видимости в списках экранов. */
+/** Общие правила видимости в списках. */
 object ListRules {
 
     /** Проект виден в списках: не удалён, не завершён и не отменён (закрытые — в Logbook), как в Things. */

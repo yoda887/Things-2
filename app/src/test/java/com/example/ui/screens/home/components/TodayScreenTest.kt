@@ -1,5 +1,6 @@
 package com.example.ui.screens.home.components
 
+import com.example.domain.lists.TodayList
 import com.example.data.model.Item
 import com.example.data.model.ItemWithChecklist
 import org.junit.Assert.assertEquals
@@ -17,14 +18,14 @@ class TodayScreenTest {
 
     @Test
     fun dayAndEvening_keepOrder() {
-        assertEquals(listOf("d1", "d2"), TodayScreen.day(tasks).map { it.item.id })
-        assertEquals(listOf("e1"), TodayScreen.evening(tasks).map { it.item.id })
+        assertEquals(listOf("d1", "d2"), TodayList.day(tasks).map { it.item.id })
+        assertEquals(listOf("e1"), TodayList.evening(tasks).map { it.item.id })
     }
 
     @Test
     fun rows_eveningHeaderOnlyWithEveningTasksOrWhileDragging() {
-        val day = TodayScreen.day(tasks)
-        assertEquals(listOf("d1", "d2", TaskListKeys.EVENING_HEADER, "e1"), ids(TodayScreen.rows(day, TodayScreen.evening(tasks), false)))
+        val day = TodayList.day(tasks)
+        assertEquals(listOf("d1", "d2", TaskListKeys.EVENING_HEADER, "e1"), ids(TodayScreen.rows(day, TodayList.evening(tasks), false)))
         assertEquals(listOf("d1", "d2"), ids(TodayScreen.rows(day, emptyList(), false)))
         assertEquals(listOf("d1", "d2", TaskListKeys.EVENING_HEADER), ids(TodayScreen.rows(day, emptyList(), true)))
     }

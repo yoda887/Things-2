@@ -1,10 +1,10 @@
 package com.example.ui.screens.home.components
 
+import com.example.domain.lists.UpcomingList
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.remember
 import androidx.compose.ui.res.stringResource
 import com.example.R
-import com.example.data.model.DayBounds
 import com.example.data.model.Item
 import com.example.data.model.ItemWithChecklist
 import java.text.SimpleDateFormat
@@ -19,13 +19,11 @@ private const val UPCOMING_DAYS_HORIZON = 7
 private const val UPCOMING_MONTHS_HORIZON = 4
 
 /**
- * Экран «Предстоящие» — все его правила в одном месте: какие задачи на нём, расписание (неделя
- * по дням, затем месяцы), строки списка и признак пустого экрана. Перетаскивание по дням и месяцам —
- * в TaskDropPlacement. Закреплено тестами UpcomingScreenTest.
+ * Экран «Предстоящие»: расписание (неделя по дням, затем месяцы), строки списка и признак пустого
+ * экрана; какие задачи на нём — UpcomingList. Перетаскивание по дням и месяцам — в TaskDropPlacement.
+ * Закреплено тестами UpcomingScreenTest.
  */
 object UpcomingScreen {
-
-    fun includes(item: Item, bounds: DayBounds): Boolean = bounds.isUpcoming(item)
 
     /**
      * Вычисляет полное расписание экрана «Предстоящие»:

@@ -1,5 +1,6 @@
 package com.example.ui.screens.home.subcomponents
 
+import com.example.ui.viewmodel.ActiveScreen
 import com.example.ui.theme.ThingsStroke
 import androidx.compose.material.icons.filled.RemoveDone
 import androidx.compose.material.icons.filled.DoneAll
@@ -37,7 +38,6 @@ import com.example.data.model.Item
 import com.example.data.model.ItemWithChecklist
 import com.example.data.model.Tag
 import androidx.compose.material.icons.outlined.LocalOffer
-import com.example.ui.screens.home.ActiveScreen
 import com.example.ui.theme.AppIcons
 import com.example.ui.theme.ThingsTheme
 import com.example.ui.theme.topAppBarTitle

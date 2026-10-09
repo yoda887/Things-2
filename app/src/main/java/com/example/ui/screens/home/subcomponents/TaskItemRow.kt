@@ -1,5 +1,6 @@
 package com.example.ui.screens.home.subcomponents
 
+import com.example.ui.viewmodel.ActiveScreen
 import com.example.R
 import androidx.compose.ui.res.stringResource
 import com.example.ui.theme.ThingsTheme
@@ -16,7 +17,6 @@ import androidx.compose.material.icons.filled.Flag
 import androidx.compose.material.icons.filled.Reorder
 import androidx.compose.material.icons.filled.Star
 import androidx.compose.material.icons.filled.NightsStay
-import com.example.ui.screens.home.ActiveScreen
 import androidx.compose.material.icons.outlined.CalendarToday
 import androidx.compose.material.icons.outlined.Description
 import androidx.compose.material.icons.outlined.FormatListBulleted

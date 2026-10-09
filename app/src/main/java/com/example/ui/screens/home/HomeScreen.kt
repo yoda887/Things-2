@@ -1,5 +1,7 @@
 package com.example.ui.screens.home
 
+import com.example.ui.viewmodel.ActiveScreen
+import com.example.domain.lists.ListRules
 import com.example.R
 import androidx.compose.ui.res.stringResource
 import com.example.ui.components.ThingsDropdownMenu
@@ -55,7 +57,6 @@ import com.example.data.model.Area
 import com.example.data.model.Tag
 import com.example.ui.screens.home.components.ThingsHomePanel
 import com.example.ui.screens.home.components.ThingsCategoryListPanel
-import com.example.ui.screens.home.components.ThingsCategoryListState
 import com.example.ui.screens.home.components.ThingsCategoryListEvent
 import com.example.ui.screens.home.components.ThingsSearchOverlay
 import com.example.ui.screens.home.components.SearchResultItem
@@ -90,11 +91,6 @@ private const val SEARCH_RESULT_CROSSFADE_MS = 120
 @Serializable object HomeRoute
 @Serializable object SearchRoute
 @Serializable data class ListRoute(val screen: ActiveScreen, val entityId: String? = null)
-
-@Serializable
-enum class ActiveScreen {
-    HOME, INBOX, TODAY, UPCOMING, ANYTIME, SOMEDAY, LOGBOOK, PROJECT_DETAIL, AREA_DETAIL, SEARCH, TAG_DETAIL
-}
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -461,7 +457,7 @@ fun ThingsHomeScreen(viewModel: ThingsViewModel = hiltViewModel()) {
                         ThingsHomePanel(
                             allTasks = allTasksRaw,
                             // Завершённые, отменённые и удалённые проекты — в Logbook, на главном экране их нет
-                            projects = projects.filter { com.example.ui.screens.home.components.ListRules.isOpenProject(it) },
+                            projects = projects.filter { ListRules.isOpenProject(it) },
                             searchQuery = searchQuery,
                             googleToken = googleToken,
                             syncError = syncError,
@@ -543,9 +539,6 @@ fun ThingsHomeScreen(viewModel: ThingsViewModel = hiltViewModel()) {
 
                     ThingsCategoryListPanel(
                         state = screenState.copy(
-                            textPrimaryColor = textPrimaryColor,
-                            textSecondaryColor = textSecondaryColor,
-                            dividerColor = dividerColor,
                             isSelectionMode = isSelectionMode,
                             selectedTaskIds = selectedTaskIds
                         ),

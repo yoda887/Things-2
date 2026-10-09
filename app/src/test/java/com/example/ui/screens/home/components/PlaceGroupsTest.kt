@@ -1,5 +1,6 @@
 package com.example.ui.screens.home.components
 
+import com.example.domain.lists.PlaceGroups
 import com.example.data.model.Area
 import com.example.data.model.Item
 import com.example.data.model.ItemWithChecklist

@@ -1,4 +1,4 @@
-package com.example.ui.screens.home.components
+package com.example.domain.lists
 
 import com.example.data.model.Item
 
@@ -7,6 +7,6 @@ import com.example.data.model.Item
  * Выполненные, отменённые и удалённые сюда не попадают. По этому же правилу считается число
  * у «Входящих» на главном экране. Закреплено тестами SimpleScreensTest.
  */
-object InboxScreen {
+object InboxList {
     fun includes(item: Item): Boolean = item.isInbox && !item.trashed && !ListRules.isClosed(item)
 }
