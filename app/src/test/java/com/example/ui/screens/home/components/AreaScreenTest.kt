@@ -81,4 +81,14 @@ class AreaScreenTest {
         assertTrue(AreaScreen.content("a", listOf(inProject, otherArea), emptyList(), bounds).isEmpty)
         assertFalse(AreaScreen.content("a", emptyList(), listOf(project), bounds).isEmpty)
     }
+
+    @Test
+    fun content_hidesCompletedCancelledAndTrashedProjects() {
+        val done = project.copy(id = "done", status = Item.STATUS_COMPLETED)
+        val cancelled = project.copy(id = "cancelled", status = Item.STATUS_CANCELLED)
+        val trashed = project.copy(id = "trashed", trashed = true)
+        val content = AreaScreen.content("a", emptyList(), listOf(project, done, cancelled, trashed), bounds)
+        assertEquals(listOf("p"), content.projects.map { it.id })
+        assertTrue(AreaScreen.content("a", emptyList(), listOf(done), bounds).isEmpty)
+    }
 }

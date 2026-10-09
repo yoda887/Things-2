@@ -9,7 +9,8 @@ import com.example.data.model.ItemWithChecklist
  * разделы делится. Пользуются им ViewModel (порядок задач), список экрана (строки), проверка пустого
  * экрана и перетаскивание (раздел задачи). Функции чистые — закреплены тестами AreaScreenTest.
  *
- * Экран: проекты области, затем её задачи без проекта по разделам — текущие, «Планы», «Когда-нибудь».
+ * Экран: открытые проекты области (завершённые и отменённые — в Logbook), затем её задачи без проекта
+ * по разделам — текущие, «Планы», «Когда-нибудь».
  * «Планы» и «Когда-нибудь» прячутся переключателем «Скрыть более поздние».
  */
 object AreaScreen {
@@ -22,6 +23,9 @@ object AreaScreen {
         bounds.isUpcoming(item) -> Section.UPCOMING
         else -> Section.CURRENT
     }
+
+    /** Проект виден в списках: не удалён, не завершён и не отменён — как на главном экране. */
+    fun isOpenProject(project: Item): Boolean = !project.trashed && project.status == Item.STATUS_OPEN
 
     /** Задача стоит в области сама, а не в одном из её проектов. */
     fun isOwnTask(item: Item, areaId: String?): Boolean =
@@ -47,7 +51,7 @@ object AreaScreen {
         val own = tasks.filter { isOwnTask(it.item, areaId) }
         val bySection = own.groupBy { sectionOf(it.item, bounds) }
         return Content(
-            projects = projects.filter { areaId != null && it.areaId == areaId },
+            projects = projects.filter { areaId != null && it.areaId == areaId && isOpenProject(it) },
             current = bySection[Section.CURRENT].orEmpty(),
             upcoming = bySection[Section.UPCOMING].orEmpty(),
             someday = bySection[Section.SOMEDAY].orEmpty()

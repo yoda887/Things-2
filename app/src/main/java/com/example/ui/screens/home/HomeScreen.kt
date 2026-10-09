@@ -460,7 +460,8 @@ fun ThingsHomeScreen(viewModel: ThingsViewModel = hiltViewModel()) {
                     ScreenTransitionWrapper(isStartDestination = true, backgroundColor = backgroundColor) {
                         ThingsHomePanel(
                             allTasks = allTasksRaw,
-                            projects = projects,
+                            // Завершённые, отменённые и удалённые проекты — в Logbook, на главном экране их нет
+                            projects = projects.filter { com.example.ui.screens.home.components.AreaScreen.isOpenProject(it) },
                             searchQuery = searchQuery,
                             googleToken = googleToken,
                             syncError = syncError,
