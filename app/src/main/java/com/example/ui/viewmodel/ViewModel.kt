@@ -4,6 +4,10 @@ import androidx.lifecycle.ViewModel
 import com.example.domain.tag.TagTitles
 import com.example.domain.usecase.heading.HeadingUseCases
 import com.example.ui.screens.home.components.AreaScreen
+import com.example.ui.screens.home.components.AnytimeScreen
+import com.example.ui.screens.home.components.ProjectScreen
+import com.example.ui.screens.home.components.SearchScreen
+import com.example.ui.screens.home.components.SomedayScreen
 import com.example.ui.screens.home.components.InboxScreen
 import com.example.ui.screens.home.components.LogbookScreen
 import com.example.ui.screens.home.components.PlaceGroups
@@ -171,8 +175,7 @@ class ThingsViewModel @Inject constructor(
         ): ThingsCategoryListState {
             // Границы дня считаем один раз на весь список, а не в геттерах каждой задачи
             val bounds = DayBounds.now()
-            // Проекты, отложенные в «Когда-нибудь»: их задачи в «В любое время» не показываются
-            val somedayProjectIds = projectList.filter { it.start == Item.START_SOMEDAY }.map { it.id }.toSet()
+            val somedayProjectIds = AnytimeScreen.somedayProjectIds(projectList)
 
             val listTasks = taskList.filter { wrapper ->
                 val task = wrapper.item
@@ -183,43 +186,27 @@ class ThingsViewModel @Inject constructor(
                         ActiveScreen.INBOX -> InboxScreen.includes(task)
                         ActiveScreen.TODAY -> TodayScreen.includes(task, bounds)
                         ActiveScreen.UPCOMING -> UpcomingScreen.includes(task, bounds)
-                        ActiveScreen.ANYTIME -> bounds.isAnytime(task) && task.projectId !in somedayProjectIds
-                        ActiveScreen.SOMEDAY -> bounds.isSomeday(task)
+                        ActiveScreen.ANYTIME -> AnytimeScreen.includes(task, bounds, somedayProjectIds)
+                        ActiveScreen.SOMEDAY -> SomedayScreen.includes(task, bounds)
                         ActiveScreen.LOGBOOK -> LogbookScreen.includes(task)
-                        ActiveScreen.PROJECT_DETAIL -> task.projectId == project?.id && !task.isCompleted
-                        ActiveScreen.AREA_DETAIL -> task.areaId == area?.id && task.type == Item.TYPE_TASK && !task.isCompleted
+                        ActiveScreen.PROJECT_DETAIL -> ProjectScreen.includes(task, project?.id)
+                        ActiveScreen.AREA_DETAIL -> AreaScreen.includes(task, area?.id)
                         ActiveScreen.TAG_DETAIL -> tag != null && TagScreen.isActiveTask(task, tag.title)
-                        // Поиск: задачи (открытые, выполненные и отменённые) по названию, заметкам и чек-листу
-                        ActiveScreen.SEARCH -> {
-                            val q = query.trim()
-                            q.isNotEmpty() && task.type == Item.TYPE_TASK && !task.trashed && (
-                                task.title.contains(q, ignoreCase = true) ||
-                                    task.notes.contains(q, ignoreCase = true) ||
-                                    wrapper.checklist.any { it.title.contains(q, ignoreCase = true) }
-                                )
-                        }
+                        ActiveScreen.SEARCH -> SearchScreen.includes(wrapper, query)
                         else -> false
                     }
                 }
             }.sortedBy { it.item.sortOrder }
 
-            // Экран проекта: активные заголовки проекта, задачи — в порядке экрана, по заголовкам
-            val projectHeadings = if (screen == ActiveScreen.PROJECT_DETAIL && project != null) {
-                headingList.filter { it.projectId == project.id && it.status == Item.STATUS_OPEN && !it.trashed }
-                    .sortedBy { it.sortOrder }
-            } else {
-                emptyList()
-            }
-            val orderedTasks = when {
-                projectHeadings.isNotEmpty() ->
-                    ProjectHeadings.orderByHeading(listTasks, projectHeadings.map { it.id }) { it.item }
-                // «В любое время» и «Когда-нибудь» сгруппированы по проектам и областям — список в том же порядке, что на экране
-                screen == ActiveScreen.ANYTIME || screen == ActiveScreen.SOMEDAY ->
-                    PlaceGroups.order(listTasks, projectList, areaList)
-                // Экран области: задачи по разделам, как на экране (см. AreaScreen)
-                screen == ActiveScreen.AREA_DETAIL -> AreaScreen.order(listTasks, area?.id, bounds)
-                // «Журнал»: свежие сверху
-                screen == ActiveScreen.LOGBOOK -> LogbookScreen.order(listTasks)
+            // Заголовки экрана проекта
+            val projectHeadings = if (screen == ActiveScreen.PROJECT_DETAIL) ProjectScreen.headings(headingList, project?.id) else emptyList()
+            // Задачи — в порядке экрана: перетаскивание работает по тому же списку, что виден
+            val orderedTasks = when (screen) {
+                ActiveScreen.PROJECT_DETAIL -> ProjectScreen.order(listTasks, projectHeadings)
+                ActiveScreen.ANYTIME -> AnytimeScreen.order(listTasks, projectList, areaList)
+                ActiveScreen.SOMEDAY -> SomedayScreen.order(listTasks, projectList, areaList)
+                ActiveScreen.AREA_DETAIL -> AreaScreen.order(listTasks, area?.id, bounds)
+                ActiveScreen.LOGBOOK -> LogbookScreen.order(listTasks)
                 else -> listTasks
             }
 

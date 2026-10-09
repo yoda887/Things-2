@@ -92,4 +92,20 @@ object PlaceGroups {
     fun somedayProjects(projects: List<Item>): List<Item> = projects.filter {
         it.type == Item.TYPE_PROJECT && !it.trashed && it.status == Item.STATUS_OPEN && it.start == Item.START_SOMEDAY
     }
+
+    /** Строки списка: заголовок проекта или области, строки проектов и задачи; задачи без места — без заголовка. */
+    fun rows(groups: List<Group>): List<Any> = buildList {
+        groups.forEach { group ->
+            when {
+                group.project != null -> add(
+                    SearchSectionHeaderItem("place_hdr_project_${group.project.id}", group.project.title, SearchSectionKind.PROJECT, project = group.project)
+                )
+                group.area != null -> add(
+                    SearchSectionHeaderItem("place_hdr_area_${group.area.id}", group.area.title, SearchSectionKind.AREA, area = group.area)
+                )
+            }
+            addAll(group.projectRows)
+            addAll(group.tasks)
+        }
+    }
 }

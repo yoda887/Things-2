@@ -933,9 +933,10 @@ fun ThingsCategoryListPanel(
                 ActiveScreen.AREA_DETAIL -> !AreaScreen.content(area?.id, displayTasks, projects).isEmpty
                 ActiveScreen.LOGBOOK -> LogbookScreen.rows(displayTasks, projects).isNotEmpty()
                 ActiveScreen.TAG_DETAIL -> !TagScreen.content(state.tag?.title, displayTasks, state.allTasks, projects).isEmpty
-                ActiveScreen.PROJECT_DETAIL -> displayTasks.isNotEmpty() || localHeadings.isNotEmpty()
+                ActiveScreen.PROJECT_DETAIL -> !ProjectScreen.isEmpty(displayTasks, localHeadings)
                 // «Когда-нибудь» показывает и отложенные проекты — без задач экран не пуст
-                ActiveScreen.SOMEDAY -> displayTasks.isNotEmpty() || PlaceGroups.somedayProjects(projects).isNotEmpty()
+                ActiveScreen.ANYTIME -> !AnytimeScreen.isEmpty(displayTasks)
+                ActiveScreen.SOMEDAY -> !SomedayScreen.isEmpty(displayTasks, projects)
                 else -> displayTasks.isNotEmpty()
             }
 

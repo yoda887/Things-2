@@ -24,6 +24,10 @@ object AreaScreen {
         else -> Section.CURRENT
     }
 
+    /** Задачи списка экрана: невыполненные задачи области (и её проектов — они идут после своих, см. [order]). */
+    fun includes(item: Item, areaId: String?): Boolean =
+        areaId != null && item.areaId == areaId && item.type == Item.TYPE_TASK && !item.isCompleted
+
     /** Задача стоит в области сама, а не в одном из её проектов. */
     fun isOwnTask(item: Item, areaId: String?): Boolean =
         areaId != null && item.areaId == areaId && item.projectId.isNullOrEmpty()

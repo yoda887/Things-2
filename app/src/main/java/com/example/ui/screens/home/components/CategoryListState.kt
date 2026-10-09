@@ -197,28 +197,14 @@ fun rememberFlattenedList(
                 addAll(LogbookScreen.rows(displayTasks, projects))
             } else if (screen == ActiveScreen.TAG_DETAIL) {
                 addAll(TagScreen.rows(TagScreen.content(tag?.title, displayTasks, allTasks, projects)))
-            } else if (screen == ActiveScreen.PROJECT_DETAIL && headings.isNotEmpty()) {
-                // Сначала задачи без заголовка, затем каждый заголовок со своими задачами.
-                // Задачи заголовка, который несут под пальцем, убраны — как проекты свёрнутой области
-                val headingIds = headings.map { it.id }
-                val draggedHeadingId = (draggedItemKey as? String)
-                    ?.takeIf { it.startsWith(TaskListKeys.HEADING_PREFIX) }
-                    ?.removePrefix(TaskListKeys.HEADING_PREFIX)
-                addAll(ProjectHeadings.tasksOf(displayTasks, null, headingIds))
-                headings.forEach { heading ->
-                    add(ProjectHeadingItem(heading))
-                    if (heading.id != draggedHeadingId) {
-                        addAll(ProjectHeadings.tasksOf(displayTasks, heading.id, headingIds))
-                    }
-                }
+            } else if (screen == ActiveScreen.PROJECT_DETAIL) {
+                addAll(ProjectScreen.rows(displayTasks, headings, draggedItemKey))
             } else if (screen == ActiveScreen.ANYTIME) {
-                // Область — заголовком, только если у неё есть свои задачи; её проекты видны и без него
-                addPlaceGroups(PlaceGroups.group(displayTasks, projects, areas, areaHeaderOnlyWithOwnItems = true))
+                addAll(AnytimeScreen.rows(displayTasks, projects, areas))
             } else if (screen == ActiveScreen.SOMEDAY) {
-                // «Когда-нибудь»: по областям, внутри области — отложенные проекты строками и задачи
-                addPlaceGroups(PlaceGroups.group(displayTasks, projects, areas, PlaceGroups.somedayProjects(projects)))
+                addAll(SomedayScreen.rows(displayTasks, projects, areas))
             } else if (screen == ActiveScreen.SEARCH) {
-                addSearchResults(displayTasks, projects, areas, savedTags, searchQuery, headerLogbook)
+                addAll(SearchScreen.rows(displayTasks, projects, areas, savedTags, searchQuery, headerLogbook))
             } else {
                 addAll(displayTasks)
             }
@@ -226,100 +212,7 @@ fun rememberFlattenedList(
     }
 }
 
-/** Группы «по месту»: заголовок проекта или области и задачи под ним; задачи без места — без заголовка. */
-private fun MutableList<Any>.addPlaceGroups(groups: List<PlaceGroups.Group>) {
-    groups.forEach { group ->
-        when {
-            group.project != null -> add(
-                SearchSectionHeaderItem("place_hdr_project_${group.project.id}", group.project.title, SearchSectionKind.PROJECT, project = group.project)
-            )
-            group.area != null -> add(
-                SearchSectionHeaderItem("place_hdr_area_${group.area.id}", group.area.title, SearchSectionKind.AREA, area = group.area)
-            )
-        }
-        addAll(group.projectRows)
-        addAll(group.tasks)
-    }
-}
 
-/**
- * Результаты поиска: открытые задачи без проекта и области, найденные проекты, области и теги (строками, без заголовка),
- * открытые задачи по проектам и областям — в порядке главного экрана, затем выполненное (Logbook).
- */
-private fun MutableList<Any>.addSearchResults(
-    matchedTasks: List<ItemWithChecklist>,
-    projects: List<Item>,
-    areas: List<Area>,
-    savedTags: List<Tag>,
-    searchQuery: String,
-    headerLogbook: String
-) {
-    val q = searchQuery.trim()
-    if (q.isEmpty()) return
-
-    fun Item.isDone() = isCompleted || status == Item.STATUS_CANCELLED
-    val projectsById = projects.filter { it.type == Item.TYPE_PROJECT }.associateBy { it.id }
-    val areasById = areas.associateBy { it.id }
-    // Задача в удалённом проекте или области — в корзине вместе с ними, в поиске её нет
-    val active = matchedTasks.filter { task ->
-        !task.item.isDone() &&
-            task.item.projectId?.let { projectsById[it]?.trashed } != true &&
-            task.item.areaId?.let { areasById[it]?.trashed } != true
-    }
-    // Проект и область задачи, если они есть и не удалены; иначе задача — среди задач без проекта
-    fun ItemWithChecklist.projectOrNull() = item.projectId?.let { projectsById[it] }
-    fun ItemWithChecklist.areaOrNull() = item.areaId?.let { areasById[it] }
-
-    // 1. Открытые задачи без проекта и области — сразу под строкой поиска, без заголовка.
-    // Сюда же — задачи, чьих проекта или области больше нет: иначе они пропали бы из поиска
-    addAll(active.filter { it.projectOrNull() == null && it.areaOrNull() == null })
-
-    // 2. Найденные открытые проекты, области и теги — строками, без заголовка секции
-    val matchedProjects = projects.filter {
-        it.type == Item.TYPE_PROJECT && !it.trashed && !it.isDone() &&
-            (it.title.contains(q, ignoreCase = true) || it.notes.contains(q, ignoreCase = true))
-    }
-    addAll(matchedProjects)
-    val matchedAreas = areas.filter { !it.trashed && it.title.contains(q, ignoreCase = true) }
-    addAll(matchedAreas.map { SearchAreaItem(it) })
-    val matchedTags = savedTags.filter { it.title.isNotBlank() && it.title.contains(q, ignoreCase = true) }
-    addAll(matchedTags.map { SearchTagItem(it) })
-
-    // 3. Открытые задачи по проектам и областям — в порядке главного экрана: сначала проекты
-    // без области, затем каждая область — её задачи без проекта, потом её проекты
-    val tasksByProject = active.filter { it.projectOrNull() != null }.groupBy { it.item.projectId!! }
-    val tasksByArea = active.filter { it.projectOrNull() == null && it.areaOrNull() != null }
-        .groupBy { it.item.areaId!! }
-    fun addProjectGroup(project: Item) {
-        val tasks = tasksByProject[project.id] ?: return
-        add(SearchSectionHeaderItem("search_hdr_project_${project.id}", project.title, SearchSectionKind.PROJECT, project = project))
-        addAll(tasks)
-    }
-    val groupProjects = projects.filter { it.id in tasksByProject }
-    // Проект, чьей области нет, на главном экране стоит среди проектов без области
-    groupProjects.filter { it.areaId.isNullOrEmpty() || it.areaId !in areasById }.forEach(::addProjectGroup)
-    areas.filter { it.id in tasksByArea || groupProjects.any { p -> p.areaId == it.id } }.forEach { area ->
-        tasksByArea[area.id]?.let { tasks ->
-            add(SearchSectionHeaderItem("search_hdr_area_${area.id}", area.title, SearchSectionKind.AREA, area = area))
-            addAll(tasks)
-        }
-        groupProjects.filter { it.areaId == area.id }.forEach(::addProjectGroup)
-    }
-
-    // 4. Выполненные и отменённые задачи и проекты — Logbook, свежие сверху
-    val doneTasks = matchedTasks.filter { it.item.isDone() }
-    val doneProjects = projects.filter {
-        it.type == Item.TYPE_PROJECT && !it.trashed && it.isDone() &&
-            (it.title.contains(q, ignoreCase = true) || it.notes.contains(q, ignoreCase = true))
-    }
-    val logbook = (doneTasks.map { it to it.item } + doneProjects.map { it to it })
-        .sortedByDescending { (_, item) -> item.stopDate ?: item.modificationDate }
-        .map { it.first }
-    if (logbook.isNotEmpty()) {
-        add(SearchSectionHeaderItem("search_hdr_logbook", headerLogbook, SearchSectionKind.LOGBOOK))
-        addAll(logbook)
-    }
-}
 
 /**
  * Предоставляет реализацию `NestedScrollConnection` для жеста "тяни-для-поиска" (Pull-To-Search).
