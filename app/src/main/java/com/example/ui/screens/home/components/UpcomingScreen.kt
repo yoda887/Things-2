@@ -12,40 +12,21 @@ import java.util.Calendar
 import java.util.Date
 import java.util.Locale
 
-/** Горизонт планирования экрана «Предстоящие» в днях: неделя вперёд, начиная с завтра */
-private const val UPCOMING_DAYS_HORIZON = 7
-
-/** Сколько целых месяцев показывать после остатка месяца, в котором закончился горизонт */
-private const val UPCOMING_MONTHS_HORIZON = 4
-
 /**
- * Экран «Предстоящие»: расписание (неделя по дням, затем месяцы), строки списка и признак пустого
- * экрана; какие задачи на нём — UpcomingList. Перетаскивание по дням и месяцам — в TaskDrops.
- * Закреплено тестами UpcomingScreenTest.
+ * Экран «Предстоящие»: подписи расписания, строки списка и признак пустого экрана. Какие задачи на
+ * экране и как они разложены по дням и месяцам — UpcomingList. Перетаскивание по дням и месяцам —
+ * в TaskDrops. Закреплено тестами UpcomingScreenTest.
  */
 object UpcomingScreen {
 
-    /**
-     * Вычисляет полное расписание экрана «Предстоящие»:
-     * 1. Неделя подряд начиная с завтра (включая пустые дни).
-     * 2. Остаток месяца, в котором закончилась неделя, и следующие [UPCOMING_MONTHS_HORIZON]
-     *    месяцев — только те, где есть дела. Дальше этого горизонта экран ничего не показывает.
-     */
+    /** Расписание экрана ([UpcomingList.schedule]) с подписями дней, разделов и плашками дат задач. */
     fun schedule(
         localTasksList: List<ItemWithChecklist>,
         calendarEvents: List<Item>,
         tomorrowLabel: String,
         now: Calendar = Calendar.getInstance()
     ): UpcomingSchedule {
-        val daysList = mutableListOf<UpcomingDay>()
-
-        val cursor = (now.clone() as Calendar).apply {
-            add(Calendar.DAY_OF_YEAR, 1)
-            set(Calendar.HOUR_OF_DAY, 0)
-            set(Calendar.MINUTE, 0)
-            set(Calendar.SECOND, 0)
-            set(Calendar.MILLISECOND, 0)
-        }
+        val plan = UpcomingList.schedule(localTasksList, calendarEvents, now)
 
         val locale = Locale.getDefault()
         val weekdayFormat = SimpleDateFormat("EEEE", locale)
@@ -54,164 +35,47 @@ object UpcomingScreen {
         // Плашка задачи в месячных разделах — число и месяц, как на экране проекта
         val dayBadgeFormat = SimpleDateFormat("d MMM", locale)
         val dayNumFormat = SimpleDateFormat("d", locale)
-
         val currentYear = now.get(Calendar.YEAR)
+        val cal = Calendar.getInstance()
 
-        // Первые 14 дней отображаются ВСЕГДА, даже если они пустые
-        for (offset in 0 until UPCOMING_DAYS_HORIZON) {
-            val dayStart = cursor.timeInMillis
-            val dayOfMonthLabel = cursor.get(Calendar.DAY_OF_MONTH).toString()
-
-            cursor.add(Calendar.DAY_OF_YEAR, 1)
-            val nextDayStart = cursor.timeInMillis
-
-            val dayEvents = calendarEvents.filter { event ->
-                val eventStart = event.eventStartMillis
-                eventStart != null && eventStart >= dayStart && eventStart < nextDayStart
-            }.map { ItemWithChecklist(item = it, checklist = emptyList()) }
-
-            val dayTasks = localTasksList.filter { wrapper ->
-                val taskStart = wrapper.item.startDate
-                taskStart != null && taskStart >= dayStart && taskStart < nextDayStart
-            }
-
-            val dayOfWeekLabel = when (offset) {
-                0 -> tomorrowLabel
-                else -> weekdayFormat.format(Date(dayStart))
-            }
-
-            daysList.add(
-                UpcomingDay(
-                    dateMillis = dayStart,
-                    dayOfMonth = dayOfMonthLabel,
-                    dayOfWeekLabel = dayOfWeekLabel,
-                    calendarEvents = dayEvents,
-                    tasks = dayTasks
-                )
+        val days = plan.days.mapIndexed { offset, day ->
+            cal.timeInMillis = day.dayStart
+            UpcomingDay(
+                dateMillis = day.dayStart,
+                dayOfMonth = cal.get(Calendar.DAY_OF_MONTH).toString(),
+                dayOfWeekLabel = if (offset == 0) tomorrowLabel else weekdayFormat.format(Date(day.dayStart)),
+                calendarEvents = day.events.map { ItemWithChecklist(item = it, checklist = emptyList()) },
+                tasks = day.tasks
             )
         }
 
-        // Недельный горизонт закончился в cursor.timeInMillis
-        val horizonEndMillis = cursor.timeInMillis
-
-        // Дальняя граница экрана: остаток месяца, в котором закончилась неделя, плюс следующие
-        // UPCOMING_MONTHS_HORIZON месяцев. Всё, что позже, на этом экране не показывается
-        val laterLimitMillis = Calendar.getInstance().apply {
-            timeInMillis = horizonEndMillis
-            set(Calendar.DAY_OF_MONTH, 1)
-            set(Calendar.HOUR_OF_DAY, 0)
-            set(Calendar.MINUTE, 0)
-            set(Calendar.SECOND, 0)
-            set(Calendar.MILLISECOND, 0)
-            add(Calendar.MONTH, UPCOMING_MONTHS_HORIZON + 1)
-        }.timeInMillis
-
-        // Задачи и события позже недели, но в пределах месячного горизонта
-        val laterTasks = localTasksList.filter { wrapper ->
-            val taskStart = wrapper.item.startDate
-            taskStart != null && taskStart >= horizonEndMillis && taskStart < laterLimitMillis
-        }
-
-        val laterEvents = calendarEvents.filter { event ->
-            val eventStart = event.eventStartMillis
-            eventStart != null && eventStart >= horizonEndMillis && eventStart < laterLimitMillis
-        }
-
-        val monthTaskBadges = mutableMapOf<String, String>()
-        laterTasks.forEach { wrapper ->
-            val taskStart = wrapper.item.startDate ?: 0L
-            monthTaskBadges[wrapper.item.id] = dayBadgeFormat.format(Date(taskStart))
-        }
-
-        // Собираем все уникальные месяцы, где есть хотя бы одна задача или событие
-        val monthCal = Calendar.getInstance()
-        data class MonthKey(val year: Int, val month: Int) : Comparable<MonthKey> {
-            override fun compareTo(other: MonthKey): Int {
-                return if (year != other.year) year.compareTo(other.year) else month.compareTo(other.month)
-            }
-        }
-
-        val monthsMap = sortedMapOf<MonthKey, Pair<MutableList<ItemWithChecklist>, MutableList<UpcomingEventItem>>>()
-
-        laterTasks.forEach { task ->
-            val start = task.item.startDate ?: 0L
-            monthCal.timeInMillis = start
-            val key = MonthKey(monthCal.get(Calendar.YEAR), monthCal.get(Calendar.MONTH))
-            val pair = monthsMap.getOrPut(key) { Pair(mutableListOf(), mutableListOf()) }
-            pair.first.add(task)
-        }
-
-        laterEvents.forEach { event ->
-            val start = event.eventStartMillis ?: 0L
-            monthCal.timeInMillis = start
-            val key = MonthKey(monthCal.get(Calendar.YEAR), monthCal.get(Calendar.MONTH))
-            val pair = monthsMap.getOrPut(key) { Pair(mutableListOf(), mutableListOf()) }
-            val dayNum = dayNumFormat.format(Date(start))
-            pair.second.add(UpcomingEventItem(event = event, dateMillis = start, dayOfMonthLabel = dayNum))
-        }
-
-        val horizonCal = Calendar.getInstance().apply { timeInMillis = horizonEndMillis }
-
-        val monthsList = mutableListOf<UpcomingMonth>()
-        monthsMap.forEach { (key, pair) ->
-            monthCal.set(Calendar.YEAR, key.year)
-            monthCal.set(Calendar.MONTH, key.month)
-            monthCal.set(Calendar.DAY_OF_MONTH, 1)
-            monthCal.set(Calendar.HOUR_OF_DAY, 0)
-            monthCal.set(Calendar.MINUTE, 0)
-            monthCal.set(Calendar.SECOND, 0)
-            monthCal.set(Calendar.MILLISECOND, 0)
-            val monthStart = monthCal.timeInMillis
-
-            // Проверяем, является ли секция остатком месяца после 14-дневного горизонта
-            val isHorizonMonth = key.year == horizonCal.get(Calendar.YEAR) && key.month == horizonCal.get(Calendar.MONTH)
-            val startDay = if (isHorizonMonth) horizonCal.get(Calendar.DAY_OF_MONTH) else 1
-
-            val (label, sectionStartMillis) = if (isHorizonMonth && startDay > 1) {
-                val endDayCal = Calendar.getInstance().apply {
-                    set(Calendar.YEAR, key.year)
-                    set(Calendar.MONTH, key.month)
-                    set(Calendar.DAY_OF_MONTH, getActualMaximum(Calendar.DAY_OF_MONTH))
-                }
-                val pattern = if (key.year == currentYear) "d MMMM" else "d MMMM yyyy"
-                val endFormatted = SimpleDateFormat(pattern, locale).format(endDayCal.time)
-                val endDay = endDayCal.get(Calendar.DAY_OF_MONTH)
-                val periodLabel = if (startDay == endDay) {
-                    endFormatted
-                } else {
-                    "$startDay – $endFormatted"
-                }
-                Pair(periodLabel, horizonEndMillis)
+        val months = plan.periods.map { period ->
+            val label = if (period.isRemainder) {
+                // Остаток месяца: «16 – 31 октября», один день — просто дата
+                cal.clear()
+                cal.set(period.year, period.month, period.lastDay)
+                val pattern = if (period.year == currentYear) "d MMMM" else "d MMMM yyyy"
+                val endFormatted = SimpleDateFormat(pattern, locale).format(cal.time)
+                if (period.firstDay == period.lastDay) endFormatted else "${period.firstDay} – $endFormatted"
             } else {
-                val rawLabel = if (key.year == currentYear) {
-                    monthFormat.format(Date(monthStart))
-                } else {
-                    monthYearFormat.format(Date(monthStart))
-                }
-                val capitalizedLabel = rawLabel.replaceFirstChar {
-                    if (it.isLowerCase()) it.titlecase(locale) else it.toString()
-                }
-                Pair(capitalizedLabel, monthStart)
+                val raw = (if (period.year == currentYear) monthFormat else monthYearFormat).format(Date(period.start))
+                raw.replaceFirstChar { if (it.isLowerCase()) it.titlecase(locale) else it.toString() }
             }
-
-            pair.first.sortBy { it.item.startDate ?: 0L }
-            pair.second.sortBy { it.dateMillis }
-
-            monthsList.add(
-                UpcomingMonth(
-                    monthMillis = sectionStartMillis,
-                    monthLabel = label,
-                    calendarEvents = pair.second,
-                    tasks = pair.first
-                )
+            UpcomingMonth(
+                monthMillis = period.start,
+                monthLabel = label,
+                calendarEvents = period.events.map { event ->
+                    val start = event.eventStartMillis ?: 0L
+                    UpcomingEventItem(event = event, dateMillis = start, dayOfMonthLabel = dayNumFormat.format(Date(start)))
+                },
+                tasks = period.tasks
             )
         }
 
-        return UpcomingSchedule(
-            days = daysList,
-            months = monthsList,
-            monthTaskBadges = monthTaskBadges
-        )
+        val monthTaskBadges = plan.periods.flatMap { it.tasks }
+            .associate { it.item.id to dayBadgeFormat.format(Date(it.item.startDate ?: 0L)) }
+
+        return UpcomingSchedule(days = days, months = months, monthTaskBadges = monthTaskBadges)
     }
 
     /** Строки списка экрана: заголовок дня, события календаря, задачи; затем месяцы так же. */

@@ -1,5 +1,6 @@
 package com.example.ui.screens.home.components
 
+import com.example.domain.lists.HeadingOrder
 import com.example.domain.edits.ProjectEdit
 import com.example.domain.edits.DropSpot
 import com.example.ui.viewmodel.ProjectProgress
@@ -308,12 +309,7 @@ fun ThingsCategoryListPanel(
         state.displayTasks.find { it.item.id == inlineExpandedTaskId }
     }
 
-    val todayCalendarEvents = remember(calendarEvents) {
-        calendarEvents.filter { event ->
-            val start = event.eventStartMillis
-            start != null && com.example.ui.screens.home.inlineeditor.utils.isTodayDate(start)
-        }
-    }
+    val todayCalendarEvents = remember(calendarEvents) { TodayList.events(calendarEvents) }
 
     // Извлечение состояния предстоящих дней (UpcomingDays) и месяцев
     val upcomingSchedule = rememberUpcomingSchedule(localTasksList, calendarEvents)
@@ -1162,7 +1158,7 @@ fun ThingsCategoryListPanel(
                                             title.isEmpty() && heading.title.isEmpty() -> {
                                                 val index = localHeadings.indexOfFirst { it.id == heading.id }
                                                 val groupAbove = localHeadings.getOrNull(index - 1)?.id
-                                                val tasksUnder = state.allTasks.filter { it.item.headingId == heading.id }.map { it.item }
+                                                val tasksUnder = HeadingOrder.tasksOf(state.allTasks, heading.id, localHeadings.map { it.id }).map { it.item }
                                                 onEvent(ThingsCategoryListEvent.DiscardHeading(heading, tasksUnder, groupAbove))
                                             }
                                             title.isNotEmpty() && title != heading.title ->

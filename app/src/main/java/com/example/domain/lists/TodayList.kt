@@ -14,4 +14,8 @@ object TodayList {
 
     /** Задачи «Сегодня вечером». */
     fun evening(tasks: List<ItemWithChecklist>): List<ItemWithChecklist> = tasks.filter { it.item.isTonight }
+
+    /** События календаря, которые начинаются сегодня. */
+    fun events(events: List<Item>, bounds: DayBounds = DayBounds.now()): List<Item> =
+        events.filter { event -> event.eventStartMillis?.let { it in bounds.todayStart..bounds.endOfToday } == true }
 }
