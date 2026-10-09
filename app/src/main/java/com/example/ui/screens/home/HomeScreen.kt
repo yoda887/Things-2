@@ -461,7 +461,7 @@ fun ThingsHomeScreen(viewModel: ThingsViewModel = hiltViewModel()) {
                         ThingsHomePanel(
                             allTasks = allTasksRaw,
                             // Завершённые, отменённые и удалённые проекты — в Logbook, на главном экране их нет
-                            projects = projects.filter { com.example.ui.screens.home.components.AreaScreen.isOpenProject(it) },
+                            projects = projects.filter { com.example.ui.screens.home.components.ListRules.isOpenProject(it) },
                             searchQuery = searchQuery,
                             googleToken = googleToken,
                             syncError = syncError,

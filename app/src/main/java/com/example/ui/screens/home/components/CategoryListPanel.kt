@@ -931,13 +931,7 @@ fun ThingsCategoryListPanel(
                 ActiveScreen.TODAY -> standardToday.isNotEmpty() || eveningToday.isNotEmpty() || dragDropState.draggedItemKey != null
                 ActiveScreen.UPCOMING -> upcomingDays.isNotEmpty()
                 ActiveScreen.AREA_DETAIL -> !AreaScreen.content(area?.id, displayTasks, projects).isEmpty
-                ActiveScreen.TAG_DETAIL -> {
-                    val tagTitle = state.tag?.title ?: ""
-                    val tagProjCount = projects.count { !it.trashed && !it.isCompleted && it.status != Item.STATUS_CANCELLED && it.tags.contains(tagTitle) }
-                    val tagTasksCount = displayTasks.count { !it.item.trashed && !it.item.isCompleted && it.item.status != Item.STATUS_CANCELLED }
-                    val logbookCount = state.allTasks.count { !it.item.trashed && (it.item.isCompleted || it.item.status == Item.STATUS_CANCELLED) && it.item.tags.contains(tagTitle) }
-                    tagProjCount > 0 || tagTasksCount > 0 || logbookCount > 0
-                }
+                ActiveScreen.TAG_DETAIL -> !TagScreen.content(state.tag?.title, displayTasks, state.allTasks, projects).isEmpty
                 ActiveScreen.PROJECT_DETAIL -> displayTasks.isNotEmpty() || localHeadings.isNotEmpty()
                 // «Когда-нибудь» показывает и отложенные проекты — без задач экран не пуст
                 ActiveScreen.SOMEDAY -> displayTasks.isNotEmpty() || PlaceGroups.somedayProjects(projects).isNotEmpty()

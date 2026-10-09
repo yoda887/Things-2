@@ -24,9 +24,6 @@ object AreaScreen {
         else -> Section.CURRENT
     }
 
-    /** Проект виден в списках: не удалён, не завершён и не отменён — как на главном экране. */
-    fun isOpenProject(project: Item): Boolean = !project.trashed && project.status == Item.STATUS_OPEN
-
     /** Задача стоит в области сама, а не в одном из её проектов. */
     fun isOwnTask(item: Item, areaId: String?): Boolean =
         areaId != null && item.areaId == areaId && item.projectId.isNullOrEmpty()
@@ -51,7 +48,7 @@ object AreaScreen {
         val own = tasks.filter { isOwnTask(it.item, areaId) }
         val bySection = own.groupBy { sectionOf(it.item, bounds) }
         return Content(
-            projects = projects.filter { areaId != null && it.areaId == areaId && isOpenProject(it) },
+            projects = projects.filter { areaId != null && it.areaId == areaId && ListRules.isOpenProject(it) },
             current = bySection[Section.CURRENT].orEmpty(),
             upcoming = bySection[Section.UPCOMING].orEmpty(),
             someday = bySection[Section.SOMEDAY].orEmpty()

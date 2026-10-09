@@ -5,6 +5,7 @@ import com.example.domain.tag.TagTitles
 import com.example.domain.usecase.heading.HeadingUseCases
 import com.example.ui.screens.home.components.AreaScreen
 import com.example.ui.screens.home.components.PlaceGroups
+import com.example.ui.screens.home.components.TagScreen
 import com.example.ui.screens.home.components.ProjectHeadings
 import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.viewModelScope
@@ -183,7 +184,7 @@ class ThingsViewModel @Inject constructor(
                         ActiveScreen.LOGBOOK -> task.isCompleted
                         ActiveScreen.PROJECT_DETAIL -> task.projectId == project?.id && !task.isCompleted
                         ActiveScreen.AREA_DETAIL -> task.areaId == area?.id && task.type == Item.TYPE_TASK && !task.isCompleted
-                        ActiveScreen.TAG_DETAIL -> task.type == Item.TYPE_TASK && tag != null && task.tags.contains(tag.title) && !task.isCompleted
+                        ActiveScreen.TAG_DETAIL -> tag != null && TagScreen.isActiveTask(task, tag.title)
                         // Поиск: задачи (открытые, выполненные и отменённые) по названию, заметкам и чек-листу
                         ActiveScreen.SEARCH -> {
                             val q = query.trim()

@@ -458,22 +458,7 @@ fun rememberFlattenedList(
             } else if (screen == ActiveScreen.AREA_DETAIL) {
                 addAll(AreaScreen.rows(AreaScreen.content(area?.id, displayTasks, projects), isLaterItemsHidden))
             } else if (screen == ActiveScreen.TAG_DETAIL) {
-                val tagTitle = tag?.title ?: ""
-                val tagProjects = projects.filter { !it.trashed && !it.isCompleted && it.status != Item.STATUS_CANCELLED && it.tags.contains(tagTitle) }
-                if (tagProjects.isNotEmpty()) {
-                    addAll(tagProjects)
-                }
-                val activeTagTasks = displayTasks.filter { !it.item.trashed && !it.item.isCompleted && it.item.status != Item.STATUS_CANCELLED }
-                if (tagProjects.isNotEmpty() && activeTagTasks.isNotEmpty()) {
-                    add(TaskListKeys.AREA_PROJECTS_SPACER)
-                }
-                addAll(activeTagTasks)
-
-                val logbookTasks = allTasks.filter { !it.item.trashed && (it.item.isCompleted || it.item.status == Item.STATUS_CANCELLED) && it.item.tags.contains(tagTitle) }
-                    .sortedByDescending { it.item.stopDate ?: it.item.modificationDate }
-                if (logbookTasks.isNotEmpty()) {
-                    addAll(logbookTasks)
-                }
+                addAll(TagScreen.rows(TagScreen.content(tag?.title, displayTasks, allTasks, projects)))
             } else if (screen == ActiveScreen.PROJECT_DETAIL && headings.isNotEmpty()) {
                 // Сначала задачи без заголовка, затем каждый заголовок со своими задачами.
                 // Задачи заголовка, который несут под пальцем, убраны — как проекты свёрнутой области
