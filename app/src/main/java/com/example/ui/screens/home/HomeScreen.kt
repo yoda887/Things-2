@@ -1,5 +1,8 @@
 package com.example.ui.screens.home
 
+import com.example.ui.screens.home.components.newTaskPlace
+import com.example.domain.edits.ProjectEdit
+import com.example.domain.edits.MoveTarget
 import com.example.ui.viewmodel.ActiveScreen
 import com.example.domain.lists.ListRules
 import com.example.R
@@ -327,61 +330,10 @@ fun ThingsHomeScreen(viewModel: ThingsViewModel = hiltViewModel()) {
                             newTaskTitlePrefill = searchQuery
                             showAddDialog = true
                         } else {
-                            val targetScreen = activeScreen
-                            val initialSection = when (targetScreen) {
-                                ActiveScreen.TODAY -> TaskSection.TODAY
-                                ActiveScreen.UPCOMING -> TaskSection.UPCOMING
-                                ActiveScreen.ANYTIME -> TaskSection.ANYTIME
-                                ActiveScreen.SOMEDAY -> TaskSection.SOMEDAY
-                                ActiveScreen.AREA_DETAIL -> TaskSection.ANYTIME
-                                ActiveScreen.TAG_DETAIL -> TaskSection.ANYTIME
-                                else -> TaskSection.INBOX
-                            }
-                            val initialProjectId = if (targetScreen == ActiveScreen.PROJECT_DETAIL) selectedProject?.id else null
-                            val initialAreaId = if (targetScreen == ActiveScreen.AREA_DETAIL) selectedArea?.id else null
-                            val initialCachedTags = if (targetScreen == ActiveScreen.TAG_DETAIL) selectedTagDetail?.title ?: "" else ""
-                            val newTaskId = java.util.UUID.randomUUID().toString()
-
-                            val startValue = when (initialSection) {
-                                TaskSection.INBOX -> 0
-                                TaskSection.TODAY -> 1
-                                TaskSection.ANYTIME -> 2
-                                TaskSection.SOMEDAY -> 3
-                                TaskSection.UPCOMING -> 2
-                            }
-                            val computedStartDate = when (targetScreen) {
-                                ActiveScreen.TODAY -> System.currentTimeMillis()
-                                ActiveScreen.UPCOMING -> {
-                                    val earliestUpcomingTask = allTasksRaw
-                                        .filter { it.item.isUpcoming }
-                                        .minByOrNull { it.item.startDate ?: Long.MAX_VALUE }
-                                    
-                                    earliestUpcomingTask?.item?.startDate ?: java.util.Calendar.getInstance().apply {
-                                        add(java.util.Calendar.DAY_OF_YEAR, 1)
-                                        set(java.util.Calendar.HOUR_OF_DAY, 0)
-                                        set(java.util.Calendar.MINUTE, 0)
-                                        set(java.util.Calendar.SECOND, 0)
-                                        set(java.util.Calendar.MILLISECOND, 0)
-                                    }.timeInMillis
-                                }
-                                else -> null
-                            }
-
-                            val newTask = Item(
-                                id = newTaskId,
-                                type = Item.TYPE_TASK,
-                                title = "",
-                                notes = "",
-                                start = startValue,
-                                projectId = initialProjectId,
-                                areaId = initialAreaId,
-                                cachedTags = initialCachedTags,
-                                startDate = computedStartDate,
-                                creationDate = System.currentTimeMillis()
+                            // Поля новой задачи по месту назначает домен (NewTasks); задача сразу раскрывается
+                            viewModel.createTask(
+                                newTaskPlace(activeScreen, selectedProject?.id, selectedArea?.id, selectedTagDetail?.title)
                             )
-
-                            viewModel.updateTask(newTask)
-                            viewModel.setInlineExpandedTaskId(newTaskId)
                         }
                     }
                 DraggableAddButton(
@@ -499,7 +451,8 @@ fun ThingsHomeScreen(viewModel: ThingsViewModel = hiltViewModel()) {
                             onEditingProjectIdChange = { editingProjectId = it },
                             editingAreaId = editingAreaId,
                             onEditingAreaIdChange = { editingAreaId = it },
-                            onUpdateProject = { viewModel.updateProject(it) },
+                            onCreateProjectAt = { id, areaId, index, projects -> viewModel.createProjectAt(id, areaId, index, projects) },
+                            onRenameProject = { project, title -> viewModel.editProject(project, ProjectEdit.Rename(title)) },
                             onUpdateArea = { viewModel.updateArea(it) },
                             onProjectsReordered = { viewModel.updateTasks(it) },
                             onAreasReordered = { viewModel.updateAreas(it) }
@@ -548,6 +501,8 @@ fun ThingsHomeScreen(viewModel: ThingsViewModel = hiltViewModel()) {
                                 is ThingsCategoryListEvent.SelectTag -> {
                                     viewModel.selectTag(event.tag)
                                 }
+                                is ThingsCategoryListEvent.ToggleEditedTask ->
+                                    viewModel.toggleEditedTask(event.task, event.fields, event.checklist, untitledTaskTitle)
                                 is ThingsCategoryListEvent.ToggleTask -> {
                                     viewModel.toggleTaskCompletion(event.task)
                                 }
@@ -621,27 +576,10 @@ fun ThingsHomeScreen(viewModel: ThingsViewModel = hiltViewModel()) {
                                 is ThingsCategoryListEvent.DuplicateTask -> {
                                     viewModel.duplicateTask(event.taskWrapper)
                                 }
-                                is ThingsCategoryListEvent.MoveTask -> {
-                                    val updatedTask = if (event.moveToInbox) {
-                                        event.taskWrapper.item.copy(
-                                            projectId = null,
-                                            areaId = null,
-                                            start = Item.START_INBOX,
-                                            startDate = null,
-                                            dueDate = null,
-                                            modificationDate = System.currentTimeMillis()
-                                        )
-                                    } else {
-                                        val newStart = if (event.taskWrapper.item.start == Item.START_INBOX && event.projectId != null) Item.START_ANYTIME else event.taskWrapper.item.start
-                                        event.taskWrapper.item.copy(
-                                            projectId = event.projectId,
-                                            areaId = event.areaId,
-                                            start = newStart,
-                                            modificationDate = System.currentTimeMillis()
-                                        )
-                                    }
-                                    viewModel.updateTask(updatedTask, event.taskWrapper.checklist)
-                                }
+                                is ThingsCategoryListEvent.MoveTask -> viewModel.moveTask(
+                                    event.taskWrapper,
+                                    if (event.moveToInbox) MoveTarget.Inbox else MoveTarget.Place(event.projectId, event.areaId)
+                                )
                                 is ThingsCategoryListEvent.ReorderTasks -> {
                                     viewModel.updateTasks(event.items)
                                 }
@@ -650,7 +588,7 @@ fun ThingsHomeScreen(viewModel: ThingsViewModel = hiltViewModel()) {
                                     navController.popBackStack()
                                     selectedProject = null
                                 }
-                                is ThingsCategoryListEvent.UpdateProject -> viewModel.updateProject(event.project)
+                                is ThingsCategoryListEvent.EditProject -> viewModel.editProject(event.project, event.edit)
                                 is ThingsCategoryListEvent.CompleteProject -> viewModel.completeProject(event.project)
                                 is ThingsCategoryListEvent.DuplicateProject -> viewModel.duplicateProject(event.project)
                                 is ThingsCategoryListEvent.DeleteArea -> {
@@ -660,14 +598,15 @@ fun ThingsHomeScreen(viewModel: ThingsViewModel = hiltViewModel()) {
                                 }
                                 is ThingsCategoryListEvent.SaveHeading -> viewModel.saveHeading(event.heading)
                                 is ThingsCategoryListEvent.DeleteHeading -> viewModel.deleteHeading(event.heading)
-                                is ThingsCategoryListEvent.DiscardHeading -> viewModel.discardHeading(event.heading, event.tasksBack)
+                                is ThingsCategoryListEvent.DiscardHeading -> viewModel.discardHeading(event.heading, event.tasks, event.groupAboveId)
                                 is ThingsCategoryListEvent.ArchiveHeading -> viewModel.archiveHeading(event.heading)
                                 is ThingsCategoryListEvent.ReorderHeadings -> viewModel.reorderHeadings(event.headings)
-                                is ThingsCategoryListEvent.CreateTaskAt -> {
-                                    viewModel.createTaskAt(event.task, event.reorderedOthers)
-                                    viewModel.setInlineExpandedTaskId(event.task.id)
-                                }
-                                is ThingsCategoryListEvent.InsertHeading -> viewModel.insertHeading(event.headings, event.movedTasks)
+                                is ThingsCategoryListEvent.CreateTaskAt ->
+                                    viewModel.createTaskAt(event.taskId, event.place, event.spot, event.insertIndex, event.listTasks)
+                                is ThingsCategoryListEvent.InsertHeadingAt ->
+                                    viewModel.insertHeadingAt(event.headingId, event.projectId, event.headings, event.index, event.movedTasks)
+                                is ThingsCategoryListEvent.AddHeading -> viewModel.addHeading(event.headingId, event.projectId, event.headings)
+                                is ThingsCategoryListEvent.RenameHeading -> viewModel.renameHeading(event.heading, event.title)
                                 is ThingsCategoryListEvent.SwipeTaskLeft -> {
                                     viewModel.setInlineExpandedTaskId(null)
                                     if (isSelectionMode) {
@@ -1018,13 +957,7 @@ fun ThingsHomeScreen(viewModel: ThingsViewModel = hiltViewModel()) {
                                     .clickable {
                                         showFabMenu = false
                                         val newProjectId = java.util.UUID.randomUUID().toString()
-                                        val newProject = Item(
-                                            id = newProjectId,
-                                            type = Item.TYPE_PROJECT,
-                                            title = "",
-                                            creationDate = System.currentTimeMillis()
-                                        )
-                                        viewModel.updateProject(newProject)
+                                        viewModel.createProject(newProjectId)
                                         editingProjectId = newProjectId
                                     }
                                     .padding(ThingsSpacing.L),

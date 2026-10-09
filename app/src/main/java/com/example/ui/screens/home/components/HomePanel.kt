@@ -213,7 +213,8 @@ fun ThingsHomePanel(
     onEditingProjectIdChange: (String?) -> Unit = {},
     editingAreaId: String? = null,
     onEditingAreaIdChange: (String?) -> Unit = {},
-    onUpdateProject: (Item) -> Unit = {},
+    onCreateProjectAt: (id: String, areaId: String?, index: Int, projects: List<Item>) -> Unit = { _, _, _, _ -> },
+    onRenameProject: (Item, String) -> Unit = { _, _ -> },
     onUpdateArea: (Area) -> Unit = {},
     onProjectsReordered: (List<Item>) -> Unit = {},
     onAreasReordered: (List<Area>) -> Unit = {}
@@ -451,22 +452,10 @@ fun ThingsHomePanel(
                 prevProject != null -> projectsNow.indexOfFirst { it.id == prevProject.project.id } + 1
                 else -> projectsNow.size
             }.let { if (it < 0) projectsNow.size else it }
-            val newProject = Item(type = Item.TYPE_PROJECT, title = "", areaId = areaId, creationDate = System.currentTimeMillis())
-            val at = insertAt.coerceIn(0, projectsNow.size)
-            val freeOrder = FabInsertion.freeSortOrder(projectsNow.map { it.sortOrder }, at)
-            if (freeOrder != null) {
-                // Место между соседями есть — остальные проекты не трогаем
-                onUpdateProject(newProject.copy(sortOrder = freeOrder))
-            } else {
-                val list = projectsNow.toMutableList().apply { add(at, newProject) }
-                val renumbered = list.mapIndexed { index, item -> if (item.sortOrder == index) item else item.copy(sortOrder = index) }
-                val previousOrder = projectsNow.associate { it.id to it.sortOrder }
-                onUpdateProject(renumbered.first { it.id == newProject.id })
-                val others = renumbered.filter { it.id != newProject.id && previousOrder[it.id] != it.sortOrder }
-                if (others.isNotEmpty()) onProjectsReordered(others)
-            }
+            val newProjectId = java.util.UUID.randomUUID().toString()
+            onCreateProjectAt(newProjectId, areaId, insertAt, projectsNow)
             if (areaId != null) expandedStates[areaId] = true
-            onEditingProjectIdChange(newProject.id)
+            onEditingProjectIdChange(newProjectId)
             return true
         }
 
@@ -659,7 +648,7 @@ fun ThingsHomePanel(
                         textSecondaryColor = textSecondaryColor,
                         onProjectClick = onProjectClick,
                         onDeleteProject = onDeleteProject,
-                        onUpdateProject = onUpdateProject,
+                        onRenameProject = onRenameProject,
                         onEditingProjectIdChange = onEditingProjectIdChange,
                         onLocalProjectsListChange = { localProjects = it },
                         onProjectsReordered = onProjectsReordered,
@@ -1159,7 +1148,7 @@ private fun LazyItemScope.ProjectItemRow(
     textSecondaryColor: Color,
     onProjectClick: (Item) -> Unit,
     onDeleteProject: (Item) -> Unit,
-    onUpdateProject: (Item) -> Unit,
+    onRenameProject: (Item, String) -> Unit,
     onEditingProjectIdChange: (String?) -> Unit,
     onLocalProjectsListChange: (List<Item>) -> Unit,
     onProjectsReordered: (List<Item>) -> Unit,
@@ -1285,7 +1274,7 @@ private fun LazyItemScope.ProjectItemRow(
                                 if (trimmed.isEmpty() && project.title.isEmpty()) {
                                     onDeleteProject(project)
                                 } else if (trimmed.isNotEmpty() && trimmed != project.title) {
-                                    onUpdateProject(project.copy(title = trimmed))
+                                    onRenameProject(project, trimmed)
                                 }
                                 onEditingProjectIdChange(null)
                             }
@@ -1308,7 +1297,7 @@ private fun LazyItemScope.ProjectItemRow(
                                     if (trimmed.isEmpty()) {
                                         onDeleteProject(project)
                                     } else {
-                                        onUpdateProject(project.copy(title = trimmed))
+                                        onRenameProject(project, trimmed)
                                     }
                                     onEditingProjectIdChange(null)
                                 }

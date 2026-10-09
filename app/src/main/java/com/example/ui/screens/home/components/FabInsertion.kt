@@ -174,39 +174,10 @@ object FabInsertion {
         return FabHeadingPlacement(headingIndex, moved)
     }
 
-    /**
-     * Номер порядка новой задачи, вставляемой в позицию [index] списка [orders] (sortOrder задач экрана
-     * в порядке показа).
-     *
-     * Если между соседями есть свободное число — это число, и остальные задачи не трогаются: перенумерация
-     * всех задач экрана переписывала бы их в базе и на совпадающих номерах меняла их порядок местами.
-     * Нет места (номера соседей совпадают или идут подряд) либо порядок показа не по возрастанию
-     * (например, задачи сгруппированы по заголовкам проекта) — null: вызывающий перенумеровывает список.
-     */
-    fun freeSortOrder(orders: List<Int>, index: Int): Int? {
-        if (orders.zipWithNext().any { (a, b) -> a > b }) return null
-        val i = index.coerceIn(0, orders.size)
-        val prev = orders.getOrNull(i - 1)
-        val next = orders.getOrNull(i)
-        return when {
-            prev == null && next == null -> 0
-            prev == null -> next!! - 1
-            next == null -> prev + 1
-            prev + 1 < next -> prev + 1
-            else -> null
-        }
-    }
-
     /** Плоский список с промежутком на месте [slot] */
     fun withGap(flattened: List<Any>, slot: FabSlot?): List<Any> {
         if (slot == null) return flattened
         val index = slot.index.coerceIn(0, flattened.size)
         return flattened.toMutableList().apply { add(index, FabGapItem(slot.asHeading)) }
     }
-
-    /** Заголовки проекта с новым [heading] на месте [index]; sortOrder — по порядку */
-    fun headingsWith(headings: List<Item>, heading: Item, index: Int): List<Item> =
-        headings.toMutableList()
-            .apply { add(index.coerceIn(0, size), heading) }
-            .mapIndexed { i, h -> if (h.sortOrder == i) h else h.copy(sortOrder = i) }
 }

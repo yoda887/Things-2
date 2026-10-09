@@ -1,5 +1,10 @@
 package com.example.ui.screens.home.components
 
+import com.example.data.model.ChecklistItem
+import com.example.domain.edits.TaskEditorFields
+import com.example.domain.edits.ProjectEdit
+import com.example.domain.edits.NewTaskPlace
+import com.example.domain.edits.DropSpot
 import com.example.ui.viewmodel.ActiveScreen
 import com.example.domain.lists.TagList
 import com.example.domain.lists.AreaList
@@ -276,6 +281,8 @@ fun rememberPullToSearchConnection(
 sealed interface ThingsCategoryListEvent {
     data class SelectTag(val tag: String?) : ThingsCategoryListEvent
     data class ToggleTask(val task: ItemWithChecklist) : ThingsCategoryListEvent
+    /** Отметка из открытого редактора — вместе с ещё не сохранёнными правками полей */
+    data class ToggleEditedTask(val task: ItemWithChecklist, val fields: TaskEditorFields, val checklist: List<ChecklistItem>) : ThingsCategoryListEvent
     data class ClickTask(val task: ItemWithChecklist) : ThingsCategoryListEvent
     data class ClickProject(val project: Item) : ThingsCategoryListEvent
     data class ClickArea(val area: Area) : ThingsCategoryListEvent
@@ -315,23 +322,41 @@ sealed interface ThingsCategoryListEvent {
     data class ReorderTasks(val items: List<Item>) : ThingsCategoryListEvent
     // Удаление проекта и области
     data class DeleteProject(val project: Item) : ThingsCategoryListEvent
-    /** Сохранить изменённый проект: заметки, «Когда», дедлайн, теги, область. */
-    data class UpdateProject(val project: Item) : ThingsCategoryListEvent
+    /** Правка проекта: заметки, «Когда», дедлайн, теги, область. */
+    data class EditProject(val project: Item, val edit: ProjectEdit) : ThingsCategoryListEvent
     data class CompleteProject(val project: Item) : ThingsCategoryListEvent
     data class DuplicateProject(val project: Item) : ThingsCategoryListEvent
     data class DeleteArea(val area: Area) : ThingsCategoryListEvent
 
     // Заголовки проекта
     data class SaveHeading(val heading: Item) : ThingsCategoryListEvent
+    /** Новый пустой подзаголовок в конце проекта */
+    data class AddHeading(val headingId: String, val projectId: String, val headings: List<Item>) : ThingsCategoryListEvent
+    data class RenameHeading(val heading: Item, val title: String) : ThingsCategoryListEvent
     data class DeleteHeading(val heading: Item) : ThingsCategoryListEvent
     /** Новый заголовок без названия: удалить его, вернув [tasksBack] в группу выше */
-    data class DiscardHeading(val heading: Item, val tasksBack: List<Item>) : ThingsCategoryListEvent
+    /** Пустой новый подзаголовок: удалить, а его задачи [tasks] вернуть в группу [groupAboveId] */
+    data class DiscardHeading(val heading: Item, val tasks: List<Item>, val groupAboveId: String?) : ThingsCategoryListEvent
     data class ArchiveHeading(val heading: Item) : ThingsCategoryListEvent
     data class ReorderHeadings(val headings: List<Item>) : ThingsCategoryListEvent
 
     // Добавление перетаскиванием кнопки «+»
-    data class CreateTaskAt(val task: Item, val reorderedOthers: List<Item>) : ThingsCategoryListEvent
-    data class InsertHeading(val headings: List<Item>, val movedTasks: List<Item>) : ThingsCategoryListEvent
+    /** «+», брошенный в список: где ([place], [spot]) и перед какой задачей списка экрана ([insertIndex]) */
+    data class CreateTaskAt(
+        val taskId: String,
+        val place: NewTaskPlace,
+        val spot: DropSpot,
+        val insertIndex: Int,
+        val listTasks: List<Item>
+    ) : ThingsCategoryListEvent
+    /** «+», брошенный у левого края проекта: новый подзаголовок на месте [index], под ним — [movedTasks] */
+    data class InsertHeadingAt(
+        val headingId: String,
+        val projectId: String,
+        val headings: List<Item>,
+        val index: Int,
+        val movedTasks: List<Item>
+    ) : ThingsCategoryListEvent
 
     // Свайп-события (для вызова мультиселекции и When/календаря)
     data class SwipeTaskLeft(val task: ItemWithChecklist) : ThingsCategoryListEvent
@@ -357,3 +382,17 @@ sealed interface ThingsCategoryListEvent {
     data class BatchSetDeadline(val deadline: Long?) : ThingsCategoryListEvent
 }
 
+/**
+ * Место новой задачи на экране [screen] — для «+» и «+», брошенного в список. Какие поля получит задача
+ * в этом месте, решает домен ([com.example.domain.edits.NewTasks]).
+ */
+fun newTaskPlace(screen: ActiveScreen, projectId: String?, areaId: String?, tagTitle: String?): NewTaskPlace = when (screen) {
+    ActiveScreen.TODAY -> NewTaskPlace.Today
+    ActiveScreen.UPCOMING -> NewTaskPlace.Upcoming(null)
+    ActiveScreen.ANYTIME -> NewTaskPlace.Anytime
+    ActiveScreen.SOMEDAY -> NewTaskPlace.Someday
+    ActiveScreen.PROJECT_DETAIL -> projectId?.let { NewTaskPlace.Project(it) } ?: NewTaskPlace.Inbox
+    ActiveScreen.AREA_DETAIL -> areaId?.let { NewTaskPlace.Area(it) } ?: NewTaskPlace.Anytime
+    ActiveScreen.TAG_DETAIL -> NewTaskPlace.Tag(tagTitle.orEmpty())
+    ActiveScreen.INBOX, ActiveScreen.LOGBOOK, ActiveScreen.SEARCH, ActiveScreen.HOME -> NewTaskPlace.Inbox
+}

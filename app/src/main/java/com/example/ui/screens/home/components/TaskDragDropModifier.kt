@@ -1,5 +1,6 @@
 package com.example.ui.screens.home.components
 
+import com.example.domain.edits.SortOrders
 import com.example.ui.viewmodel.ActiveScreen
 import androidx.compose.ui.Modifier
 import com.example.data.model.Item
@@ -150,38 +151,10 @@ fun Modifier.taskDragAndDrop(
                 localTasksList
             }
 
-            // Перерасчет окончательных порядковых индексов (sortOrder) для сохранения изменений
-            val updatedList = listWithBatchOrdered.mapIndexed { index, wrapper ->
-                val original = filteredTasks.firstOrNull { it.item.id == wrapper.item.id }
-                val changed = original == null
-                    || original.item.sortOrder != index
-                    || original.item.isTonight != wrapper.item.isTonight
-                    || original.item.startDate != wrapper.item.startDate
-                    || original.item.headingId != wrapper.item.headingId
-                if (changed) {
-                    ItemWithChecklist(
-                        item = wrapper.item.copy(
-                            sortOrder = index,
-                            modificationDate = System.currentTimeMillis(),
-                        ),
-                        checklist = wrapper.checklist,
-                    )
-                } else {
-                    wrapper.copy(item = wrapper.item.copy(sortOrder = index))
-                }
-            }
-
-            val changedTasks = updatedList.filter { wrapper ->
-                val original = filteredTasks.firstOrNull { it.item.id == wrapper.item.id }
-                original == null
-                    || original.item.sortOrder != wrapper.item.sortOrder
-                    || original.item.isTonight != wrapper.item.isTonight
-                    || original.item.startDate != wrapper.item.startDate
-                    || original.item.headingId != wrapper.item.headingId
-            }
-
-            onLocalTasksListChange(updatedList)
-            if (changedTasks.isNotEmpty()) onTasksReordered(changedTasks.map { it.item })
+            // Новые sortOrder и задачи, которые надо сохранить, — по правилу домена
+            val reordered = SortOrders.afterReorder(listWithBatchOrdered, filteredTasks)
+            onLocalTasksListChange(reordered.updated)
+            if (reordered.changed.isNotEmpty()) onTasksReordered(reordered.changed)
         }
     )
 }

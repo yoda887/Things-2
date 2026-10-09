@@ -1,5 +1,6 @@
 package com.example.ui.screens.home.subcomponents
 
+import com.example.domain.edits.ProjectEdit
 import android.view.HapticFeedbackConstants
 import androidx.compose.foundation.layout.ExperimentalLayoutApi
 import androidx.compose.foundation.layout.FlowRow
@@ -45,8 +46,6 @@ import com.example.data.model.Item
 import com.example.data.model.ItemWithChecklist
 import com.example.data.model.Tag
 import com.example.data.model.TaskSection
-import com.example.data.model.toStartVal
-import com.example.domain.tag.TagTitles
 import com.example.ui.components.ThingsConfirmDialog
 import com.example.ui.screens.home.inlineeditor.DeadlineDatePickerDialog
 import com.example.ui.screens.home.inlineeditor.dialogs.ThingsMoveDialog
@@ -281,7 +280,7 @@ private fun ProjectNotesField(project: Item, onNotesChange: (String) -> Unit) {
 
 /**
  * Окна пунктов меню проекта: «Когда», теги, дедлайн, перемещение в область и подтверждение
- * завершения. Каждое сохраняет проект через [onUpdateProject] и закрывается через [onClose].
+ * завершения. Каждое сообщает правку через [onEditProject] и закрывается через [onClose].
  */
 @Composable
 fun ProjectDialogs(
@@ -297,13 +296,9 @@ fun ProjectDialogs(
     onDeleteTag: (Tag) -> Unit,
     onUpdateTag: (Tag) -> Unit,
     onUpdateTagsOrder: (List<Tag>) -> Unit,
-    onUpdateProject: (Item) -> Unit,
+    onEditProject: (ProjectEdit) -> Unit,
     onCompleteProject: (Item) -> Unit
 ) {
-    fun update(change: Item.() -> Item) {
-        val updated = project.change()
-        if (updated != project) onUpdateProject(updated.copy(modificationDate = System.currentTimeMillis()))
-    }
     when (openDialog) {
         ProjectAction.WHEN -> {
             var startDate by remember(project.id) { mutableStateOf(project.startDate) }
@@ -318,9 +313,7 @@ fun ProjectDialogs(
                 onIsTonightChange = { isTonight = it },
                 onShowCalendarHelperChange = { },
                 onDismissRequest = {
-                    // У проекта нет «Входящих»: без даты он «В любое время»
-                    val start = if (section == TaskSection.INBOX) TaskSection.ANYTIME.toStartVal() else section.toStartVal()
-                    update { copy(start = start, startDate = startDate, isTonight = isTonight) }
+                    onEditProject(ProjectEdit.Start(section, startDate, isTonight))
                     onClose()
                 }
             )
@@ -333,12 +326,12 @@ fun ProjectDialogs(
             onDeleteTag = onDeleteTag,
             onUpdateTag = onUpdateTag,
             onUpdateTagsOrder = onUpdateTagsOrder,
-            onTagsSelected = { selected -> update { copy(cachedTags = TagTitles.join(selected)) } },
+            onTagsSelected = { selected -> onEditProject(ProjectEdit.Tags(selected)) },
             onDismissRequest = onClose
         )
         ProjectAction.DEADLINE -> DeadlineDatePickerDialog(
             initialSelectedDateMillis = project.dueDate,
-            onDateSelected = { date -> update { copy(dueDate = date) } },
+            onDateSelected = { date -> onEditProject(ProjectEdit.Deadline(date)) },
             onDismiss = onClose
         )
         ProjectAction.MOVE -> ThingsMoveDialog(
@@ -349,7 +342,7 @@ fun ProjectDialogs(
             areas = areas.filter { !it.trashed },
             allTasks = allTasks,
             onMove = { _, areaId, _ ->
-                update { copy(areaId = areaId) }
+                onEditProject(ProjectEdit.MoveToArea(areaId))
                 onClose()
             },
             onDismissRequest = onClose,

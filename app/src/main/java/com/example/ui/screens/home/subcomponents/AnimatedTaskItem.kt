@@ -1,5 +1,6 @@
 package com.example.ui.screens.home.subcomponents
 
+import com.example.domain.edits.TaskEditorFields
 import com.example.ui.viewmodel.ProjectProgress
 import com.example.ui.viewmodel.ActiveScreen
 import com.example.ui.theme.ThingsStroke
@@ -554,22 +555,11 @@ fun AnimatedTaskItem(
                         onFullHeightMeasured = { cardGeometry.editorFullHeight = it },
                         screen = screen,
                         onToggle = { currentTitle, currentNotes, currentSection, currentIsTonight, currentStartDate, currentDueDate, currentTags, currentProjectId, currentChecklist, currentPriority ->
-                            val updatedItem = taskWrapper.item.copy(
-                                title = currentTitle,
-                                notes = currentNotes,
-                                start = currentSection.toStartVal(),
-                                isTonight = currentIsTonight,
-                                startDate = currentStartDate,
-                                dueDate = currentDueDate,
-                                cachedTags = com.example.domain.tag.TagTitles.join(currentTags),
-                                projectId = currentProjectId,
-                                priority = currentPriority
+                            val fields = TaskEditorFields(
+                                currentTitle, currentNotes, currentSection, currentIsTonight, currentStartDate,
+                                currentDueDate, currentTags, currentProjectId, currentPriority
                             )
-                            val updatedWrapper = taskWrapper.copy(
-                                item = updatedItem,
-                                checklist = currentChecklist
-                            )
-                            onEvent(ThingsCategoryListEvent.ToggleTask(updatedWrapper))
+                            onEvent(ThingsCategoryListEvent.ToggleEditedTask(taskWrapper, fields, currentChecklist))
                         },
                         onSave = { title, notes, section, isTonight, startDate, dueDate, tags, projectId, checklist, priority ->
                             val hasPositionChange = (projectId != task.projectId) ||

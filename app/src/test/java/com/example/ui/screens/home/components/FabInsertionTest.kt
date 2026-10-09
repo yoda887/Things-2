@@ -1,5 +1,7 @@
 package com.example.ui.screens.home.components
 
+import com.example.domain.edits.Headings
+import com.example.domain.edits.SortOrders
 import com.example.data.model.Item
 import com.example.data.model.ItemWithChecklist
 import org.junit.Assert.assertEquals
@@ -126,7 +128,7 @@ class FabInsertionTest {
     @Test
     fun headingsWith_renumbers() {
         val hs = listOf(Item(id = "A", type = 2, sortOrder = 0), Item(id = "B", type = 2, sortOrder = 1))
-        val result = FabInsertion.headingsWith(hs, Item(id = "N", type = 2, sortOrder = -1), 1)
+        val result = Headings.insertAt(hs, Item(id = "N", type = 2, sortOrder = -1), 1)
         assertEquals(listOf("A", "N", "B"), result.map { it.id })
         assertEquals(listOf(0, 1, 2), result.map { it.sortOrder })
     }
@@ -162,17 +164,17 @@ class FabInsertionTest {
 
     @Test
     fun freeSortOrder_usesGapBetweenNeighbours() {
-        assertEquals(6, FabInsertion.freeSortOrder(listOf(5, 10), 1))
-        assertEquals(11, FabInsertion.freeSortOrder(listOf(5, 10), 2))
-        assertEquals(4, FabInsertion.freeSortOrder(listOf(5, 10), 0))
-        assertEquals(0, FabInsertion.freeSortOrder(emptyList(), 0))
+        assertEquals(6, SortOrders.freeSortOrder(listOf(5, 10), 1))
+        assertEquals(11, SortOrders.freeSortOrder(listOf(5, 10), 2))
+        assertEquals(4, SortOrders.freeSortOrder(listOf(5, 10), 0))
+        assertEquals(0, SortOrders.freeSortOrder(emptyList(), 0))
     }
 
     @Test
     fun freeSortOrder_nullWhenNoRoomOrOrderIsNotAscending() {
-        assertNull(FabInsertion.freeSortOrder(listOf(3, 3, 3), 1))
-        assertNull(FabInsertion.freeSortOrder(listOf(3, 4), 1))
-        assertNull(FabInsertion.freeSortOrder(listOf(9, 2, 5), 1))
+        assertNull(SortOrders.freeSortOrder(listOf(3, 3, 3), 1))
+        assertNull(SortOrders.freeSortOrder(listOf(3, 4), 1))
+        assertNull(SortOrders.freeSortOrder(listOf(9, 2, 5), 1))
     }
 
     @Test

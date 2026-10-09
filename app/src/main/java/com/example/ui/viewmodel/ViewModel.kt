@@ -1,5 +1,18 @@
 package com.example.ui.viewmodel
 
+import com.example.domain.edits.TaskEditorFields
+import com.example.domain.edits.TaskEdits
+import java.util.UUID
+import com.example.domain.edits.TaskMoves
+import com.example.domain.edits.SortOrders
+import com.example.domain.edits.ProjectEdits
+import com.example.domain.edits.ProjectEdit
+import com.example.domain.edits.NewTasks
+import com.example.domain.edits.NewTaskPlace
+import com.example.domain.edits.NewProjects
+import com.example.domain.edits.MoveTarget
+import com.example.domain.edits.Headings
+import com.example.domain.edits.DropSpot
 import com.example.domain.lists.SearchList
 import com.example.domain.lists.ProjectList
 import com.example.domain.lists.TagList
@@ -368,6 +381,9 @@ class ThingsViewModel @Inject constructor(
     }
 
     /** Пустой новый заголовок: его задачи возвращаются в группу выше, сам заголовок удаляется */
+    fun discardHeading(heading: Item, tasks: List<Item>, groupAboveId: String?) =
+        discardHeading(heading, Headings.assign(tasks, groupAboveId))
+
     fun discardHeading(heading: Item, tasksBack: List<Item>) {
         viewModelScope.launch { headingUseCases.discard(heading, tasksBack) }
     }
@@ -382,18 +398,41 @@ class ThingsViewModel @Inject constructor(
     }
 
     /** Новый заголовок посреди проекта (сброс кнопки «+»): заголовки по порядку и задачи, ушедшие под него */
+    /** Новый пустой подзаголовок в конце проекта. */
+    fun addHeading(id: String, projectId: String, headings: List<Item>) = saveHeading(Headings.newAtEnd(projectId, headings, id))
+
+    fun renameHeading(heading: Item, title: String) = saveHeading(Headings.rename(heading, title))
+
+    /** Новый подзаголовок на месте [index] среди [headings], под ним — [movedTasks]. */
+    fun insertHeadingAt(id: String, projectId: String, headings: List<Item>, index: Int, movedTasks: List<Item>) =
+        insertHeading(Headings.insertAt(headings, Headings.newHeading(projectId, id), index), Headings.assign(movedTasks, id))
+
     fun insertHeading(headings: List<Item>, movedTasks: List<Item>) {
         viewModelScope.launch { headingUseCases.insert(headings, movedTasks) }
     }
 
-    /**
-     * Новая задача на месте сброса кнопки «+»: сама задача (со сверкой тегов) и соседи с новыми sortOrder.
-     */
-    fun createTaskAt(task: Item, reorderedOthers: List<Item>) {
-        viewModelScope.launch {
-            taskUseCases.updateTask(task)
-            if (reorderedOthers.isNotEmpty()) taskUseCases.updateTask(reorderedOthers)
+    /** Новая задача по «+» на экране: поля по месту ([NewTasks]); задача сразу раскрывается для ввода. */
+    fun createTask(place: NewTaskPlace, id: String = UUID.randomUUID().toString()) {
+        val resolved = if (place is NewTaskPlace.Upcoming && place.startDate == null) {
+            NewTaskPlace.Upcoming(NewTasks.defaultUpcomingDate(tasks.value.filter { it.item.isUpcoming }.mapNotNull { it.item.startDate }))
+        } else {
+            place
         }
+        updateTask(NewTasks.create(resolved, id))
+        setInlineExpandedTaskId(id)
+    }
+
+    /**
+     * Новая задача на месте сброса кнопки «+»: поля по месту и точке сброса, место в списке —
+     * перед задачей [insertIndex] списка экрана [listTasks]; соседи при нужде перенумеровываются.
+     */
+    fun createTaskAt(id: String, place: NewTaskPlace, spot: DropSpot, insertIndex: Int, listTasks: List<Item>) {
+        val insertion = SortOrders.insert(listTasks, insertIndex, NewTasks.atDrop(NewTasks.create(place, id), spot))
+        viewModelScope.launch {
+            taskUseCases.updateTask(insertion.created)
+            if (insertion.reordered.isNotEmpty()) taskUseCases.updateTask(insertion.reordered)
+        }
+        setInlineExpandedTaskId(id)
     }
 
     fun insertTag(tagTitle: String, parentId: String? = null) {
@@ -518,26 +557,15 @@ class ThingsViewModel @Inject constructor(
         priority: Int,
         untitledTitle: String
     ) {
+        val fields = TaskEditorFields(title, notes, section, isTonight, startDate, dueDate, tags, projectId, priority)
         viewModelScope.launch {
-            val startVal = if (projectId != null && section == TaskSection.INBOX) {
-                TaskSection.ANYTIME.toStartVal()
-            } else {
-                section.toStartVal()
-            }
-            val updatedTask = task.copy(
-                title = title.ifBlank { untitledTitle },
-                notes = notes,
-                start = startVal,
-                isTonight = isTonight,
-                startDate = startDate,
-                dueDate = dueDate,
-                cachedTags = TagTitles.join(tags),
-                projectId = projectId,
-                priority = priority,
-                modificationDate = System.currentTimeMillis()
-            )
-            taskUseCases.updateTask(updatedTask, checklist)
+            taskUseCases.updateTask(TaskEdits.apply(task, fields, untitledTitle), checklist)
         }
+    }
+
+    /** Отметка задачи прямо из открытого редактора — вместе с её ещё не сохранёнными правками. */
+    fun toggleEditedTask(wrapper: ItemWithChecklist, fields: TaskEditorFields, checklist: List<ChecklistItem>, untitledTitle: String) {
+        toggleTaskCompletion(wrapper.copy(item = TaskEdits.apply(wrapper.item, fields, untitledTitle), checklist = checklist))
     }
 
     fun updateTasks(items: List<Item>) {
@@ -659,28 +687,16 @@ class ThingsViewModel @Inject constructor(
      * Пакетно перемещает список задач в проект или сферу.
      */
     fun batchMoveTasks(taskWrappers: List<ItemWithChecklist>, projectId: String?, areaId: String?, moveToInbox: Boolean) {
+        val target = if (moveToInbox) MoveTarget.Inbox else MoveTarget.Place(projectId, areaId)
         viewModelScope.launch {
-            val updated = taskWrappers.map { wrapper ->
-                if (moveToInbox) {
-                    wrapper.item.copy(
-                        start = Item.START_INBOX,
-                        projectId = null,
-                        areaId = null,
-                        startDate = null,
-                        dueDate = null,
-                        modificationDate = System.currentTimeMillis()
-                    )
-                } else {
-                    val newStart = if (wrapper.item.start == Item.START_INBOX && projectId != null) Item.START_ANYTIME else wrapper.item.start
-                    wrapper.item.copy(
-                        start = newStart,
-                        projectId = projectId,
-                        areaId = areaId,
-                        modificationDate = System.currentTimeMillis()
-                    )
-                }
-            }
-            taskUseCases.updateTask(updated)
+            taskUseCases.updateTask(taskWrappers.map { TaskMoves.moved(it.item, target) })
+        }
+    }
+
+    /** Перемещение одной задачи («Переместить» в редакторе) — по тому же правилу, что пакетное. */
+    fun moveTask(wrapper: ItemWithChecklist, target: MoveTarget) {
+        viewModelScope.launch {
+            taskUseCases.updateTask(TaskMoves.moved(wrapper.item, target), wrapper.checklist)
         }
     }
 
@@ -719,6 +735,22 @@ class ThingsViewModel @Inject constructor(
         viewModelScope.launch {
             projectUseCases.updateProject(project)
         }
+    }
+
+    /** Новый проект с пустым названием (его тут же правят на главном экране). */
+    fun createProject(id: String, areaId: String? = null) = updateProject(NewProjects.create(areaId, id))
+
+    /** Новый проект на месте [index] среди [projects] (в порядке главного экрана); соседи при нужде перенумеровываются. */
+    fun createProjectAt(id: String, areaId: String?, index: Int, projects: List<Item>) {
+        val insertion = SortOrders.insert(projects, index, NewProjects.create(areaId, id))
+        updateProject(insertion.created)
+        if (insertion.reordered.isNotEmpty()) updateTasks(insertion.reordered)
+    }
+
+    /** Правка проекта ([ProjectEdits]); без изменений ничего не сохраняется. */
+    fun editProject(project: Item, edit: ProjectEdit) {
+        val edited = ProjectEdits.apply(project, edit)
+        if (edited !== project) updateProject(edited)
     }
 
     fun deleteProject(project: Item) {

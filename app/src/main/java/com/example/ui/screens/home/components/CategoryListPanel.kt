@@ -1,5 +1,7 @@
 package com.example.ui.screens.home.components
 
+import com.example.domain.edits.ProjectEdit
+import com.example.domain.edits.DropSpot
 import com.example.ui.viewmodel.ProjectProgress
 import com.example.ui.viewmodel.ThingsCategoryListState
 import com.example.ui.viewmodel.ActiveScreen
@@ -251,13 +253,9 @@ fun ThingsCategoryListPanel(
     /** Новый пустой заголовок в конце проекта: сразу открывается для ввода названия */
     fun addHeading() {
         val currentProject = project ?: return
-        val heading = Item(
-            type = Item.TYPE_HEADING,
-            projectId = currentProject.id,
-            sortOrder = (localHeadings.maxOfOrNull { it.sortOrder } ?: -1) + 1
-        )
-        editingHeadingId = heading.id
-        onEvent(ThingsCategoryListEvent.SaveHeading(heading))
+        val headingId = java.util.UUID.randomUUID().toString()
+        editingHeadingId = headingId
+        onEvent(ThingsCategoryListEvent.AddHeading(headingId, currentProject.id, localHeadings))
     }
 
     val view = androidx.compose.ui.platform.LocalView.current
@@ -379,24 +377,6 @@ fun ThingsCategoryListPanel(
     }
     val currentLocalTasks by rememberUpdatedState(localTasksList)
 
-    /** Новая задача с полями экрана — как при нажатии на «+» */
-    fun newTaskForScreen(): Item {
-        val start = when (screen) {
-            ActiveScreen.TODAY -> 1
-            ActiveScreen.UPCOMING, ActiveScreen.ANYTIME, ActiveScreen.AREA_DETAIL, ActiveScreen.TAG_DETAIL -> 2
-            ActiveScreen.SOMEDAY -> 3
-            else -> 0
-        }
-        return Item(
-            type = Item.TYPE_TASK,
-            start = start,
-            startDate = if (screen == ActiveScreen.TODAY) System.currentTimeMillis() else null,
-            projectId = if (screen == ActiveScreen.PROJECT_DETAIL) project?.id else null,
-            areaId = if (screen == ActiveScreen.AREA_DETAIL) area?.id else null,
-            cachedTags = if (screen == ActiveScreen.TAG_DETAIL) state.tag?.title ?: "" else ""
-        )
-    }
-
     /** Сброс кнопки «+» на промежуток: задача на его месте, у левого края проекта — заголовок */
     fun dropFab(): Boolean {
         val slot = fabSlot ?: return false
@@ -423,65 +403,45 @@ fun ThingsCategoryListPanel(
         if (slot.asHeading && currentProject != null) {
             fabSlot = null
             val placement = FabInsertion.headingPlacement(flat, slot.index)
-            val heading = Item(type = Item.TYPE_HEADING, projectId = currentProject.id, sortOrder = -1)
-            val headings = FabInsertion.headingsWith(localHeadings, heading, placement.headingIndex)
-            val moved = currentLocalTasks
-                .filter { it.item.id in placement.movedTaskIds }
-                .map { it.item.copy(headingId = heading.id, modificationDate = System.currentTimeMillis()) }
-            editingHeadingId = heading.id
-            onEvent(ThingsCategoryListEvent.InsertHeading(headings, moved))
+            val headingId = java.util.UUID.randomUUID().toString()
+            val moved = currentLocalTasks.filter { it.item.id in placement.movedTaskIds }.map { it.item }
+            editingHeadingId = headingId
+            onEvent(ThingsCategoryListEvent.InsertHeadingAt(headingId, currentProject.id, localHeadings, placement.headingIndex, moved))
         } else {
             val tasks = currentLocalTasks
             val placement = FabInsertion.taskPlacement(flat, slot.index, tasks)
-            val newTask = newTaskForScreen().let { base ->
-                base.copy(
-                    headingId = placement.headingId,
-                    isTonight = placement.isTonight,
-                    // «Предстоящие»: дата раздела, под заголовком которого раскрылся промежуток
-                    startDate = placement.startDate ?: base.startDate
-                ).let { task ->
-                    when {
-                        // Экран области: секция «Когда-нибудь» и «Планы» задаются свойствами задачи
-                        placement.inAreaSomeday -> task.copy(start = Item.START_SOMEDAY)
-                        placement.inAreaUpcoming -> task.copy(startDate = tomorrowNoonMillis())
-                        // «В любое время»: задача встаёт в проект или область группы, куда её бросили
-                        placement.placeHeader?.project != null -> placement.placeHeader.project.let {
-                            task.copy(projectId = it.id, areaId = it.areaId)
-                        }
-                        placement.placeHeader?.area != null -> task.copy(projectId = null, areaId = placement.placeHeader.area.id)
-                        else -> task
-                    }
-                }
-            }
-            val insertAt = placement.taskIndex.coerceIn(0, tasks.size)
-            val freeOrder = FabInsertion.freeSortOrder(tasks.map { it.item.sortOrder }, insertAt)
-            val commit: () -> Unit = if (freeOrder != null) {
-                // Место между соседями есть — остальные задачи не трогаем
-                { onEvent(ThingsCategoryListEvent.CreateTaskAt(newTask.copy(sortOrder = freeOrder), emptyList())) }
-            } else {
-                val list = tasks.map { it.item }.toMutableList()
-                list.add(insertAt, newTask)
-                val renumbered = list.mapIndexed { index, item -> if (item.sortOrder == index) item else item.copy(sortOrder = index) }
-                val created = renumbered.first { it.id == newTask.id }
-                val previousOrder = tasks.associate { it.item.id to it.item.sortOrder }
-                val others = renumbered.filter { it.id != newTask.id && previousOrder[it.id] != it.sortOrder }
-                val emit: () -> Unit = { onEvent(ThingsCategoryListEvent.CreateTaskAt(created, others)) }
-                emit
+            val newTaskId = java.util.UUID.randomUUID().toString()
+            // Где оказалась задача — поля по этому месту назначит домен (NewTasks.atDrop)
+            val spot = DropSpot(
+                headingId = placement.headingId,
+                isTonight = placement.isTonight,
+                startDate = placement.startDate,
+                areaSection = when {
+                    placement.inAreaSomeday -> AreaList.Section.SOMEDAY
+                    placement.inAreaUpcoming -> AreaList.Section.UPCOMING
+                    else -> null
+                },
+                groupProject = placement.placeHeader?.project,
+                groupAreaId = placement.placeHeader?.area?.id
+            )
+            val place = newTaskPlace(screen, project?.id, area?.id, state.tag?.title)
+            val commit: () -> Unit = {
+                onEvent(ThingsCategoryListEvent.CreateTaskAt(newTaskId, place, spot, placement.taskIndex, tasks.map { it.item }))
             }
             // Порядок: 1) задачи сверху и снизу раздвигаются на высоту раскрытой задачи, 2) в центре
             // освободившегося места раскрывается новая задача (см. AnimatedTaskItem)
-            pendingFabTaskId = newTask.id
+            pendingFabTaskId = newTaskId
             spreadScope.launch {
                 gapExtra.snapTo(0f)
                 gapExtra.animateTo(
                     (finalGapHeight - gapHeightNow).coerceAtLeast(0f),
                     androidx.compose.animation.core.tween(FAB_SPREAD_MS, easing = androidx.compose.animation.core.FastOutSlowInEasing)
                 )
-                fabDrag?.freshTaskId = newTask.id
+                fabDrag?.freshTaskId = newTaskId
                 commit()
                 // Промежуток уйдёт в том же кадре, в котором в списке появится новая строка
                 kotlinx.coroutines.withTimeoutOrNull(800) {
-                    snapshotFlow { localTasksList.any { it.item.id == newTask.id } }.first { it }
+                    snapshotFlow { localTasksList.any { it.item.id == newTaskId } }.first { it }
                 }
                 withFrameNanos { }
                 fabSlot = null
@@ -878,7 +838,7 @@ fun ThingsCategoryListPanel(
                         textPrimaryColor = textPrimaryColor,
                         onAction = { projectDialog = it },
                         onNotesChange = { notes ->
-                            onEvent(ThingsCategoryListEvent.UpdateProject(project.copy(notes = notes, modificationDate = System.currentTimeMillis())))
+                            onEvent(ThingsCategoryListEvent.EditProject(project, ProjectEdit.Notes(notes)))
                         },
                         modifier = Modifier
                             .padding(horizontal = ThingsSpacing.S)
@@ -1202,14 +1162,11 @@ fun ThingsCategoryListPanel(
                                             title.isEmpty() && heading.title.isEmpty() -> {
                                                 val index = localHeadings.indexOfFirst { it.id == heading.id }
                                                 val groupAbove = localHeadings.getOrNull(index - 1)?.id
-                                                val now = System.currentTimeMillis()
-                                                val tasksBack = state.allTasks
-                                                    .filter { it.item.headingId == heading.id }
-                                                    .map { it.item.copy(headingId = groupAbove, modificationDate = now) }
-                                                onEvent(ThingsCategoryListEvent.DiscardHeading(heading, tasksBack))
+                                                val tasksUnder = state.allTasks.filter { it.item.headingId == heading.id }.map { it.item }
+                                                onEvent(ThingsCategoryListEvent.DiscardHeading(heading, tasksUnder, groupAbove))
                                             }
                                             title.isNotEmpty() && title != heading.title ->
-                                                onEvent(ThingsCategoryListEvent.SaveHeading(heading.copy(title = title)))
+                                                onEvent(ThingsCategoryListEvent.RenameHeading(heading, title))
                                         }
                                     },
                                     onArchive = { onEvent(ThingsCategoryListEvent.ArchiveHeading(heading)) },
@@ -1582,7 +1539,7 @@ fun ThingsCategoryListPanel(
             onDeleteTag = { tag -> onEvent(ThingsCategoryListEvent.DeleteTag(tag)) },
             onUpdateTag = { tag -> onEvent(ThingsCategoryListEvent.UpdateTag(tag)) },
             onUpdateTagsOrder = { tags -> onEvent(ThingsCategoryListEvent.UpdateTagsOrder(tags)) },
-            onUpdateProject = { onEvent(ThingsCategoryListEvent.UpdateProject(it)) },
+            onEditProject = { edit -> onEvent(ThingsCategoryListEvent.EditProject(project, edit)) },
             onCompleteProject = { onEvent(ThingsCategoryListEvent.CompleteProject(it)) }
         )
     }
@@ -1841,12 +1798,3 @@ private fun FabGapRow(asHeading: Boolean, extraPx: () -> Float, modifier: Modifi
     }
 }
 
-/** Завтра, 12:00 — дата для задачи, брошенной в секцию «Планы» на экране области */
-private fun tomorrowNoonMillis(): Long = java.util.Calendar.getInstance().run {
-    add(java.util.Calendar.DAY_OF_YEAR, 1)
-    set(java.util.Calendar.HOUR_OF_DAY, 12)
-    set(java.util.Calendar.MINUTE, 0)
-    set(java.util.Calendar.SECOND, 0)
-    set(java.util.Calendar.MILLISECOND, 0)
-    timeInMillis
-}
