@@ -1,5 +1,6 @@
 package com.example.ui.screens.home
 
+import java.util.UUID
 import com.example.ui.screens.home.components.newTaskPlace
 import com.example.domain.edits.ProjectEdit
 import com.example.domain.edits.MoveTarget
@@ -330,9 +331,13 @@ fun ThingsHomeScreen(viewModel: ThingsViewModel = hiltViewModel()) {
                             newTaskTitlePrefill = searchQuery
                             showAddDialog = true
                         } else {
-                            // Поля новой задачи по месту назначает домен (NewTasks); задача сразу раскрывается
+                            // Поля новой задачи по месту назначает домен (NewTasks); задача сразу раскрывается,
+                            // курсор — в названии
+                            val newTaskId = UUID.randomUUID().toString()
+                            fabDragController.focusTaskId = newTaskId
                             viewModel.createTask(
-                                newTaskPlace(activeScreen, selectedProject?.id, selectedArea?.id, selectedTagDetail?.title)
+                                newTaskPlace(activeScreen, selectedProject?.id, selectedArea?.id, selectedTagDetail?.title),
+                                newTaskId
                             )
                         }
                     }

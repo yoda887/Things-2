@@ -172,6 +172,11 @@ fun AnimatedTaskItem(
     // Решается один раз, когда строка появилась: freshTaskId сбросится после раскрытия. Только на первое
     // раскрытие — строка остаётся в композиции, и повторное открытие тапом должно идти как обычно
     var focusTitleOnOpen by remember(task.id) { mutableStateOf(isFreshFromFab) }
+    // Новая задача по тапу на «+»: раскрывается как обычно, но курсор сразу в названии
+    var focusTitleFromTap by remember(task.id) { mutableStateOf(fabController?.focusTaskId == task.id) }
+    LaunchedEffect(Unit) {
+        if (focusTitleFromTap) fabController?.focusTaskId = null
+    }
     // Сбрасывается, только когда редактор ушёл совсем: пока он открыт или сворачивается, настройки поля
     // (кнопка «Done» у клавиатуры) не должны меняться — иначе Compose перезапускает ввод и снова
     // показывает клавиатуру прямо во время её скрытия
@@ -227,7 +232,10 @@ fun AnimatedTaskItem(
     }
     val showEditor = isExpanded || isExpansionVisible
     LaunchedEffect(showEditor) {
-        if (!showEditor && wasExpandedOnce) focusTitleOnOpen = false
+        if (!showEditor && wasExpandedOnce) {
+            focusTitleOnOpen = false
+            focusTitleFromTap = false
+        }
     }
 
     val density = androidx.compose.ui.platform.LocalDensity.current
@@ -563,7 +571,7 @@ fun AnimatedTaskItem(
                         onUpdateTagsOrder = { tags -> onEvent(ThingsCategoryListEvent.UpdateTagsOrder(tags)) },
                         isDeletedExternally = { deletedTaskIds.contains(task.id) },
                         isExpanded = isExpanded,
-                        autoFocusTitle = focusTitleOnOpen,
+                        autoFocusTitle = focusTitleOnOpen || focusTitleFromTap,
                         outsideTouch = editorOutsideTouch,
                         expansionProgress = expansionProgress,
                         onFullHeightMeasured = { cardGeometry.editorFullHeight = it },

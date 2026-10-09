@@ -74,6 +74,9 @@ class FabDragController {
     /** Задача, только что созданная сбросом кнопки: её строка раскрывается из центра промежутка. */
     var freshTaskId by mutableStateOf<String?>(null)
 
+    /** Задача, только что созданная тапом по кнопке: у неё сразу фокус в названии и клавиатура. */
+    var focusTaskId by mutableStateOf<String?>(null)
+
     /** Растёт на каждое приземление — по нему анимация запускается заново */
     var settleToken by mutableIntStateOf(0)
         private set
