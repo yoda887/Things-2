@@ -186,28 +186,19 @@ fun rememberFlattenedList(
 ): List<Any> {
     val headerLogbook = stringResource(R.string.category_logbook)
     return remember(screen, standardToday, eveningToday, headerLogbook, draggedItemKey, upcomingDays, upcomingMonths, projects, area, displayTasks, isLaterItemsHidden, tag, allTasks, areas, savedTags, searchQuery, headings) {
-        buildList<Any> {
-            if (screen == ActiveScreen.TODAY) {
-                addAll(TodayScreen.rows(standardToday, eveningToday, isDragging = draggedItemKey != null))
-            } else if (screen == ActiveScreen.UPCOMING) {
-                addAll(UpcomingScreen.rows(upcomingDays, upcomingMonths))
-            } else if (screen == ActiveScreen.AREA_DETAIL) {
-                addAll(AreaScreen.rows(AreaScreen.content(area?.id, displayTasks, projects), isLaterItemsHidden))
-            } else if (screen == ActiveScreen.LOGBOOK) {
-                addAll(LogbookScreen.rows(displayTasks, projects))
-            } else if (screen == ActiveScreen.TAG_DETAIL) {
-                addAll(TagScreen.rows(TagScreen.content(tag?.title, displayTasks, allTasks, projects)))
-            } else if (screen == ActiveScreen.PROJECT_DETAIL) {
-                addAll(ProjectScreen.rows(displayTasks, headings, draggedItemKey))
-            } else if (screen == ActiveScreen.ANYTIME) {
-                addAll(AnytimeScreen.rows(displayTasks, projects, areas))
-            } else if (screen == ActiveScreen.SOMEDAY) {
-                addAll(SomedayScreen.rows(displayTasks, projects, areas))
-            } else if (screen == ActiveScreen.SEARCH) {
-                addAll(SearchScreen.rows(displayTasks, projects, areas, savedTags, searchQuery, headerLogbook))
-            } else {
-                addAll(displayTasks)
-            }
+        // Все экраны перечислены явно (без else): новый экран компилятор заставит указать и здесь
+        when (screen) {
+            ActiveScreen.TODAY -> TodayScreen.rows(standardToday, eveningToday, isDragging = draggedItemKey != null)
+            ActiveScreen.UPCOMING -> UpcomingScreen.rows(upcomingDays, upcomingMonths)
+            ActiveScreen.AREA_DETAIL -> AreaScreen.rows(AreaScreen.content(area?.id, displayTasks, projects), isLaterItemsHidden)
+            ActiveScreen.LOGBOOK -> LogbookScreen.rows(displayTasks, projects)
+            ActiveScreen.TAG_DETAIL -> TagScreen.rows(TagScreen.content(tag?.title, displayTasks, allTasks, projects))
+            ActiveScreen.PROJECT_DETAIL -> ProjectScreen.rows(displayTasks, headings, draggedItemKey)
+            ActiveScreen.ANYTIME -> AnytimeScreen.rows(displayTasks, projects, areas)
+            ActiveScreen.SOMEDAY -> SomedayScreen.rows(displayTasks, projects, areas)
+            ActiveScreen.SEARCH -> SearchScreen.rows(displayTasks, projects, areas, savedTags, searchQuery, headerLogbook)
+            // «Входящие» — задачи как есть; у главного экрана списка нет
+            ActiveScreen.INBOX, ActiveScreen.HOME -> displayTasks
         }
     }
 }

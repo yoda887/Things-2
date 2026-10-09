@@ -177,6 +177,7 @@ class ThingsViewModel @Inject constructor(
             val bounds = DayBounds.now()
             val somedayProjectIds = AnytimeScreen.somedayProjectIds(projectList)
 
+            // Все экраны перечислены явно (без else): новый экран компилятор заставит указать и здесь
             val listTasks = taskList.filter { wrapper ->
                 val task = wrapper.item
                 if (task.id == expandedTaskId) {
@@ -193,21 +194,25 @@ class ThingsViewModel @Inject constructor(
                         ActiveScreen.AREA_DETAIL -> AreaScreen.includes(task, area?.id)
                         ActiveScreen.TAG_DETAIL -> tag != null && TagScreen.isActiveTask(task, tag.title)
                         ActiveScreen.SEARCH -> SearchScreen.includes(wrapper, query)
-                        else -> false
+                        // У главного экрана нет списка задач
+                        ActiveScreen.HOME -> false
                     }
                 }
             }.sortedBy { it.item.sortOrder }
 
             // Заголовки экрана проекта
             val projectHeadings = if (screen == ActiveScreen.PROJECT_DETAIL) ProjectScreen.headings(headingList, project?.id) else emptyList()
-            // Задачи — в порядке экрана: перетаскивание работает по тому же списку, что виден
+            // Задачи — в порядке экрана: перетаскивание работает по тому же списку, что виден.
+            // Все экраны перечислены явно (без else): новый экран компилятор заставит указать и здесь
             val orderedTasks = when (screen) {
                 ActiveScreen.PROJECT_DETAIL -> ProjectScreen.order(listTasks, projectHeadings)
                 ActiveScreen.ANYTIME -> AnytimeScreen.order(listTasks, projectList, areaList)
                 ActiveScreen.SOMEDAY -> SomedayScreen.order(listTasks, projectList, areaList)
                 ActiveScreen.AREA_DETAIL -> AreaScreen.order(listTasks, area?.id, bounds)
                 ActiveScreen.LOGBOOK -> LogbookScreen.order(listTasks)
-                else -> listTasks
+                // Порядок экрана — общий порядок задач (sortOrder)
+                ActiveScreen.INBOX, ActiveScreen.TODAY, ActiveScreen.UPCOMING, ActiveScreen.TAG_DETAIL,
+                ActiveScreen.SEARCH, ActiveScreen.HOME -> listTasks
             }
 
             val displayTasks = if (selectedTag == null) {

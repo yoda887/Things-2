@@ -927,6 +927,7 @@ fun ThingsCategoryListPanel(
                 }
             }
 
+            // Все экраны перечислены явно (без else): новый экран компилятор заставит указать и здесь
             val hasTasks = when (screen) {
                 ActiveScreen.TODAY -> !TodayScreen.isEmpty(standardToday, eveningToday, isDragging = dragDropState.draggedItemKey != null)
                 ActiveScreen.UPCOMING -> !UpcomingScreen.isEmpty(upcomingSchedule)
@@ -934,10 +935,11 @@ fun ThingsCategoryListPanel(
                 ActiveScreen.LOGBOOK -> LogbookScreen.rows(displayTasks, projects).isNotEmpty()
                 ActiveScreen.TAG_DETAIL -> !TagScreen.content(state.tag?.title, displayTasks, state.allTasks, projects).isEmpty
                 ActiveScreen.PROJECT_DETAIL -> !ProjectScreen.isEmpty(displayTasks, localHeadings)
-                // «Когда-нибудь» показывает и отложенные проекты — без задач экран не пуст
                 ActiveScreen.ANYTIME -> !AnytimeScreen.isEmpty(displayTasks)
+                // «Когда-нибудь» показывает и отложенные проекты — без задач экран не пуст
                 ActiveScreen.SOMEDAY -> !SomedayScreen.isEmpty(displayTasks, projects)
-                else -> displayTasks.isNotEmpty()
+                // Поиск показывает свою пустую заглушку отдельно; у главного экрана списка нет
+                ActiveScreen.INBOX, ActiveScreen.SEARCH, ActiveScreen.HOME -> displayTasks.isNotEmpty()
             }
 
             if (screen == ActiveScreen.SEARCH && flattened.isEmpty()) {
