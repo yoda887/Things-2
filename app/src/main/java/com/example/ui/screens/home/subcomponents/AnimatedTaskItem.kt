@@ -179,6 +179,20 @@ fun AnimatedTaskItem(
     LaunchedEffect(isExpanded) {
         if (isExpanded) wasExpandedOnce = true
     }
+    // Пустую задачу удаляют с анимацией (сворачивание, затем серая карточка) — в корутине. Если строка
+    // уходит раньше (Back с открытым редактором, переход на другой экран), корутина отменяется вместе со
+    // scope экрана, и пустая задача оставалась бы в базе — тогда удаляем сразу, без анимации
+    var pendingDelete by remember(task.id) { mutableStateOf(false) }
+    val currentTaskWrapper by rememberUpdatedState(taskWrapper)
+    val currentOnEvent by rememberUpdatedState(onEvent)
+    DisposableEffect(task.id) {
+        onDispose {
+            if (pendingDelete) {
+                pendingDelete = false
+                currentOnEvent(ThingsCategoryListEvent.DeleteTask(currentTaskWrapper))
+            }
+        }
+    }
     val reveal = remember(task.id) {
         androidx.compose.animation.core.Animatable(if (isFreshFromFab) 0f else 1f)
     }
@@ -613,6 +627,7 @@ fun AnimatedTaskItem(
                         },
                         onDelete = {
                             onEvent(ThingsCategoryListEvent.ChangeInlineExpandedTaskId(null))
+                            pendingDelete = true
                             coroutineScope.launch {
                                 // 1. Сначала сворачиваем открытый редактор в обычную белую строку (300 мс)
                                 delay(com.example.ui.theme.AnimationConstants.TASK_EXPANSION_DURATION_MS)
@@ -621,7 +636,10 @@ fun AnimatedTaskItem(
                                 // 3. Ждём 500 мс (стандартный таймер выполнения чекбокса)
                                 delay(ThingsMotion.LONG.toLong())
                                 // 4. Удаляем задачу из ViewModel -> animateItem растворяет серую карточку и подтягивает задачи
-                                onEvent(ThingsCategoryListEvent.DeleteTask(taskWrapper))
+                                if (pendingDelete) {
+                                    pendingDelete = false
+                                    onEvent(ThingsCategoryListEvent.DeleteTask(taskWrapper))
+                                }
                             }
                         },
                         onDone = {
