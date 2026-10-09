@@ -3,6 +3,7 @@ package com.example.ui.viewmodel
 import androidx.lifecycle.ViewModel
 import com.example.domain.tag.TagTitles
 import com.example.domain.usecase.heading.HeadingUseCases
+import com.example.ui.screens.home.components.PlaceGroups
 import com.example.ui.screens.home.components.ProjectHeadings
 import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.viewModelScope
@@ -164,6 +165,8 @@ class ThingsViewModel @Inject constructor(
         ): ThingsCategoryListState {
             // Границы дня считаем один раз на весь список, а не в геттерах каждой задачи
             val bounds = DayBounds.now()
+            // Проекты, отложенные в «Когда-нибудь»: их задачи в «В любое время» не показываются
+            val somedayProjectIds = projectList.filter { it.start == Item.START_SOMEDAY }.map { it.id }.toSet()
 
             val listTasks = taskList.filter { wrapper ->
                 val task = wrapper.item
@@ -174,7 +177,7 @@ class ThingsViewModel @Inject constructor(
                         ActiveScreen.INBOX -> task.isInbox && !task.isCompleted
                         ActiveScreen.TODAY -> bounds.isToday(task)
                         ActiveScreen.UPCOMING -> bounds.isUpcoming(task)
-                        ActiveScreen.ANYTIME -> bounds.isAnytime(task)
+                        ActiveScreen.ANYTIME -> bounds.isAnytime(task) && task.projectId !in somedayProjectIds
                         ActiveScreen.SOMEDAY -> bounds.isSomeday(task)
                         ActiveScreen.LOGBOOK -> task.isCompleted
                         ActiveScreen.PROJECT_DETAIL -> task.projectId == project?.id && !task.isCompleted
@@ -201,8 +204,13 @@ class ThingsViewModel @Inject constructor(
             } else {
                 emptyList()
             }
-            val orderedTasks = if (projectHeadings.isEmpty()) listTasks else {
-                ProjectHeadings.orderByHeading(listTasks, projectHeadings.map { it.id }) { it.item }
+            val orderedTasks = when {
+                projectHeadings.isNotEmpty() ->
+                    ProjectHeadings.orderByHeading(listTasks, projectHeadings.map { it.id }) { it.item }
+                // «В любое время» и «Когда-нибудь» сгруппированы по проектам и областям — список в том же порядке, что на экране
+                screen == ActiveScreen.ANYTIME || screen == ActiveScreen.SOMEDAY ->
+                    PlaceGroups.order(listTasks, projectList, areaList)
+                else -> listTasks
             }
 
             val displayTasks = if (selectedTag == null) {

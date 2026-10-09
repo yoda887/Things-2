@@ -35,6 +35,8 @@ data class FabTaskPlacement(
     val inAreaUpcoming: Boolean = false,
     /** Экран области: промежуток в секции «Когда-нибудь» */
     val inAreaSomeday: Boolean = false,
+    /** Группа «по месту» («В любое время»), в которую попал промежуток: её заголовок; null — выше групп */
+    val placeHeader: SearchSectionHeaderItem? = null,
 )
 
 /** Новый заголовок: его место среди заголовков и задачи, которые уйдут под него */
@@ -48,7 +50,8 @@ object FabInsertion {
 
     /** Строки, между которыми может раскрыться промежуток: задачи, заголовки проекта, «Вечер» */
     /** Подзаголовок, разделяющий секции списка: всё, что можно пометить промежутком, кроме задач */
-    private fun isSectionBoundary(element: Any): Boolean = element !is ItemWithChecklist && isAnchor(element)
+    private fun isSectionBoundary(element: Any): Boolean =
+        element !is ItemWithChecklist && (isAnchor(element) || element is SearchSectionHeaderItem)
 
     fun isAnchor(element: Any): Boolean =
         element is ItemWithChecklist || element is ProjectHeadingItem || element == TaskListKeys.EVENING_HEADER ||
@@ -128,6 +131,7 @@ object FabInsertion {
             taskIndex, headingId, isTonight, upcomingDate(flattened, above),
             inAreaUpcoming = sectionHeader == TaskListKeys.AREA_UPCOMING_HEADING,
             inAreaSomeday = sectionHeader == TaskListKeys.AREA_SOMEDAY_HEADING,
+            placeHeader = above.lastOrNull { it is SearchSectionHeaderItem } as? SearchSectionHeaderItem,
         )
     }
 

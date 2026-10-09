@@ -348,8 +348,9 @@ fun TaskItemRow(
                 areas.firstOrNull { it.id == task.areaId }
             }
             val subtitle = when {
-                // В поиске открытые задачи стоят под заголовком своего проекта или области — подпись повторяла бы его
+                // В поиске и «В любое время» задачи стоят под заголовком своего проекта или области — подпись повторяла бы его
                 screen == ActiveScreen.SEARCH && !isSearchLogbookStyle -> null
+                screen == ActiveScreen.ANYTIME || screen == ActiveScreen.SOMEDAY -> null
                 project != null && screen != ActiveScreen.PROJECT_DETAIL -> project.name
                 project == null && area != null && screen != ActiveScreen.AREA_DETAIL -> area.title
                 else -> null

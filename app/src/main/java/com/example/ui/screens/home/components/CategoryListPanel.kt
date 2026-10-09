@@ -437,6 +437,11 @@ fun ThingsCategoryListPanel(
                         // Экран области: секция «Когда-нибудь» и «Планы» задаются свойствами задачи
                         placement.inAreaSomeday -> task.copy(start = Item.START_SOMEDAY)
                         placement.inAreaUpcoming -> task.copy(startDate = tomorrowNoonMillis())
+                        // «В любое время»: задача встаёт в проект или область группы, куда её бросили
+                        placement.placeHeader?.project != null -> placement.placeHeader.project.let {
+                            task.copy(projectId = it.id, areaId = it.areaId)
+                        }
+                        placement.placeHeader?.area != null -> task.copy(projectId = null, areaId = placement.placeHeader.area.id)
                         else -> task
                     }
                 }
@@ -938,6 +943,8 @@ fun ThingsCategoryListPanel(
                     tagProjCount > 0 || tagTasksCount > 0 || logbookCount > 0
                 }
                 ActiveScreen.PROJECT_DETAIL -> displayTasks.isNotEmpty() || localHeadings.isNotEmpty()
+                // «Когда-нибудь» показывает и отложенные проекты — без задач экран не пуст
+                ActiveScreen.SOMEDAY -> displayTasks.isNotEmpty() || PlaceGroups.somedayProjects(projects).isNotEmpty()
                 else -> displayTasks.isNotEmpty()
             }
 

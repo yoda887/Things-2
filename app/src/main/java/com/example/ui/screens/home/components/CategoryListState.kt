@@ -378,7 +378,7 @@ fun rememberUpcomingSchedule(
 enum class SearchSectionKind { PROJECT, AREA, LOGBOOK }
 
 /**
- * Заголовок секции результатов поиска: задачи конкретного проекта или области, Logbook.
+ * Заголовок секции списка: задачи конкретного проекта или области (поиск, «В любое время», «Когда-нибудь»), Logbook поиска.
  * Найденные проекты, области и теги идут строками без заголовка.
  */
 data class SearchSectionHeaderItem(
@@ -517,12 +517,34 @@ fun rememberFlattenedList(
                         addAll(ProjectHeadings.tasksOf(displayTasks, heading.id, headingIds))
                     }
                 }
+            } else if (screen == ActiveScreen.ANYTIME) {
+                // Область — заголовком, только если у неё есть свои задачи; её проекты видны и без него
+                addPlaceGroups(PlaceGroups.group(displayTasks, projects, areas, areaHeaderOnlyWithOwnItems = true))
+            } else if (screen == ActiveScreen.SOMEDAY) {
+                // «Когда-нибудь»: по областям, внутри области — отложенные проекты строками и задачи
+                addPlaceGroups(PlaceGroups.group(displayTasks, projects, areas, PlaceGroups.somedayProjects(projects)))
             } else if (screen == ActiveScreen.SEARCH) {
                 addSearchResults(displayTasks, projects, areas, savedTags, searchQuery, headerLogbook)
             } else {
                 addAll(displayTasks)
             }
         }
+    }
+}
+
+/** Группы «по месту»: заголовок проекта или области и задачи под ним; задачи без места — без заголовка. */
+private fun MutableList<Any>.addPlaceGroups(groups: List<PlaceGroups.Group>) {
+    groups.forEach { group ->
+        when {
+            group.project != null -> add(
+                SearchSectionHeaderItem("place_hdr_project_${group.project.id}", group.project.title, SearchSectionKind.PROJECT, project = group.project)
+            )
+            group.area != null -> add(
+                SearchSectionHeaderItem("place_hdr_area_${group.area.id}", group.area.title, SearchSectionKind.AREA, area = group.area)
+            )
+        }
+        addAll(group.projectRows)
+        addAll(group.tasks)
     }
 }
 

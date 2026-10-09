@@ -101,7 +101,7 @@ Things 2 — Android-приложение для задач по образцу 
 ## Типографика
 
 - Один шрифт — системный Roboto (`FontFamily.Default`). На экранах шире 600 dp все размеры умножаются на 1.25 — один раз, внутри `ThingsTheme`.
-- Название экрана — `largeTitle` (32, Bold), эмодзи перед ним — `heroEmoji` (30). После прокрутки его заменяет `topAppBarTitle` (20, SemiBold) в верхнем тулбаре.
+- Название экрана — `largeTitle` (32, Medium), эмодзи перед ним — `heroEmoji` (30). После прокрутки его заменяет `topAppBarTitle` (20, SemiBold) в верхнем тулбаре.
 - Задача — `taskTitle` (19, Regular), подпись под ней — `taskSubtitle` (15). Строки главного экрана (разделы, проекты, области) — `listTitle` (19, Medium).
 - Подзаголовки: секции экрана — `sectionHeader` (19, Medium, `text-primary`), подзаголовки проекта — тот же `sectionHeader` в SemiBold цветом `project`. Надписи капителью («PROJECTS», «NEW HEADING») — `overline` (11, Bold, разрядка 1 sp).
 - В редакторе: заметки — `editorNotes` (18), пункты чек-листа — `editorChecklist` (17.2), дата и дедлайн — `editorDate` (18).

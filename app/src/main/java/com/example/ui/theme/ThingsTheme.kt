@@ -364,7 +364,7 @@ internal fun thingsTypography(scale: Float = 1f) = ThingsTypography(
     headlineStrong = TextStyle(fontFamily = FontFamily.Default, fontWeight = FontWeight.Bold, fontSize = (16 * scale).sp),
     subhead = TextStyle(fontFamily = FontFamily.Default, fontWeight = FontWeight.Normal, fontSize = (15 * scale).sp),
     subheadMedium = TextStyle(fontFamily = FontFamily.Default, fontWeight = FontWeight.Medium, fontSize = (15 * scale).sp),
-    largeTitle = TextStyle(fontFamily = FontFamily.Default, fontWeight = FontWeight.Bold, fontSize = (32 * scale).sp),
+    largeTitle = TextStyle(fontFamily = FontFamily.Default, fontWeight = FontWeight.Medium, fontSize = (32 * scale).sp),
     button = TextStyle(fontFamily = FontFamily.Default, fontWeight = FontWeight.SemiBold, fontSize = (17 * scale).sp),
     listTitle = TextStyle(fontFamily = FontFamily.Default, fontWeight = FontWeight.Medium, fontSize = (19 * scale).sp),
     listTitleStrong = TextStyle(fontFamily = FontFamily.Default, fontWeight = FontWeight.SemiBold, fontSize = (19 * scale).sp),

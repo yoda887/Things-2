@@ -247,6 +247,12 @@ private fun planSwap(
         return null
     }
 
+    // «В любое время» и «Когда-нибудь» сгруппированы по проектам и областям, а обмен их не меняет: задача
+    // перескочила бы в чужую группу и тут же вернулась в свою
+    if ((screen == ActiveScreen.ANYTIME || screen == ActiveScreen.SOMEDAY) && placeKey(hoveredTask.item) != placeKey(moved.item)) {
+        return null
+    }
+
     // Статус «Вечер» меняется только на экране «Сегодня», дата — только на «Предстоящих»
     if (screen == ActiveScreen.TODAY && hoveredTask.item.isTonight != moved.item.isTonight) {
         moved = moved.copyWithTonight(hoveredTask.item.isTonight)
@@ -260,6 +266,11 @@ private fun planSwap(
 }
 
 // ─── Private helpers ──────────────────────────────────────────────────────────
+
+/** Группа задачи «по месту»: проект, иначе область (см. [PlaceGroups]). */
+private fun placeKey(item: Item): String? =
+    item.projectId?.takeIf { it.isNotEmpty() }?.let { "project:$it" }
+        ?: item.areaId?.takeIf { it.isNotEmpty() }?.let { "area:$it" }
 
 /**
  * Индекс вставки на краю целевой секции общего списка задач.
