@@ -538,7 +538,8 @@ fun ThingsHomePanel(
         // Smart Lists Grid
         // TODO: Сделать названия адаптивными под системный язык (локализация)
         item {
-            Column(verticalArrangement = Arrangement.spacedBy(MaterialTheme.dimens.homeSmartListSpacing)) {
+            // «Входящие» отделены от остальных умных списков промежутком homeInboxGap
+            Column {
                 SmartListRow(
                     title = stringResource(R.string.category_inbox),
                     // Используем кастомную иконку AppIcons.Inbox
@@ -552,7 +553,8 @@ fun ThingsHomePanel(
                     isGrayCountAndNoBg = true, // [ИЗМЕНЕНИЕ]: Количество задач серого цвета и без фона
                     onClick = { onSmartListClick(ActiveScreen.INBOX) }
                 )
-                Spacer(modifier = Modifier.height(ThingsSpacing.M))
+                Spacer(modifier = Modifier.height(MaterialTheme.dimens.homeInboxGap))
+            Column(verticalArrangement = Arrangement.spacedBy(MaterialTheme.dimens.homeSmartListSpacing)) {
                 SmartListRow(
                     title = stringResource(R.string.category_today),
                     // Используем кастомную иконку AppIcons.Today
@@ -604,6 +606,7 @@ fun ThingsHomePanel(
                     textSecondaryColor = textSecondaryColor,
                     onClick = { onSmartListClick(ActiveScreen.LOGBOOK) }
                 )
+            }
             }
             Spacer(modifier = Modifier.height(ThingsSpacing.L))
         }

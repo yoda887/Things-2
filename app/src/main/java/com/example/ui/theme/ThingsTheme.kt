@@ -354,7 +354,7 @@ internal fun thingsTypography(scale: Float = 1f) = ThingsTypography(
     topAppBarTitle = TextStyle(fontFamily = FontFamily.Default, fontWeight = FontWeight.SemiBold, fontSize = (20 * scale).sp),
     caption = TextStyle(fontFamily = FontFamily.Default, fontWeight = FontWeight.Medium, fontSize = (12 * scale).sp),
     captionStrong = TextStyle(fontFamily = FontFamily.Default, fontWeight = FontWeight.Bold, fontSize = (12 * scale).sp),
-    tagChip = TextStyle(fontFamily = FontFamily.Default, fontWeight = FontWeight.Medium, fontSize = (14 * scale).sp),
+    tagChip = TextStyle(fontFamily = FontFamily.Default, fontWeight = FontWeight.Normal, fontSize = (16 * scale).sp),
     badge = TextStyle(fontFamily = FontFamily.Default, fontWeight = FontWeight.Medium, fontSize = (11 * scale).sp),
     badgeStrong = TextStyle(fontFamily = FontFamily.Default, fontWeight = FontWeight.Bold, fontSize = (11 * scale).sp),
     bodySmall = TextStyle(fontFamily = FontFamily.Default, fontWeight = FontWeight.Normal, fontSize = (13 * scale).sp),
