@@ -1506,7 +1506,9 @@ fun ThingsCategoryListPanel(
     }
 
     FloatingBottomCapsuleToolbar(
-        visible = inlineExpandedTaskId != null && activeTask != null && !isWhenDialogOpen && !isTagDialogOpen && swipeWhenTask == null,
+        // Пока открыто окно «Переместить», тулбар скрыт — как в Things
+        visible = inlineExpandedTaskId != null && activeTask != null && !isWhenDialogOpen && !isTagDialogOpen && swipeWhenTask == null &&
+            !showMoveDialog,
         onMoveClick = { showMoveDialog = true },
         onDeleteClick = { showDeleteConfirm = true },
         onDuplicateClick = {
@@ -1722,7 +1724,7 @@ fun ThingsCategoryListPanel(
 
     // Плавающий тулбар пакетных операций
     BatchActionToolbar(
-        isVisible = state.isSelectionMode,
+        isVisible = state.isSelectionMode && !showBatchMoveDialog,
         selectedCount = state.selectedTaskIds.size,
         onWhenClick = { showBatchWhenDialog = true },
         onMoveClick = { showBatchMoveDialog = true },

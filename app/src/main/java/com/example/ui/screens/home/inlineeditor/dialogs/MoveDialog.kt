@@ -1,5 +1,18 @@
 package com.example.ui.screens.home.inlineeditor.dialogs
 
+import com.example.ui.components.hideSoftKeyboardNow
+import com.example.ui.theme.ThingsMotion
+import kotlinx.coroutines.launch
+import androidx.compose.material.icons.filled.Search
+import androidx.compose.foundation.gestures.detectTapGestures
+import androidx.compose.ui.input.pointer.pointerInput
+import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.ui.draw.drawBehind
+import com.example.domain.lists.ListRules
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.ui.res.pluralStringResource
+import com.example.domain.lists.HomeList
 import com.example.ui.theme.ThingsStroke
 import com.example.ui.theme.ThingsSpacing
 import com.example.ui.theme.ThingsIconSize
@@ -65,19 +78,69 @@ fun ThingsMoveDialog(
     onDismissRequest: () -> Unit,
     areasOnly: Boolean = false
 ) {
+    // Группы (id области, NO_AREA_GROUP — без области), где поздние проекты раскрыты. Если задача уже в
+    // позднем проекте, его группа раскрыта сразу — иначе отметка текущего проекта была бы спрятана
+    var expandedLater by remember {
+        mutableStateOf(
+            projects.firstOrNull { it.id == currentProjectId && !HomeList.showsProject(it) }
+                ?.let { setOf(it.areaId?.takeIf { id -> id.isNotBlank() } ?: NO_AREA_GROUP) } ?: emptySet()
+        )
+    }
+    var query by remember { mutableStateOf("") }
     Dialog(
         onDismissRequest = onDismissRequest,
-        properties = DialogProperties(usePlatformDefaultWidth = false)
+        // Окно во весь экран, без системных отступов: затемнение, появление и закрытие рисуем сами, как у
+        // окна тегов. Нажатие мимо карточки ловит сам диалог
+        properties = DialogProperties(
+            usePlatformDefaultWidth = false,
+            decorFitsSystemWindows = false,
+            dismissOnClickOutside = false
+        )
     ) {
-        Box(
+        val dialogWindow = (androidx.compose.ui.platform.LocalView.current.parent as? androidx.compose.ui.window.DialogWindowProvider)?.window
+        // Затемнение — той же силы, что у системы и у остальных окон (как в окне тегов)
+        val dimAmount = remember(dialogWindow) {
+            val amount = dialogWindow?.attributes?.dimAmount ?: 0f
+            dialogWindow?.setWindowAnimations(R.style.DialogWindowAnimationNone)
+            dialogWindow?.clearFlags(android.view.WindowManager.LayoutParams.FLAG_DIM_BEHIND)
+            dialogWindow?.addFlags(android.view.WindowManager.LayoutParams.FLAG_LAYOUT_NO_LIMITS)
+            if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.R) {
+                dialogWindow?.let { window ->
+                    window.attributes = window.attributes.apply {
+                        fitInsetsTypes = 0
+                        layoutInDisplayCutoutMode = android.view.WindowManager.LayoutParams.LAYOUT_IN_DISPLAY_CUTOUT_MODE_ALWAYS
+                    }
+                }
+            }
+            amount
+        }
+        val appear = remember { androidx.compose.animation.core.Animatable(0f) }
+        var closing by remember { mutableStateOf(false) }
+        val scope = rememberCoroutineScope()
+        val dialogView = androidx.compose.ui.platform.LocalView.current
+        LaunchedEffect(Unit) {
+            appear.animateTo(1f, androidx.compose.animation.core.tween(ThingsMotion.QUICK, easing = androidx.compose.animation.core.FastOutSlowInEasing))
+        }
+
+        /** Закрывает окно: карточка сжимается и гаснет вместе с затемнением, затем окно убирается. */
+        fun closeWindow() {
+            if (closing) return
+            closing = true
+            dialogView.hideSoftKeyboardNow()
+            scope.launch {
+                appear.animateTo(0f, androidx.compose.animation.core.tween(ThingsMotion.FAST, easing = androidx.compose.animation.core.LinearEasing))
+                onDismissRequest()
+            }
+        }
+        androidx.activity.compose.BackHandler { closeWindow() }
+
+        val scrimColor = ThingsTheme.colors.scrim
+        BoxWithConstraints(
             modifier = Modifier
                 .fillMaxSize()
-                .clickable(
-                    interactionSource = remember { androidx.compose.foundation.interaction.MutableInteractionSource() },
-                    indication = null,
-                    onClick = onDismissRequest
-                ),
-            contentAlignment = Alignment.Center
+                .drawBehind { drawRect(scrimColor, alpha = dimAmount * appear.value) }
+                .pointerInput(Unit) { detectTapGestures(onTap = { closeWindow() }) },
+            contentAlignment = Alignment.TopCenter
         ) {
             Card(
                 shape = ThingsTheme.shapes.dialogShape,
@@ -85,13 +148,19 @@ fun ThingsMoveDialog(
                     containerColor = ThingsTheme.colors.overlaySurface
                 ),
                 modifier = Modifier
-                    .width(MaterialTheme.dimens.dialogWidth)
-                    .height(MaterialTheme.dimens.dialogHeight)
-                    .clickable(
-                        interactionSource = remember { androidx.compose.foundation.interaction.MutableInteractionSource() },
-                        indication = null,
-                        onClick = {} // Consume taps inside card
-                    )
+                    // Ближе к верху экрана, как в эталоне
+                    .padding(top = maxHeight * MOVE_DIALOG_TOP_FRACTION)
+                    .graphicsLayer {
+                        val progress = appear.value
+                        val fromScale = if (closing) ThingsMotion.DIALOG_EXIT_SCALE else ThingsMotion.DIALOG_ENTER_SCALE
+                        val scale = fromScale + (1f - fromScale) * progress
+                        scaleX = scale
+                        scaleY = scale
+                        alpha = progress
+                    }
+                    .width(maxWidth * MaterialTheme.dimens.dialogWidthFraction)
+                    .height(maxHeight * MaterialTheme.dimens.dialogHeightFraction)
+                    .pointerInput(Unit) { detectTapGestures() }
             ) {
                 Column(
                     modifier = Modifier
@@ -108,7 +177,7 @@ fun ThingsMoveDialog(
                             .padding(
                                 start = MaterialTheme.dimens.dialogInnerContentPadding,
                                 end = MaterialTheme.dimens.dialogInnerContentPadding,
-                                bottom = ThingsSpacing.M
+                                bottom = ThingsSpacing.L // до поля поиска — как между строками списка
                             ),
                         horizontalArrangement = Arrangement.SpaceBetween,
                         verticalAlignment = Alignment.CenterVertically
@@ -130,7 +199,7 @@ fun ThingsMoveDialog(
                                 .size(MaterialTheme.dimens.dialogHeaderButtonSize)
                                 .clip(CircleShape)
                                 .background(ThingsTheme.colors.overlayControl)
-                                .clickable { onDismissRequest() },
+                                .clickable { closeWindow() },
                             contentAlignment = Alignment.Center
                         ) {
                             Icon(
@@ -142,22 +211,44 @@ fun ThingsMoveDialog(
                         }
                     }
 
+                    MoveSearchField(
+                        query = query,
+                        onQueryChange = { query = it },
+                        modifier = Modifier
+                            .padding(horizontal = MaterialTheme.dimens.dialogInnerContentPadding)
+                            // Зазор до «Входящих» — как между строками списка (их поле S_PLUS + промежуток XXS)
+                            .padding(bottom = ThingsSpacing.S_PLUS)
+                    )
+
                     // Content List
                     LazyColumn(
                         modifier = Modifier
                             .fillMaxWidth()
                             .weight(1f)
-                            .padding(horizontal = ThingsSpacing.XS_PLUS),
-                        contentPadding = PaddingValues(vertical = ThingsSpacing.XS),
+                            // Строки и разделители — чуть дальше от краёв окна, чем крестик и поле поиска:
+                            // этот отступ + их собственный L_PLUS
+                            .padding(horizontal = MaterialTheme.dimens.dialogInnerContentPadding - ThingsSpacing.M),
+                        contentPadding = PaddingValues(top = ThingsSpacing.XXS, bottom = ThingsSpacing.XS),
                         verticalArrangement = Arrangement.spacedBy(ThingsSpacing.XXS)
                     ) {
+                        if (query.isNotBlank()) {
+                            searchResults(
+                                query = query.trim(),
+                                projects = if (areasOnly) emptyList() else projects.filter { ListRules.isOpenProject(it) },
+                                areas = areas,
+                                currentProjectId = currentProjectId,
+                                currentAreaId = currentAreaId,
+                                allTasks = allTasks,
+                                onMove = onMove
+                            )
+                        } else {
                         // 1. Inbox Option
                         if (!areasOnly) item {
                             val isSelected = currentProjectId == null && currentAreaId == null && currentIsInbox
                             MoveDialogRow(
                                 title = stringResource(R.string.category_inbox),
                                 icon = Icons.Default.Inbox,
-                                iconColor = ThingsTheme.colors.accent,
+                                iconColor = ThingsTheme.colors.overlayContentSecondary,
                                 isSelected = isSelected,
                                 onClick = {
                                     onMove(null, null, true)
@@ -170,7 +261,7 @@ fun ThingsMoveDialog(
                             val isSelected = currentProjectId == null && currentAreaId == null && !currentIsInbox
                             MoveDialogRow(
                                 title = stringResource(if (areasOnly) R.string.move_no_area else R.string.move_no_project),
-                                icon = Icons.Default.Block,
+                                icon = Icons.Default.Close,
                                 iconColor = ThingsTheme.colors.overlayContentSecondary,
                                 isSelected = isSelected,
                                 onClick = {
@@ -182,7 +273,7 @@ fun ThingsMoveDialog(
                         // Horizontal Divider
                         item {
                             HorizontalDivider(
-                                modifier = Modifier.padding(vertical = ThingsSpacing.S),
+                                modifier = Modifier.padding(vertical = ThingsSpacing.XS, horizontal = ThingsSpacing.L_PLUS),
                                 color = ThingsTheme.colors.overlayDivider,
                                 thickness = ThingsStroke.THIN
                             )
@@ -190,10 +281,11 @@ fun ThingsMoveDialog(
 
                         // Filters for Projects
                         val projectsWithNoArea = projects.filter { it.areaId.isNullOrBlank() }
+                        val (noAreaShown, noAreaLater) = splitLater(projectsWithNoArea, expandedLater, NO_AREA_GROUP)
 
                         // 3. Projects without Area
                         if (!areasOnly && projectsWithNoArea.isNotEmpty()) {
-                            items(projectsWithNoArea, key = { "proj_no_area_${it.id}" }) { project ->
+                            items(noAreaShown, key = { "proj_no_area_${it.id}" }) { project ->
                                 val isSelected = currentProjectId == project.id
                                 val projectTasks = allTasks.filter { it.item.projectId == project.id }
                                 val completedCount = projectTasks.count { it.item.isClosed }
@@ -213,6 +305,7 @@ fun ThingsMoveDialog(
                                     }
                                 )
                             }
+                            laterToggleItem(NO_AREA_GROUP, noAreaLater, expandedLater) { expandedLater = it }
                         }
 
                         // 4. Areas and Projects grouped under Areas
@@ -220,7 +313,7 @@ fun ThingsMoveDialog(
                             // Horizontal divider before each area
                             item(key = "divider_${area.id}") {
                                 HorizontalDivider(
-                                    modifier = Modifier.padding(top = ThingsSpacing.M, bottom = ThingsSpacing.XS, start = ThingsSpacing.M, end = ThingsSpacing.M),
+                                    modifier = Modifier.padding(top = ThingsSpacing.XS, bottom = ThingsSpacing.XS, start = ThingsSpacing.L_PLUS, end = ThingsSpacing.L_PLUS),
                                     color = ThingsTheme.colors.overlayDivider,
                                     thickness = ThingsStroke.THIN
                                 )
@@ -242,7 +335,8 @@ fun ThingsMoveDialog(
 
                             // Projects belonging to this Area
                             val areaProjects = if (areasOnly) emptyList() else projects.filter { it.areaId == area.id }
-                            items(areaProjects, key = { "proj_${area.id}_${it.id}" }) { project ->
+                            val (areaShown, areaLater) = splitLater(areaProjects, expandedLater, area.id)
+                            items(areaShown, key = { "proj_${area.id}_${it.id}" }) { project ->
                                 val isSelected = currentProjectId == project.id
                                 val projectTasks = allTasks.filter { it.item.projectId == project.id }
                                 val completedCount = projectTasks.count { it.item.isClosed }
@@ -262,6 +356,8 @@ fun ThingsMoveDialog(
                                     }
                                 )
                             }
+                            laterToggleItem(area.id, areaLater, expandedLater) { expandedLater = it }
+                        }
                         }
                     }
                 }
@@ -292,9 +388,13 @@ private fun MoveDialogRow(
             .fillMaxWidth()
             .padding(start = indentation)
             .clip(ThingsTheme.shapes.rowShape)
-            .background(if (isSelected) ThingsTheme.colors.overlayRowSelected else Color.Transparent)
-            .clickable { onClick() }
-            .padding(horizontal = ThingsSpacing.M, vertical = ThingsSpacing.S_PLUS),
+            // Текущее место отмечено только галочкой, как в эталоне; нажатие подсвечивает строку
+            .clickable(
+                interactionSource = remember { androidx.compose.foundation.interaction.MutableInteractionSource() },
+                indication = androidx.compose.foundation.LocalIndication.current
+            ) { onClick() }
+            // Чуть дальше от краёв окна, чем разделители и поле поиска
+            .padding(horizontal = ThingsSpacing.L_PLUS, vertical = ThingsSpacing.S_PLUS),
         verticalAlignment = Alignment.CenterVertically
     ) {
         if (isProject) {
@@ -305,6 +405,8 @@ private fun MoveDialogRow(
                 ProjectProgressArc(
                     completed = completed,
                     total = total,
+                    // Голубой акцент темы
+                    color = ThingsTheme.colors.accent,
                     dashed = dashed,
                     modifier = Modifier.size(ThingsIconSize.M)
                 )
@@ -322,6 +424,7 @@ private fun MoveDialogRow(
         Text(
             text = title,
             color = ThingsTheme.colors.overlayContent,
+            // Проекты и «Входящие» — обычным начертанием (стиль dialogRow), заголовки областей — жирным
             style = ThingsTheme.type.dialogRow,
             fontWeight = if (isAreaHeader) FontWeight.Bold else FontWeight.Normal,
             maxLines = 1,
@@ -336,5 +439,128 @@ private fun MoveDialogRow(
                 modifier = Modifier.size(ThingsIconSize.XS)
             )
         }
+    }
+}
+
+/** Ключ группы проектов без области — для раскрытия поздних проектов. */
+private const val NO_AREA_GROUP = "no_area"
+
+/**
+ * Открытые проекты группы, которые видны ([first]), и более поздние ([second]) — отложенные и запланированные,
+ * как в «Всех проектах»: сначала запланированные по дате, затем отложенные. Раскрытая группа ([group] в
+ * [expanded]) показывает и поздние — после активных.
+ */
+private fun splitLater(list: List<Item>, expanded: Set<String>, group: String): Pair<List<Item>, List<Item>> {
+    // Закрытые проекты сюда не попадают: переносить в них нечего
+    val (active, later) = list.filter { ListRules.isOpenProject(it) }.partition { HomeList.showsProject(it) }
+    val (scheduled, someday) = later.partition { it.start != Item.START_SOMEDAY && it.startDate != null }
+    val laterOrdered = scheduled.sortedBy { it.startDate } + someday
+    return if (group in expanded) Pair(active + laterOrdered, laterOrdered) else Pair(active, laterOrdered)
+}
+
+/** Строка «Показать / Скрыть N более поздних проектов» под проектами группы, если поздние есть. */
+private fun androidx.compose.foundation.lazy.LazyListScope.laterToggleItem(
+    group: String,
+    later: List<Item>,
+    expanded: Set<String>,
+    onExpandedChange: (Set<String>) -> Unit
+) {
+    if (later.isEmpty()) return
+    item(key = "later_$group") {
+        val isExpanded = group in expanded
+        Text(
+            text = pluralStringResource(
+                if (isExpanded) R.plurals.all_projects_hide_later else R.plurals.all_projects_show_later,
+                later.size, later.size
+            ),
+            style = ThingsTheme.type.bodyMedium.copy(color = ThingsTheme.colors.overlayContentSecondary),
+            modifier = Modifier
+                .fillMaxWidth()
+                .clickable(
+                    interactionSource = remember { androidx.compose.foundation.interaction.MutableInteractionSource() },
+                    indication = null
+                ) { onExpandedChange(if (isExpanded) expanded - group else expanded + group) }
+                .padding(horizontal = ThingsSpacing.L_PLUS, vertical = ThingsSpacing.S)
+        )
+    }
+}
+
+/** Окно «Переместить» начинается на этой доле высоты экрана — ближе к верху, как в эталоне Things */
+private const val MOVE_DIALOG_TOP_FRACTION = 0.17f
+
+/** Поле поиска по проектам и областям — залитая плашка с лупой, как в эталоне. */
+@Composable
+private fun MoveSearchField(query: String, onQueryChange: (String) -> Unit, modifier: Modifier = Modifier) {
+    Row(
+        modifier = modifier
+            .fillMaxWidth()
+            .height(MaterialTheme.dimens.dialogFieldHeight)
+            .clip(CircleShape)
+            .background(ThingsTheme.colors.overlayControl)
+            .padding(horizontal = ThingsSpacing.M),
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.Center
+    ) {
+        Icon(
+            imageVector = Icons.Default.Search,
+            contentDescription = null,
+            tint = ThingsTheme.colors.overlayContentSecondary,
+            modifier = Modifier.size(ThingsIconSize.S)
+        )
+        Spacer(modifier = Modifier.width(ThingsSpacing.XS_PLUS))
+        Box(modifier = if (query.isEmpty()) Modifier else Modifier.weight(1f)) {
+            if (query.isEmpty()) {
+                Text(
+                    text = stringResource(R.string.cd_search),
+                    style = ThingsTheme.type.dialogRow.copy(color = ThingsTheme.colors.overlayContentSecondary)
+                )
+            }
+            androidx.compose.foundation.text.BasicTextField(
+                value = query,
+                onValueChange = onQueryChange,
+                singleLine = true,
+                textStyle = ThingsTheme.type.dialogRow.copy(color = ThingsTheme.colors.overlayContent),
+                cursorBrush = SolidColor(ThingsTheme.colors.accent),
+                modifier = if (query.isEmpty()) Modifier.matchParentSize() else Modifier.fillMaxWidth()
+            )
+        }
+    }
+}
+
+/** Результаты поиска: проекты и области, в названии которых есть [query]. */
+private fun androidx.compose.foundation.lazy.LazyListScope.searchResults(
+    query: String,
+    projects: List<Item>,
+    areas: List<Area>,
+    currentProjectId: String?,
+    currentAreaId: String?,
+    allTasks: List<ItemWithChecklist>,
+    onMove: (projectId: String?, areaId: String?, moveToInbox: Boolean) -> Unit
+) {
+    val foundProjects = projects.filter { it.title.contains(query, ignoreCase = true) }
+    val foundAreas = areas.filter { it.title.contains(query, ignoreCase = true) }
+    items(foundProjects, key = { "found_proj_${it.id}" }) { project ->
+        val projectTasks = allTasks.filter { it.item.projectId == project.id }
+        MoveDialogRow(
+            title = project.title,
+            icon = null,
+            iconColor = ThingsTheme.colors.overlayContent,
+            isSelected = currentProjectId == project.id,
+            isProject = true,
+            completed = projectTasks.count { it.item.isClosed },
+            total = projectTasks.size,
+            dashed = project.start == Item.START_SOMEDAY,
+            onClick = { onMove(project.id, project.areaId, false) }
+        )
+    }
+    items(foundAreas, key = { "found_area_${it.id}" }) { area ->
+        MoveDialogRow(
+            title = area.title,
+            icon = AppIcons.Area,
+            iconColor = ThingsTheme.colors.area,
+            isSelected = currentAreaId == area.id && currentProjectId == null,
+            isAreaHeader = true,
+            onClick = { onMove(null, area.id, false) }
+        )
     }
 }

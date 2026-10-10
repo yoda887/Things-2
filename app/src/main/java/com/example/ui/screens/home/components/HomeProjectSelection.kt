@@ -81,7 +81,8 @@ fun BoxScope.HomeProjectBatchLayer(
     val finish: () -> Unit = { dialog = null; onDone() }
 
     BatchActionToolbar(
-        isVisible = isActive,
+        // Пока открыто окно «Переместить», панель скрыта — как у задач
+        isVisible = isActive && dialog != ProjectBatchDialog.MOVE,
         selectedCount = selected.size,
         onWhenClick = { dialog = ProjectBatchDialog.WHEN },
         onMoveClick = { dialog = ProjectBatchDialog.MOVE },
