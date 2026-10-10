@@ -5,8 +5,9 @@ import com.example.data.model.Item
 import com.example.data.model.ItemWithChecklist
 
 /**
- * Область: что в ней показывается, в каком порядке и на какие разделы делится — открытые проекты
- * области, затем её задачи без проекта по разделам: текущие, «Планы», «Когда-нибудь».
+ * Область: что в ней показывается, в каком порядке и на какие разделы делится — активные проекты
+ * области, затем её задачи без проекта по разделам: текущие, «Планы», «Когда-нибудь». Проекты с датой
+ * старта позже сегодняшнего дня стоят в «Планах» (по дате), отложенные — в «Когда-нибудь», перед задачами.
  * Закреплено тестами AreaScreenTest.
  */
 object AreaList {
@@ -33,10 +34,15 @@ object AreaList {
         val projects: List<Item>,
         val current: List<ItemWithChecklist>,
         val upcoming: List<ItemWithChecklist>,
-        val someday: List<ItemWithChecklist>
+        val someday: List<ItemWithChecklist>,
+        /** Запланированные проекты — в «Планах», по дате старта */
+        val upcomingProjects: List<Item> = emptyList(),
+        /** Отложенные проекты — в «Когда-нибудь» */
+        val somedayProjects: List<Item> = emptyList()
     ) {
-        val isEmpty: Boolean get() = projects.isEmpty() && current.isEmpty() && upcoming.isEmpty() && someday.isEmpty()
-        val hasLater: Boolean get() = upcoming.isNotEmpty() || someday.isNotEmpty()
+        val isEmpty: Boolean get() = projects.isEmpty() && current.isEmpty() && !hasLater
+        val hasLater: Boolean get() =
+            upcoming.isNotEmpty() || someday.isNotEmpty() || upcomingProjects.isNotEmpty() || somedayProjects.isNotEmpty()
     }
 
     fun content(
@@ -47,11 +53,16 @@ object AreaList {
     ): Content {
         val own = tasks.filter { isOwnTask(it.item, areaId) }
         val bySection = own.groupBy { sectionOf(it.item, bounds) }
+        val areaProjects = projects.filter { areaId != null && it.areaId == areaId && ListRules.isOpenProject(it) }
+        val (active, later) = areaProjects.partition { HomeList.showsProject(it, bounds) }
+        val (someday, scheduled) = later.partition { it.start == Item.START_SOMEDAY }
         return Content(
-            projects = projects.filter { areaId != null && it.areaId == areaId && ListRules.isOpenProject(it) },
+            projects = active,
             current = bySection[Section.CURRENT].orEmpty(),
             upcoming = bySection[Section.UPCOMING].orEmpty(),
-            someday = bySection[Section.SOMEDAY].orEmpty()
+            someday = bySection[Section.SOMEDAY].orEmpty(),
+            upcomingProjects = scheduled.sortedBy { it.startDate },
+            somedayProjects = someday
         )
     }
 

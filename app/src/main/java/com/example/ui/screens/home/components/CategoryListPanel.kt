@@ -1,5 +1,6 @@
 package com.example.ui.screens.home.components
 
+import com.example.domain.lists.HomeList
 import com.example.domain.lists.AllProjectsList
 import com.example.domain.lists.PlaceGroups
 import com.example.domain.lists.HeadingOrder
@@ -1041,6 +1042,8 @@ fun ThingsCategoryListPanel(
                                     dateBadge = when (screen) {
                                         ActiveScreen.UPCOMING -> monthTaskBadges[task.id]
                                         ActiveScreen.ALL_PROJECTS -> if (LogbookList.includesProject(task)) null else AllProjectsScreen.laterDateBadge(task)
+                                        // В «Планах» области — дата старта запланированного проекта
+                                        ActiveScreen.AREA_DETAIL -> if (HomeList.showsProject(task)) null else AllProjectsScreen.laterDateBadge(task)
                                         else -> null
                                     },
                                     // Под закрытым проектом — его область, как в Logbook Things

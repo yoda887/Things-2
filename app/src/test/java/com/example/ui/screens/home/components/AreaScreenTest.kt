@@ -92,4 +92,27 @@ class AreaScreenTest {
         assertEquals(listOf("p"), content.projects.map { it.id })
         assertTrue(AreaList.content("a", emptyList(), listOf(done), bounds).isEmpty)
     }
+
+    @Test
+    fun laterProjects_inUpcomingAndSomedaySections_beforeTasks() {
+        val day = 24 * 3600 * 1000L
+        fun proj(id: String, start: Int = Item.START_ANYTIME, startDate: Long? = null) =
+            Item(id = id, title = id, type = Item.TYPE_PROJECT, areaId = "a", start = start, startDate = startDate)
+        val active = proj("active")
+        val soon = proj("soon", startDate = bounds.endOfToday + day)
+        val sooner = proj("sooner", startDate = bounds.endOfToday + 1000L)
+        val shelved = proj("shelved", start = Item.START_SOMEDAY)
+        val content = AreaList.content("a", listOf(current, later, someday), listOf(soon, active, shelved, sooner), bounds)
+        assertEquals(listOf("active"), content.projects.map { it.id })
+        assertEquals(listOf("sooner", "soon"), content.upcomingProjects.map { it.id })
+        assertEquals(listOf("shelved"), content.somedayProjects.map { it.id })
+        val rows = ids(AreaScreen.rows(content, isLaterHidden = false))
+        // Проекты раздела — сразу под его заголовком, перед задачами
+        assertEquals(rows.indexOf("project:sooner"), rows.indexOf(TaskListKeys.AREA_UPCOMING_HEADING) + 1)
+        assertEquals(rows.indexOf("project:shelved"), rows.indexOf(TaskListKeys.AREA_SOMEDAY_HEADING) + 1)
+        // Только поздний проект — экран не пуст, есть переключатель
+        val onlyLater = AreaList.content("a", emptyList(), listOf(shelved), bounds)
+        assertFalse(onlyLater.isEmpty)
+        assertTrue(onlyLater.hasLater)
+    }
 }
