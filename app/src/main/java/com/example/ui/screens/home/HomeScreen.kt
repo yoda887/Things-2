@@ -1,5 +1,7 @@
 package com.example.ui.screens.home
 
+import com.example.ui.screens.home.components.HomeProjectBatchLayer
+import com.example.ui.screens.home.components.ProjectSwipeWhenDialog
 import com.example.domain.lists.HomeList
 import java.util.UUID
 import com.example.ui.screens.home.components.newTaskPlace
@@ -234,6 +236,11 @@ fun ThingsHomeScreen(viewModel: ThingsViewModel = hiltViewModel()) {
     var newTaskTitlePrefill by remember { mutableStateOf("") }
     var isListDialogActive by remember { mutableStateOf(false) }
     var isSelectionMode by remember { mutableStateOf(false) }
+    // Множественный выбор проектов на главном экране (свайп влево по проекту) и «Когда» по свайпу вправо
+    var selectedProjectIds by remember { mutableStateOf(emptySet<String>()) }
+    val isProjectSelectionMode = selectedProjectIds.isNotEmpty()
+    var swipeWhenProject by remember { mutableStateOf<Item?>(null) }
+    var swipeWhenProjectOrigin by remember { mutableStateOf<androidx.compose.ui.geometry.Offset?>(null) }
     var selectedTaskIds by remember { mutableStateOf(setOf<String>()) }
 
     // [ИЗМЕНЕНИЕ]: Состояния для недавно искавшихся объектов и подсветки конкретной задачи
@@ -311,7 +318,8 @@ fun ThingsHomeScreen(viewModel: ThingsViewModel = hiltViewModel()) {
             // На особых списках проектов она, как на главном экране, открывает меню: задача, проект, область
             AnimatedVisibility(
                 visible = activeScreen != ActiveScreen.LOGBOOK && (fabDragController.isDragging || fabDragController.isSettling ||
-                    (inlineExpandedTaskId == null && !showFabMenu && !isListDialogActive && !showAddDialog && !isSelectionMode)),
+                    (inlineExpandedTaskId == null && !showFabMenu && !isListDialogActive && !showAddDialog && !isSelectionMode &&
+                        !(activeScreen == ActiveScreen.HOME && isProjectSelectionMode))),
                 enter = slideInVertically(
                     initialOffsetY = { it * 2 },
                     animationSpec = spring(
@@ -416,7 +424,24 @@ fun ThingsHomeScreen(viewModel: ThingsViewModel = hiltViewModel()) {
                 composable<HomeRoute> {
                     // Применяем обертку ScreenTransitionWrapper со сплошным фоном и эффектом затемнения для уходящего экрана
                     ScreenTransitionWrapper(isStartDestination = true, backgroundColor = backgroundColor) {
+                        // Выход из выбора проектов — «Назад»
+                        androidx.activity.compose.BackHandler(enabled = isProjectSelectionMode) { selectedProjectIds = emptySet() }
+                        Box(modifier = Modifier.fillMaxSize()) {
                         ThingsHomePanel(
+                            isProjectSelectionMode = isProjectSelectionMode,
+                            selectedProjectIds = selectedProjectIds,
+                            onProjectSwipeRight = { project, origin ->
+                                swipeWhenProject = project
+                                swipeWhenProjectOrigin = origin
+                            },
+                            onProjectSwipeLeft = { project ->
+                                selectedProjectIds = if (project.id in selectedProjectIds) selectedProjectIds - project.id
+                                else selectedProjectIds + project.id
+                            },
+                            onToggleProjectSelection = { project ->
+                                selectedProjectIds = if (project.id in selectedProjectIds) selectedProjectIds - project.id
+                                else selectedProjectIds + project.id
+                            },
                             collapsedAreaIds = collapsedAreaIds,
                             onAreaExpandedChange = viewModel::setAreaExpanded,
                             allTasks = allTasksRaw,
@@ -470,6 +495,27 @@ fun ThingsHomeScreen(viewModel: ThingsViewModel = hiltViewModel()) {
                             onProjectsReordered = { viewModel.updateTasks(it) },
                             onAreasReordered = { viewModel.updateAreas(it) }
                         )
+                        HomeProjectBatchLayer(
+                            isActive = isProjectSelectionMode,
+                            selected = projects.filter { it.id in selectedProjectIds },
+                            allTasks = allTasksRaw,
+                            projects = projects,
+                            areas = areas,
+                            onEditProjects = { list, edit -> list.forEach { viewModel.editProject(it, edit) } },
+                            onDeleteProjects = { list -> list.forEach { viewModel.deleteProject(it) } },
+                            onCompleteProjects = { list -> list.forEach { viewModel.completeProject(it) } },
+                            onDuplicateProjects = { list -> list.forEach { viewModel.duplicateProject(it) } },
+                            onDone = { selectedProjectIds = emptySet() }
+                        )
+                        swipeWhenProject?.let { project ->
+                            ProjectSwipeWhenDialog(
+                                project = project,
+                                growFromOffset = swipeWhenProjectOrigin,
+                                onEditProject = { p, edit -> viewModel.editProject(p, edit) },
+                                onDismiss = { swipeWhenProject = null; swipeWhenProjectOrigin = null }
+                            )
+                        }
+                        }
                     }
                 }
                 // Helper for the category lists

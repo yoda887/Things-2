@@ -28,6 +28,10 @@
     <plurals name="all_projects_hide_later"><item quantity="one">Hide %1$d later project</item><item quantity="other">Hide %1$d later projects</item></plurals>
     <string name="all_projects_show_logged">Show logged projects</string>
     <string name="all_projects_hide_logged">Hide logged projects</string>
+    <string name="batch_delete_projects_title">Delete Projects</string>
+    <plurals name="batch_delete_projects_message"><item quantity="one">Delete %1$d selected project with its to-dos? This can’t be undone.</item><item quantity="other">Delete %1$d selected projects with their to-dos? This can’t be undone.</item></plurals>
+    <string name="batch_complete_projects_title">Complete Projects</string>
+    <plurals name="batch_complete_projects_message"><item quantity="one">Complete %1$d selected project with its open to-dos?</item><item quantity="other">Complete %1$d selected projects with their open to-dos?</item></plurals>
     <string name="tomorrow">Tomorrow</string>
     <string name="yesterday">Yesterday</string>
     <string name="cancel">Cancel</string>

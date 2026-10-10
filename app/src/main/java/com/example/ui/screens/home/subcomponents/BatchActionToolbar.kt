@@ -70,7 +70,8 @@ fun BatchActionToolbar(
     onMoveClick: () -> Unit,
     onDeleteClick: () -> Unit,
     onCompleteClick: () -> Unit,
-    onSetTagsClick: () -> Unit,
+    // null — пункта «Теги» нет (у проектов на главном экране)
+    onSetTagsClick: (() -> Unit)?,
     onSetDeadlineClick: () -> Unit,
     onDuplicateClick: () -> Unit,
     onShareClick: () -> Unit,
@@ -153,11 +154,13 @@ fun BatchActionToolbar(
                             isMoreMenuExpanded = false
                             onCompleteClick()
                         })
-                        ThingsMenuItem(stringResource(R.string.batch_action_set_tags), AppIcons.Tag, onClick = {
-                            view.performHapticFeedback(HapticFeedbackConstants.CLOCK_TICK)
-                            isMoreMenuExpanded = false
-                            onSetTagsClick()
-                        })
+                        if (onSetTagsClick != null) {
+                            ThingsMenuItem(stringResource(R.string.batch_action_set_tags), AppIcons.Tag, onClick = {
+                                view.performHapticFeedback(HapticFeedbackConstants.CLOCK_TICK)
+                                isMoreMenuExpanded = false
+                                onSetTagsClick()
+                            })
+                        }
                         ThingsMenuItem(stringResource(R.string.batch_action_set_deadline), AppIcons.Deadline, onClick = {
                             view.performHapticFeedback(HapticFeedbackConstants.CLOCK_TICK)
                             isMoreMenuExpanded = false

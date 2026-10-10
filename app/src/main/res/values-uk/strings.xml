@@ -6,6 +6,10 @@
     <plurals name="all_projects_hide_later"><item quantity="one">Сховати %1$d пізніший проєкт</item><item quantity="few">Сховати %1$d пізніші проєкти</item><item quantity="many">Сховати %1$d пізніших проєктів</item><item quantity="other">Сховати %1$d пізнішого проєкту</item></plurals>
     <string name="all_projects_show_logged">Показати завершені проєкти</string>
     <string name="all_projects_hide_logged">Сховати завершені проєкти</string>
+    <string name="batch_delete_projects_title">Видалити проєкти</string>
+    <plurals name="batch_delete_projects_message"><item quantity="one">Видалити %1$d вибраний проєкт разом із завданнями? Скасувати це не можна.</item><item quantity="few">Видалити %1$d вибрані проєкти разом із завданнями? Скасувати це не можна.</item><item quantity="many">Видалити %1$d вибраних проєктів разом із завданнями? Скасувати це не можна.</item><item quantity="other">Видалити %1$d вибраного проєкту разом із завданнями? Скасувати це не можна.</item></plurals>
+    <string name="batch_complete_projects_title">Завершити проєкти</string>
+    <plurals name="batch_complete_projects_message"><item quantity="one">Завершити %1$d вибраний проєкт разом із відкритими завданнями?</item><item quantity="few">Завершити %1$d вибрані проєкти разом із відкритими завданнями?</item><item quantity="many">Завершити %1$d вибраних проєктів разом із відкритими завданнями?</item><item quantity="other">Завершити %1$d вибраного проєкту разом із відкритими завданнями?</item></plurals>
     <string name="tomorrow">Завтра</string>
     <string name="yesterday">Вчора</string>
     <string name="area_upcoming_heading">Плани</string>

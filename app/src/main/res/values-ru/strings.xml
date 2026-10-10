@@ -6,6 +6,10 @@
     <plurals name="all_projects_hide_later"><item quantity="one">Скрыть %1$d более поздний проект</item><item quantity="few">Скрыть %1$d более поздних проекта</item><item quantity="many">Скрыть %1$d более поздних проектов</item><item quantity="other">Скрыть %1$d более поздних проекта</item></plurals>
     <string name="all_projects_show_logged">Показать завершённые проекты</string>
     <string name="all_projects_hide_logged">Скрыть завершённые проекты</string>
+    <string name="batch_delete_projects_title">Удалить проекты</string>
+    <plurals name="batch_delete_projects_message"><item quantity="one">Удалить %1$d выбранный проект вместе с задачами? Отменить это нельзя.</item><item quantity="few">Удалить %1$d выбранных проекта вместе с задачами? Отменить это нельзя.</item><item quantity="many">Удалить %1$d выбранных проектов вместе с задачами? Отменить это нельзя.</item><item quantity="other">Удалить %1$d выбранных проекта вместе с задачами? Отменить это нельзя.</item></plurals>
+    <string name="batch_complete_projects_title">Завершить проекты</string>
+    <plurals name="batch_complete_projects_message"><item quantity="one">Завершить %1$d выбранный проект вместе с открытыми задачами?</item><item quantity="few">Завершить %1$d выбранных проекта вместе с открытыми задачами?</item><item quantity="many">Завершить %1$d выбранных проектов вместе с открытыми задачами?</item><item quantity="other">Завершить %1$d выбранных проекта вместе с открытыми задачами?</item></plurals>
     <string name="tomorrow">Завтра</string>
     <string name="yesterday">Вчера</string>
     <string name="area_upcoming_heading">Планы</string>

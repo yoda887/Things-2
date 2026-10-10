@@ -67,7 +67,7 @@ import java.util.Calendar
  * Выбранное в «Когда» для проекта — по сохранённым полям старта. [Item.section] здесь не годится: это
  * раздел списка, и дедлайн на сегодня переносит туда даже проект «Когда-нибудь».
  */
-private val Item.startSection: TaskSection
+internal val Item.startSection: TaskSection
     get() = when {
         start == Item.START_SOMEDAY -> TaskSection.SOMEDAY
         startDate != null -> TaskSection.UPCOMING

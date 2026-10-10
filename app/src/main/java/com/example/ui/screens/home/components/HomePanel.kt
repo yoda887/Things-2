@@ -1,5 +1,9 @@
 package com.example.ui.screens.home.components
 
+import androidx.compose.ui.layout.findRootCoordinates
+import androidx.compose.ui.layout.boundsInRoot
+import com.example.ui.screens.home.subcomponents.SelectionCircle
+import com.example.ui.components.swipe.SwipeableTaskContainer
 import com.example.ui.viewmodel.ActiveScreen
 import com.example.domain.lists.InboxList
 import com.example.R
@@ -218,6 +222,12 @@ fun ThingsHomePanel(
     onUpdateArea: (Area) -> Unit = {},
     onProjectsReordered: (List<Item>) -> Unit = {},
     onAreasReordered: (List<Area>) -> Unit = {},
+    // Свайпы по проекту, как у задач: вправо — «Когда», влево — множественный выбор
+    isProjectSelectionMode: Boolean = false,
+    selectedProjectIds: Set<String> = emptySet(),
+    onProjectSwipeRight: (Item, Offset?) -> Unit = { _, _ -> },
+    onProjectSwipeLeft: (Item) -> Unit = {},
+    onToggleProjectSelection: (Item) -> Unit = {},
     // Свёрнутые области — запоминаются между запусками; меняет их только пользователь (не перетаскивание)
     collapsedAreaIds: Set<String> = emptySet(),
     onAreaExpandedChange: (areaId: String, expanded: Boolean) -> Unit = { _, _ -> }
@@ -668,7 +678,12 @@ fun ThingsHomePanel(
                         onExpandArea = { areaId ->
                             if (expandedStates[areaId] == false) onAreaExpandedChange(areaId, true)
                             expandedStates[areaId] = true
-                        }
+                        },
+                        isSelectionMode = isProjectSelectionMode,
+                        isSelected = treeItem.project.id in selectedProjectIds,
+                        onSwipeRight = onProjectSwipeRight,
+                        onSwipeLeft = onProjectSwipeLeft,
+                        onToggleSelect = onToggleProjectSelection
                     )
                 }
                 is HomeTreeItem.AreaHeaderItem -> {
@@ -1171,8 +1186,15 @@ private fun LazyItemScope.ProjectItemRow(
     onEditingProjectIdChange: (String?) -> Unit,
     onLocalProjectsListChange: (List<Item>) -> Unit,
     onProjectsReordered: (List<Item>) -> Unit,
-    onExpandArea: (String) -> Unit
+    onExpandArea: (String) -> Unit,
+    isSelectionMode: Boolean,
+    isSelected: Boolean,
+    onSwipeRight: (Item, Offset?) -> Unit,
+    onSwipeLeft: (Item) -> Unit,
+    onToggleSelect: (Item) -> Unit
 ) {
+    // Смещение центра строки от центра экрана: из него диалог «Когда» вырастает, как у задач
+    var rowCenter by remember { mutableStateOf<Offset?>(null) }
     val projectTasks = remember(allTasks, project.id) {
         allTasks.filter { it.item.projectId == project.id }
     }
@@ -1223,6 +1245,35 @@ private fun LazyItemScope.ProjectItemRow(
             )
         }
 
+        // Перетаскивание — на внешнем контейнере свайпа, как у задач: внутри него долгое нажатие
+        // перехватывал жест свайпа, и проект не поднимался
+        SwipeableTaskContainer(
+            modifier = Modifier
+                .onGloballyPositioned { coordinates ->
+                    val root = coordinates.findRootCoordinates()
+                    rowCenter = coordinates.boundsInRoot().center - Offset(root.size.width / 2f, root.size.height / 2f)
+                }
+                // В режиме выбора проекты не перетаскиваются: нажатие только отмечает
+                .then(
+                    if (isSelectionMode) Modifier
+                    else Modifier.projectDragAndDrop(
+                        state = dragDropState,
+                        project = project,
+                        originalProjects = originalProjects,
+                        localProjectsList = localProjectsList,
+                        areas = areas,
+                        expandedStates = expandedStates,
+                        onLocalProjectsListChange = onLocalProjectsListChange,
+                        onProjectsReordered = onProjectsReordered,
+                        onExpandArea = onExpandArea
+                    )
+                ),
+            onSwipeLeft = { onSwipeLeft(project) },
+            onSwipeRight = { onSwipeRight(project, rowCenter) },
+            enabled = !isEditing && dragDropState.draggedItemKey == null,
+            // В режиме выбора свайп вправо «Когда» не вызывает — как у задач
+            swipeRightEnabled = !isSelectionMode
+        ) {
         Row(
             modifier = Modifier
                 .graphicsLayer {
@@ -1239,21 +1290,13 @@ private fun LazyItemScope.ProjectItemRow(
                 .clip(projectChipShape)
                 .background(
                     if (isDragging || dragElev > ThingsElevation.NONE) cardSurfaceColor
+                    else if (isSelected) ThingsTheme.colors.accentSelection
                     else if (isEditing) ThingsTheme.colors.accent.copy(alpha = ThingsAlpha.SUBTLE)
                     else Color.Transparent
                 )
-                .projectDragAndDrop(
-                    state = dragDropState,
-                    project = project,
-                    originalProjects = originalProjects,
-                    localProjectsList = localProjectsList,
-                    areas = areas,
-                    expandedStates = expandedStates,
-                    onLocalProjectsListChange = onLocalProjectsListChange,
-                    onProjectsReordered = onProjectsReordered,
-                    onExpandArea = onExpandArea
-                )
-                .clickable(enabled = !isEditing && !isDragging) { onProjectClick(project) }
+                .clickable(enabled = !isEditing && !isDragging) {
+                    if (isSelectionMode) onToggleSelect(project) else onProjectClick(project)
+                }
                 .padding(horizontal = MaterialTheme.dimens.homeRowInset),
             verticalAlignment = Alignment.CenterVertically
         ) {
@@ -1348,6 +1391,16 @@ private fun LazyItemScope.ProjectItemRow(
                     overflow = TextOverflow.Ellipsis
                 )
             }
+            androidx.compose.animation.AnimatedVisibility(
+                visible = isSelectionMode,
+                enter = androidx.compose.animation.scaleIn() + androidx.compose.animation.fadeIn() +
+                    androidx.compose.animation.expandHorizontally(),
+                exit = androidx.compose.animation.scaleOut() + androidx.compose.animation.fadeOut() +
+                    androidx.compose.animation.shrinkHorizontally()
+            ) {
+                SelectionCircle(isSelected = isSelected, isDragSelecting = false, onToggle = { onToggleSelect(project) })
+            }
+        }
         }
     }
 }

@@ -50,8 +50,6 @@ import kotlinx.coroutines.launch
 
 // Колонка чекбокса от края строки; кружок выбора и зазор кольца отметки
 private val ROW_CHECKBOX_COLUMN_START = 10.dp
-private val SELECTION_CIRCLE_SIZE = 28.dp
-private val SELECTION_RING_GAP = 2.dp
 
 private const val COMPLETION_FILL_MS = 350
 
@@ -66,7 +64,6 @@ private const val FOUND_SCALE_DOWN_MS = 650
 private const val TITLE_PRESS_MS = 70L
 private const val CARD_PRESS_MS = 50L
 private const val COMPLETE_TOGGLE_DELAY_MS = 220L
-private const val SELECT_BOUNCE_MS = 80
 private val ROW_META_ICON_SIZE = 13.dp
 private val DUE_ICON_SIZE = 15.dp
 private const val DUE_TEXT_ALPHA = 0.85f
@@ -550,103 +547,7 @@ fun TaskItemRow(
             ) + androidx.compose.animation.fadeIn() + androidx.compose.animation.expandHorizontally(),
             exit = androidx.compose.animation.scaleOut() + androidx.compose.animation.fadeOut() + androidx.compose.animation.shrinkHorizontally()
         ) {
-            val targetBorderColor = when {
-                isSelected -> ThingsTheme.colors.accent
-                isDragSelecting -> ThingsTheme.colors.accent.copy(alpha = ThingsAlpha.HALF)
-                else -> ThingsTheme.colors.checkboxBorder
-            }
-            val animatedBorderColor by androidx.compose.animation.animateColorAsState(
-                targetValue = targetBorderColor,
-                animationSpec = androidx.compose.animation.core.tween(durationMillis = ThingsMotion.BASE),
-                label = "selectionBorderColor"
-            )
-            val animatedCheckScale by androidx.compose.animation.core.animateFloatAsState(
-                targetValue = if (isSelected) 1f else 0f,
-                animationSpec = androidx.compose.animation.core.spring(
-                    dampingRatio = androidx.compose.animation.core.Spring.DampingRatioMediumBouncy,
-                    stiffness = androidx.compose.animation.core.Spring.StiffnessMediumLow
-                ),
-                label = "selectionCheckScale"
-            )
-
-            val animatedDragSelectScale by androidx.compose.animation.core.animateFloatAsState(
-                targetValue = if (isDragSelecting) 1.14f else 1f,
-                animationSpec = androidx.compose.animation.core.tween(durationMillis = ThingsMotion.BASE),
-                label = "dragSelectScale"
-            )
-
-            val iconBounceScale = remember { androidx.compose.animation.core.Animatable(1f) }
-            var isInitialComposition by remember { mutableStateOf(true) }
-
-            LaunchedEffect(isSelected) {
-                if (isInitialComposition) {
-                    isInitialComposition = false
-                } else {
-                    iconBounceScale.animateTo(
-                        targetValue = 1.18f,
-                        animationSpec = androidx.compose.animation.core.tween(
-                            durationMillis = SELECT_BOUNCE_MS,
-                            easing = androidx.compose.animation.core.FastOutSlowInEasing
-                        )
-                    )
-                    iconBounceScale.animateTo(
-                        targetValue = 1.0f,
-                        animationSpec = androidx.compose.animation.core.spring(
-                            dampingRatio = androidx.compose.animation.core.Spring.DampingRatioMediumBouncy,
-                            stiffness = androidx.compose.animation.core.Spring.StiffnessMediumLow
-                        )
-                    )
-                }
-            }
-
-            Row(verticalAlignment = Alignment.CenterVertically) {
-                Spacer(modifier = Modifier.width(ThingsSpacing.S))
-                val view = androidx.compose.ui.platform.LocalView.current
-                Box(
-                    modifier = Modifier
-                        .size(SELECTION_CIRCLE_SIZE)
-                        .graphicsLayer {
-                            scaleX = iconBounceScale.value * animatedDragSelectScale
-                            scaleY = iconBounceScale.value * animatedDragSelectScale
-                        }
-                        .clickable(
-                            interactionSource = remember { androidx.compose.foundation.interaction.MutableInteractionSource() },
-                            indication = null
-                        ) {
-                            view.performHapticFeedback(android.view.HapticFeedbackConstants.CLOCK_TICK)
-                            onToggleSelect()
-                        },
-                    contentAlignment = Alignment.Center
-                ) {
-                    val selectionFill = ThingsTheme.colors.accent
-                    androidx.compose.foundation.Canvas(
-                        modifier = Modifier.size(ThingsIconSize.XL)
-                    ) {
-                        val strokeWidth = ThingsStroke.BOLD.toPx()
-                        val radius = size.minDimension / 2f
-                        
-                        // 1. Внешняя окружность с плавным переходом цвета
-                        drawCircle(
-                            color = animatedBorderColor,
-                            radius = radius - strokeWidth / 2f,
-                            style = androidx.compose.ui.graphics.drawscope.Stroke(width = strokeWidth)
-                        )
-
-                        // 2. Анимированное заполнение при выборе задачи (spring bounce)
-                        if (animatedCheckScale > 0.001f) {
-                            // Центральная синяя заливка с пружинным масштабированием
-                            val targetInnerRadius = (radius - strokeWidth) - SELECTION_RING_GAP.toPx()
-                            val currentInnerRadius = targetInnerRadius * animatedCheckScale
-                            if (currentInnerRadius > 0f) {
-                                drawCircle(
-                                    color = selectionFill,
-                                    radius = currentInnerRadius
-                                )
-                            }
-                        }
-                    }
-                }
-            }
+            SelectionCircle(isSelected = isSelected, isDragSelecting = isDragSelecting, onToggle = onToggleSelect)
         }
     }
 }
