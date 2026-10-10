@@ -1,5 +1,11 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
+    <string name="special_all_projects">Усі проєкти</string>
+    <string name="special_logged_projects">Завершені проєкти</string>
+    <string name="all_projects_show_later">Показати пізніші проєкти (%1$d)</string>
+    <string name="all_projects_hide_later">Сховати пізніші проєкти</string>
+    <string name="all_projects_show_logged">Показати завершені проєкти</string>
+    <string name="all_projects_hide_logged">Сховати завершені проєкти</string>
     <string name="tomorrow">Завтра</string>
     <string name="yesterday">Вчора</string>
     <string name="area_upcoming_heading">Плани</string>

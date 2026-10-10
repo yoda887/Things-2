@@ -309,7 +309,8 @@ fun ThingsHomeScreen(viewModel: ThingsViewModel = hiltViewModel()) {
             // Скрывать FAB при открытии inline-редактора, FAB-меню, диалогов, окна быстрой задачи (QuickAddDialog) или режима мультивыбора.
             // В «Журнале» кнопки нет вовсе: там только закрытое, новые задачи не создают (как в Things)
             AnimatedVisibility(
-                visible = activeScreen != ActiveScreen.LOGBOOK && (fabDragController.isDragging || fabDragController.isSettling ||
+                visible = activeScreen != ActiveScreen.LOGBOOK && activeScreen != ActiveScreen.ALL_PROJECTS &&
+                    activeScreen != ActiveScreen.LOGGED_PROJECTS && (fabDragController.isDragging || fabDragController.isSettling ||
                     (inlineExpandedTaskId == null && !showFabMenu && !isListDialogActive && !showAddDialog && !isSelectionMode)),
                 enter = slideInVertically(
                     initialOffsetY = { it * 2 },
@@ -742,7 +743,9 @@ fun ThingsHomeScreen(viewModel: ThingsViewModel = hiltViewModel()) {
                 ActiveScreen.UPCOMING to stringResource(R.string.category_upcoming),
                 ActiveScreen.ANYTIME to stringResource(R.string.category_anytime),
                 ActiveScreen.SOMEDAY to stringResource(R.string.category_someday),
-                ActiveScreen.LOGBOOK to stringResource(R.string.category_logbook)
+                ActiveScreen.LOGBOOK to stringResource(R.string.category_logbook),
+                ActiveScreen.ALL_PROJECTS to stringResource(R.string.special_all_projects),
+                ActiveScreen.LOGGED_PROJECTS to stringResource(R.string.special_logged_projects)
             )
             if (isSearchOverlayActive) {
                 Box(modifier = Modifier.graphicsLayer { alpha = searchOverlayFade.value }) {

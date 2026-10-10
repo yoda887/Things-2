@@ -356,6 +356,24 @@ private fun CategoryTopAppBarTitleContent(
                     color = textPrimaryColor
                 )
             }
+            ActiveScreen.ALL_PROJECTS, ActiveScreen.LOGGED_PROJECTS -> {
+                if (screen == ActiveScreen.ALL_PROJECTS) {
+                    com.example.ui.components.ProjectProgressArc(
+                        completed = 1, total = 2, color = ThingsTheme.colors.project,
+                        modifier = Modifier.size(TOP_APP_BAR_ICON_SIZE)
+                    )
+                } else {
+                    com.example.ui.components.ClosedProjectIcon(cancelled = false, modifier = Modifier.size(TOP_APP_BAR_ICON_SIZE))
+                }
+                Spacer(modifier = Modifier.width(TOP_APP_BAR_SPACING))
+                Text(
+                    text = stringResource(
+                        if (screen == ActiveScreen.ALL_PROJECTS) R.string.special_all_projects else R.string.special_logged_projects
+                    ),
+                    style = ThingsTheme.type.topAppBarTitle,
+                    color = textPrimaryColor
+                )
+            }
             ActiveScreen.PROJECT_DETAIL -> {
                 val completedCount = tasks.count { it.item.projectId == project?.id && it.item.isClosed }
                 val totalCount = tasks.count { it.item.projectId == project?.id }

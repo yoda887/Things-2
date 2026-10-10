@@ -22,6 +22,12 @@
     <string name="delete_task_confirm_message">Are you sure you want to delete this task? This cannot be undone.</string>
     <string name="delete_task_confirm_cancel">Cancel</string>
     <string name="delete_task_confirm_delete">Delete</string>
+    <string name="special_all_projects">All Projects</string>
+    <string name="special_logged_projects">Logged Projects</string>
+    <string name="all_projects_show_later">Show %1$d later projects</string>
+    <string name="all_projects_hide_later">Hide later projects</string>
+    <string name="all_projects_show_logged">Show logged projects</string>
+    <string name="all_projects_hide_logged">Hide logged projects</string>
     <string name="tomorrow">Tomorrow</string>
     <string name="yesterday">Yesterday</string>
     <string name="cancel">Cancel</string>

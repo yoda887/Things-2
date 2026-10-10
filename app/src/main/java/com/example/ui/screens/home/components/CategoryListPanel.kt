@@ -1,5 +1,6 @@
 package com.example.ui.screens.home.components
 
+import com.example.domain.lists.AllProjectsList
 import com.example.domain.lists.PlaceGroups
 import com.example.domain.lists.HeadingOrder
 import com.example.domain.edits.ProjectEdit
@@ -334,6 +335,9 @@ fun ThingsCategoryListPanel(
         state.displayTasks.firstOrNull { it.item.id == inlineExpandedTaskId }?.item?.let { PlaceGroups.Place(it.projectId, it.areaId) }
     }
     val pinnedPlaces = if (inlineExpandedTaskId != null && editedTaskPlace != null) mapOf(inlineExpandedTaskId to editedTaskPlace) else emptyMap()
+    // «Все проекты»: раскрытые группы поздних проектов и показ завершённых — пока открыт экран
+    var expandedLaterProjects by remember(screen) { mutableStateOf(emptySet<String>()) }
+    var showLoggedProjects by remember(screen) { mutableStateOf(false) }
     val flattened = rememberFlattenedList(
         screen = screen,
         standardToday = standardToday,
@@ -351,7 +355,9 @@ fun ThingsCategoryListPanel(
         savedTags = allSavedTagObjects,
         searchQuery = state.searchQuery,
         headings = if (screen == ActiveScreen.PROJECT_DETAIL) localHeadings else emptyList(),
-        pinnedPlaces = pinnedPlaces
+        pinnedPlaces = pinnedPlaces,
+        expandedLaterProjects = expandedLaterProjects,
+        showLoggedProjects = showLoggedProjects
     )
 
     // ── Добавление перетаскиванием кнопки «+» (см. FabDragController) ──
@@ -912,6 +918,8 @@ fun ThingsCategoryListPanel(
                 ActiveScreen.SOMEDAY -> SomedayList.hasContent(displayTasks, projects)
                 // Поиск показывает свою пустую заглушку отдельно; у главного экрана списка нет
                 ActiveScreen.INBOX, ActiveScreen.SEARCH, ActiveScreen.HOME -> displayTasks.isNotEmpty()
+                ActiveScreen.ALL_PROJECTS -> AllProjectsList.hasContent(AllProjectsList.content(projects, areasState))
+                ActiveScreen.LOGGED_PROJECTS -> projects.any { LogbookList.includesProject(it) }
             }
 
             if (screen == ActiveScreen.SEARCH && flattened.isEmpty()) {
@@ -945,6 +953,7 @@ fun ThingsCategoryListPanel(
                         is UpcomingHeaderItem -> "${TaskListKeys.DAY_HEADER_PREFIX}${item.dateMillis}"
                         is UpcomingMonthHeaderItem -> "${TaskListKeys.MONTH_HEADER_PREFIX}${item.monthMillis}"
                         is LogbookHeaderItem -> item.key
+                        is ListToggleItem -> item.key
                         is UpcomingEventItem -> "${TaskListKeys.CALENDAR_EVENT_PREFIX}${item.event.id}_${item.dateMillis}"
                         is SearchSectionHeaderItem -> item.key
                         is SearchAreaItem -> "search_area_${item.area.id}"
@@ -1021,7 +1030,11 @@ fun ThingsCategoryListPanel(
                                     textPrimaryColor = textPrimaryColor,
                                     inlineExpandedTaskId = inlineExpandedTaskId,
                                     onProjectClick = { onEvent(ThingsCategoryListEvent.ClickProject(it)) },
-                                    closedAt = if (screen == ActiveScreen.LOGBOOK) LogbookList.closedAt(task) else null,
+                                    // Дата закрытия — у закрытых проектов в «Журнале» и особых списках проектов
+                                    closedAt = if (
+                                        (screen == ActiveScreen.LOGBOOK || screen == ActiveScreen.LOGGED_PROJECTS || screen == ActiveScreen.ALL_PROJECTS) &&
+                                        LogbookList.includesProject(task)
+                                    ) LogbookList.closedAt(task) else null,
                                     dateBadge = if (screen == ActiveScreen.UPCOMING) monthTaskBadges[task.id] else null,
                                     modifier = Modifier.animateItem(
                                         placementSpec = placementSpec
@@ -1068,6 +1081,23 @@ fun ThingsCategoryListPanel(
                                         placementSpec = placementSpec
                                     )
                                     .graphicsLayer { alpha = dimAlpha }
+                            )
+                        }
+                        is ListToggleItem -> {
+                            ListToggleRow(
+                                label = item.label,
+                                onClick = {
+                                    if (item.key == AllProjectsScreen.LOGGED_KEY) {
+                                        showLoggedProjects = !showLoggedProjects
+                                    } else {
+                                        expandedLaterProjects = if (item.key in expandedLaterProjects) {
+                                            expandedLaterProjects - item.key
+                                        } else {
+                                            expandedLaterProjects + item.key
+                                        }
+                                    }
+                                },
+                                modifier = Modifier.animateItem(placementSpec = placementSpec)
                             )
                         }
                         is LogbookHeaderItem -> {
@@ -1764,8 +1794,29 @@ private fun listItemKey(element: Any): Any? = when (element) {
     is UpcomingHeaderItem -> "${TaskListKeys.DAY_HEADER_PREFIX}${element.dateMillis}"
     is UpcomingMonthHeaderItem -> "${TaskListKeys.MONTH_HEADER_PREFIX}${element.monthMillis}"
     is LogbookHeaderItem -> element.key
+    is ListToggleItem -> element.key
     is String -> element
     else -> null
+}
+
+/** Строка-переключатель списка серым текстом — как «Показать более поздние объекты» на экране области. */
+@Composable
+private fun ListToggleRow(label: String, onClick: () -> Unit, modifier: Modifier = Modifier) {
+    Box(
+        modifier = modifier
+            .fillMaxWidth()
+            .padding(start = MaterialTheme.dimens.taskRowStartPadding, top = ThingsSpacing.S, bottom = ThingsSpacing.M)
+    ) {
+        Text(
+            text = label,
+            style = ThingsTheme.type.bodyMedium.copy(color = ThingsTheme.colors.textSecondary.copy(alpha = ThingsAlpha.HINT)),
+            modifier = Modifier.clickable(
+                interactionSource = remember { androidx.compose.foundation.interaction.MutableInteractionSource() },
+                indication = null,
+                onClick = onClick
+            )
+        )
+    }
 }
 
 /** Промежуток на месте пальца: серая плашка задачи или пунктир «NEW HEADING» */

@@ -213,8 +213,8 @@ class ThingsViewModel @Inject constructor(
                         ActiveScreen.AREA_DETAIL -> AreaList.includes(task, area?.id)
                         ActiveScreen.TAG_DETAIL -> tag != null && TagList.isActiveTask(task, tag.title)
                         ActiveScreen.SEARCH -> SearchList.includes(wrapper, query)
-                        // У главного экрана нет списка задач
-                        ActiveScreen.HOME -> false
+                        // У главного экрана и особых списков проектов нет списка задач
+                        ActiveScreen.HOME, ActiveScreen.ALL_PROJECTS, ActiveScreen.LOGGED_PROJECTS -> false
                     }
                 }
             }.sortedBy { it.item.sortOrder }
@@ -231,7 +231,7 @@ class ThingsViewModel @Inject constructor(
                 ActiveScreen.LOGBOOK -> LogbookList.order(listTasks)
                 // Порядок экрана — общий порядок задач (sortOrder)
                 ActiveScreen.INBOX, ActiveScreen.TODAY, ActiveScreen.UPCOMING, ActiveScreen.TAG_DETAIL,
-                ActiveScreen.SEARCH, ActiveScreen.HOME -> listTasks
+                ActiveScreen.SEARCH, ActiveScreen.HOME, ActiveScreen.ALL_PROJECTS, ActiveScreen.LOGGED_PROJECTS -> listTasks
             }
 
             val displayTasks = if (selectedTag == null) {

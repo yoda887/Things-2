@@ -6,10 +6,12 @@ import com.example.data.model.ItemWithChecklist
 import com.example.data.model.Tag
 import kotlinx.serialization.Serializable
 
-/** Экран приложения: главный, умные списки, проект, область, тег, поиск. */
+/** Экран приложения: главный, умные списки, проект, область, тег, поиск, особые списки. */
 @Serializable
 enum class ActiveScreen {
-    HOME, INBOX, TODAY, UPCOMING, ANYTIME, SOMEDAY, LOGBOOK, PROJECT_DETAIL, AREA_DETAIL, SEARCH, TAG_DETAIL
+    HOME, INBOX, TODAY, UPCOMING, ANYTIME, SOMEDAY, LOGBOOK, PROJECT_DETAIL, AREA_DETAIL, SEARCH, TAG_DETAIL,
+    // Особые списки — открываются из «Швидкого пошуку» по названию, как в Things
+    ALL_PROJECTS, LOGGED_PROJECTS
 }
 
 /** Прогресс проекта: сколько задач выполнено из скольких. */

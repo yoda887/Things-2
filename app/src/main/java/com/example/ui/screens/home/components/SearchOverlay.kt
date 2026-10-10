@@ -343,7 +343,14 @@ fun ThingsSearchOverlay(
         ActiveScreen.UPCOMING to stringResource(R.string.category_upcoming),
         ActiveScreen.ANYTIME to stringResource(R.string.category_anytime),
         ActiveScreen.SOMEDAY to stringResource(R.string.category_someday),
-        ActiveScreen.LOGBOOK to stringResource(R.string.category_logbook)
+        ActiveScreen.LOGBOOK to stringResource(R.string.category_logbook),
+        // Особые списки, как в Things: находятся только по названию — на языке приложения или по-английски
+        ActiveScreen.ALL_PROJECTS to stringResource(R.string.special_all_projects),
+        ActiveScreen.LOGGED_PROJECTS to stringResource(R.string.special_logged_projects)
+    )
+    val specialListEnglishNames = mapOf(
+        ActiveScreen.ALL_PROJECTS to "All Projects",
+        ActiveScreen.LOGGED_PROJECTS to "Logged Projects"
     )
     val searchResults = remember(searchQuery, allTasks, projects, areas, allSavedTagObjects, smartListNames) {
         if (searchQuery.isBlank()) {
@@ -355,7 +362,8 @@ fun ThingsSearchOverlay(
             // 1. Поиск по смарт-спискам
             val smartLists = smartListNames.map { (screen, name) -> Pair(name, screen) }
             for ((name, screen) in smartLists) {
-                if (name.contains(query, ignoreCase = true)) {
+                val englishName = specialListEnglishNames[screen]
+                if (name.contains(query, ignoreCase = true) || englishName?.contains(query, ignoreCase = true) == true) {
                     results.add(SearchResultItem.SmartListResult(name, screen))
                 }
             }
@@ -1102,7 +1110,14 @@ fun SearchResultRow(
                         )
 
                     when (result) {
-                        is SearchResultItem.SmartListResult -> {
+                        is SearchResultItem.SmartListResult -> if (result.screen == ActiveScreen.ALL_PROJECTS) {
+                            com.example.ui.components.ProjectProgressArc(
+                                completed = 1, total = 2, color = ThingsTheme.colors.project,
+                                modifier = iconModifier.size(RESULT_ICON_SIZE)
+                            )
+                        } else if (result.screen == ActiveScreen.LOGGED_PROJECTS) {
+                            com.example.ui.components.ClosedProjectIcon(cancelled = false, modifier = iconModifier.size(RESULT_ICON_SIZE))
+                        } else {
                             val info = when (result.screen) {
                                 ActiveScreen.TODAY -> Pair(AppIcons.Today, Color.Unspecified)
                                 ActiveScreen.INBOX -> Pair(AppIcons.Inbox, Color.Unspecified)

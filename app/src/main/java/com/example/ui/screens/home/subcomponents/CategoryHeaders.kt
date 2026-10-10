@@ -211,6 +211,25 @@ fun MainCategoryHeader(
                     style = ThingsTheme.type.largeTitle.copy(color = textPrimaryColor)
                 )
             }
+            // Особые списки проектов: значок проекта — как у строк, которые в них стоят
+            ActiveScreen.ALL_PROJECTS, ActiveScreen.LOGGED_PROJECTS -> {
+                if (screen == ActiveScreen.ALL_PROJECTS) {
+                    ProjectProgressArc(
+                        completed = 1, total = 2, color = ThingsTheme.colors.project,
+                        modifier = Modifier.size((28 * scaleFactor).dp)
+                    )
+                } else {
+                    com.example.ui.components.ClosedProjectIcon(cancelled = false, modifier = Modifier.size((28 * scaleFactor).dp))
+                }
+                Spacer(modifier = Modifier.width((10 * scaleFactor).dp))
+                Text(
+                    text = androidx.compose.ui.res.stringResource(
+                        if (screen == ActiveScreen.ALL_PROJECTS) com.example.R.string.special_all_projects
+                        else com.example.R.string.special_logged_projects
+                    ),
+                    style = ThingsTheme.type.largeTitle.copy(color = textPrimaryColor)
+                )
+            }
             ActiveScreen.PROJECT_DETAIL -> {
                 // Завершённый проект — кольцо полное, даже если задач в нём нет
                 val projectDone = project != null && (project.isCompleted || project.status == Item.STATUS_CANCELLED)

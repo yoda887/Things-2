@@ -1,5 +1,6 @@
 package com.example.ui.screens.home.components
 
+import com.example.domain.lists.AllProjectsList
 import com.example.domain.lists.PlaceGroups
 import com.example.data.model.ChecklistItem
 import com.example.domain.edits.TaskEditorFields
@@ -128,6 +129,9 @@ object TaskListKeys {
     /** Префикс заголовка дня на экране «Предстоящие» */
     const val DAY_HEADER_PREFIX = "hdr_"
 
+    /** Префикс строки-переключателя списка (поздние и завершённые проекты в «Всех проектах») */
+    const val LIST_TOGGLE_PREFIX = "list_toggle_"
+
     /** Префикс заголовка раздела «Журнала» (сегодня, вчера, месяц) */
     const val LOGBOOK_HEADER_PREFIX = "lbhdr_"
 
@@ -202,12 +206,19 @@ fun rememberFlattenedList(
     searchQuery: String = "",
     headings: List<Item> = emptyList(),
     // Место задачи в открытом редакторе — «В любое время» и «Когда-нибудь» держат её там до закрытия
-    pinnedPlaces: Map<String, PlaceGroups.Place> = emptyMap()
+    pinnedPlaces: Map<String, PlaceGroups.Place> = emptyMap(),
+    // «Все проекты»: раскрытые группы поздних проектов и показ завершённых
+    expandedLaterProjects: Set<String> = emptySet(),
+    showLoggedProjects: Boolean = false
 ): List<Any> {
     val headerLogbook = stringResource(R.string.category_logbook)
     val todayLabel = stringResource(R.string.category_today)
     val yesterdayLabel = stringResource(R.string.yesterday)
-    return remember(screen, standardToday, eveningToday, headerLogbook, todayLabel, yesterdayLabel, draggedItemKey, upcomingDays, upcomingMonths, projects, area, displayTasks, isLaterItemsHidden, tag, allTasks, areas, savedTags, searchQuery, headings, pinnedPlaces) {
+    val showLaterFormat = stringResource(R.string.all_projects_show_later)
+    val hideLaterLabel = stringResource(R.string.all_projects_hide_later)
+    val showLoggedLabel = stringResource(R.string.all_projects_show_logged)
+    val hideLoggedLabel = stringResource(R.string.all_projects_hide_logged)
+    return remember(expandedLaterProjects, showLoggedProjects, showLaterFormat, screen, standardToday, eveningToday, headerLogbook, todayLabel, yesterdayLabel, draggedItemKey, upcomingDays, upcomingMonths, projects, area, displayTasks, isLaterItemsHidden, tag, allTasks, areas, savedTags, searchQuery, headings, pinnedPlaces) {
         // Все экраны перечислены явно (без else): новый экран компилятор заставит указать и здесь
         when (screen) {
             ActiveScreen.TODAY -> TodayScreen.rows(standardToday, eveningToday, isDragging = draggedItemKey != null)
@@ -221,6 +232,12 @@ fun rememberFlattenedList(
             ActiveScreen.SEARCH -> SearchScreen.rows(displayTasks, projects, areas, savedTags, searchQuery, headerLogbook)
             // «Входящие» — задачи как есть; у главного экрана списка нет
             ActiveScreen.INBOX, ActiveScreen.HOME -> displayTasks
+            ActiveScreen.ALL_PROJECTS -> AllProjectsScreen.rows(
+                AllProjectsList.content(projects, areas), expandedLaterProjects, showLoggedProjects,
+                { count -> String.format(showLaterFormat, count) }, hideLaterLabel, showLoggedLabel, hideLoggedLabel
+            )
+            // Завершённые проекты — разделами, как «Журнал»
+            ActiveScreen.LOGGED_PROJECTS -> LogbookScreen.rows(LogbookList.sections(emptyList(), projects), todayLabel, yesterdayLabel)
         }
     }
 }
@@ -408,5 +425,6 @@ fun newTaskPlace(screen: ActiveScreen, projectId: String?, areaId: String?, tagT
     ActiveScreen.PROJECT_DETAIL -> projectId?.let { NewTaskPlace.Project(it) } ?: NewTaskPlace.Inbox
     ActiveScreen.AREA_DETAIL -> areaId?.let { NewTaskPlace.Area(it) } ?: NewTaskPlace.Anytime
     ActiveScreen.TAG_DETAIL -> NewTaskPlace.Tag(tagTitle.orEmpty())
-    ActiveScreen.INBOX, ActiveScreen.LOGBOOK, ActiveScreen.SEARCH, ActiveScreen.HOME -> NewTaskPlace.Inbox
+    ActiveScreen.INBOX, ActiveScreen.LOGBOOK, ActiveScreen.SEARCH, ActiveScreen.HOME,
+    ActiveScreen.ALL_PROJECTS, ActiveScreen.LOGGED_PROJECTS -> NewTaskPlace.Inbox
 }
