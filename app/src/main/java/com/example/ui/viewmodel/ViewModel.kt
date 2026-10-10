@@ -196,7 +196,7 @@ class ThingsViewModel @Inject constructor(
                         ActiveScreen.TODAY -> TodayList.includes(task, bounds)
                         ActiveScreen.UPCOMING -> UpcomingList.includes(task, bounds)
                         ActiveScreen.ANYTIME -> AnytimeList.includes(task, bounds, somedayProjectIds)
-                        ActiveScreen.SOMEDAY -> SomedayList.includes(task, bounds)
+                        ActiveScreen.SOMEDAY -> SomedayList.includes(task, bounds, somedayProjectIds)
                         ActiveScreen.LOGBOOK -> LogbookList.includes(task)
                         ActiveScreen.PROJECT_DETAIL -> ProjectList.includes(task, project?.id)
                         ActiveScreen.AREA_DETAIL -> AreaList.includes(task, area?.id)

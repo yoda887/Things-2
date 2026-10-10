@@ -12,7 +12,12 @@ import com.example.data.model.ItemWithChecklist
  */
 object SomedayList {
 
-    fun includes(item: Item, bounds: DayBounds): Boolean = bounds.isSomeday(item)
+    /**
+     * Отложенная задача: открыта и не удалена. Задачи отложенного проекта отдельно не показываются —
+     * проект целиком стоит строкой (как в Things), его задачи видны в самом проекте.
+     */
+    fun includes(item: Item, bounds: DayBounds, somedayProjectIds: Set<String>): Boolean =
+        bounds.isSomeday(item) && !item.trashed && !ListRules.isClosed(item) && item.projectId !in somedayProjectIds
 
     fun order(tasks: List<ItemWithChecklist>, projects: List<Item>, areas: List<Area>): List<ItemWithChecklist> =
         PlaceGroups.order(tasks, projects, areas)

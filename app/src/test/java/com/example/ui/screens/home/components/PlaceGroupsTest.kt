@@ -93,4 +93,16 @@ class PlaceGroupsTest {
             groups.map { g -> (g.project?.id ?: g.area?.id ?: "-") to g.projectRows.map { it.id } }
         )
     }
+
+    @Test
+    fun someday_tasksOfSomedayProject_notListed_projectIsARow() {
+        val bounds = com.example.data.model.DayBounds.now()
+        val somedayIds = setOf("sp")
+        fun t(project: String?) = Item(id = "t", title = "t", start = Item.START_SOMEDAY, projectId = project)
+        assertEquals(false, SomedayList.includes(t("sp"), bounds, somedayIds))
+        assertEquals(true, SomedayList.includes(t("active"), bounds, somedayIds))
+        assertEquals(true, SomedayList.includes(t(null), bounds, somedayIds))
+        assertEquals(false, SomedayList.includes(t(null).copy(status = Item.STATUS_CANCELLED), bounds, somedayIds))
+        assertEquals(false, SomedayList.includes(t(null).copy(trashed = true), bounds, somedayIds))
+    }
 }
