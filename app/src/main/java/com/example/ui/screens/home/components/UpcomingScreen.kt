@@ -31,8 +31,8 @@ object UpcomingScreen {
 
         val locale = Locale.getDefault()
         val weekdayFormat = SimpleDateFormat("EEEE", locale)
-        val monthFormat = SimpleDateFormat("MMMM", locale)
-        val monthYearFormat = SimpleDateFormat("MMMM yyyy", locale)
+        val monthFormat = SimpleDateFormat("LLLL", locale)
+        val monthYearFormat = SimpleDateFormat("LLLL yyyy", locale)
         // Плашка задачи в месячных разделах — число и месяц, как на экране проекта
         val dayBadgeFormat = SimpleDateFormat("d MMM", locale)
         val dayNumFormat = SimpleDateFormat("d", locale)
