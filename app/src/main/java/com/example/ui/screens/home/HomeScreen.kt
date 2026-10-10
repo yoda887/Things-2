@@ -648,6 +648,7 @@ fun ThingsHomeScreen(viewModel: ThingsViewModel = hiltViewModel()) {
                                     navController.popBackStack()
                                     selectedProject = null
                                 }
+                                is ThingsCategoryListEvent.RenameArea -> viewModel.updateArea(event.area.copy(title = event.title))
                                 is ThingsCategoryListEvent.EditProject -> viewModel.editProject(event.project, event.edit)
                                 is ThingsCategoryListEvent.CompleteProject -> viewModel.completeProject(event.project)
                                 is ThingsCategoryListEvent.DuplicateProject -> viewModel.duplicateProject(event.project)

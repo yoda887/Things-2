@@ -1,5 +1,6 @@
 package com.example.ui.screens.home.components
 
+import com.example.data.model.Area
 import com.example.domain.lists.AllProjectsList
 import com.example.domain.lists.PlaceGroups
 import com.example.data.model.ChecklistItem
@@ -356,6 +357,8 @@ sealed interface ThingsCategoryListEvent {
     data class DeleteProject(val project: Item) : ThingsCategoryListEvent
     /** Правка проекта: заметки, «Когда», дедлайн, теги, область. */
     data class EditProject(val project: Item, val edit: ProjectEdit) : ThingsCategoryListEvent
+    /** Новое название области */
+    data class RenameArea(val area: Area, val title: String) : ThingsCategoryListEvent
     data class CompleteProject(val project: Item) : ThingsCategoryListEvent
     data class DuplicateProject(val project: Item) : ThingsCategoryListEvent
     data class DeleteArea(val area: Area) : ThingsCategoryListEvent

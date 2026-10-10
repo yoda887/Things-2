@@ -1,5 +1,9 @@
 package com.example.ui.screens.home.subcomponents
 
+import com.example.ui.components.hideSoftKeyboardNow
+import androidx.compose.material.icons.filled.Edit
+import androidx.compose.ui.focus.onFocusChanged
+import androidx.compose.ui.focus.focusRequester
 import com.example.ui.viewmodel.ActiveScreen
 import com.example.ui.theme.AppIcons
 import com.example.ui.components.ThingsMenuDivider
@@ -72,8 +76,12 @@ fun MainCategoryHeader(
     onDeleteArea: (Area) -> Unit = {},
     onAddHeading: () -> Unit = {},
     onProjectAction: (ProjectAction) -> Unit = {},
+    // Переименование: нажатие на название проекта или области (или «Перейменувати» в меню «…»)
+    onRenameProject: (Item, String) -> Unit = { _, _ -> },
+    onRenameArea: (Area, String) -> Unit = { _, _ -> },
     modifier: Modifier = Modifier
 ) {
+    var isEditingTitle by remember(project?.id, area?.id, screen) { mutableStateOf(false) }
     val headerEmojiFontSize = ThingsTheme.type.heroEmoji.fontSize
     val headerTitleFontSize = ThingsTheme.type.largeTitle.fontSize
 
@@ -291,6 +299,10 @@ fun MainCategoryHeader(
                                 if (project?.isCompleted != true) {
                                     ThingsMenuItem(stringResource(R.string.project_complete), Icons.Outlined.CheckCircle, onClick = { action(ProjectAction.COMPLETE) })
                                 }
+                                ThingsMenuItem(stringResource(R.string.ui_rename), Icons.Default.Edit, onClick = {
+                                    showOptionsMenu = false
+                                    isEditingTitle = true
+                                })
                                 ThingsMenuItem(stringResource(R.string.batch_action_when), AppIcons.Upcoming, onClick = { action(ProjectAction.WHEN) })
                                 ThingsMenuItem(stringResource(R.string.batch_action_set_tags), AppIcons.Tag, onClick = { action(ProjectAction.TAGS) })
                                 ThingsMenuItem(stringResource(R.string.batch_action_set_deadline), AppIcons.Deadline, onClick = { action(ProjectAction.DEADLINE) })
@@ -312,12 +324,27 @@ fun MainCategoryHeader(
                     }
                 )
 
-                Text(
-                    text = projectTitleAnnotated,
-                    inlineContent = inlineContentMap,
-                    style = ThingsTheme.type.largeTitle.copy(color = textPrimaryColor),
-                    modifier = Modifier.weight(1f, fill = false)
-                )
+                if (isEditingTitle && project != null) {
+                    EditableLargeTitle(
+                        initial = project.title,
+                        textColor = textPrimaryColor,
+                        onCommit = { title -> isEditingTitle = false; if (title != project.title) onRenameProject(project, title) },
+                        modifier = Modifier.weight(1f)
+                    )
+                } else {
+                    Text(
+                        text = projectTitleAnnotated,
+                        inlineContent = inlineContentMap,
+                        style = ThingsTheme.type.largeTitle.copy(color = textPrimaryColor),
+                        modifier = Modifier
+                            .weight(1f, fill = false)
+                            .clickable(
+                                interactionSource = remember { MutableInteractionSource() },
+                                indication = null,
+                                enabled = project != null
+                            ) { isEditingTitle = true }
+                    )
+                }
             }
             ActiveScreen.AREA_DETAIL -> {
                 Icon(
@@ -372,6 +399,10 @@ fun MainCategoryHeader(
                                 expanded = showAreaOptionsMenu,
                                 onDismissRequest = { showAreaOptionsMenu = false }
                             ) {
+                                ThingsMenuItem(stringResource(R.string.ui_rename), Icons.Default.Edit, onClick = {
+                                    showAreaOptionsMenu = false
+                                    isEditingTitle = true
+                                })
                                 ThingsMenuItem(stringResource(R.string.ui_delete_area), Icons.Default.Delete, destructive = true, onClick = {
                                     showAreaOptionsMenu = false
                                     showAreaDeleteConfirmDialog = true
@@ -381,12 +412,27 @@ fun MainCategoryHeader(
                     }
                 )
 
-                Text(
-                    text = areaTitleAnnotated,
-                    inlineContent = areaInlineContentMap,
-                    style = ThingsTheme.type.largeTitle.copy(color = textPrimaryColor),
-                    modifier = Modifier.weight(1f, fill = false)
-                )
+                if (isEditingTitle && area != null) {
+                    EditableLargeTitle(
+                        initial = area.title,
+                        textColor = textPrimaryColor,
+                        onCommit = { title -> isEditingTitle = false; if (title != area.title) onRenameArea(area, title) },
+                        modifier = Modifier.weight(1f)
+                    )
+                } else {
+                    Text(
+                        text = areaTitleAnnotated,
+                        inlineContent = areaInlineContentMap,
+                        style = ThingsTheme.type.largeTitle.copy(color = textPrimaryColor),
+                        modifier = Modifier
+                            .weight(1f, fill = false)
+                            .clickable(
+                                interactionSource = remember { MutableInteractionSource() },
+                                indication = null,
+                                enabled = area != null
+                            ) { isEditingTitle = true }
+                    )
+                }
             }
             ActiveScreen.TAG_DETAIL -> {
                 Icon(
@@ -726,4 +772,51 @@ fun LogbookSectionHeader(
                 .background(dividerColor)
         )
     }
+}
+
+/**
+ * Название проекта или области в режиме правки — тем же крупным шрифтом, что заголовок экрана. Курсор
+ * сразу в конце; «Готово» на клавиатуре или уход фокуса сохраняют ([onCommit] с обрезанным названием),
+ * пустое название не сохраняется — остаётся прежнее.
+ */
+@Composable
+private fun EditableLargeTitle(
+    initial: String,
+    textColor: Color,
+    onCommit: (String) -> Unit,
+    modifier: Modifier = Modifier
+) {
+    var value by remember {
+        mutableStateOf(androidx.compose.ui.text.input.TextFieldValue(initial, androidx.compose.ui.text.TextRange(initial.length)))
+    }
+    var committed by remember { mutableStateOf(false) }
+    var hadFocus by remember { mutableStateOf(false) }
+    val focusRequester = remember { androidx.compose.ui.focus.FocusRequester() }
+    val view = androidx.compose.ui.platform.LocalView.current
+    fun commit() {
+        if (committed) return
+        committed = true
+        onCommit(value.text.trim().ifEmpty { initial })
+    }
+    androidx.compose.foundation.text.BasicTextField(
+        value = value,
+        onValueChange = { value = it },
+        textStyle = ThingsTheme.type.largeTitle.copy(color = textColor),
+        cursorBrush = androidx.compose.ui.graphics.SolidColor(ThingsTheme.colors.accent),
+        singleLine = true,
+        keyboardOptions = androidx.compose.foundation.text.KeyboardOptions(
+            imeAction = androidx.compose.ui.text.input.ImeAction.Done,
+            capitalization = androidx.compose.ui.text.input.KeyboardCapitalization.Sentences
+        ),
+        keyboardActions = androidx.compose.foundation.text.KeyboardActions(onDone = {
+            view.hideSoftKeyboardNow()
+            commit()
+        }),
+        modifier = modifier
+            .focusRequester(focusRequester)
+            .onFocusChanged { state ->
+                if (state.isFocused) hadFocus = true else if (hadFocus) commit()
+            }
+    )
+    LaunchedEffect(Unit) { focusRequester.requestFocus() }
 }

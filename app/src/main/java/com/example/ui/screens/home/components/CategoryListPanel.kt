@@ -817,6 +817,8 @@ fun ThingsCategoryListPanel(
                         onDeleteProject = { onEvent(ThingsCategoryListEvent.DeleteProject(it)) },
                         onAddHeading = { addHeading() },
                         onDeleteArea = { onEvent(ThingsCategoryListEvent.DeleteArea(it)) },
+                        onRenameProject = { proj, title -> onEvent(ThingsCategoryListEvent.EditProject(proj, ProjectEdit.Rename(title))) },
+                        onRenameArea = { a, title -> onEvent(ThingsCategoryListEvent.RenameArea(a, title)) },
                         onProjectAction = { projectAction ->
                             val currentProject = project ?: return@MainCategoryHeader
                             when (projectAction) {
