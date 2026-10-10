@@ -170,6 +170,7 @@
     <string name="priority_medium">Medium Priority</string>
     <string name="priority_low">Low Priority</string>
     <string name="priority_none">No Priority</string>
+    <string name="move_new_project">New Project “%1$s”</string>
     <string name="move_no_project">No Project</string>
     <string name="fallback_project">Project</string>
     <string name="fallback_area">Area</string>

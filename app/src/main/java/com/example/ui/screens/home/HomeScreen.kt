@@ -636,9 +636,11 @@ fun ThingsHomeScreen(viewModel: ThingsViewModel = hiltViewModel()) {
                                 is ThingsCategoryListEvent.DuplicateTask -> {
                                     viewModel.duplicateTask(event.taskWrapper)
                                 }
+                                is ThingsCategoryListEvent.MoveTaskToNewProject ->
+                                    viewModel.moveTasksToNewProject(listOf(event.taskWrapper), event.title)
                                 is ThingsCategoryListEvent.MoveTask -> viewModel.moveTask(
                                     event.taskWrapper,
-                                    if (event.moveToInbox) MoveTarget.Inbox else MoveTarget.Place(event.projectId, event.areaId)
+                                    if (event.moveToInbox) MoveTarget.Inbox else MoveTarget.Place(event.projectId, event.areaId, event.headingId)
                                 )
                                 is ThingsCategoryListEvent.ReorderTasks -> {
                                     viewModel.updateTasks(event.items)
@@ -744,9 +746,15 @@ fun ThingsHomeScreen(viewModel: ThingsViewModel = hiltViewModel()) {
                                     isSelectionMode = false
                                     selectedTaskIds = emptySet()
                                 }
+                                is ThingsCategoryListEvent.BatchMoveTasksToNewProject -> {
+                                    val selectedTasks = screenState.allTasks.filter { selectedTaskIds.contains(it.item.id) }
+                                    viewModel.moveTasksToNewProject(selectedTasks, event.title)
+                                    isSelectionMode = false
+                                    selectedTaskIds = emptySet()
+                                }
                                 is ThingsCategoryListEvent.BatchMoveTasks -> {
                                     val selectedTasks = screenState.allTasks.filter { selectedTaskIds.contains(it.item.id) }
-                                    viewModel.batchMoveTasks(selectedTasks, event.projectId, event.areaId, event.moveToInbox)
+                                    viewModel.batchMoveTasks(selectedTasks, event.projectId, event.areaId, event.moveToInbox, event.headingId)
                                     isSelectionMode = false
                                     selectedTaskIds = emptySet()
                                 }

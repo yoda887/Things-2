@@ -175,6 +175,7 @@
     <string name="priority_medium">Середній пріоритет</string>
     <string name="priority_low">Низький пріоритет</string>
     <string name="priority_none">Без пріоритету</string>
+    <string name="move_new_project">Новий проєкт «%1$s»</string>
     <string name="move_no_project">Без проєкту</string>
     <string name="fallback_project">Проєкт</string>
     <string name="fallback_area">Область</string>

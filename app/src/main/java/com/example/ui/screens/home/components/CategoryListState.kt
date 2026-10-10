@@ -351,7 +351,16 @@ sealed interface ThingsCategoryListEvent {
     data class DuplicateTask(val taskWrapper: ItemWithChecklist) : ThingsCategoryListEvent
     /** Отменить задачу или вернуть отменённую */
     data class ToggleTaskCancel(val taskId: String) : ThingsCategoryListEvent
-    data class MoveTask(val taskWrapper: ItemWithChecklist, val projectId: String?, val areaId: String?, val moveToInbox: Boolean) : ThingsCategoryListEvent
+    data class MoveTask(
+        val taskWrapper: ItemWithChecklist,
+        val projectId: String?,
+        val areaId: String?,
+        val moveToInbox: Boolean,
+        // Подзаголовок проекта — если в поиске окна «Переместить» выбрали найденный подзаголовок
+        val headingId: String? = null
+    ) : ThingsCategoryListEvent
+    /** «Новый проект „…“» в окне «Переместить»: проект с этим названием, задача — в него */
+    data class MoveTaskToNewProject(val taskWrapper: ItemWithChecklist, val title: String) : ThingsCategoryListEvent
     data class ReorderTasks(val items: List<Item>) : ThingsCategoryListEvent
     // Удаление проекта и области
     data class DeleteProject(val project: Item) : ThingsCategoryListEvent
@@ -412,7 +421,9 @@ sealed interface ThingsCategoryListEvent {
     object BatchDeleteTasks : ThingsCategoryListEvent
     object BatchDuplicateTasks : ThingsCategoryListEvent
     data class BatchScheduleTasks(val startDate: Long?, val isTonight: Boolean, val section: TaskSection) : ThingsCategoryListEvent
-    data class BatchMoveTasks(val projectId: String?, val areaId: String?, val moveToInbox: Boolean) : ThingsCategoryListEvent
+    data class BatchMoveTasks(val projectId: String?, val areaId: String?, val moveToInbox: Boolean, val headingId: String? = null) : ThingsCategoryListEvent
+    /** То же для выбранных задач */
+    data class BatchMoveTasksToNewProject(val title: String) : ThingsCategoryListEvent
     data class BatchSetTags(val tags: List<String>) : ThingsCategoryListEvent
     data class BatchSetDeadline(val deadline: Long?) : ThingsCategoryListEvent
 }

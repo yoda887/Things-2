@@ -43,5 +43,7 @@ data class ThingsCategoryListState(
     // Текст запроса экрана поиска
     val searchQuery: String = "",
     // Активные заголовки проекта по порядку (экран проекта)
-    val headings: List<Item> = emptyList()
+    val headings: List<Item> = emptyList(),
+    // Все подзаголовки проектов — для поиска в окне «Переместить»
+    val allHeadings: List<Item> = emptyList()
 )

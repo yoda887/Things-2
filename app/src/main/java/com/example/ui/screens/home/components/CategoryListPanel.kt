@@ -1445,6 +1445,15 @@ fun ThingsCategoryListPanel(
                 onEvent(ThingsCategoryListEvent.MoveTask(activeTask, projectId, areaId, moveToInbox))
                 showMoveDialog = false
             },
+            onMoveToNewProject = { title ->
+                onEvent(ThingsCategoryListEvent.MoveTaskToNewProject(activeTask, title))
+                showMoveDialog = false
+            },
+            headings = state.allHeadings,
+            onMoveToHeading = { projectId, areaId, headingId ->
+                onEvent(ThingsCategoryListEvent.MoveTask(activeTask, projectId, areaId, false, headingId))
+                showMoveDialog = false
+            },
             onDismissRequest = { showMoveDialog = false }
         )
     }
@@ -1587,6 +1596,15 @@ fun ThingsCategoryListPanel(
             allTasks = state.allTasks,
             onMove = { projectId, areaId, moveToInbox ->
                 onEvent(ThingsCategoryListEvent.BatchMoveTasks(projectId, areaId, moveToInbox))
+                showBatchMoveDialog = false
+            },
+            onMoveToNewProject = { title ->
+                onEvent(ThingsCategoryListEvent.BatchMoveTasksToNewProject(title))
+                showBatchMoveDialog = false
+            },
+            headings = state.allHeadings,
+            onMoveToHeading = { projectId, areaId, headingId ->
+                onEvent(ThingsCategoryListEvent.BatchMoveTasks(projectId, areaId, false, headingId))
                 showBatchMoveDialog = false
             },
             onDismissRequest = { showBatchMoveDialog = false }

@@ -131,4 +131,22 @@ class EditsTest {
         // Выполненную задачу «Отменить» тоже отменяет
         org.junit.Assert.assertEquals(Item.STATUS_CANCELLED, TaskStatuses.toggledCancel(open.copy(status = Item.STATUS_COMPLETED)).status)
     }
+
+    @Test
+    fun newProject_fromMoveSearch_hasTrimmedTitle() {
+        val project = NewProjects.create(title = "  Ремонт  ", id = "p")
+        assertEquals("Ремонт", project.title)
+        assertEquals(Item.TYPE_PROJECT, project.type)
+        assertEquals("", NewProjects.create(id = "q").title)
+    }
+
+    @Test
+    fun moveUnderHeading_setsProjectAndHeading_withoutHeadingKeepsCurrent() {
+        val task = Item(id = "t", title = "t", start = Item.START_INBOX, headingId = "old")
+        val moved = TaskMoves.moved(task, MoveTarget.Place("p", null, "h"))
+        assertEquals("p", moved.projectId)
+        assertEquals("h", moved.headingId)
+        assertEquals(Item.START_ANYTIME, moved.start)
+        assertEquals("old", TaskMoves.moved(task, MoveTarget.Place("p", null)).headingId)
+    }
 }

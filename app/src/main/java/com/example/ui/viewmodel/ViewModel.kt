@@ -268,7 +268,8 @@ class ThingsViewModel @Inject constructor(
                 allTasks = taskList,
                 projectProgressMap = projectProgressMap,
                 searchQuery = query,
-                headings = projectHeadings
+                headings = projectHeadings,
+                allHeadings = headingList.filter { !it.trashed }
             )
         }
     }
@@ -702,9 +703,29 @@ class ThingsViewModel @Inject constructor(
     /**
      * Пакетно перемещает список задач в проект или сферу.
      */
-    fun batchMoveTasks(taskWrappers: List<ItemWithChecklist>, projectId: String?, areaId: String?, moveToInbox: Boolean) {
-        val target = if (moveToInbox) MoveTarget.Inbox else MoveTarget.Place(projectId, areaId)
+    fun batchMoveTasks(
+        taskWrappers: List<ItemWithChecklist>,
+        projectId: String?,
+        areaId: String?,
+        moveToInbox: Boolean,
+        headingId: String? = null
+    ) {
+        val target = if (moveToInbox) MoveTarget.Inbox else MoveTarget.Place(projectId, areaId, headingId)
         viewModelScope.launch {
+            taskUseCases.updateTask(taskWrappers.map { TaskMoves.moved(it.item, target) })
+        }
+    }
+
+    /**
+     * «Новый проект „…“» в окне «Переместить»: создаёт проект с названием из поиска и переносит в него задачи.
+     * Проект сохраняется раньше задач — в одной корутине, по порядку.
+     */
+    fun moveTasksToNewProject(taskWrappers: List<ItemWithChecklist>, title: String) {
+        if (title.isBlank() || taskWrappers.isEmpty()) return
+        val project = NewProjects.create(title = title)
+        val target = MoveTarget.Place(project.id, null)
+        viewModelScope.launch {
+            projectUseCases.updateProject(project)
             taskUseCases.updateTask(taskWrappers.map { TaskMoves.moved(it.item, target) })
         }
     }
