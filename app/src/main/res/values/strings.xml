@@ -23,6 +23,7 @@
     <string name="delete_task_confirm_cancel">Cancel</string>
     <string name="delete_task_confirm_delete">Delete</string>
     <string name="tomorrow">Tomorrow</string>
+    <string name="yesterday">Yesterday</string>
     <string name="cancel">Cancel</string>
     <string name="select_all">Select All</string>
     <string name="deselect_all">Deselect All</string>

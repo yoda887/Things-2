@@ -123,6 +123,9 @@ object TaskListKeys {
     /** Префикс заголовка дня на экране «Предстоящие» */
     const val DAY_HEADER_PREFIX = "hdr_"
 
+    /** Префикс заголовка раздела «Журнала» (сегодня, вчера, месяц) */
+    const val LOGBOOK_HEADER_PREFIX = "lbhdr_"
+
     /** Префикс заголовка месяца на экране «Предстоящие» */
     const val MONTH_HEADER_PREFIX = "mhdr_"
 
@@ -195,13 +198,15 @@ fun rememberFlattenedList(
     headings: List<Item> = emptyList()
 ): List<Any> {
     val headerLogbook = stringResource(R.string.category_logbook)
-    return remember(screen, standardToday, eveningToday, headerLogbook, draggedItemKey, upcomingDays, upcomingMonths, projects, area, displayTasks, isLaterItemsHidden, tag, allTasks, areas, savedTags, searchQuery, headings) {
+    val todayLabel = stringResource(R.string.category_today)
+    val yesterdayLabel = stringResource(R.string.yesterday)
+    return remember(screen, standardToday, eveningToday, headerLogbook, todayLabel, yesterdayLabel, draggedItemKey, upcomingDays, upcomingMonths, projects, area, displayTasks, isLaterItemsHidden, tag, allTasks, areas, savedTags, searchQuery, headings) {
         // Все экраны перечислены явно (без else): новый экран компилятор заставит указать и здесь
         when (screen) {
             ActiveScreen.TODAY -> TodayScreen.rows(standardToday, eveningToday, isDragging = draggedItemKey != null)
             ActiveScreen.UPCOMING -> UpcomingScreen.rows(upcomingDays, upcomingMonths)
             ActiveScreen.AREA_DETAIL -> AreaScreen.rows(AreaList.content(area?.id, displayTasks, projects), isLaterItemsHidden)
-            ActiveScreen.LOGBOOK -> LogbookList.entries(displayTasks, projects)
+            ActiveScreen.LOGBOOK -> LogbookScreen.rows(LogbookList.sections(displayTasks, projects), todayLabel, yesterdayLabel)
             ActiveScreen.TAG_DETAIL -> TagScreen.rows(TagList.content(tag?.title, displayTasks, allTasks, projects))
             ActiveScreen.PROJECT_DETAIL -> ProjectScreen.rows(displayTasks, headings, draggedItemKey)
             ActiveScreen.ANYTIME -> PlaceGroupRows.rows(AnytimeList.groups(displayTasks, projects, areas))

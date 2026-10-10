@@ -935,6 +935,7 @@ fun ThingsCategoryListPanel(
                         is Item -> item.id
                         is UpcomingHeaderItem -> "${TaskListKeys.DAY_HEADER_PREFIX}${item.dateMillis}"
                         is UpcomingMonthHeaderItem -> "${TaskListKeys.MONTH_HEADER_PREFIX}${item.monthMillis}"
+                        is LogbookHeaderItem -> item.key
                         is UpcomingEventItem -> "${TaskListKeys.CALENDAR_EVENT_PREFIX}${item.event.id}_${item.dateMillis}"
                         is SearchSectionHeaderItem -> item.key
                         is SearchAreaItem -> "search_area_${item.area.id}"
@@ -1056,6 +1057,17 @@ fun ThingsCategoryListPanel(
                                         placementSpec = placementSpec
                                     )
                                     .graphicsLayer { alpha = dimAlpha }
+                            )
+                        }
+                        is LogbookHeaderItem -> {
+                            // Тот же вид, что у заголовка месяца «Предстоящих»
+                            UpcomingMonthHeader(
+                                monthLabel = item.label,
+                                textPrimaryColor = textPrimaryColor,
+                                dividerColor = dividerColor,
+                                modifier = Modifier
+                                    .padding(horizontal = ThingsSpacing.S)
+                                    .animateItem(placementSpec = placementSpec)
                             )
                         }
                         is SearchSectionHeaderItem -> {
@@ -1727,6 +1739,7 @@ private fun listItemKey(element: Any): Any? = when (element) {
     is ProjectHeadingItem -> element.key
     is UpcomingHeaderItem -> "${TaskListKeys.DAY_HEADER_PREFIX}${element.dateMillis}"
     is UpcomingMonthHeaderItem -> "${TaskListKeys.MONTH_HEADER_PREFIX}${element.monthMillis}"
+    is LogbookHeaderItem -> element.key
     is String -> element
     else -> null
 }

@@ -1,6 +1,7 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
     <string name="tomorrow">Завтра</string>
+    <string name="yesterday">Вчера</string>
     <string name="area_upcoming_heading">Планы</string>
     <string name="area_someday_heading">Когда-нибудь</string>
     <string name="area_hide_later_items">Скрыть более поздние объекты</string>
