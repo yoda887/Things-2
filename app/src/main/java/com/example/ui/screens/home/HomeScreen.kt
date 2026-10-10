@@ -582,6 +582,7 @@ fun ThingsHomeScreen(viewModel: ThingsViewModel = hiltViewModel()) {
                                 is ThingsCategoryListEvent.DeleteTask -> {
                                     viewModel.deleteTask(event.taskWrapper)
                                 }
+                                is ThingsCategoryListEvent.ToggleTaskCancel -> viewModel.toggleTaskCancel(event.taskId)
                                 is ThingsCategoryListEvent.DuplicateTask -> {
                                     viewModel.duplicateTask(event.taskWrapper)
                                 }

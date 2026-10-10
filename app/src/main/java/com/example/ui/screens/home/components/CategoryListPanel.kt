@@ -1472,6 +1472,19 @@ fun ThingsCategoryListPanel(
                 onEvent(ThingsCategoryListEvent.DuplicateTask(activeTask))
             }
         },
+        isCancelled = activeTask?.item?.status == Item.STATUS_CANCELLED,
+        onCancelClick = {
+            val taskId = activeTask?.item?.id
+            if (taskId != null) {
+                // Сначала редактор сворачивается и сохраняет правки, потом задача отменяется — иначе
+                // сохранение при сворачивании вернуло бы ей прежний статус
+                onEvent(ThingsCategoryListEvent.ChangeInlineExpandedTaskId(null))
+                coroutineScope.launch {
+                    kotlinx.coroutines.delay(com.example.ui.theme.AnimationConstants.TASK_EXPANSION_DURATION_MS)
+                    onEvent(ThingsCategoryListEvent.ToggleTaskCancel(taskId))
+                }
+            }
+        },
         modifier = Modifier.align(Alignment.BottomCenter)
     )
 

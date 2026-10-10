@@ -591,6 +591,11 @@ class ThingsViewModel @Inject constructor(
         }
     }
 
+    /** Отменить задачу или вернуть отменённую ([TaskStatuses]). */
+    fun toggleTaskCancel(taskId: String) {
+        viewModelScope.launch { taskUseCases.toggleTaskCancel(taskId) }
+    }
+
     fun toggleChecklistItem(wrapper: ItemWithChecklist, itemId: String) {
         viewModelScope.launch {
             checklistUseCases.toggleChecklistItem(wrapper, itemId)

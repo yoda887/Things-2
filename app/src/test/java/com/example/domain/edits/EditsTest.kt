@@ -114,4 +114,18 @@ class EditsTest {
         assertEquals(listOf("n" to 0, "h1" to 1), Headings.insertAt(listOf(h1), Headings.newHeading("p", "n"), 0).map { it.id to it.sortOrder })
         assertEquals(listOf("g"), Headings.assign(listOf(Item(id = "t", title = "t")), "g", now).map { it.headingId })
     }
+
+    @Test
+    fun cancel_closesTaskWithStopDate_andRestoreReopensIt() {
+        val open = Item(id = "t", title = "t", status = Item.STATUS_OPEN)
+        val cancelled = TaskStatuses.toggledCancel(open, now = 5000L)
+        org.junit.Assert.assertEquals(Item.STATUS_CANCELLED, cancelled.status)
+        org.junit.Assert.assertEquals(5000L, cancelled.stopDate)
+        org.junit.Assert.assertEquals(5000L, cancelled.modificationDate)
+        val restored = TaskStatuses.toggledCancel(cancelled, now = 6000L)
+        org.junit.Assert.assertEquals(Item.STATUS_OPEN, restored.status)
+        org.junit.Assert.assertEquals(null, restored.stopDate)
+        // Выполненную задачу «Отменить» тоже отменяет
+        org.junit.Assert.assertEquals(Item.STATUS_CANCELLED, TaskStatuses.toggledCancel(open.copy(status = Item.STATUS_COMPLETED)).status)
+    }
 }

@@ -11,5 +11,6 @@ class TaskUseCases @Inject constructor(
     val deleteTask: DeleteTaskUseCase,
     val duplicateTask: DuplicateTaskUseCase,
     val toggleTaskCompletion: ToggleTaskCompletionUseCase,
+    val toggleTaskCancel: ToggleTaskCancelUseCase,
     val updateTask: UpdateTaskUseCase
 )

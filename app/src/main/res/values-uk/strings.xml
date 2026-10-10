@@ -145,6 +145,8 @@
     <string name="ui_quickly_switch_lists_find_to_dos">Перемикайтеся між списками, шукайте завдання\nй теги…</string>
     <string name="ui_recent">Нещодавні</string>
     <string name="ui_rename">Перейменувати</string>
+    <string name="task_action_cancel">Скасувати</string>
+    <string name="task_action_restore">Відновити</string>
     <string name="ui_repeat">Повтор</string>
     <string name="ui_sync_tasks_now">Синхронізувати зараз</string>
     <string name="ui_tags_e_g_work_home">Теги (наприклад, Робота, Дім)</string>

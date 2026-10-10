@@ -93,6 +93,9 @@ interface ITaskRepository {
      */
     suspend fun deleteTasks(items: List<Item>)
 
+    /** Задача (или другой элемент) по идентификатору — как она сейчас в базе. */
+    suspend fun getTask(id: String): Item?
+
     /**
      * Удаляет задачу по ее идентификатору.
      * @param id Уникальный идентификатор задачи

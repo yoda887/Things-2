@@ -326,6 +326,8 @@ sealed interface ThingsCategoryListEvent {
     // Удаление, дублирование
     data class DeleteTask(val taskWrapper: ItemWithChecklist) : ThingsCategoryListEvent
     data class DuplicateTask(val taskWrapper: ItemWithChecklist) : ThingsCategoryListEvent
+    /** Отменить задачу или вернуть отменённую */
+    data class ToggleTaskCancel(val taskId: String) : ThingsCategoryListEvent
     data class MoveTask(val taskWrapper: ItemWithChecklist, val projectId: String?, val areaId: String?, val moveToInbox: Boolean) : ThingsCategoryListEvent
     data class ReorderTasks(val items: List<Item>) : ThingsCategoryListEvent
     // Удаление проекта и области

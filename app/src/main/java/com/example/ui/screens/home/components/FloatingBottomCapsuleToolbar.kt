@@ -1,5 +1,7 @@
 package com.example.ui.screens.home.components
 
+import androidx.compose.material.icons.filled.Cancel
+import androidx.compose.material.icons.filled.Restore
 import com.example.ui.theme.ThingsSpacing
 import com.example.ui.theme.ThingsIconSize
 import com.example.R
@@ -59,6 +61,8 @@ import com.example.ui.theme.dimens
  * @param onMoveClick обработчик события для перемещения задачи.
  * @param onDeleteClick обработчик события для удаления задачи.
  * @param onDuplicateClick обработчик события для дублирования задачи.
+ * @param isCancelled задача уже отменена — пункт меню возвращает её, а не отменяет.
+ * @param onCancelClick отменить задачу или вернуть отменённую.
  * @param modifier модификатор макета для кастомизации расположения.
  */
 @Composable
@@ -67,6 +71,8 @@ fun FloatingBottomCapsuleToolbar(
     onMoveClick: () -> Unit,
     onDeleteClick: () -> Unit,
     onDuplicateClick: () -> Unit,
+    isCancelled: Boolean = false,
+    onCancelClick: () -> Unit = {},
     modifier: Modifier = Modifier
 ) {
     var expandedDotsMenu by remember { mutableStateOf(false) }
@@ -165,6 +171,15 @@ fun FloatingBottomCapsuleToolbar(
                             onDuplicateClick()
                             expandedDotsMenu = false
                         })
+                        ThingsMenuItem(
+                            stringResource(if (isCancelled) R.string.task_action_restore else R.string.task_action_cancel),
+                            if (isCancelled) Icons.Default.Restore else Icons.Default.Cancel,
+                            onClick = {
+                                view.performHapticFeedback(HapticFeedbackConstants.CLOCK_TICK)
+                                onCancelClick()
+                                expandedDotsMenu = false
+                            }
+                        )
                         ThingsMenuItem(stringResource(R.string.ui_repeat), Icons.Default.Refresh, onClick = { expandedDotsMenu = false })
                         ThingsMenuItem(stringResource(R.string.ui_convert), Icons.Default.Transform, onClick = { expandedDotsMenu = false })
                         ThingsMenuItem(stringResource(R.string.batch_action_share), Icons.Default.Share, onClick = { expandedDotsMenu = false })

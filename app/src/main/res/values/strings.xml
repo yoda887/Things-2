@@ -142,6 +142,8 @@
     <string name="ui_quickly_switch_lists_find_to_dos">Quickly switch lists, find to-dos,\nsearch for tags...</string>
     <string name="ui_recent">Recent</string>
     <string name="ui_rename">Rename</string>
+    <string name="task_action_cancel">Cancel</string>
+    <string name="task_action_restore">Restore</string>
     <string name="ui_repeat">Repeat</string>
     <string name="ui_sync_tasks_now">Sync Tasks Now</string>
     <string name="ui_tags_e_g_work_home">Tags (e.g., Work, Home)</string>
