@@ -217,7 +217,10 @@ fun ThingsHomePanel(
     onRenameProject: (Item, String) -> Unit = { _, _ -> },
     onUpdateArea: (Area) -> Unit = {},
     onProjectsReordered: (List<Item>) -> Unit = {},
-    onAreasReordered: (List<Area>) -> Unit = {}
+    onAreasReordered: (List<Area>) -> Unit = {},
+    // Свёрнутые области — запоминаются между запусками; меняет их только пользователь (не перетаскивание)
+    collapsedAreaIds: Set<String> = emptySet(),
+    onAreaExpandedChange: (areaId: String, expanded: Boolean) -> Unit = { _, _ -> }
 ) {
     var rawTokenInput by remember { mutableStateOf(googleToken) }
     var isSyncConfigExpanded by remember { mutableStateOf(false) }
@@ -231,7 +234,10 @@ fun ThingsHomePanel(
         allTasks.groupBy { it.item.projectId }
     }
 
-    val expandedStates = remember { mutableStateMapOf<String, Boolean>() }
+    // Свёрнутые с прошлого раза области — сразу, с первого кадра, без мигания раскрытыми
+    val expandedStates = remember {
+        mutableStateMapOf<String, Boolean>().apply { collapsedAreaIds.forEach { put(it, false) } }
+    }
     
     LaunchedEffect(areas) {
         areas.forEach { area ->
@@ -454,7 +460,10 @@ fun ThingsHomePanel(
             }.let { if (it < 0) projectsNow.size else it }
             val newProjectId = java.util.UUID.randomUUID().toString()
             onCreateProjectAt(newProjectId, areaId, insertAt, projectsNow)
-            if (areaId != null) expandedStates[areaId] = true
+            if (areaId != null && expandedStates[areaId] == false) {
+                expandedStates[areaId] = true
+                onAreaExpandedChange(areaId, true)
+            }
             onEditingProjectIdChange(newProjectId)
             return true
         }
@@ -656,7 +665,10 @@ fun ThingsHomePanel(
                         onEditingProjectIdChange = onEditingProjectIdChange,
                         onLocalProjectsListChange = { localProjects = it },
                         onProjectsReordered = onProjectsReordered,
-                        onExpandArea = { areaId -> expandedStates[areaId] = true }
+                        onExpandArea = { areaId ->
+                            if (expandedStates[areaId] == false) onAreaExpandedChange(areaId, true)
+                            expandedStates[areaId] = true
+                        }
                     )
                 }
                 is HomeTreeItem.AreaHeaderItem -> {
@@ -847,7 +859,10 @@ fun ThingsHomePanel(
 
                             if (hasProjects) {
                                 IconButton(
-                                    onClick = { expandedStates[area.id] = !isExpanded },
+                                    onClick = {
+                                        expandedStates[area.id] = !isExpanded
+                                        onAreaExpandedChange(area.id, !isExpanded)
+                                    },
                                     modifier = Modifier.size(MaterialTheme.dimens.homeAreaToggleSize)
                                 ) {
                                     Icon(

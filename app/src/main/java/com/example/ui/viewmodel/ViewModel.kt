@@ -1,5 +1,6 @@
 package com.example.ui.viewmodel
 
+import com.example.data.local.HomeLayoutPrefs
 import com.example.domain.edits.TaskEditorFields
 import com.example.domain.edits.TaskEdits
 import java.util.UUID
@@ -69,7 +70,8 @@ class ThingsViewModel @Inject constructor(
     private val syncUseCases: SyncUseCases,
     private val checklistUseCases: ChecklistUseCases,
     private val queryUseCases: QueryUseCases,
-    private val headingUseCases: HeadingUseCases
+    private val headingUseCases: HeadingUseCases,
+    private val homeLayoutPrefs: HomeLayoutPrefs
 ) : ViewModel() {
 
     // --- 1. ПЕРЕНОСИМ СОСТОЯНИЯ СИНХРОНИЗАЦИИ ИЗ SYNCHELPER СЮДА ---
@@ -117,6 +119,15 @@ class ThingsViewModel @Inject constructor(
 
     private val _highlightedTaskId = MutableStateFlow<String?>(null)
     val highlightedTaskId: StateFlow<String?> = _highlightedTaskId.asStateFlow()
+
+    /** Свёрнутые области главного экрана — запоминаются между запусками. */
+    private val _collapsedAreaIds = MutableStateFlow(homeLayoutPrefs.collapsedAreaIds())
+    val collapsedAreaIds: StateFlow<Set<String>> = _collapsedAreaIds.asStateFlow()
+
+    fun setAreaExpanded(areaId: String, expanded: Boolean) {
+        homeLayoutPrefs.setAreaCollapsed(areaId, collapsed = !expanded)
+        _collapsedAreaIds.value = homeLayoutPrefs.collapsedAreaIds()
+    }
 
     fun setInlineExpandedTaskId(taskId: String?) {
         _inlineExpandedTaskId.value = taskId

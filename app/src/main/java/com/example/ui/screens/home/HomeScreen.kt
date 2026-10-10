@@ -103,6 +103,7 @@ fun ThingsHomeScreen(viewModel: ThingsViewModel = hiltViewModel()) {
     val allTasksRaw by viewModel.tasks.collectAsState()
     val projects by viewModel.projects.collectAsState()
     val areas by viewModel.areas.collectAsState()
+    val collapsedAreaIds by viewModel.collapsedAreaIds.collectAsState()
     val searchQuery by viewModel.searchQuery.collectAsState()
     val selectedTagFilter by viewModel.selectedTagFilter.collectAsState()
     val allTags by viewModel.allTags.collectAsState()
@@ -413,6 +414,8 @@ fun ThingsHomeScreen(viewModel: ThingsViewModel = hiltViewModel()) {
                     // Применяем обертку ScreenTransitionWrapper со сплошным фоном и эффектом затемнения для уходящего экрана
                     ScreenTransitionWrapper(isStartDestination = true, backgroundColor = backgroundColor) {
                         ThingsHomePanel(
+                            collapsedAreaIds = collapsedAreaIds,
+                            onAreaExpandedChange = viewModel::setAreaExpanded,
                             allTasks = allTasksRaw,
                             // Завершённые, отменённые и удалённые проекты — в Logbook, на главном экране их нет
                             projects = projects.filter { ListRules.isOpenProject(it) },

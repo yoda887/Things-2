@@ -2,6 +2,7 @@ package com.example.di
 
 import android.content.Context
 import com.example.data.local.DeviceCalendarDataSource
+import com.example.data.local.HomeLayoutPrefs
 import com.example.data.local.LocalTaskDataSource
 import com.example.data.local.TaskDao
 import com.example.data.remote.GoogleTasksService
@@ -33,5 +34,11 @@ object DataSourceModule {
     @Singleton
     fun provideDeviceCalendarDataSource(@ApplicationContext context: Context): DeviceCalendarDataSource {
         return DeviceCalendarDataSource(context)
+    }
+
+    @Provides
+    @Singleton
+    fun provideHomeLayoutPrefs(@ApplicationContext context: Context): HomeLayoutPrefs {
+        return HomeLayoutPrefs(context)
     }
 }
