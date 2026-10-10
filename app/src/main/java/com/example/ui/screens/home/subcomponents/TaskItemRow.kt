@@ -398,6 +398,8 @@ fun TaskItemRow(
                                 Spacer(modifier = Modifier.width(ThingsSpacing.XS_PLUS))
                             } else if (dateIndicator != null && (
                                     screen == ActiveScreen.PROJECT_DETAIL || screen == ActiveScreen.AREA_DETAIL ||
+                                        // В «В любое время» звезда или луна отмечают задачи «Сегодня»
+                                        screen == ActiveScreen.ANYTIME ||
                                         // В поиске открытые задачи стоят под проектом или областью — срок виден в строке
                                         (screen == ActiveScreen.SEARCH && !isSearchLogbookStyle)
                                 )
