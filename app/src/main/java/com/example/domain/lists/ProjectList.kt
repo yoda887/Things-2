@@ -7,7 +7,7 @@ import com.example.data.model.ItemWithChecklist
 object ProjectList {
 
     fun includes(item: Item, projectId: String?): Boolean =
-        projectId != null && item.projectId == projectId && !item.isCompleted
+        projectId != null && item.projectId == projectId && !item.isClosed
 
     /** Открытые заголовки проекта по порядку. */
     fun headings(all: List<Item>, projectId: String?): List<Item> =

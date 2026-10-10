@@ -86,6 +86,11 @@ data class Item(
     val isCompleted: Boolean
         get() = status == Item.STATUS_COMPLETED
 
+    /** Закрыта — выполнена или отменена: в открытых списках её нет, её место в «Журнале». */
+    @get:Ignore
+    val isClosed: Boolean
+        get() = status == Item.STATUS_COMPLETED || status == Item.STATUS_CANCELLED
+
     /** Заголовок внутри проекта: группирует задачи проекта, сам задачей не является */
     @get:Ignore
     val isHeading: Boolean
@@ -200,7 +205,7 @@ class DayBounds private constructor(
      * имеет горящий дедлайн или дату старта не позже конца сегодняшнего дня.
      */
     fun isToday(item: Item): Boolean {
-        if (item.type != Item.TYPE_TASK || item.isCompleted) return false
+        if (item.type != Item.TYPE_TASK || item.isClosed) return false
         if (item.start == Item.START_TODAY) return true
         if (isDueSoon(item.dueDate)) return true
         val startDate = item.startDate ?: return false
@@ -212,7 +217,7 @@ class DayBounds private constructor(
      * и при этом не имеет горящего дедлайна.
      */
     fun isUpcoming(item: Item): Boolean {
-        if (item.type != Item.TYPE_TASK || item.isCompleted) return false
+        if (item.type != Item.TYPE_TASK || item.isClosed) return false
         if (isToday(item)) return false
         val startDate = item.startDate ?: return false
         return startDate > endOfToday
@@ -223,7 +228,7 @@ class DayBounds private constructor(
      * но она не в Inbox, не в Someday и не запланирована на будущее.
      */
     fun isAnytime(item: Item): Boolean {
-        if (item.type != Item.TYPE_TASK || item.isCompleted) return false
+        if (item.type != Item.TYPE_TASK || item.isClosed) return false
         if (isToday(item)) return false
         if (item.start == Item.START_INBOX && item.startDate == null && item.projectId == null) return false
         if (item.start == Item.START_SOMEDAY) return false
@@ -237,7 +242,7 @@ class DayBounds private constructor(
      * Задача отложена в «Когда-нибудь потом» (Someday).
      */
     fun isSomeday(item: Item): Boolean =
-        item.type == Item.TYPE_TASK && !item.isCompleted && !isToday(item) && item.start == Item.START_SOMEDAY
+        item.type == Item.TYPE_TASK && !item.isClosed && !isToday(item) && item.start == Item.START_SOMEDAY
 
     /**
      * Секция, в которую попадает задача с учётом дедлайна и даты старта.

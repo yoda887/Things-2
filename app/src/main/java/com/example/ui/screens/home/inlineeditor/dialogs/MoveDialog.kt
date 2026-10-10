@@ -196,7 +196,7 @@ fun ThingsMoveDialog(
                             items(projectsWithNoArea, key = { "proj_no_area_${it.id}" }) { project ->
                                 val isSelected = currentProjectId == project.id
                                 val projectTasks = allTasks.filter { it.item.projectId == project.id }
-                                val completedCount = projectTasks.count { it.item.isCompleted }
+                                val completedCount = projectTasks.count { it.item.isClosed }
                                 val totalCount = projectTasks.size
                                 MoveDialogRow(
                                     title = project.title,
@@ -245,7 +245,7 @@ fun ThingsMoveDialog(
                             items(areaProjects, key = { "proj_${area.id}_${it.id}" }) { project ->
                                 val isSelected = currentProjectId == project.id
                                 val projectTasks = allTasks.filter { it.item.projectId == project.id }
-                                val completedCount = projectTasks.count { it.item.isCompleted }
+                                val completedCount = projectTasks.count { it.item.isClosed }
                                 val totalCount = projectTasks.size
                                 MoveDialogRow(
                                     title = project.title,

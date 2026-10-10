@@ -357,7 +357,7 @@ private fun CategoryTopAppBarTitleContent(
                 )
             }
             ActiveScreen.PROJECT_DETAIL -> {
-                val completedCount = tasks.count { it.item.projectId == project?.id && it.item.isCompleted }
+                val completedCount = tasks.count { it.item.projectId == project?.id && it.item.isClosed }
                 val totalCount = tasks.count { it.item.projectId == project?.id }
                 com.example.ui.components.ProjectProgressArc(
                     completed = completedCount,

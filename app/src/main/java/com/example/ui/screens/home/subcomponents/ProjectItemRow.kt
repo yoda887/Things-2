@@ -55,7 +55,7 @@ fun ProjectItemRow(
     modifier: Modifier = Modifier
 ) {
     val progress = projectProgressMap[project.id]
-    val completedCount = progress?.completed ?: tasks.filter { it.item.projectId == project.id }.count { it.item.isCompleted }
+    val completedCount = progress?.completed ?: tasks.filter { it.item.projectId == project.id }.count { it.item.isClosed }
     val totalCount = progress?.total ?: tasks.count { it.item.projectId == project.id }
     // Выполненный или отменённый проект («Журнал», Logbook поиска) — кольцо с галочкой или крестиком
     val isDone = project.isCompleted || project.status == Item.STATUS_CANCELLED

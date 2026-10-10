@@ -1008,7 +1008,7 @@ fun SearchResultRow(
         }
         is SearchResultItem.ProjectResult -> {
             val totalCount = allTasks.count { it.item.projectId == result.project.id && it.item.type == Item.TYPE_TASK }
-            val completedCount = allTasks.count { it.item.projectId == result.project.id && it.item.type == Item.TYPE_TASK && it.item.isCompleted }
+            val completedCount = allTasks.count { it.item.projectId == result.project.id && it.item.type == Item.TYPE_TASK && it.item.isClosed }
             val isSomeday = result.project.isSomeday
             val baseArcColor = if (isSomeday) ThingsTheme.colors.someday else ThingsTheme.colors.project
             val arcColor = if (isHighlighted) androidx.compose.ui.graphics.lerp(baseArcColor, accentColor, 0.45f) else baseArcColor

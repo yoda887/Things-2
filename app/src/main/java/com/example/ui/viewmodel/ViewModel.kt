@@ -245,7 +245,7 @@ class ThingsViewModel @Inject constructor(
                 .groupBy { it.item.projectId!! }
                 .mapValues { (_, tasks) ->
                     ProjectProgress(
-                        completed = tasks.count { it.item.isCompleted },
+                        completed = tasks.count { it.item.isClosed },
                         total = tasks.size
                     )
                 }

@@ -9,5 +9,5 @@ object ListRules {
     fun isOpenProject(project: Item): Boolean = !project.trashed && project.status == Item.STATUS_OPEN
 
     /** Задача закрыта — выполнена или отменена; её место в Logbook. */
-    fun isClosed(item: Item): Boolean = item.isCompleted || item.status == Item.STATUS_CANCELLED
+    fun isClosed(item: Item): Boolean = item.isClosed
 }

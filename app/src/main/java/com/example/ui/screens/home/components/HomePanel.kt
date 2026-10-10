@@ -1176,7 +1176,7 @@ private fun LazyItemScope.ProjectItemRow(
     val projectTasks = remember(allTasks, project.id) {
         allTasks.filter { it.item.projectId == project.id }
     }
-    val completedCount = projectTasks.count { it.item.isCompleted }
+    val completedCount = projectTasks.count { it.item.isClosed }
     val totalCount = projectTasks.size
 
     val isDragging = dragDropState.draggedItemKey == HomeListKeys.project(project.id)

@@ -215,7 +215,7 @@ fun MainCategoryHeader(
                 // Завершённый проект — кольцо полное, даже если задач в нём нет
                 val projectDone = project != null && (project.isCompleted || project.status == Item.STATUS_CANCELLED)
                 val totalCount = tasks.count { it.item.projectId == project?.id }.let { if (projectDone) maxOf(it, 1) else it }
-                val completedCount = if (projectDone) totalCount else tasks.count { it.item.projectId == project?.id && it.item.isCompleted }
+                val completedCount = if (projectDone) totalCount else tasks.count { it.item.projectId == project?.id && it.item.isClosed }
                 // Иконка проекта (ProgressArc) окрашена в синий цвет и выровнена по верхнему краю заголовка с компенсационным отступом
                 ProjectProgressArc(
                     completed = completedCount,
