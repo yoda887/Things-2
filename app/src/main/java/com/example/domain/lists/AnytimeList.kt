@@ -33,6 +33,11 @@ object AnytimeList {
     fun order(tasks: List<ItemWithChecklist>, projects: List<Item>, areas: List<Area>): List<ItemWithChecklist> =
         PlaceGroups.order(tasks, projects, areas)
 
-    fun groups(tasks: List<ItemWithChecklist>, projects: List<Item>, areas: List<Area>): List<PlaceGroups.Group> =
-        PlaceGroups.group(tasks, projects, areas, areaHeaderOnlyWithOwnItems = true)
+    fun groups(
+        tasks: List<ItemWithChecklist>,
+        projects: List<Item>,
+        areas: List<Area>,
+        pinned: Map<String, PlaceGroups.Place> = emptyMap()
+    ): List<PlaceGroups.Group> =
+        PlaceGroups.group(tasks, projects, areas, areaHeaderOnlyWithOwnItems = true, pinned = pinned)
 }

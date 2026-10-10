@@ -1,5 +1,6 @@
 package com.example.ui.screens.home.components
 
+import com.example.domain.lists.PlaceGroups
 import com.example.data.model.ChecklistItem
 import com.example.domain.edits.TaskEditorFields
 import com.example.domain.edits.ProjectEdit
@@ -195,12 +196,14 @@ fun rememberFlattenedList(
     areas: List<Area> = emptyList(),
     savedTags: List<Tag> = emptyList(),
     searchQuery: String = "",
-    headings: List<Item> = emptyList()
+    headings: List<Item> = emptyList(),
+    // Место задачи в открытом редакторе — «В любое время» и «Когда-нибудь» держат её там до закрытия
+    pinnedPlaces: Map<String, PlaceGroups.Place> = emptyMap()
 ): List<Any> {
     val headerLogbook = stringResource(R.string.category_logbook)
     val todayLabel = stringResource(R.string.category_today)
     val yesterdayLabel = stringResource(R.string.yesterday)
-    return remember(screen, standardToday, eveningToday, headerLogbook, todayLabel, yesterdayLabel, draggedItemKey, upcomingDays, upcomingMonths, projects, area, displayTasks, isLaterItemsHidden, tag, allTasks, areas, savedTags, searchQuery, headings) {
+    return remember(screen, standardToday, eveningToday, headerLogbook, todayLabel, yesterdayLabel, draggedItemKey, upcomingDays, upcomingMonths, projects, area, displayTasks, isLaterItemsHidden, tag, allTasks, areas, savedTags, searchQuery, headings, pinnedPlaces) {
         // Все экраны перечислены явно (без else): новый экран компилятор заставит указать и здесь
         when (screen) {
             ActiveScreen.TODAY -> TodayScreen.rows(standardToday, eveningToday, isDragging = draggedItemKey != null)
@@ -209,8 +212,8 @@ fun rememberFlattenedList(
             ActiveScreen.LOGBOOK -> LogbookScreen.rows(LogbookList.sections(displayTasks, projects), todayLabel, yesterdayLabel)
             ActiveScreen.TAG_DETAIL -> TagScreen.rows(TagList.content(tag?.title, displayTasks, allTasks, projects))
             ActiveScreen.PROJECT_DETAIL -> ProjectScreen.rows(displayTasks, headings, draggedItemKey)
-            ActiveScreen.ANYTIME -> PlaceGroupRows.rows(AnytimeList.groups(displayTasks, projects, areas))
-            ActiveScreen.SOMEDAY -> PlaceGroupRows.rows(SomedayList.groups(displayTasks, projects, areas))
+            ActiveScreen.ANYTIME -> PlaceGroupRows.rows(AnytimeList.groups(displayTasks, projects, areas, pinnedPlaces))
+            ActiveScreen.SOMEDAY -> PlaceGroupRows.rows(SomedayList.groups(displayTasks, projects, areas, pinnedPlaces))
             ActiveScreen.SEARCH -> SearchScreen.rows(displayTasks, projects, areas, savedTags, searchQuery, headerLogbook)
             // «Входящие» — задачи как есть; у главного экрана списка нет
             ActiveScreen.INBOX, ActiveScreen.HOME -> displayTasks

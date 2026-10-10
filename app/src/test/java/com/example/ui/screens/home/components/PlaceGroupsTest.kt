@@ -105,4 +105,18 @@ class PlaceGroupsTest {
         assertEquals(false, SomedayList.includes(t(null).copy(status = Item.STATUS_CANCELLED), bounds, somedayIds))
         assertEquals(false, SomedayList.includes(t(null).copy(trashed = true), bounds, somedayIds))
     }
+
+    @Test
+    fun pinnedTask_staysInItsFormerGroupWhileEdited() {
+        // Задачу «t» из проекта p1 перенесли в область Work, пока она открыта в редакторе. Список уже
+        // упорядочен по новому месту: «t» после задач p1, хотя по sortOrder она между ними
+        fun t(id: String, order: Int, project: String? = null, area: String? = null) =
+            ItemWithChecklist(Item(id = id, title = id, projectId = project, areaId = area, sortOrder = order, creationDate = 0L))
+        val tasks = listOf(t("a", 0, project = "p1"), t("b", 2, project = "p1"), t("t", 1, area = "work"))
+        val pinned = mapOf("t" to PlaceGroups.Place(projectId = "p1", areaId = null))
+        // Остаётся в p1 и на своём месте по порядку
+        assertEquals(listOf("p1" to listOf("a", "t", "b")), shape(PlaceGroups.group(tasks, projects, areas, pinned = pinned)))
+        // Без закрепления — уже в Work
+        assertEquals(listOf("p1" to listOf("a", "b"), "work" to listOf("t")), shape(PlaceGroups.group(tasks, projects, areas)))
+    }
 }

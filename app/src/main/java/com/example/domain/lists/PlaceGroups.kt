@@ -12,6 +12,9 @@ import com.example.data.model.ItemWithChecklist
  * проекты — строками ([Group.projectRows]).
  *
  * Проект или область, которых нет или которые удалены, задачу не уносят — она среди задач без места.
+ *
+ * Задача, которую сейчас правят, стоит в своей группе до закрытия редактора: перенос в другой проект или
+ * область из открытого редактора сохраняется сразу, но в список она переедет после ([pinned]).
  */
 object PlaceGroups {
 
@@ -26,6 +29,12 @@ object PlaceGroups {
         val projectRows: List<Item> = emptyList()
     )
 
+    /** Порядок задач в базе (TaskDao): по sortOrder, при равном — новые сверху. */
+    private val BASE_ORDER = compareBy<Item> { it.sortOrder }.thenByDescending { it.creationDate }
+
+    /** Место задачи: проект и область (как в задаче). */
+    data class Place(val projectId: String?, val areaId: String?)
+
     /** Ключ группы задачи: перенос перетаскиванием допустим только внутри одной группы. */
     fun keyOf(task: Item, projects: List<Item>, areas: List<Area>): String? {
         val project = task.projectId?.let { id -> projects.firstOrNull { it.id == id && !it.trashed } }
@@ -39,24 +48,42 @@ object PlaceGroups {
      * без места, с областью — под заголовком своей области
      * @param areaHeaderOnlyWithOwnItems заголовок области — только когда у неё есть свои задачи без проекта
      * (или строки проектов); её проекты с задачами показываются и без него («В любое время» и «Когда-нибудь»)
+     * @param pinned место, по которому группируются задачи с этими id вместо их нынешнего, — задача в
+     * открытом редакторе остаётся там, где была, пока редактор не закроют
      */
     fun group(
         tasks: List<ItemWithChecklist>,
         projects: List<Item>,
         areas: List<Area>,
         projectRows: List<Item> = emptyList(),
-        areaHeaderOnlyWithOwnItems: Boolean = false
+        areaHeaderOnlyWithOwnItems: Boolean = false,
+        pinned: Map<String, Place> = emptyMap()
     ): List<Group> {
         val liveProjects = projects.filter { it.type == Item.TYPE_PROJECT && !it.trashed }
         val liveAreas = areas.filter { !it.trashed }
         val projectsById = liveProjects.associateBy { it.id }
         val areasById = liveAreas.associateBy { it.id }
-        fun ItemWithChecklist.project() = item.projectId?.let { projectsById[it] }
-        fun ItemWithChecklist.area() = item.areaId?.let { areasById[it] }
+        fun ItemWithChecklist.place() = pinned[item.id] ?: Place(item.projectId, item.areaId)
+        fun ItemWithChecklist.project() = place().projectId?.let { projectsById[it] }
+        fun ItemWithChecklist.area() = place().areaId?.let { areasById[it] }
 
-        val loose = tasks.filter { it.project() == null && it.area() == null }
-        val byProject = tasks.filter { it.project() != null }.groupBy { it.item.projectId!! }
-        val byArea = tasks.filter { it.project() == null && it.area() != null }.groupBy { it.item.areaId!! }
+        // Закреплённая задача встаёт в свою группу на место по порядку базы (sortOrder, затем новые сверху):
+        // в пришедшем списке она уже стоит там, куда её перенесли. Остальные — в порядке списка, как есть
+        // (во время перетаскивания он локальный, пересортировывать его нельзя)
+        fun List<ItemWithChecklist>.withPinnedInPlace(): List<ItemWithChecklist> {
+            val (pins, rest) = partition { it.item.id in pinned }
+            if (pins.isEmpty()) return this
+            val out = rest.toMutableList()
+            pins.forEach { pin ->
+                val at = out.indexOfFirst { BASE_ORDER.compare(it.item, pin.item) > 0 }
+                out.add(if (at == -1) out.size else at, pin)
+            }
+            return out
+        }
+
+        val loose = tasks.filter { it.project() == null && it.area() == null }.withPinnedInPlace()
+        val byProject = tasks.filter { it.project() != null }.groupBy { it.project()!!.id }.mapValues { it.value.withPinnedInPlace() }
+        val byArea = tasks.filter { it.project() == null && it.area() != null }.groupBy { it.area()!!.id }.mapValues { it.value.withPinnedInPlace() }
 
         val rows = projectRows.filter { it.type == Item.TYPE_PROJECT && !it.trashed }
         val rowsWithoutArea = rows.filter { it.areaId.isNullOrEmpty() || it.areaId !in areasById }

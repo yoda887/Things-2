@@ -1,5 +1,6 @@
 package com.example.ui.screens.home.components
 
+import com.example.domain.lists.PlaceGroups
 import com.example.domain.lists.HeadingOrder
 import com.example.domain.edits.ProjectEdit
 import com.example.domain.edits.DropSpot
@@ -326,6 +327,13 @@ fun ThingsCategoryListPanel(
     var isTagsFilterVisible by remember(screen, project?.id, area?.id) { mutableStateOf(false) }
 
     // Извлечение выравнивания плоского списка для LazyColumn
+    // Задача в открытом редакторе стоит в своей группе до закрытия: место запоминается, когда она раскрылась
+    // (у новой задачи — когда появилась в списке), перенос в другой проект или область сдвинет её только потом
+    val editedTaskShown = inlineExpandedTaskId != null && state.displayTasks.any { it.item.id == inlineExpandedTaskId }
+    val editedTaskPlace = remember(inlineExpandedTaskId, editedTaskShown) {
+        state.displayTasks.firstOrNull { it.item.id == inlineExpandedTaskId }?.item?.let { PlaceGroups.Place(it.projectId, it.areaId) }
+    }
+    val pinnedPlaces = if (inlineExpandedTaskId != null && editedTaskPlace != null) mapOf(inlineExpandedTaskId to editedTaskPlace) else emptyMap()
     val flattened = rememberFlattenedList(
         screen = screen,
         standardToday = standardToday,
@@ -342,7 +350,8 @@ fun ThingsCategoryListPanel(
         areas = areasState,
         savedTags = allSavedTagObjects,
         searchQuery = state.searchQuery,
-        headings = if (screen == ActiveScreen.PROJECT_DETAIL) localHeadings else emptyList()
+        headings = if (screen == ActiveScreen.PROJECT_DETAIL) localHeadings else emptyList(),
+        pinnedPlaces = pinnedPlaces
     )
 
     // ── Добавление перетаскиванием кнопки «+» (см. FabDragController) ──
