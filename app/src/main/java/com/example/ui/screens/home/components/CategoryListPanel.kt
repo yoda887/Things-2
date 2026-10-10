@@ -1012,6 +1012,7 @@ fun ThingsCategoryListPanel(
                                     textPrimaryColor = textPrimaryColor,
                                     inlineExpandedTaskId = inlineExpandedTaskId,
                                     onProjectClick = { onEvent(ThingsCategoryListEvent.ClickProject(it)) },
+                                    closedAt = if (screen == ActiveScreen.LOGBOOK) LogbookList.closedAt(task) else null,
                                     modifier = Modifier.animateItem(
                                         placementSpec = placementSpec
                                     )

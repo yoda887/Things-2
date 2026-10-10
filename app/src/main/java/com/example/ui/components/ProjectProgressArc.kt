@@ -86,3 +86,34 @@ fun ProjectProgressArc(
         }
     }
 }
+
+/**
+ * Закрытый проект — в «Журнале» и в результатах поиска: кольцо той же толщины, внутри галочка
+ * (завершён) или крестик ([cancelled]), как у закрытой задачи.
+ */
+@Composable
+fun ClosedProjectIcon(
+    cancelled: Boolean,
+    modifier: Modifier = Modifier,
+    color: Color = ThingsTheme.colors.project
+) {
+    Canvas(modifier = modifier.aspectRatio(1f)) {
+        val diameter = minOf(size.width, size.height)
+        val strokeWidth = diameter * 0.08f
+        val center = androidx.compose.ui.geometry.Offset(size.width / 2f, size.height / 2f)
+        drawCircle(color = color, radius = (diameter - strokeWidth) / 2f, center = center, style = Stroke(width = strokeWidth))
+        val markStroke = Stroke(width = diameter * 0.1f, cap = androidx.compose.ui.graphics.StrokeCap.Round, join = androidx.compose.ui.graphics.StrokeJoin.Round)
+        val path = androidx.compose.ui.graphics.Path().apply {
+            if (cancelled) {
+                val d = diameter * 0.2f
+                moveTo(center.x - d, center.y - d); lineTo(center.x + d, center.y + d)
+                moveTo(center.x + d, center.y - d); lineTo(center.x - d, center.y + d)
+            } else {
+                moveTo(center.x - diameter * 0.22f, center.y + diameter * 0.01f)
+                lineTo(center.x - diameter * 0.06f, center.y + diameter * 0.17f)
+                lineTo(center.x + diameter * 0.24f, center.y - diameter * 0.16f)
+            }
+        }
+        drawPath(path, color = color, style = markStroke)
+    }
+}

@@ -27,6 +27,7 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import com.example.data.model.Item
 import com.example.data.model.ItemWithChecklist
+import com.example.ui.components.ClosedProjectIcon
 import com.example.ui.components.ProjectProgressArc
 import com.example.ui.theme.dimens
 
@@ -49,12 +50,14 @@ fun ProjectItemRow(
     textPrimaryColor: Color,
     inlineExpandedTaskId: String?,
     onProjectClick: (Item) -> Unit,
+    // Дата закрытия перед названием — в «Журнале», в той же колонке, что у закрытых задач
+    closedAt: Long? = null,
     modifier: Modifier = Modifier
 ) {
     val progress = projectProgressMap[project.id]
     val completedCount = progress?.completed ?: tasks.filter { it.item.projectId == project.id }.count { it.item.isCompleted }
     val totalCount = progress?.total ?: tasks.count { it.item.projectId == project.id }
-    // Выполненный или отменённый проект (в Logbook поиска) — кольцо полное, как у закрытого проекта
+    // Выполненный или отменённый проект («Журнал», Logbook поиска) — кольцо с галочкой или крестиком
     val isDone = project.isCompleted || project.status == Item.STATUS_CANCELLED
     val shouldDim = inlineExpandedTaskId != null
     val dimAlpha by animateFloatAsState(
@@ -82,15 +85,26 @@ fun ProjectItemRow(
             modifier = Modifier.size(MaterialTheme.dimens.taskLeftColumnWidthDefault),
             contentAlignment = Alignment.Center
         ) {
-            ProjectProgressArc(
-                completed = if (isDone) maxOf(totalCount, 1) else completedCount,
-                total = if (isDone) maxOf(totalCount, 1) else totalCount,
-                color = ThingsTheme.colors.project,
-                dashed = project.start == Item.START_SOMEDAY,
-                modifier = Modifier.requiredSize(ThingsIconSize.M)
-            )
+            if (isDone) {
+                ClosedProjectIcon(
+                    cancelled = project.status == Item.STATUS_CANCELLED,
+                    modifier = Modifier.requiredSize(ThingsIconSize.M)
+                )
+            } else {
+                ProjectProgressArc(
+                    completed = completedCount,
+                    total = totalCount,
+                    color = ThingsTheme.colors.project,
+                    dashed = project.start == Item.START_SOMEDAY,
+                    modifier = Modifier.requiredSize(ThingsIconSize.M)
+                )
+            }
         }
         Spacer(modifier = Modifier.width(MaterialTheme.dimens.taskSpacingToTextDefault))
+        if (closedAt != null) {
+            ClosedDateLabel(closedAt = closedAt, inLogbook = true)
+            Spacer(modifier = Modifier.width(com.example.ui.theme.ThingsSpacing.S))
+        }
         Row(
             modifier = Modifier.weight(1f),
             verticalAlignment = Alignment.CenterVertically

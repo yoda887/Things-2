@@ -55,12 +55,6 @@ private val SELECTION_RING_GAP = 2.dp
 
 private const val COMPLETION_FILL_MS = 350
 
-/**
- * Колонка дня закрытия в «Журнале» — в размерах шрифта даты: «10 жовт.» занимает ~4, запас на длинные
- * сокращения месяцев. Ширина одна на все строки — названия задач стоят ровно, а с размером шрифта
- * колонка растёт сама.
- */
-private const val LOGBOOK_DATE_COLUMN_EM = 4.4f
 // Подсветка найденной задачи — по кадрам эталона Things 3
 private const val FOUND_GLOW_IN_MS = 160
 private const val FOUND_GLOW_HOLD_MS = 80L
@@ -379,26 +373,7 @@ fun TaskItemRow(
                 // Дата завершения — отдельной колонкой слева от названия и подзаголовка,
                 // по центру строки по вертикали
                 if (isSearchLogbookStyle) {
-                    val completedAt = task.stopDate ?: task.modificationDate
-                    // В «Журнале» над задачами уже стоит месяц — день и месяц коротко, в поиске — полная дата
-                    val dateText = remember(completedAt, screen) {
-                        if (screen == ActiveScreen.LOGBOOK) formatLogbookDay(completedAt) else formatSearchLogbookDate(completedAt)
-                    }
-                    val dateFontSize = ThingsTheme.type.taskTitle.fontSize * 0.9f
-                    val density = androidx.compose.ui.platform.LocalDensity.current
-                    Text(
-                        text = dateText,
-                        style = ThingsTheme.type.taskSubtitleStrong.copy(
-                            fontSize = dateFontSize,
-                            color = searchLogbookDateColor()
-                        ),
-                        maxLines = 1,
-                        modifier = if (screen == ActiveScreen.LOGBOOK) {
-                            Modifier.width(with(density) { (dateFontSize * LOGBOOK_DATE_COLUMN_EM).toDp() })
-                        } else {
-                            Modifier
-                        }
-                    )
+                    ClosedDateLabel(closedAt = task.stopDate ?: task.modificationDate, inLogbook = screen == ActiveScreen.LOGBOOK)
                     Spacer(modifier = Modifier.width(ThingsSpacing.S))
                 }
 
@@ -776,18 +751,3 @@ private fun getStartDateIndicator(
 /** Заливка флажка выполненной/отменённой задачи в результатах поиска — фирменный голубой. */
 @Composable
 private fun searchLogbookCheckColor(): Color = ThingsTheme.colors.accent
-
-/** Цвет даты завершения перед названием задачи в результатах поиска — фирменный голубой. */
-@Composable
-private fun searchLogbookDateColor(): Color = ThingsTheme.colors.accent
-
-/** Короткая числовая дата в формате системы: 04/28/24 для en-US, 28.04.24 для ru/uk. */
-/** День закрытия в «Журнале»: «9 жовт.» — коротко, месяц и так в заголовке раздела. */
-private fun formatLogbookDay(millis: Long): String =
-    java.text.SimpleDateFormat("d MMM", java.util.Locale.getDefault()).format(java.util.Date(millis))
-
-private fun formatSearchLogbookDate(millis: Long): String {
-    val locale = java.util.Locale.getDefault()
-    val pattern = android.text.format.DateFormat.getBestDateTimePattern(locale, "ddMMyy")
-    return java.text.SimpleDateFormat(pattern, locale).format(java.util.Date(millis))
-}

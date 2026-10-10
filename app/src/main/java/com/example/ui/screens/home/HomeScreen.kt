@@ -305,10 +305,11 @@ fun ThingsHomeScreen(viewModel: ThingsViewModel = hiltViewModel()) {
         // Поэтому на уровне главного Scaffold тулбар больше не отображается.
         topBar = {},
         floatingActionButton = {
-            // Скрывать FAB при открытии inline-редактора, FAB-меню, диалогов, окна быстрой задачи (QuickAddDialog) или режима мультивыбора
+            // Скрывать FAB при открытии inline-редактора, FAB-меню, диалогов, окна быстрой задачи (QuickAddDialog) или режима мультивыбора.
+            // В «Журнале» кнопки нет вовсе: там только закрытое, новые задачи не создают (как в Things)
             AnimatedVisibility(
-                visible = fabDragController.isDragging || fabDragController.isSettling ||
-                    (inlineExpandedTaskId == null && !showFabMenu && !isListDialogActive && !showAddDialog && !isSelectionMode),
+                visible = activeScreen != ActiveScreen.LOGBOOK && (fabDragController.isDragging || fabDragController.isSettling ||
+                    (inlineExpandedTaskId == null && !showFabMenu && !isListDialogActive && !showAddDialog && !isSelectionMode)),
                 enter = slideInVertically(
                     initialOffsetY = { it * 2 },
                     animationSpec = spring(
