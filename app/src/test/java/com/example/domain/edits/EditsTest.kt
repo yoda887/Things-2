@@ -52,6 +52,9 @@ class EditsTest {
     fun moveTask() {
         val inbox = Item(id = "t", title = "t", start = Item.START_INBOX)
         TaskMoves.moved(inbox, MoveTarget.Place("p", null), now).let { assertEquals("p", it.projectId); assertEquals(Item.START_ANYTIME, it.start) }
+        // В область — тоже уходит из «Входящих»; «Без проекта» — остаётся
+        TaskMoves.moved(inbox, MoveTarget.Place(null, "a"), now).let { assertEquals("a", it.areaId); assertEquals(Item.START_ANYTIME, it.start) }
+        assertEquals(Item.START_INBOX, TaskMoves.moved(inbox, MoveTarget.Place(null, null), now).start)
         val dated = Item(id = "t", title = "t", start = Item.START_ANYTIME, projectId = "p", startDate = day(12), dueDate = day(14))
         TaskMoves.moved(dated, MoveTarget.Inbox, now).let {
             assertNull(it.projectId); assertNull(it.startDate); assertNull(it.dueDate)

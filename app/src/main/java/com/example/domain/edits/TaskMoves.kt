@@ -25,8 +25,8 @@ object TaskMoves {
         is MoveTarget.Place -> task.copy(
             projectId = target.projectId,
             areaId = target.areaId,
-            // Задача из «Входящих», попавшая в проект, — уже разобрана
-            start = if (task.start == Item.START_INBOX && target.projectId != null) Item.START_ANYTIME else task.start,
+            // Задача из «Входящих», попавшая в проект или область, — уже разобрана
+            start = if (task.start == Item.START_INBOX && (target.projectId != null || target.areaId != null)) Item.START_ANYTIME else task.start,
             modificationDate = now
         )
     }
