@@ -545,6 +545,7 @@ fun ThingsHomePanel(
                     icon = AppIcons.Inbox,
                     // Задаём Unspecified цвет, чтобы отображался оригинальный красивый градиент/цвет иконки
                     iconColor = Color.Unspecified,
+                    iconSize = MaterialTheme.dimens.homeInboxIconSize,
                     count = inboxCount,
                     textPrimaryColor = textPrimaryColor,
                     textSecondaryColor = textSecondaryColor,

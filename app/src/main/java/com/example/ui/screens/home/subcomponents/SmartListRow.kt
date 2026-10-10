@@ -37,6 +37,8 @@ fun SmartListRow(
     textPrimaryColor: Color,
     textSecondaryColor: Color,
     isGrayCountAndNoBg: Boolean = false,
+    // Размер самой иконки; рамка под неё всегда ThingsIconSize.L — названия стоят ровно
+    iconSize: androidx.compose.ui.unit.Dp = ThingsIconSize.L,
     onClick: () -> Unit
 ) {
     Row(
@@ -47,7 +49,9 @@ fun SmartListRow(
             .padding(vertical = ThingsSpacing.XS_PLUS, horizontal = ThingsSpacing.XS_PLUS),
         verticalAlignment = Alignment.CenterVertically
     ) {
-        Icon(icon, contentDescription = title, tint = iconColor, modifier = Modifier.size(ThingsIconSize.L))
+        Box(modifier = Modifier.size(ThingsIconSize.L), contentAlignment = Alignment.Center) {
+            Icon(icon, contentDescription = title, tint = iconColor, modifier = Modifier.size(iconSize))
+        }
         Spacer(modifier = Modifier.width(MaterialTheme.dimens.homeRowIconTextGap))
         Text(title, style = ThingsTheme.type.listTitle.copy(color = textPrimaryColor), modifier = Modifier.weight(1f))
         

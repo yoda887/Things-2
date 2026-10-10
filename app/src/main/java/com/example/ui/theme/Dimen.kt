@@ -81,6 +81,11 @@ data class AppDimens(
     val homeRowIconTextGap: Dp = 7.dp,
     /** Значок области — высота (ширина homeRowIconSize) */
     val homeAreaIconHeight: Dp = 28.dp,
+    /**
+     * Иконка «Входящих» на главном экране: она залита плотнее остальных (сплошной синий лоток) и при том же
+     * размере кажется крупнее — рисуется чуть меньше внутри той же рамки ThingsIconSize.L
+     */
+    val homeInboxIconSize: Dp = 19.dp,
     /** Промежуток между разделами Входящие / Сегодня / … */
     val homeSmartListSpacing: Dp = 10.dp,
     /** Отступ до и после разделителя перед областью */
