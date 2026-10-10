@@ -204,7 +204,7 @@ object TaskDrops {
             timestamp
         } else {
             val currentDayIdx = upcomingDayStarts.indexOfFirst { it.dayStart() == timestamp.dayStart() }
-            if (currentDayIdx > 0) upcomingDayStarts[currentDayIdx - 1] else timestamp - MS_PER_DAY
+            if (currentDayIdx > 0) upcomingDayStarts[currentDayIdx - 1] else timestamp.plusDays(-1)
         }
 
         val clipped = maxOf(targetTimestamp, tomorrowStart)
@@ -255,7 +255,9 @@ object TaskDrops {
         // месяц, а его остаток, и задача тех же суток, но ещё внутри горизонта, принадлежит
         // разделу «дни». Только для движения вниз: вверх через свой заголовок задача как раз
         // уходит в предыдущий раздел.
-        val horizonEndMillis = upcomingDayStarts.lastOrNull()?.plus(MS_PER_DAY) ?: 0L
+        // Конец горизонта — следующие сутки по календарю: в день перехода на летнее/зимнее время в сутках
+        // не 24 часа, и «+ 24 ч» промахивается на час
+        val horizonEndMillis = upcomingDayStarts.lastOrNull()?.plusDays(1) ?: 0L
         val oldStart = moved.item.startDate
         if (movingDown && oldStart != null && oldStart >= horizonEndMillis &&
             oldStart.sameMonthAs(monthTimestamp)

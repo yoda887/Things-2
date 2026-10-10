@@ -27,7 +27,8 @@ class TaskDropPlacementTest {
     /** Дни-заголовки экрана «Предстоящие»: 14 суток начиная с завтра */
     private val upcomingDayStarts: List<Long> = (1..14).map { dayStart(it) }
 
-    private val horizonEnd: Long = upcomingDayStarts.last() + MS_PER_DAY
+    // По календарю: в сутках перехода на зимнее время 25 часов, «+ 24 ч» дало бы 23:00 того же дня
+    private val horizonEnd: Long = dayStart(15)
 
     // ─── Заголовок «Вечер» (экран «Сегодня») ──────────────────────────────────
 
@@ -188,7 +189,7 @@ class TaskDropPlacementTest {
             bounds = bounds,
         )!!
 
-        assertEquals(dayStart(2) + HOUR * 12, result.first { it.item.id == "dragged" }.item.startDate)
+        assertEquals(noonOf(dayStart(2)), result.first { it.item.id == "dragged" }.item.startDate)
     }
 
     // ─── Заголовок месяца (экран «Предстоящие») ───────────────────────────────
@@ -215,7 +216,7 @@ class TaskDropPlacementTest {
 
         assertEquals(listOf("month", "lastDay", "dragged"), ids(result))
         val movedStart = result.last().item.startDate!!
-        assertEquals(upcomingDayStarts.last() + HOUR * 12, movedStart)
+        assertEquals(noonOf(upcomingDayStarts.last()), movedStart)
     }
 
     @Test
