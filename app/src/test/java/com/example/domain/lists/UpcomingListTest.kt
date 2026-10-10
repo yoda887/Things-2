@@ -68,4 +68,23 @@ class UpcomingListTest {
         val yesterday = event("yesterday", bounds.todayStart - 3_600_000L)
         assertEquals(listOf("today"), TodayList.events(listOf(yesterday, today, tomorrow), bounds).map { it.id })
     }
+
+    @Test
+    fun scheduledProjects_onTheirDayOrMonth_somedayAndPastNot() {
+        fun project(id: String, start: Long?, startVal: Int = Item.START_ANYTIME) =
+            Item(id = id, title = id, type = Item.TYPE_PROJECT, start = startVal, startDate = start)
+        val tomorrowProject = project("pTomorrow", at(2026, Calendar.OCTOBER, 10))
+        val novemberProject = project("pNov", at(2026, Calendar.NOVEMBER, 12))
+        val schedule = UpcomingList.schedule(emptyList(), emptyList(), now, listOf(tomorrowProject, novemberProject))
+        assertEquals(listOf("pTomorrow"), schedule.days[0].projects.map { it.id })
+        assertEquals(listOf("pNov"), schedule.periods.single { it.month == Calendar.NOVEMBER }.projects.map { it.id })
+
+        val bounds = DayBounds.now()
+        val day = 24 * 3600 * 1000L
+        assertTrue(UpcomingList.includesProject(project("f", bounds.endOfToday + day), bounds))
+        assertFalse(UpcomingList.includesProject(project("today", bounds.todayStart + 3_600_000L), bounds))
+        assertFalse(UpcomingList.includesProject(project("none", null), bounds))
+        assertFalse(UpcomingList.includesProject(project("s", bounds.endOfToday + day, Item.START_SOMEDAY), bounds))
+        assertFalse(UpcomingList.includesProject(project("c", bounds.endOfToday + day).copy(status = Item.STATUS_COMPLETED), bounds))
+    }
 }

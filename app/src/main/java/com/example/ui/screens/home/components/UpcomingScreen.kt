@@ -24,9 +24,10 @@ object UpcomingScreen {
         localTasksList: List<ItemWithChecklist>,
         calendarEvents: List<Item>,
         tomorrowLabel: String,
-        now: Calendar = Calendar.getInstance()
+        now: Calendar = Calendar.getInstance(),
+        projects: List<Item> = emptyList()
     ): UpcomingSchedule {
-        val plan = UpcomingList.schedule(localTasksList, calendarEvents, now)
+        val plan = UpcomingList.schedule(localTasksList, calendarEvents, now, projects)
 
         val locale = Locale.getDefault()
         val weekdayFormat = SimpleDateFormat("EEEE", locale)
@@ -45,7 +46,8 @@ object UpcomingScreen {
                 dayOfMonth = cal.get(Calendar.DAY_OF_MONTH).toString(),
                 dayOfWeekLabel = if (offset == 0) tomorrowLabel else weekdayFormat.format(Date(day.dayStart)),
                 calendarEvents = day.events.map { ItemWithChecklist(item = it, checklist = emptyList()) },
-                tasks = day.tasks
+                tasks = day.tasks,
+                projects = day.projects
             )
         }
 
@@ -68,12 +70,15 @@ object UpcomingScreen {
                     val start = event.eventStartMillis ?: 0L
                     UpcomingEventItem(event = event, dateMillis = start, dayOfMonthLabel = dayNumFormat.format(Date(start)))
                 },
-                tasks = period.tasks
+                tasks = period.tasks,
+                projects = period.projects
             )
         }
 
+        // Плашки с датой в месячных разделах — у задач и у проектов
         val monthTaskBadges = plan.periods.flatMap { it.tasks }
-            .associate { it.item.id to dayBadgeFormat.format(Date(it.item.startDate ?: 0L)) }
+            .associate { it.item.id to dayBadgeFormat.format(Date(it.item.startDate ?: 0L)) } +
+            plan.periods.flatMap { it.projects }.associate { it.id to dayBadgeFormat.format(Date(it.startDate ?: 0L)) }
 
         return UpcomingSchedule(days = days, months = months, monthTaskBadges = monthTaskBadges)
     }
@@ -90,6 +95,8 @@ object UpcomingScreen {
                 val isLast = index == day.calendarEvents.lastIndex
                 add(UpcomingEventItem(event.item, day.dateMillis, isLastBeforeTasks = isLast))
             }
+            // Проекты дня — после событий, перед задачами
+            addAll(day.projects)
             day.tasks.forEach { task ->
                 add(task)
             }
@@ -103,6 +110,7 @@ object UpcomingScreen {
                 val isLast = index == month.calendarEvents.lastIndex
                 add(event.copy(isLastBeforeTasks = isLast))
             }
+            addAll(month.projects)
             // Задачи месяца выводятся строго после событий календаря
             month.tasks.forEach { task ->
                 add(task)
@@ -118,10 +126,16 @@ object UpcomingScreen {
 @Composable
 fun rememberUpcomingSchedule(
     localTasksList: List<ItemWithChecklist>,
-    calendarEvents: List<Item>
+    calendarEvents: List<Item>,
+    projects: List<Item> = emptyList()
 ): UpcomingSchedule {
     val tomorrowLabel = stringResource(R.string.tomorrow)
-    return remember(localTasksList, calendarEvents, tomorrowLabel) {
-        UpcomingScreen.schedule(localTasksList, calendarEvents, tomorrowLabel)
+    return remember(localTasksList, calendarEvents, projects, tomorrowLabel) {
+        // Запланированные проекты — на своём дне или в своём месяце (UpcomingList.includesProject)
+        val bounds = com.example.data.model.DayBounds.now()
+        UpcomingScreen.schedule(
+            localTasksList, calendarEvents, tomorrowLabel,
+            projects = projects.filter { UpcomingList.includesProject(it, bounds) }
+        )
     }
 }

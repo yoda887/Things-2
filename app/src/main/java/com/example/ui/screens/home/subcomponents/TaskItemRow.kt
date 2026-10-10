@@ -665,7 +665,7 @@ sealed class DateIndicatorResult {
 
 /** Серая плашка с датой у строки задачи: число и месяц в месячных разделах, дата — на экранах проекта и сферы */
 @Composable
-private fun DateBadge(text: String) {
+internal fun DateBadge(text: String) {
     Text(
         text = text,
         style = ThingsTheme.type.badge.copy(

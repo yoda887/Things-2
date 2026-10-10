@@ -19,8 +19,21 @@ object UpcomingList {
 
     fun includes(item: Item, bounds: DayBounds): Boolean = bounds.isUpcoming(item)
 
-    /** День недели расписания: начало суток, события календаря и задачи этого дня (в порядке списка). */
-    data class Day(val dayStart: Long, val events: List<Item>, val tasks: List<ItemWithChecklist>)
+    /** Запланированный проект: открытый, не «Когда-нибудь», с датой старта позже сегодняшнего дня. */
+    fun includesProject(project: Item, bounds: DayBounds): Boolean =
+        ListRules.isOpenProject(project) && project.start != Item.START_SOMEDAY &&
+            project.startDate.let { it != null && it > bounds.endOfToday }
+
+    /**
+     * День недели расписания: начало суток, события календаря, проекты, которые стартуют в этот день,
+     * и задачи (в порядке списка).
+     */
+    data class Day(
+        val dayStart: Long,
+        val events: List<Item>,
+        val tasks: List<ItemWithChecklist>,
+        val projects: List<Item> = emptyList()
+    )
 
     /**
      * Раздел после недели: месяц [year]/[month] (месяц по Calendar, с 0) — целый или, если неделя
@@ -35,7 +48,8 @@ object UpcomingList {
         val lastDay: Int,
         val isRemainder: Boolean,
         val events: List<Item>,
-        val tasks: List<ItemWithChecklist>
+        val tasks: List<ItemWithChecklist>,
+        val projects: List<Item> = emptyList()
     )
 
     data class Schedule(val days: List<Day>, val periods: List<Period>)
@@ -46,7 +60,13 @@ object UpcomingList {
      * 2. Остаток месяца, в котором закончилась неделя, и следующие [MONTHS_HORIZON] месяцев — только те,
      *    где есть задачи или события. Дальше этого горизонта экран ничего не показывает.
      */
-    fun schedule(tasks: List<ItemWithChecklist>, events: List<Item>, now: Calendar = Calendar.getInstance()): Schedule {
+    fun schedule(
+        tasks: List<ItemWithChecklist>,
+        events: List<Item>,
+        now: Calendar = Calendar.getInstance(),
+        // Запланированные проекты ([includesProject]) — на своём дне или в своём месяце, как задачи
+        projects: List<Item> = emptyList()
+    ): Schedule {
         val cursor = (now.clone() as Calendar).apply {
             add(Calendar.DAY_OF_YEAR, 1)
             set(Calendar.HOUR_OF_DAY, 0)
@@ -62,7 +82,8 @@ object UpcomingList {
             Day(
                 dayStart = dayStart,
                 events = events.filter { it.eventStartMillis.inRange(dayStart, nextDayStart) },
-                tasks = tasks.filter { it.item.startDate.inRange(dayStart, nextDayStart) }
+                tasks = tasks.filter { it.item.startDate.inRange(dayStart, nextDayStart) },
+                projects = projects.filter { it.startDate.inRange(dayStart, nextDayStart) }.sortedBy { it.startDate }
             )
         }
 
@@ -87,12 +108,14 @@ object UpcomingList {
             .groupBy { monthKey(it.item.startDate!!) }
         val laterEvents = events.filter { it.eventStartMillis.inRange(horizonEnd, laterLimit) }
             .groupBy { monthKey(it.eventStartMillis!!) }
+        val laterProjects = projects.filter { it.startDate.inRange(horizonEnd, laterLimit) }
+            .groupBy { monthKey(it.startDate!!) }
 
         val horizonKey = monthKey(horizonEnd)
         cal.timeInMillis = horizonEnd
         val horizonDay = cal.get(Calendar.DAY_OF_MONTH)
 
-        val periods = (laterTasks.keys + laterEvents.keys).sorted().map { key ->
+        val periods = (laterTasks.keys + laterEvents.keys + laterProjects.keys).sorted().map { key ->
             cal.clear()
             cal.set(key / 12, key % 12, 1)
             val monthStart = cal.timeInMillis
@@ -107,7 +130,8 @@ object UpcomingList {
                 lastDay = lastDay,
                 isRemainder = isRemainder,
                 events = laterEvents[key].orEmpty().sortedBy { it.eventStartMillis },
-                tasks = laterTasks[key].orEmpty().sortedBy { it.item.startDate }
+                tasks = laterTasks[key].orEmpty().sortedBy { it.item.startDate },
+                projects = laterProjects[key].orEmpty().sortedBy { it.startDate }
             )
         }
         return Schedule(days, periods)

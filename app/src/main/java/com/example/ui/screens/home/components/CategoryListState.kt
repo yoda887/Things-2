@@ -42,7 +42,9 @@ data class UpcomingDay(
     val dayOfMonth: String,
     val dayOfWeekLabel: String,
     val calendarEvents: List<ItemWithChecklist>,
-    val tasks: List<ItemWithChecklist>
+    val tasks: List<ItemWithChecklist>,
+    // Проекты, которые стартуют в этот день
+    val projects: List<Item> = emptyList()
 )
 
 /**
@@ -72,7 +74,9 @@ data class UpcomingMonth(
     val monthMillis: Long,
     val monthLabel: String,
     val calendarEvents: List<UpcomingEventItem>,
-    val tasks: List<ItemWithChecklist>
+    val tasks: List<ItemWithChecklist>,
+    // Проекты, которые стартуют в этом разделе
+    val projects: List<Item> = emptyList()
 )
 
 /**

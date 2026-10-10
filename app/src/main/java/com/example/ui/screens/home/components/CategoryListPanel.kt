@@ -313,7 +313,7 @@ fun ThingsCategoryListPanel(
     val todayCalendarEvents = remember(calendarEvents) { TodayList.events(calendarEvents) }
 
     // Извлечение состояния предстоящих дней (UpcomingDays) и месяцев
-    val upcomingSchedule = rememberUpcomingSchedule(localTasksList, calendarEvents)
+    val upcomingSchedule = rememberUpcomingSchedule(localTasksList, calendarEvents, projects)
     val upcomingDays = upcomingSchedule.days
     val upcomingMonths = upcomingSchedule.months
     val monthTaskBadges = upcomingSchedule.monthTaskBadges
@@ -1022,6 +1022,7 @@ fun ThingsCategoryListPanel(
                                     inlineExpandedTaskId = inlineExpandedTaskId,
                                     onProjectClick = { onEvent(ThingsCategoryListEvent.ClickProject(it)) },
                                     closedAt = if (screen == ActiveScreen.LOGBOOK) LogbookList.closedAt(task) else null,
+                                    dateBadge = if (screen == ActiveScreen.UPCOMING) monthTaskBadges[task.id] else null,
                                     modifier = Modifier.animateItem(
                                         placementSpec = placementSpec
                                     )

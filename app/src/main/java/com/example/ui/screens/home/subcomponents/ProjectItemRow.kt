@@ -52,6 +52,8 @@ fun ProjectItemRow(
     onProjectClick: (Item) -> Unit,
     // Дата закрытия перед названием — в «Журнале», в той же колонке, что у закрытых задач
     closedAt: Long? = null,
+    // Плашка с датой старта перед названием — в месячных разделах «Предстоящих», как у задач
+    dateBadge: String? = null,
     modifier: Modifier = Modifier
 ) {
     val progress = projectProgressMap[project.id]
@@ -104,6 +106,10 @@ fun ProjectItemRow(
         if (closedAt != null) {
             ClosedDateLabel(closedAt = closedAt, inLogbook = true)
             Spacer(modifier = Modifier.width(com.example.ui.theme.ThingsSpacing.S))
+        }
+        if (dateBadge != null) {
+            DateBadge(text = dateBadge)
+            Spacer(modifier = Modifier.width(com.example.ui.theme.ThingsSpacing.XS_PLUS))
         }
         Row(
             modifier = Modifier.weight(1f),
