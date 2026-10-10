@@ -20,7 +20,7 @@
 | `meta-grey` | `#8e8e93` | `ThingsTheme.colors.overlayContentSecondary` | Плейсхолдеры («New To-Do»), вторичный текст Quick Find и диалогов (ThingsMetaGrey). |
 | `dialog-button` | `#2c2e38` | `ThingsTheme.colors.overlayControl` | Кнопки и поля внутри тёмных диалогов (Move, теги) на overlaySurface. |
 | `dialog-row-selected` | `#1e2027` | `ThingsTheme.colors.overlayRowSelected` | Подсветка выбранной строки в диалоге Move. |
-| `overlay-divider` | `#28292b` | `ThingsTheme.colors.overlayDivider` | Разделители внутри тёмных диалогов и меню. |
+| `overlay-divider` | `#3a3d47` | `ThingsTheme.colors.overlayDivider` | Разделители внутри тёмных диалогов и меню. |
 | `text-notes` | `#424242` / `#8b8c8e` | `ThingsTheme.colors.textNotes` | Текст заметок в раскрытом редакторе. Редактор всегда светлый (белая карточка). |
 | `editor-text` | `#1c1c1e` / `#ececed` | `ThingsTheme.colors.editorText` | Название задачи и пункты чек-листа в раскрытом редакторе (на белой карточке); карточка Quick Find в светлой теме (ThingsInk). |
 | `checkbox-border` | `#c7c7cc` | `ThingsTheme.colors.checkboxBorder` | Рамка неотмеченного чекбокса, неактивные иконки панели редактора. |

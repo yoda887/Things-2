@@ -79,6 +79,8 @@ val ThingsDialogBackground = Color(0xFF22242C)
 val ThingsDialogButton = Color(0xFF2C2E38)
 /** Подсветка выбранной строки в диалоге Move */
 val ThingsDialogRowSelected = Color(0xFF1E2027)
+/** Разделители на тёмных окнах и меню: заметно светлее их фона, как в эталоне */
+val ThingsDialogDivider = Color(0xFF3A3D47)
 /** Кнопка «Clear» диалога When */
 val ThingsWhenClear = Color(0xFFE22D5A)
 
