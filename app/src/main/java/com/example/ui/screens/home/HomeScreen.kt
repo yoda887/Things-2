@@ -1,11 +1,11 @@
 package com.example.ui.screens.home
 
+import com.example.domain.lists.HomeList
 import java.util.UUID
 import com.example.ui.screens.home.components.newTaskPlace
 import com.example.domain.edits.ProjectEdit
 import com.example.domain.edits.MoveTarget
 import com.example.ui.viewmodel.ActiveScreen
-import com.example.domain.lists.ListRules
 import com.example.R
 import androidx.compose.ui.res.stringResource
 import com.example.ui.components.ThingsDropdownMenu
@@ -417,8 +417,9 @@ fun ThingsHomeScreen(viewModel: ThingsViewModel = hiltViewModel()) {
                             collapsedAreaIds = collapsedAreaIds,
                             onAreaExpandedChange = viewModel::setAreaExpanded,
                             allTasks = allTasksRaw,
-                            // Завершённые, отменённые и удалённые проекты — в Logbook, на главном экране их нет
-                            projects = projects.filter { ListRules.isOpenProject(it) },
+                            // Только проекты, с которыми можно работать сейчас (HomeList): закрытые — в Logbook,
+                            // отложенные и запланированные — в «Когда-нибудь» и «Предстоящих»
+                            projects = projects.filter { HomeList.showsProject(it) },
                             searchQuery = searchQuery,
                             googleToken = googleToken,
                             syncError = syncError,
