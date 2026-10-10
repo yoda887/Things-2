@@ -1,6 +1,7 @@
 package com.example.ui.screens.home.components
 
 import com.example.domain.lists.PlaceGroups
+import com.example.domain.lists.SomedayList
 import com.example.data.model.Area
 import com.example.data.model.Item
 import com.example.data.model.ItemWithChecklist
@@ -79,6 +80,17 @@ class PlaceGroupsTest {
         assertEquals(
             listOf("home" to listOf("t-home"), "h1" to listOf("t-h1"), "w1" to listOf("t-w1")),
             shape(PlaceGroups.group(tasks, projects, areas, areaHeaderOnlyWithOwnItems = true))
+        )
+    }
+
+    @Test
+    fun someday_areaHeaderOnlyWithOwnSomedayProjectsOrTasks() {
+        val somedayHome = Item(id = "sh", type = Item.TYPE_PROJECT, title = "sh", areaId = "home", start = Item.START_SOMEDAY)
+        // У Work только активный проект w1 с отложенной задачей — заголовка Work нет, проект w1 есть
+        val groups = SomedayList.groups(listOf(task("t-w1", project = "w1")), projects + somedayHome, areas)
+        assertEquals(
+            listOf("home" to listOf("sh"), "w1" to emptyList()),
+            groups.map { g -> (g.project?.id ?: g.area?.id ?: "-") to g.projectRows.map { it.id } }
         )
     }
 }

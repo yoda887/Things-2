@@ -7,7 +7,8 @@ import com.example.data.model.ItemWithChecklist
 
 /**
  * «Когда-нибудь»: какие задачи и их группы «по месту» — по областям, внутри области отложенные
- * проекты строками и задачи. Закреплено тестами PlaceGroupsTest.
+ * проекты строками и задачи. Заголовок области — только если у неё есть свои отложенные проекты или
+ * задачи; её активные проекты с отложенными задачами показываются и без него. Закреплено тестами PlaceGroupsTest.
  */
 object SomedayList {
 
@@ -17,7 +18,7 @@ object SomedayList {
         PlaceGroups.order(tasks, projects, areas)
 
     fun groups(tasks: List<ItemWithChecklist>, projects: List<Item>, areas: List<Area>): List<PlaceGroups.Group> =
-        PlaceGroups.group(tasks, projects, areas, PlaceGroups.somedayProjects(projects))
+        PlaceGroups.group(tasks, projects, areas, PlaceGroups.somedayProjects(projects), areaHeaderOnlyWithOwnItems = true)
 
     /** Есть ли что показать: задачи или отложенные проекты. */
     fun hasContent(tasks: List<ItemWithChecklist>, projects: List<Item>): Boolean =
