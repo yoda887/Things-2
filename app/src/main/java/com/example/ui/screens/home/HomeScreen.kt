@@ -307,10 +307,10 @@ fun ThingsHomeScreen(viewModel: ThingsViewModel = hiltViewModel()) {
         topBar = {},
         floatingActionButton = {
             // Скрывать FAB при открытии inline-редактора, FAB-меню, диалогов, окна быстрой задачи (QuickAddDialog) или режима мультивыбора.
-            // В «Журнале» кнопки нет вовсе: там только закрытое, новые задачи не создают (как в Things)
+            // В «Журнале» кнопки нет вовсе: там только закрытое, новые задачи не создают (как в Things).
+            // На особых списках проектов она, как на главном экране, открывает меню: задача, проект, область
             AnimatedVisibility(
-                visible = activeScreen != ActiveScreen.LOGBOOK && activeScreen != ActiveScreen.ALL_PROJECTS &&
-                    activeScreen != ActiveScreen.LOGGED_PROJECTS && (fabDragController.isDragging || fabDragController.isSettling ||
+                visible = activeScreen != ActiveScreen.LOGBOOK && (fabDragController.isDragging || fabDragController.isSettling ||
                     (inlineExpandedTaskId == null && !showFabMenu && !isListDialogActive && !showAddDialog && !isSelectionMode)),
                 enter = slideInVertically(
                     initialOffsetY = { it * 2 },
@@ -326,7 +326,9 @@ fun ThingsHomeScreen(viewModel: ThingsViewModel = hiltViewModel()) {
             ) {
                 val view = androidx.compose.ui.platform.LocalView.current
                 val onFabClick: () -> Unit = {
-                                                if (activeScreen == ActiveScreen.HOME) {
+                                                if (activeScreen == ActiveScreen.HOME || activeScreen == ActiveScreen.ALL_PROJECTS ||
+                            activeScreen == ActiveScreen.LOGGED_PROJECTS
+                        ) {
                             showFabMenu = true
                         } else if (activeScreen == ActiveScreen.SEARCH) {
                             // На экране поиска новая задача создаётся с текстом запроса
@@ -970,6 +972,9 @@ fun ThingsHomeScreen(viewModel: ThingsViewModel = hiltViewModel()) {
                                     .fillMaxWidth()
                                     .clickable {
                                         showFabMenu = false
+                                        // Проект и область создаются и называются на главном экране — с особого
+                                        // списка сначала возвращаемся туда
+                                        if (activeScreen != ActiveScreen.HOME) navController.popBackStack(HomeRoute, inclusive = false)
                                         val newProjectId = java.util.UUID.randomUUID().toString()
                                         viewModel.createProject(newProjectId)
                                         editingProjectId = newProjectId
@@ -1020,6 +1025,7 @@ fun ThingsHomeScreen(viewModel: ThingsViewModel = hiltViewModel()) {
                                     .fillMaxWidth()
                                     .clickable {
                                         showFabMenu = false
+                                        if (activeScreen != ActiveScreen.HOME) navController.popBackStack(HomeRoute, inclusive = false)
                                         val newAreaId = java.util.UUID.randomUUID().toString()
                                         val newArea = Area(
                                             id = newAreaId,

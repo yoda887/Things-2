@@ -1110,13 +1110,13 @@ fun SearchResultRow(
                         )
 
                     when (result) {
-                        is SearchResultItem.SmartListResult -> if (result.screen == ActiveScreen.ALL_PROJECTS) {
-                            com.example.ui.components.ProjectProgressArc(
-                                completed = 1, total = 2, color = ThingsTheme.colors.project,
-                                modifier = iconModifier.size(RESULT_ICON_SIZE)
+                        is SearchResultItem.SmartListResult -> if (
+                            result.screen == ActiveScreen.ALL_PROJECTS || result.screen == ActiveScreen.LOGGED_PROJECTS
+                        ) {
+                            com.example.ui.components.ProjectStackIcon(
+                                logged = result.screen == ActiveScreen.LOGGED_PROJECTS,
+                                modifier = iconModifier.width(RESULT_ICON_SIZE)
                             )
-                        } else if (result.screen == ActiveScreen.LOGGED_PROJECTS) {
-                            com.example.ui.components.ClosedProjectIcon(cancelled = false, modifier = iconModifier.size(RESULT_ICON_SIZE))
                         } else {
                             val info = when (result.screen) {
                                 ActiveScreen.TODAY -> Pair(AppIcons.Today, Color.Unspecified)

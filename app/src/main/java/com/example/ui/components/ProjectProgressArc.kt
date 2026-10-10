@@ -88,32 +88,80 @@ fun ProjectProgressArc(
 }
 
 /**
- * Закрытый проект — в «Журнале» и в результатах поиска: кольцо той же толщины, внутри галочка
- * (завершён) или крестик ([cancelled]), как у закрытой задачи.
+ * Закрытый проект — в «Журнале», «Завершённых проектах» и в результатах поиска, как в Logbook Things:
+ * залитый круг, внутри белая галочка (завершён) или крестик ([cancelled], круг серый).
  */
 @Composable
 fun ClosedProjectIcon(
     cancelled: Boolean,
     modifier: Modifier = Modifier,
-    color: Color = ThingsTheme.colors.project
+    color: Color = if (cancelled) ThingsTheme.colors.textSecondary.copy(alpha = ThingsAlpha.HINT) else ThingsTheme.colors.project
 ) {
+    val markColor = ThingsTheme.colors.onAccent
     Canvas(modifier = modifier.aspectRatio(1f)) {
         val diameter = minOf(size.width, size.height)
-        val strokeWidth = diameter * 0.08f
         val center = androidx.compose.ui.geometry.Offset(size.width / 2f, size.height / 2f)
-        drawCircle(color = color, radius = (diameter - strokeWidth) / 2f, center = center, style = Stroke(width = strokeWidth))
-        val markStroke = Stroke(width = diameter * 0.1f, cap = androidx.compose.ui.graphics.StrokeCap.Round, join = androidx.compose.ui.graphics.StrokeJoin.Round)
-        val path = androidx.compose.ui.graphics.Path().apply {
-            if (cancelled) {
-                val d = diameter * 0.2f
-                moveTo(center.x - d, center.y - d); lineTo(center.x + d, center.y + d)
-                moveTo(center.x + d, center.y - d); lineTo(center.x - d, center.y + d)
-            } else {
-                moveTo(center.x - diameter * 0.22f, center.y + diameter * 0.01f)
-                lineTo(center.x - diameter * 0.06f, center.y + diameter * 0.17f)
-                lineTo(center.x + diameter * 0.24f, center.y - diameter * 0.16f)
-            }
+        drawCircle(color = color, radius = diameter / 2f, center = center)
+        drawClosedMark(cancelled, center, diameter, markColor)
+    }
+}
+
+/** Галочка или крестик закрытого проекта по центру [center] круга диаметром [diameter]. */
+private fun androidx.compose.ui.graphics.drawscope.DrawScope.drawClosedMark(
+    cancelled: Boolean,
+    center: androidx.compose.ui.geometry.Offset,
+    diameter: Float,
+    color: Color
+) {
+    val markStroke = Stroke(width = diameter * 0.11f, cap = androidx.compose.ui.graphics.StrokeCap.Round, join = androidx.compose.ui.graphics.StrokeJoin.Round)
+    val path = androidx.compose.ui.graphics.Path().apply {
+        if (cancelled) {
+            val d = diameter * 0.18f
+            moveTo(center.x - d, center.y - d); lineTo(center.x + d, center.y + d)
+            moveTo(center.x + d, center.y - d); lineTo(center.x - d, center.y + d)
+        } else {
+            moveTo(center.x - diameter * 0.22f, center.y + diameter * 0.01f)
+            lineTo(center.x - diameter * 0.06f, center.y + diameter * 0.16f)
+            lineTo(center.x + diameter * 0.23f, center.y - diameter * 0.15f)
         }
-        drawPath(path, color = color, style = markStroke)
+    }
+    drawPath(path, color = color, style = markStroke)
+}
+
+/**
+ * Значок особого списка проектов, как в Things: круг проекта, за ним справа ещё два кольца — стопка
+ * проектов. [logged] — «Завершённые проекты»: передний круг залит, в нём белая галочка.
+ * Холст шире высоты: кольца выступают вправо.
+ */
+@Composable
+fun ProjectStackIcon(
+    logged: Boolean,
+    modifier: Modifier = Modifier,
+    color: Color = ThingsTheme.colors.project
+) {
+    val markColor = ThingsTheme.colors.onAccent
+    Canvas(modifier = modifier.aspectRatio(1.5f)) {
+        val diameter = size.height
+        val stroke = diameter * 0.12f
+        val radius = (diameter - stroke) / 2f
+        val cy = size.height / 2f
+        val front = androidx.compose.ui.geometry.Offset(diameter / 2f, cy)
+        // Задние кольца — только правые дуги, их левая часть скрыта передним кругом
+        listOf(0.42f, 0.24f).forEach { shift ->
+            val c = androidx.compose.ui.geometry.Offset(front.x + diameter * shift, cy)
+            drawArc(
+                color = color.copy(alpha = if (shift > 0.3f) 0.45f else 0.7f),
+                startAngle = -62f, sweepAngle = 124f, useCenter = false,
+                topLeft = androidx.compose.ui.geometry.Offset(c.x - radius, c.y - radius),
+                size = androidx.compose.ui.geometry.Size(radius * 2, radius * 2),
+                style = Stroke(width = stroke, cap = androidx.compose.ui.graphics.StrokeCap.Round)
+            )
+        }
+        if (logged) {
+            drawCircle(color = color, radius = diameter / 2f, center = front)
+            drawClosedMark(cancelled = false, center = front, diameter = diameter, color = markColor)
+        } else {
+            drawCircle(color = color, radius = radius, center = front, style = Stroke(width = stroke))
+        }
     }
 }

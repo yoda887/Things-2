@@ -54,6 +54,8 @@ fun ProjectItemRow(
     closedAt: Long? = null,
     // Плашка с датой старта перед названием — в месячных разделах «Предстоящих», как у задач
     dateBadge: String? = null,
+    // Вторая строка под названием — область проекта (у закрытых проектов, как в Logbook Things)
+    subtitle: String? = null,
     modifier: Modifier = Modifier
 ) {
     val progress = projectProgressMap[project.id]
@@ -70,7 +72,7 @@ fun ProjectItemRow(
     Row(
         modifier = modifier
             .fillMaxWidth()
-            .height(MaterialTheme.dimens.rowHeight)
+            .heightIn(min = MaterialTheme.dimens.rowHeight)
             .clip(ThingsTheme.shapes.rowShape)
             .clickable { onProjectClick(project) }
             .graphicsLayer { alpha = dimAlpha }
@@ -111,8 +113,8 @@ fun ProjectItemRow(
             DateBadge(text = dateBadge)
             Spacer(modifier = Modifier.width(com.example.ui.theme.ThingsSpacing.XS_PLUS))
         }
+        Column(modifier = Modifier.weight(1f)) {
         Row(
-            modifier = Modifier.weight(1f),
             verticalAlignment = Alignment.CenterVertically
         ) {
             Text(
@@ -140,6 +142,15 @@ fun ProjectItemRow(
                 tint = ThingsTheme.colors.textSecondary.copy(alpha = ThingsAlpha.MUTED),
                 modifier = Modifier.size(ThingsIconSize.XS)
             )
+        }
+        if (subtitle != null) {
+            Text(
+                text = subtitle,
+                style = ThingsTheme.type.taskSubtitle.copy(color = ThingsTheme.colors.textSecondary),
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis
+            )
+        }
         }
     }
 }

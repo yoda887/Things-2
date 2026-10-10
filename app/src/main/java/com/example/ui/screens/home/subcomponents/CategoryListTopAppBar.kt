@@ -357,14 +357,10 @@ private fun CategoryTopAppBarTitleContent(
                 )
             }
             ActiveScreen.ALL_PROJECTS, ActiveScreen.LOGGED_PROJECTS -> {
-                if (screen == ActiveScreen.ALL_PROJECTS) {
-                    com.example.ui.components.ProjectProgressArc(
-                        completed = 1, total = 2, color = ThingsTheme.colors.project,
-                        modifier = Modifier.size(TOP_APP_BAR_ICON_SIZE)
-                    )
-                } else {
-                    com.example.ui.components.ClosedProjectIcon(cancelled = false, modifier = Modifier.size(TOP_APP_BAR_ICON_SIZE))
-                }
+                com.example.ui.components.ProjectStackIcon(
+                    logged = screen == ActiveScreen.LOGGED_PROJECTS,
+                    modifier = Modifier.height(TOP_APP_BAR_ICON_SIZE * 0.8f)
+                )
                 Spacer(modifier = Modifier.width(TOP_APP_BAR_SPACING))
                 Text(
                     text = stringResource(

@@ -214,11 +214,10 @@ fun rememberFlattenedList(
     val headerLogbook = stringResource(R.string.category_logbook)
     val todayLabel = stringResource(R.string.category_today)
     val yesterdayLabel = stringResource(R.string.yesterday)
-    val showLaterFormat = stringResource(R.string.all_projects_show_later)
-    val hideLaterLabel = stringResource(R.string.all_projects_hide_later)
+    val resources = androidx.compose.ui.platform.LocalContext.current.resources
     val showLoggedLabel = stringResource(R.string.all_projects_show_logged)
     val hideLoggedLabel = stringResource(R.string.all_projects_hide_logged)
-    return remember(expandedLaterProjects, showLoggedProjects, showLaterFormat, screen, standardToday, eveningToday, headerLogbook, todayLabel, yesterdayLabel, draggedItemKey, upcomingDays, upcomingMonths, projects, area, displayTasks, isLaterItemsHidden, tag, allTasks, areas, savedTags, searchQuery, headings, pinnedPlaces) {
+    return remember(expandedLaterProjects, showLoggedProjects, resources, screen, standardToday, eveningToday, headerLogbook, todayLabel, yesterdayLabel, draggedItemKey, upcomingDays, upcomingMonths, projects, area, displayTasks, isLaterItemsHidden, tag, allTasks, areas, savedTags, searchQuery, headings, pinnedPlaces) {
         // Все экраны перечислены явно (без else): новый экран компилятор заставит указать и здесь
         when (screen) {
             ActiveScreen.TODAY -> TodayScreen.rows(standardToday, eveningToday, isDragging = draggedItemKey != null)
@@ -234,7 +233,9 @@ fun rememberFlattenedList(
             ActiveScreen.INBOX, ActiveScreen.HOME -> displayTasks
             ActiveScreen.ALL_PROJECTS -> AllProjectsScreen.rows(
                 AllProjectsList.content(projects, areas), expandedLaterProjects, showLoggedProjects,
-                { count -> String.format(showLaterFormat, count) }, hideLaterLabel, showLoggedLabel, hideLoggedLabel
+                { count -> resources.getQuantityString(R.plurals.all_projects_show_later, count, count) },
+                { count -> resources.getQuantityString(R.plurals.all_projects_hide_later, count, count) },
+                showLoggedLabel, hideLoggedLabel
             )
             // Завершённые проекты — разделами, как «Журнал»
             ActiveScreen.LOGGED_PROJECTS -> LogbookScreen.rows(LogbookList.sections(emptyList(), projects), todayLabel, yesterdayLabel)

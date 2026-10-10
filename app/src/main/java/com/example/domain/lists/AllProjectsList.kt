@@ -7,7 +7,8 @@ import com.example.data.model.Item
 /**
  * Особый список «Все проекты», как All Projects в Things: открытые проекты по областям (в порядке
  * главного экрана), в каждой группе сначала активные ([HomeList.showsProject]), затем более поздние —
- * отложенные в «Когда-нибудь» и запланированные; внизу — завершённые и отменённые, свежие сверху.
+ * запланированные по дате старта и отложенные в «Когда-нибудь»; внизу — завершённые и отменённые,
+ * свежие сверху.
  * Закреплено тестами AllProjectsListTest.
  */
 object AllProjectsList {
@@ -24,7 +25,9 @@ object AllProjectsList {
         fun group(area: Area?, list: List<Item>): Group? {
             if (list.isEmpty()) return null
             val (active, later) = list.partition { HomeList.showsProject(it, bounds) }
-            return Group(area, active, later)
+            // Более поздние, как в Things: сначала запланированные по дате старта, затем отложенные
+            val (scheduled, someday) = later.partition { it.start != Item.START_SOMEDAY && it.startDate != null }
+            return Group(area, active, scheduled.sortedBy { it.startDate } + someday)
         }
         val groups = buildList {
             // Проекты без области (или чья область удалена) — сверху, как на главном экране

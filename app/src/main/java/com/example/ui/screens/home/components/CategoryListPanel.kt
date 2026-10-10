@@ -115,6 +115,7 @@ import com.example.ui.screens.home.subcomponents.MainCategoryHeader
 import com.example.ui.screens.home.subcomponents.SubCategoryHeader
 import com.example.ui.screens.home.subcomponents.UpcomingDateHeader
 import com.example.ui.screens.home.subcomponents.UpcomingMonthHeader
+import com.example.ui.screens.home.subcomponents.LogbookSectionHeader
 import com.example.ui.screens.home.subcomponents.TagFilterRow
 import com.example.ui.screens.home.subcomponents.ProjectItemRow
 import com.example.ui.screens.home.subcomponents.EmptyStateView
@@ -1035,7 +1036,16 @@ fun ThingsCategoryListPanel(
                                         (screen == ActiveScreen.LOGBOOK || screen == ActiveScreen.LOGGED_PROJECTS || screen == ActiveScreen.ALL_PROJECTS) &&
                                         LogbookList.includesProject(task)
                                     ) LogbookList.closedAt(task) else null,
-                                    dateBadge = if (screen == ActiveScreen.UPCOMING) monthTaskBadges[task.id] else null,
+                                    dateBadge = when (screen) {
+                                        ActiveScreen.UPCOMING -> monthTaskBadges[task.id]
+                                        ActiveScreen.ALL_PROJECTS -> if (LogbookList.includesProject(task)) null else AllProjectsScreen.laterDateBadge(task)
+                                        else -> null
+                                    },
+                                    // Под закрытым проектом — его область, как в Logbook Things
+                                    subtitle = if (
+                                        (screen == ActiveScreen.LOGBOOK || screen == ActiveScreen.LOGGED_PROJECTS || screen == ActiveScreen.ALL_PROJECTS) &&
+                                        LogbookList.includesProject(task)
+                                    ) areasState.firstOrNull { it.id == task.areaId }?.title else null,
                                     modifier = Modifier.animateItem(
                                         placementSpec = placementSpec
                                     )
@@ -1101,9 +1111,8 @@ fun ThingsCategoryListPanel(
                             )
                         }
                         is LogbookHeaderItem -> {
-                            // Тот же вид, что у заголовка месяца «Предстоящих»
-                            UpcomingMonthHeader(
-                                monthLabel = item.label,
+                            LogbookSectionHeader(
+                                label = item.label,
                                 textPrimaryColor = textPrimaryColor,
                                 dividerColor = dividerColor,
                                 modifier = Modifier
