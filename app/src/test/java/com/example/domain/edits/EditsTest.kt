@@ -111,6 +111,16 @@ class EditsTest {
     }
 
     @Test
+    fun taskEdits_backgroundDraft_keepsTaskInPlace() {
+        val saved = TaskEditorFields("", "", TaskSection.INBOX, false, null, null, emptyList(), null, 0)
+        val edited = TaskEditorFields("new", "n", TaskSection.TODAY, true, day(12), day(20), listOf("x"), "p", 2)
+        assertEquals(
+            TaskEditorFields("new", "n", TaskSection.INBOX, false, null, null, listOf("x"), null, 2),
+            TaskEdits.backgroundDraft(saved, edited)
+        )
+    }
+
+    @Test
     fun headings() {
         val h1 = Item(id = "h1", type = Item.TYPE_HEADING, projectId = "p", sortOrder = 3)
         assertEquals(4, Headings.newAtEnd("p", listOf(h1), "n").sortOrder)

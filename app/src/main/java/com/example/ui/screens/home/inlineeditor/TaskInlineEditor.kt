@@ -64,6 +64,11 @@ import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.platform.LocalView
 import com.example.ui.components.hideSoftKeyboardNow
 import com.example.ui.components.progressPadding
+import androidx.compose.ui.platform.LocalLifecycleOwner
+import androidx.lifecycle.Lifecycle
+import androidx.lifecycle.LifecycleEventObserver
+import com.example.domain.edits.TaskEditorFields
+import com.example.domain.edits.TaskEdits
 
 /** Высота редактора в начале раскрытия — совпадает с высотой свёрнутой строки задачи */
 internal val EDITOR_COLLAPSED_HEIGHT = 46.dp
@@ -88,6 +93,8 @@ fun ThingsTaskInlineEditor(
     ) -> Unit,
     onDelete: (() -> Unit)? = null,
     onDone: () -> Unit = {},
+    // Запись черновика при уходе приложения в фон: только сохраняет задачу, редактор остаётся открытым
+    onSaveDraft: (fields: TaskEditorFields, checklist: List<ChecklistItem>) -> Unit = { _, _ -> },
     onToggle: (
         title: String,
         notes: String,
@@ -241,6 +248,44 @@ fun ThingsTaskInlineEditor(
 
     val currentTask by rememberUpdatedState(task)
     val currentOnDone by rememberUpdatedState(onDone)
+    val currentOnSaveDraft by rememberUpdatedState(onSaveDraft)
+
+    // Приложение ушло в фон (ON_STOP), а редактор открыт: записываем черновик, не сворачивая редактор.
+    // Иначе набранное пропадало, если система выгружала процесс в фоне (или приложение переустанавливали):
+    // правки писались только при сворачивании и в onDispose, а новая задача оставалась во «Входящих»
+    // без названия. Пустую новую задачу здесь не удаляем — к ней ещё вернутся. После записи задача
+    // из базы совпадает с редактором, и сворачивание (hasUnsavedChanges) не перезапишет её ещё раз.
+    val lifecycleOwner = LocalLifecycleOwner.current
+    DisposableEffect(lifecycleOwner) {
+        val observer = LifecycleEventObserver { _, event ->
+            if (event != Lifecycle.Event.ON_STOP) return@LifecycleEventObserver
+            if (isDeleted || currentIsDeletedExternally() || isSavedManually) return@LifecycleEventObserver
+            if (currentTitle.isBlank() && currentNotes.isBlank() && currentChecklist.isEmpty()) return@LifecycleEventObserver
+            val tagList = currentTagInput.split(",")
+                .map { it.trim() }
+                .filter { it.isNotEmpty() }
+            val saved = currentTask.item.let {
+                TaskEditorFields(
+                    it.title, it.notes, it.section, it.isTonight, it.startDate,
+                    it.dueDate, it.tags, it.projectId, it.priority
+                )
+            }
+            val draft = TaskEdits.backgroundDraft(
+                saved,
+                TaskEditorFields(
+                    currentTitle, currentNotes, currentSection, currentIsTonight, currentStartDate,
+                    currentDueDate, tagList, currentProjectId, currentPriority
+                )
+            )
+            val changed = hasUnsavedChanges(
+                currentTask, draft.title, draft.notes, draft.section, draft.isTonight,
+                draft.startDate, draft.dueDate, draft.tags, currentChecklist, draft.priority
+            )
+            if (changed) currentOnSaveDraft(draft, currentChecklist)
+        }
+        lifecycleOwner.lifecycle.addObserver(observer)
+        onDispose { lifecycleOwner.lifecycle.removeObserver(observer) }
+    }
 
     // Save changes automatically when focus is cleared or editor is disposed (e.g., clicking outside)
     DisposableEffect(Unit) {

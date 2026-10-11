@@ -42,4 +42,20 @@ object TaskEdits {
             priority = fields.priority,
             modificationDate = now
         )
+
+    /**
+     * Черновик открытого редактора, который записывается при уходе приложения в фон, чтобы набранное
+     * не пропало, если система выгрузит процесс. Пишутся только содержимое и свойства, не меняющие
+     * места задачи (название, заметки, теги, приоритет); раздел, даты, «Вечер» и проект остаются
+     * сохранёнными: иначе задача ушла бы из текущего списка вместе с открытым редактором.
+     * Остальное сохранится при сворачивании редактора, как обычно.
+     */
+    fun backgroundDraft(saved: TaskEditorFields, edited: TaskEditorFields): TaskEditorFields =
+        edited.copy(
+            section = saved.section,
+            isTonight = saved.isTonight,
+            startDate = saved.startDate,
+            dueDate = saved.dueDate,
+            projectId = saved.projectId
+        )
 }

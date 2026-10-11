@@ -653,6 +653,24 @@ fun AnimatedTaskItem(
                         onDone = {
                             onEvent(ThingsCategoryListEvent.ChangeInlineExpandedTaskId(null))
                         },
+                        // Черновик при уходе в фон: только запись задачи, раскрытую задачу не сбрасываем
+                        onSaveDraft = { fields, checklist ->
+                            onEvent(
+                                ThingsCategoryListEvent.SaveTask(
+                                    taskWrapper = taskWrapper,
+                                    title = fields.title,
+                                    notes = fields.notes,
+                                    section = fields.section,
+                                    isTonight = fields.isTonight,
+                                    startDate = fields.startDate,
+                                    dueDate = fields.dueDate,
+                                    tags = fields.tags,
+                                    projectId = fields.projectId,
+                                    priority = fields.priority,
+                                    checklist = checklist
+                                )
+                            )
+                        },
                         onWhenDialogVisibilityChange = onWhenDialogVisibilityChange,
                         onTagDialogVisibilityChange = onTagDialogVisibilityChange,
                         areas = areas,
