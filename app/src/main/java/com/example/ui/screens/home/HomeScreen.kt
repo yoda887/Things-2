@@ -12,6 +12,7 @@ import com.example.ui.viewmodel.ActiveScreen
 import com.example.R
 import androidx.compose.ui.res.stringResource
 import com.example.ui.components.ThingsDropdownMenu
+import com.example.ui.components.hideSoftKeyboardNow
 import com.example.ui.components.ThingsMenuItem
 import com.example.ui.theme.ThingsTheme
 import android.Manifest
@@ -283,6 +284,24 @@ fun ThingsHomeScreen(viewModel: ThingsViewModel = hiltViewModel()) {
     // Project input fields
     
     val scope = rememberCoroutineScope()
+    val rootView = androidx.compose.ui.platform.LocalView.current
+
+    /**
+     * Уход из Quick Find к выбранному: как в Things 3, окно поиска гаснет за 100 мс, а под ним уже
+     * проступает новый экран. Раньше при выборе проекта, области, тега или списка окно вместе с
+     * затемнением исчезало за один кадр — вспыхивал главный экран, и только потом рос новый.
+     * Клавиатура уходит сразу, а не после окна.
+     * @param keepQuery запрос нужен дальше («Продолжить поиск» открывает с ним экран поиска)
+     */
+    fun leaveSearchOverlay(keepQuery: Boolean = false) {
+        rootView.hideSoftKeyboardNow()
+        scope.launch {
+            searchOverlayFade.animateTo(0f, tween(durationMillis = ThingsMotion.FAST))
+            if (!keepQuery) viewModel.setSearchQuery("")
+            isSearchOverlayActive = false
+            searchOverlayFade.snapTo(1f)
+        }
+    }
     
     // Palette assignment from ThingsTheme
     val backgroundColor = ThingsTheme.colors.background
@@ -524,14 +543,20 @@ fun ThingsHomeScreen(viewModel: ThingsViewModel = hiltViewModel()) {
                     // Мы запоминаем проект и область именно для данного инстанса экрана на момент его создания/отображения,
                     // чтобы при изменении глобальных selectedProject/selectedArea на других экранах (или при сбросе в null на "Назад")
                     // этот конкретный экран сохранял свое состояние и данные для плавной анимации ухода.
+                    // Удалённый проект или область исчезают из списков раньше, чем экран успевает уйти:
+                    // экран держит последний найденный объект, иначе на время ухода он оставался без него —
+                    // мелькали заголовок «Проект» и пустой список
+                    val lastFound = remember(screen, entityId) { arrayOfNulls<Any>(2) }
                     val screenProject = remember(screen, entityId, projects) {
                         if (screen == ActiveScreen.PROJECT_DETAIL) {
-                            projects.firstOrNull { it.id == entityId } ?: selectedProject
+                            (projects.firstOrNull { it.id == entityId } ?: lastFound[0] as Item? ?: selectedProject)
+                                ?.also { lastFound[0] = it }
                         } else null
                     }
                     val screenArea = remember(screen, entityId, areas) {
                         if (screen == ActiveScreen.AREA_DETAIL) {
-                            areas.firstOrNull { it.id == entityId } ?: selectedArea
+                            (areas.firstOrNull { it.id == entityId } ?: lastFound[1] as Area? ?: selectedArea)
+                                ?.also { lastFound[1] = it }
                         } else null
                     }
                     val screenTag = remember(screen, entityId, allSavedTagObjects) {
@@ -548,7 +573,13 @@ fun ThingsHomeScreen(viewModel: ThingsViewModel = hiltViewModel()) {
                     val initialScreenState = remember(screen, screenProject, screenArea, screenTag) {
                         viewModel.getCategoryListStateSnapshot(screen, screenProject, screenArea, screenTag)
                     }
-                    val screenState by screenStateFlow.collectAsState(initial = initialScreenState)
+                    val liveScreenState by screenStateFlow.collectAsState(initial = initialScreenState)
+                    // Проект или область удалены, а экран ещё уходит — показываем последнее состояние,
+                    // а не опустевший список
+                    val keptState = remember(screen, entityId) { arrayOfNulls<com.example.ui.viewmodel.ThingsCategoryListState>(1) }
+                    val entityGone = (screen == ActiveScreen.PROJECT_DETAIL && projects.none { it.id == entityId }) ||
+                        (screen == ActiveScreen.AREA_DETAIL && areas.none { it.id == entityId })
+                    val screenState = if (entityGone) keptState[0] ?: liveScreenState else liveScreenState.also { keptState[0] = it }
 
                     ThingsCategoryListPanel(
                         state = screenState.copy(
@@ -876,48 +907,38 @@ fun ThingsHomeScreen(viewModel: ThingsViewModel = hiltViewModel()) {
                             }
                         }
                         
-                        // Как в Things 3: окно поиска гаснет за 100 мс, а под ним уже проступает экран задачи
-                        scope.launch {
-                            searchOverlayFade.animateTo(0f, tween(durationMillis = ThingsMotion.FAST))
-                            viewModel.setSearchQuery("")
-                            isSearchOverlayActive = false
-                            searchOverlayFade.snapTo(1f)
-                        }
+                        leaveSearchOverlay()
                     },
                     onProjectClick = { proj ->
                         // [ИЗМЕНЕНИЕ]: Добавление проекта в недавно искавшиеся объекты
                         addToRecent(SearchResultItem.ProjectResult(proj))
 
                         selectedProject = proj
-                        navigateTo(ActiveScreen.PROJECT_DETAIL, proj.id)
-                        viewModel.setSearchQuery("")
-                        isSearchOverlayActive = false
+                        navigateTo(ActiveScreen.PROJECT_DETAIL, proj.id, crossfade = true)
+                        leaveSearchOverlay()
                     },
                     onAreaClick = { area ->
                         // [ИЗМЕНЕНИЕ]: Добавление области в недавно искавшиеся объекты
                         addToRecent(SearchResultItem.AreaResult(area))
 
                         selectedArea = area
-                        navigateTo(ActiveScreen.AREA_DETAIL, area.id)
-                        viewModel.setSearchQuery("")
-                        isSearchOverlayActive = false
+                        navigateTo(ActiveScreen.AREA_DETAIL, area.id, crossfade = true)
+                        leaveSearchOverlay()
                     },
                     allSavedTagObjects = allSavedTagObjects,
                     onTagClick = { tag ->
                         addToRecent(SearchResultItem.TagResult(tag))
                         selectedTagDetail = tag
-                        navigateTo(ActiveScreen.TAG_DETAIL, tag.id)
-                        viewModel.setSearchQuery("")
-                        isSearchOverlayActive = false
+                        navigateTo(ActiveScreen.TAG_DETAIL, tag.id, crossfade = true)
+                        leaveSearchOverlay()
                     },
                     onSmartListClick = { smartScreen ->
                         // [ИЗМЕНЕНИЕ]: Добавление смарт-списка в недавно искавшиеся объекты
                         val title = smartListTitles[smartScreen] ?: smartScreen.name
                         addToRecent(SearchResultItem.SmartListResult(title, smartScreen))
 
-                        navigateTo(smartScreen)
-                        viewModel.setSearchQuery("")
-                        isSearchOverlayActive = false
+                        navigateTo(smartScreen, crossfade = true)
+                        leaveSearchOverlay()
                     },
                     onClose = {
                         isSearchOverlayActive = false
@@ -927,10 +948,10 @@ fun ThingsHomeScreen(viewModel: ThingsViewModel = hiltViewModel()) {
                     // [ИЗМЕНЕНИЕ]: Передача списка недавно найденных/искавшихся объектов
                     recentSearchItems = recentSearchItems,
                     onContinueSearchClick = {
-                        isSearchOverlayActive = false
                         // Фильтр по тегу общий для списков: в поиске он молча отсекал бы результаты
                         viewModel.selectTag(null)
-                        navigateTo(ActiveScreen.SEARCH)
+                        navigateTo(ActiveScreen.SEARCH, crossfade = true)
+                        leaveSearchOverlay(keepQuery = true)
                     }
                 )
                 }
