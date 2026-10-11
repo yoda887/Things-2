@@ -1,5 +1,6 @@
 package com.example.ui.screens.home
 
+import androidx.navigation.NavDestination.Companion.hasRoute
 import com.example.ui.screens.home.components.HomeProjectBatchLayer
 import com.example.ui.screens.home.components.ProjectSwipeWhenDialog
 import com.example.domain.lists.HomeList
@@ -194,27 +195,27 @@ fun ThingsHomeScreen(viewModel: ThingsViewModel = hiltViewModel()) {
      *   проступает под гаснущим окном поиска, без роста из точки
      */
     fun navigateTo(screen: ActiveScreen, entityId: String? = null, crossfade: Boolean = false) {
+        // Главный экран — всегда дно стека: к нему возвращаемся, а не открываем второй поверх
+        if (screen == ActiveScreen.HOME) {
+            navController.popBackStack(HomeRoute, inclusive = false)
+            return
+        }
+        // Тот же экран уже открыт — ничего не делаем (и двойное нажатие не кладёт его в стек дважды).
+        // Сверяемся с верхом стека напрямую: он меняется сразу после navigate, а activeScreen — позже
+        val top = navController.currentBackStackEntry
+        val alreadyOpen = when {
+            top == null -> false
+            screen == ActiveScreen.SEARCH -> top.destination.hasRoute<SearchRoute>()
+            top.destination.hasRoute<ListRoute>() -> top.toRoute<ListRoute>() == ListRoute(screen, entityId)
+            else -> false
+        }
+        if (alreadyOpen) return
         crossfadeNavigation = crossfade
-        val currentListRoute = try {
-            navBackStackEntry?.toRoute<ListRoute>()
-        } catch (e: Exception) {
-            null
-        }
-        if (activeScreen == screen) {
-            if (screen == ActiveScreen.PROJECT_DETAIL || screen == ActiveScreen.AREA_DETAIL || screen == ActiveScreen.TAG_DETAIL) {
-                if (currentListRoute?.entityId == entityId && entityId != null) return
-            } else {
-                return
-            }
-        }
-        val route: Any = when (screen) {
-            ActiveScreen.HOME -> HomeRoute
-            ActiveScreen.SEARCH -> SearchRoute
-            else -> ListRoute(screen, entityId)
-        }
-        navController.navigate(route) {
-            launchSingleTop = true
-        }
+        val route: Any = if (screen == ActiveScreen.SEARCH) SearchRoute else ListRoute(screen, entityId)
+        // Без launchSingleTop: он сравнивает только маршрут без аргументов, и все списки (области, проекты,
+        // теги) — один ListRoute. Переход из области в проект заменял область в стеке, и «Назад» из проекта
+        // вёл сразу на главный экран, минуя область
+        navController.navigate(route)
     }
     var taskToEdit by remember { mutableStateOf<ItemWithChecklist?>(null) }
     var showAddDialog by remember { mutableStateOf(false) }
@@ -791,6 +792,15 @@ fun ThingsHomeScreen(viewModel: ThingsViewModel = hiltViewModel()) {
                     }
                 }
             }
+
+            // «Назад» сначала закрывает то, что открыто поверх экрана, и только потом уводит с экрана.
+            // Обработчики объявлены после NavHost, поэтому срабатывают раньше его перехода назад
+            // Раскрытая задача — сворачивается (правки сохраняет сам редактор при сворачивании)
+            androidx.activity.compose.BackHandler(enabled = inlineExpandedTaskId != null) {
+                viewModel.setInlineExpandedTaskId(null)
+            }
+            // Меню кнопки «+» — закрывается, а не закрывает приложение
+            androidx.activity.compose.BackHandler(enabled = showFabMenu) { showFabMenu = false }
 
             // [ИЗМЕНЕНИЕ]: Полноэкранный оверлей поиска с бесшовным пространственным морфингом (Spatial UI)
             // Названия смарт-списков для Recent — на языке системы
