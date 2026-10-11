@@ -1,5 +1,7 @@
 package com.example.ui.screens.home.inlineeditor.dialogs
 
+import androidx.compose.foundation.layout.imeAnimationTarget
+import androidx.compose.foundation.layout.ExperimentalLayoutApi
 import com.example.ui.components.IME_FOCUS_CLEAR_DIALOG_SETTLE_MS
 import com.example.ui.components.ClearFocusOnImeHidden
 import androidx.compose.ui.layout.onSizeChanged
@@ -78,6 +80,7 @@ import com.example.ui.theme.dimens
  * Список содержит "Inbox", "No project", далее разделитель, проекты без области и проекты, разбитые по областям.
  * С [areasOnly] — для перемещения самого проекта: только «Без области» и области, без «Входящих» и проектов.
  */
+@OptIn(ExperimentalLayoutApi::class)
 @Composable
 fun ThingsMoveDialog(
     currentProjectId: String?,
@@ -176,6 +179,19 @@ fun ThingsMoveDialog(
         androidx.activity.compose.BackHandler(enabled = !closing && (searchFocused || query.isNotEmpty())) { leaveSearch() }
         // Свернули клавиатуру — курсор уходит из поля, и пустой поиск больше не приглушает список
         ClearFocusOnImeHidden(settleMillis = IME_FOCUS_CLEAR_DIALOG_SETTLE_MS)
+        // Курсор снимается с выдержкой после ухода клавиатуры (иначе Gboard выглядывает из-под края),
+        // а видимый выход из поиска — подсказка к центру, список без приглушения — начинается сразу,
+        // как только клавиатура пошла вниз: цель её анимации уже «скрыта»
+        val density = LocalDensity.current
+        val imeTarget = WindowInsets.imeAnimationTarget
+        val keyboardGoingAway by remember(imeTarget, density) { derivedStateOf { imeTarget.getBottom(density) == 0 } }
+        var keyboardWasShown by remember { mutableStateOf(false) }
+        LaunchedEffect(keyboardGoingAway, searchFocused) {
+            if (!searchFocused) keyboardWasShown = false
+            else if (!keyboardGoingAway) keyboardWasShown = true
+        }
+        // Поиск активен, пока курсор в поле и клавиатура не уходит (до её появления — тоже активен)
+        val searchActive = searchFocused && !(keyboardWasShown && keyboardGoingAway)
 
         val scrimColor = ThingsTheme.colors.scrim
         BoxWithConstraints(
@@ -279,6 +295,7 @@ fun ThingsMoveDialog(
                         query = query,
                         onQueryChange = { query = it },
                         onFocusChange = { searchFocused = it },
+                        active = searchActive,
                         focusRequester = searchFocusRequester,
                         onGo = {
                             val first = found.firstOrNull()
@@ -295,11 +312,11 @@ fun ThingsMoveDialog(
 
                     // Content List — пока поле поиска в фокусе и пустое, список приглушён, как в эталоне
                     val listAlpha by androidx.compose.animation.core.animateFloatAsState(
-                        targetValue = if (searchFocused && query.isEmpty()) ThingsAlpha.MUTED else 1f,
+                        targetValue = if (searchActive && query.isEmpty()) ThingsAlpha.MUTED else 1f,
                         animationSpec = androidx.compose.animation.core.tween(ThingsMotion.QUICK),
                         label = "moveListAlpha"
                     )
-                    val searchDimsList = searchFocused && query.isEmpty()
+                    val searchDimsList = searchActive && query.isEmpty()
                     Box(modifier = Modifier.fillMaxWidth().weight(1f)) {
                     LazyColumn(
                         modifier = Modifier
@@ -614,15 +631,16 @@ private fun MoveSearchField(
     query: String,
     onQueryChange: (String) -> Unit,
     onFocusChange: (Boolean) -> Unit,
+    // Поиск активен: курсор в поле и клавиатура не уходит
+    active: Boolean,
     focusRequester: FocusRequester,
     onGo: () -> Unit,
     modifier: Modifier = Modifier
 ) {
-    var focused by remember { mutableStateOf(false) }
     val keyboard = LocalSoftwareKeyboardController.current
     // Не в фокусе и пусто — лупа и подсказка по центру; в фокусе или с текстом — у левого края, как в эталоне.
     // Поле ввода всегда во всю ширину, а лупа с подсказкой плавно съезжают сдвигом [shift]
-    val centered = !focused && query.isEmpty()
+    val centered = !active && query.isEmpty()
     var fieldWidth by remember { mutableIntStateOf(0) }
     var hintWidth by remember { mutableIntStateOf(0) }
     val density = LocalDensity.current
@@ -699,7 +717,6 @@ private fun MoveSearchField(
                         .fillMaxWidth()
                         .focusRequester(focusRequester)
                         .onFocusChanged { state ->
-                            focused = state.isFocused
                             onFocusChange(state.isFocused)
                         }
                 )
