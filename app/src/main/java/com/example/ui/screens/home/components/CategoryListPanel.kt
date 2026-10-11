@@ -1,5 +1,8 @@
 package com.example.ui.screens.home.components
 
+import androidx.compose.ui.layout.findRootCoordinates
+import com.example.ui.screens.home.subcomponents.EXPANDED_BOTTOM_GAP
+import com.example.ui.screens.home.subcomponents.EXPANDED_TOP_LIMIT
 import com.example.domain.lists.HomeList
 import com.example.domain.lists.AllProjectsList
 import com.example.domain.lists.PlaceGroups
@@ -585,6 +588,44 @@ fun ThingsCategoryListPanel(
         if (inlineExpandedTaskId != null) editorOutsideTouch.reset()
     }
 
+    // Пока задача раскрыта, прокрутка не уводит её карточку из видимой зоны — той же, в которую карточку
+    // ставит раскрытие: от тулбара до плашки действий (или клавиатуры). Карточка ниже зоны видна целиком
+    // и не уезжает; карточка выше зоны прокручивается только в своих границах, от верха до низа.
+    // Движение, которое возвращает карточку в зону, разрешено всегда
+    val currentExpandedId by rememberUpdatedState(inlineExpandedTaskId)
+    val imeInsetsForClamp = WindowInsets.ime
+    val navBarInsetsForClamp = WindowInsets.navigationBars
+    val cardTopLimitPx = WindowInsets.statusBars.getTop(density) + with(density) { EXPANDED_TOP_LIMIT.toPx() }
+    val cardBottomReservePx = with(density) {
+        (MaterialTheme.dimens.floatingToolbarBottomPadding + MaterialTheme.dimens.floatingToolbarHeight + EXPANDED_BOTTOM_GAP).toPx()
+    }
+    val cardGapPx = with(density) { MaterialTheme.dimens.taskExpandedVerticalGap.toPx() }
+    val currentCardLimits by rememberUpdatedState(Triple(cardTopLimitPx, cardBottomReservePx, cardGapPx))
+    val expandedCardScrollClamp = remember {
+        object : NestedScrollConnection {
+            override fun onPreScroll(available: Offset, source: NestedScrollSource): Offset {
+                val id = currentExpandedId ?: return Offset.Zero
+                val coords = listCoordinates?.takeIf { it.isAttached } ?: return Offset.Zero
+                val layoutInfo = lazyListState.layoutInfo
+                val info = layoutInfo.visibleItemsInfo.firstOrNull { it.key == id } ?: return Offset.Zero
+                val (topLimit, bottomReserve, gap) = currentCardLimits
+                val rootHeight = coords.findRootCoordinates().size.height.toFloat()
+                // Карточка — строка без отступов раскрытия сверху и снизу, в координатах экрана
+                val cardTop = coords.positionInRoot().y + (info.offset - layoutInfo.viewportStartOffset) + gap
+                val cardHeight = info.size - 2 * gap
+                val zoneBottom = minOf(
+                    rootHeight - imeInsetsForClamp.getBottom(density),
+                    rootHeight - navBarInsetsForClamp.getBottom(density) - bottomReserve
+                )
+                val lo = minOf(topLimit, zoneBottom - cardHeight)
+                val hi = maxOf(topLimit, zoneBottom - cardHeight)
+                val dy = available.y
+                val allowed = if (dy > 0f) minOf(dy, maxOf(0f, hi - cardTop)) else maxOf(dy, minOf(0f, lo - cardTop))
+                return Offset(0f, dy - allowed)
+            }
+        }
+    }
+
     // --- Scroll_B: аккумулятор ручного скролла пользователя ---
     val manualScrollDelta = remember { FloatAccumulator() }
     val scrollTrackingConnection = remember {
@@ -780,7 +821,11 @@ fun ThingsCategoryListPanel(
             state = lazyListState,
             modifier = Modifier
                 .fillMaxSize()
-                .then(if (screen == ActiveScreen.SEARCH) Modifier else Modifier.nestedScroll(nestedScrollConnection))
+                // Первым в цепочке: ограничение раскрытой карточкой забирает лишнее раньше оттяжки поиска
+                .nestedScroll(expandedCardScrollClamp)
+                // Оттяжка к Quick Find — только без раскрытой задачи: иначе прокрутка вниз у начала списка
+                // открывала поиск и закрывала редактор
+                .then(if (screen == ActiveScreen.SEARCH || anyExpanded) Modifier else Modifier.nestedScroll(nestedScrollConnection))
                 .nestedScroll(scrollTrackingConnection)
                 .graphicsLayer { translationY = pullOffset.value }
                 .observeTouchesOutsideEditor(editorOutsideTouch) { isEditorOpen }
