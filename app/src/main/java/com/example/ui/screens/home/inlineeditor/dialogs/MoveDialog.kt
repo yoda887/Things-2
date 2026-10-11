@@ -1,5 +1,13 @@
 package com.example.ui.screens.home.inlineeditor.dialogs
 
+import com.example.ui.components.IME_FOCUS_CLEAR_DIALOG_SETTLE_MS
+import com.example.ui.components.ClearFocusOnImeHidden
+import androidx.compose.ui.layout.onSizeChanged
+import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.platform.LocalSoftwareKeyboardController
+import androidx.compose.ui.platform.LocalFocusManager
+import androidx.compose.ui.focus.focusRequester
+import androidx.compose.ui.focus.FocusRequester
 import com.example.ui.theme.ThingsAlpha
 import androidx.compose.ui.focus.onFocusChanged
 import androidx.compose.material.icons.filled.Cancel
@@ -158,6 +166,16 @@ fun ThingsMoveDialog(
             closeThen { onMove(projectId, areaId, toInbox) }
         }
         androidx.activity.compose.BackHandler { closeWindow() }
+        // Выход из поиска: «Назад» при активном поиске очищает запрос и снимает курсор, окно остаётся
+        val focusManager = LocalFocusManager.current
+        val searchFocusRequester = remember { FocusRequester() }
+        fun leaveSearch() {
+            query = ""
+            focusManager.clearFocus()
+        }
+        androidx.activity.compose.BackHandler(enabled = !closing && (searchFocused || query.isNotEmpty())) { leaveSearch() }
+        // Свернули клавиатуру — курсор уходит из поля, и пустой поиск больше не приглушает список
+        ClearFocusOnImeHidden(settleMillis = IME_FOCUS_CLEAR_DIALOG_SETTLE_MS)
 
         val scrimColor = ThingsTheme.colors.scrim
         BoxWithConstraints(
@@ -261,6 +279,7 @@ fun ThingsMoveDialog(
                         query = query,
                         onQueryChange = { query = it },
                         onFocusChange = { searchFocused = it },
+                        focusRequester = searchFocusRequester,
                         onGo = {
                             val first = found.firstOrNull()
                             when {
@@ -280,10 +299,11 @@ fun ThingsMoveDialog(
                         animationSpec = androidx.compose.animation.core.tween(ThingsMotion.QUICK),
                         label = "moveListAlpha"
                     )
+                    val searchDimsList = searchFocused && query.isEmpty()
+                    Box(modifier = Modifier.fillMaxWidth().weight(1f)) {
                     LazyColumn(
                         modifier = Modifier
-                            .fillMaxWidth()
-                            .weight(1f)
+                            .fillMaxSize()
                             .graphicsLayer { alpha = listAlpha }
                             // Строки и разделители — чуть дальше от краёв окна, чем крестик и поле поиска:
                             // этот отступ + их собственный L_PLUS
@@ -345,31 +365,16 @@ fun ThingsMoveDialog(
 
                         // Filters for Projects
                         val projectsWithNoArea = projects.filter { it.areaId.isNullOrBlank() }
-                        val (noAreaShown, noAreaLater) = splitLater(projectsWithNoArea, expandedLater, NO_AREA_GROUP)
+                        val (noAreaShown, noAreaLater) = splitLater(projectsWithNoArea)
 
                         // 3. Projects without Area
                         if (!areasOnly && projectsWithNoArea.isNotEmpty()) {
                             items(noAreaShown, key = { "proj_no_area_${it.id}" }) { project ->
-                                val isSelected = currentProjectId == project.id
-                                val projectTasks = allTasks.filter { it.item.projectId == project.id }
-                                val completedCount = projectTasks.count { it.item.isClosed }
-                                val totalCount = projectTasks.size
-                                MoveDialogRow(
-                                    title = project.title,
-                                    icon = null,
-                                    iconColor = ThingsTheme.colors.overlayContent,
-                                    isSelected = isSelected,
-                                    isProject = true,
-                                    completed = completedCount,
-                                    total = totalCount,
-                                    dashed = project.start == Item.START_SOMEDAY,
-                                    indentation = ThingsSpacing.NONE,
-                                    onClick = {
-                                        moveAnimated(project.id, null, false)
-                                    }
-                                )
+                                MoveProjectRow(project, currentProjectId, allTasks) { moveAnimated(project.id, null, false) }
                             }
-                            laterToggleItem(NO_AREA_GROUP, noAreaLater, expandedLater) { expandedLater = it }
+                            laterToggleItem(NO_AREA_GROUP, noAreaLater, expandedLater, onExpandedChange = { expandedLater = it }) { project ->
+                                MoveProjectRow(project, currentProjectId, allTasks) { moveAnimated(project.id, null, false) }
+                            }
                         }
 
                         // 4. Areas and Projects grouped under Areas
@@ -399,30 +404,24 @@ fun ThingsMoveDialog(
 
                             // Projects belonging to this Area
                             val areaProjects = if (areasOnly) emptyList() else projects.filter { it.areaId == area.id }
-                            val (areaShown, areaLater) = splitLater(areaProjects, expandedLater, area.id)
+                            val (areaShown, areaLater) = splitLater(areaProjects)
                             items(areaShown, key = { "proj_${area.id}_${it.id}" }) { project ->
-                                val isSelected = currentProjectId == project.id
-                                val projectTasks = allTasks.filter { it.item.projectId == project.id }
-                                val completedCount = projectTasks.count { it.item.isClosed }
-                                val totalCount = projectTasks.size
-                                MoveDialogRow(
-                                    title = project.title,
-                                    icon = null,
-                                    iconColor = ThingsTheme.colors.overlayContent,
-                                    isSelected = isSelected,
-                                    isProject = true,
-                                    completed = completedCount,
-                                    total = totalCount,
-                                    dashed = project.start == Item.START_SOMEDAY,
-                                    indentation = ThingsSpacing.NONE,
-                                    onClick = {
-                                        moveAnimated(project.id, area.id, false)
-                                    }
-                                )
+                                MoveProjectRow(project, currentProjectId, allTasks) { moveAnimated(project.id, area.id, false) }
                             }
-                            laterToggleItem(area.id, areaLater, expandedLater) { expandedLater = it }
+                            laterToggleItem(area.id, areaLater, expandedLater, onExpandedChange = { expandedLater = it }) { project ->
+                                MoveProjectRow(project, currentProjectId, allTasks) { moveAnimated(project.id, area.id, false) }
+                            }
                         }
                         }
+                    }
+                    // Нажатие на приглушённый список — выход из поиска, как в эталоне
+                    if (searchDimsList) {
+                        Box(
+                            modifier = Modifier
+                                .matchParentSize()
+                                .pointerInput(Unit) { detectTapGestures { focusManager.clearFocus() } }
+                        )
+                    }
                     }
                 }
             }
@@ -531,42 +530,78 @@ private fun MoveDialogRow(
 private const val NO_AREA_GROUP = "no_area"
 
 /**
- * Открытые проекты группы, которые видны ([first]), и более поздние ([second]) — отложенные и запланированные,
- * как в «Всех проектах»: сначала запланированные по дате, затем отложенные. Раскрытая группа ([group] в
- * [expanded]) показывает и поздние — после активных.
+ * Открытые проекты группы: активные ([first]) и более поздние ([second]) — отложенные и запланированные,
+ * как в «Всех проектах»: сначала запланированные по дате, затем отложенные.
  */
-private fun splitLater(list: List<Item>, expanded: Set<String>, group: String): Pair<List<Item>, List<Item>> {
+private fun splitLater(list: List<Item>): Pair<List<Item>, List<Item>> {
     // Закрытые проекты сюда не попадают: переносить в них нечего
     val (active, later) = list.filter { ListRules.isOpenProject(it) }.partition { HomeList.showsProject(it) }
     val (scheduled, someday) = later.partition { it.start != Item.START_SOMEDAY && it.startDate != null }
-    val laterOrdered = scheduled.sortedBy { it.startDate } + someday
-    return if (group in expanded) Pair(active + laterOrdered, laterOrdered) else Pair(active, laterOrdered)
+    return Pair(active, scheduled.sortedBy { it.startDate } + someday)
 }
 
-/** Строка «Показать / Скрыть N более поздних проектов» под проектами группы, если поздние есть. */
+/** Строка проекта в окне «Переместить»: кольцо прогресса (пунктирное у отложенного) и галочка у текущего. */
+@Composable
+private fun MoveProjectRow(project: Item, currentProjectId: String?, allTasks: List<ItemWithChecklist>, onClick: () -> Unit) {
+    val projectTasks = allTasks.filter { it.item.projectId == project.id }
+    MoveDialogRow(
+        title = project.title,
+        icon = null,
+        iconColor = ThingsTheme.colors.overlayContent,
+        isSelected = currentProjectId == project.id,
+        isProject = true,
+        completed = projectTasks.count { it.item.isClosed },
+        total = projectTasks.size,
+        dashed = project.start == Item.START_SOMEDAY,
+        onClick = onClick
+    )
+}
+
+/**
+ * Поздние проекты группы и под ними строка «Показать / Скрыть N более поздних проектов», если поздние есть.
+ * Поздние раскрываются и сворачиваются плавно, раздвигая список.
+ */
 private fun androidx.compose.foundation.lazy.LazyListScope.laterToggleItem(
     group: String,
     later: List<Item>,
     expanded: Set<String>,
-    onExpandedChange: (Set<String>) -> Unit
+    onExpandedChange: (Set<String>) -> Unit,
+    row: @Composable (Item) -> Unit
 ) {
     if (later.isEmpty()) return
     item(key = "later_$group") {
         val isExpanded = group in expanded
-        Text(
-            text = pluralStringResource(
-                if (isExpanded) R.plurals.all_projects_hide_later else R.plurals.all_projects_show_later,
-                later.size, later.size
-            ),
-            style = ThingsTheme.type.bodyMedium.copy(color = ThingsTheme.colors.overlayContentSecondary),
-            modifier = Modifier
-                .fillMaxWidth()
-                .clickable(
-                    interactionSource = remember { androidx.compose.foundation.interaction.MutableInteractionSource() },
-                    indication = null
-                ) { onExpandedChange(if (isExpanded) expanded - group else expanded + group) }
-                .padding(horizontal = ThingsSpacing.L_PLUS, vertical = ThingsSpacing.S)
-        )
+        Column {
+            androidx.compose.animation.AnimatedVisibility(
+                visible = isExpanded,
+                enter = androidx.compose.animation.expandVertically(androidx.compose.animation.core.tween(ThingsMotion.MEDIUM)) +
+                    androidx.compose.animation.fadeIn(androidx.compose.animation.core.tween(ThingsMotion.MEDIUM)),
+                exit = androidx.compose.animation.shrinkVertically(androidx.compose.animation.core.tween(ThingsMotion.MEDIUM)) +
+                    androidx.compose.animation.fadeOut(androidx.compose.animation.core.tween(ThingsMotion.QUICK))
+            ) {
+                // Промежутки — как между строками списка
+                Column(
+                    modifier = Modifier.padding(bottom = ThingsSpacing.XXS),
+                    verticalArrangement = Arrangement.spacedBy(ThingsSpacing.XXS)
+                ) {
+                    later.forEach { project -> key(project.id) { row(project) } }
+                }
+            }
+            Text(
+                text = pluralStringResource(
+                    if (isExpanded) R.plurals.all_projects_hide_later else R.plurals.all_projects_show_later,
+                    later.size, later.size
+                ),
+                style = ThingsTheme.type.bodyMedium.copy(color = ThingsTheme.colors.overlayContentSecondary),
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .clickable(
+                        interactionSource = remember { androidx.compose.foundation.interaction.MutableInteractionSource() },
+                        indication = null
+                    ) { onExpandedChange(if (isExpanded) expanded - group else expanded + group) }
+                    .padding(horizontal = ThingsSpacing.L_PLUS, vertical = ThingsSpacing.S)
+            )
+        }
     }
 }
 
@@ -579,51 +614,96 @@ private fun MoveSearchField(
     query: String,
     onQueryChange: (String) -> Unit,
     onFocusChange: (Boolean) -> Unit,
+    focusRequester: FocusRequester,
     onGo: () -> Unit,
     modifier: Modifier = Modifier
 ) {
     var focused by remember { mutableStateOf(false) }
-    // Не в фокусе и пусто — лупа и подсказка по центру; в фокусе или с текстом — с левого края, как в эталоне
+    val keyboard = LocalSoftwareKeyboardController.current
+    // Не в фокусе и пусто — лупа и подсказка по центру; в фокусе или с текстом — у левого края, как в эталоне.
+    // Поле ввода всегда во всю ширину, а лупа с подсказкой плавно съезжают сдвигом [shift]
     val centered = !focused && query.isEmpty()
+    var fieldWidth by remember { mutableIntStateOf(0) }
+    var hintWidth by remember { mutableIntStateOf(0) }
+    val density = LocalDensity.current
+    val centerShift = with(density) {
+        val content = ThingsIconSize.S.toPx() + ThingsSpacing.XS_PLUS.toPx() + hintWidth
+        ((fieldWidth - 2 * ThingsSpacing.M.toPx() - content) / 2f).coerceAtLeast(0f)
+    }
+    val shift = remember { androidx.compose.animation.core.Animatable(0f) }
+    // До первого замера содержимое не показываем, чтобы оно не прыгнуло от края к центру
+    var placed by remember { mutableStateOf(false) }
+    LaunchedEffect(centered, centerShift) {
+        val target = if (centered) centerShift else 0f
+        if (!placed) {
+            if (fieldWidth > 0 && hintWidth > 0) {
+                shift.snapTo(target)
+                placed = true
+            }
+        } else {
+            shift.animateTo(target, androidx.compose.animation.core.tween(ThingsMotion.MEDIUM, easing = androidx.compose.animation.core.FastOutSlowInEasing))
+        }
+    }
     Row(
         modifier = modifier
             .fillMaxWidth()
             .height(MaterialTheme.dimens.dialogFieldHeight)
             .clip(CircleShape)
             .background(ThingsTheme.colors.overlayControl)
+            .onSizeChanged { fieldWidth = it.width }
+            // Нажатие в любом месте плашки ставит курсор в поле
+            .clickable(
+                interactionSource = remember { androidx.compose.foundation.interaction.MutableInteractionSource() },
+                indication = null
+            ) {
+                focusRequester.requestFocus()
+                keyboard?.show()
+            }
             .padding(horizontal = ThingsSpacing.M),
-        verticalAlignment = Alignment.CenterVertically,
-        horizontalArrangement = if (centered) Arrangement.Center else Arrangement.Start
+        verticalAlignment = Alignment.CenterVertically
     ) {
-        Icon(
-            imageVector = Icons.Default.Search,
-            contentDescription = null,
-            tint = ThingsTheme.colors.overlayContentSecondary,
-            modifier = Modifier.size(ThingsIconSize.S)
-        )
-        Spacer(modifier = Modifier.width(ThingsSpacing.XS_PLUS))
-        Box(modifier = if (centered) Modifier else Modifier.weight(1f)) {
-            if (query.isEmpty()) {
-                Text(
-                    text = stringResource(R.string.cd_search),
-                    style = ThingsTheme.type.dialogRow.copy(color = ThingsTheme.colors.overlayContentSecondary)
+        Row(
+            modifier = Modifier
+                .weight(1f)
+                .graphicsLayer {
+                    translationX = shift.value
+                    alpha = if (placed) 1f else 0f
+                },
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Icon(
+                imageVector = Icons.Default.Search,
+                contentDescription = null,
+                tint = ThingsTheme.colors.overlayContentSecondary,
+                modifier = Modifier.size(ThingsIconSize.S)
+            )
+            Spacer(modifier = Modifier.width(ThingsSpacing.XS_PLUS))
+            Box(modifier = Modifier.weight(1f)) {
+                if (query.isEmpty()) {
+                    Text(
+                        text = stringResource(R.string.cd_search),
+                        style = ThingsTheme.type.dialogRow.copy(color = ThingsTheme.colors.overlayContentSecondary),
+                        modifier = Modifier.onSizeChanged { hintWidth = it.width }
+                    )
+                }
+                androidx.compose.foundation.text.BasicTextField(
+                    value = query,
+                    onValueChange = onQueryChange,
+                    singleLine = true,
+                    // «Go» на клавиатуре — подсвеченный результат
+                    keyboardOptions = androidx.compose.foundation.text.KeyboardOptions(imeAction = androidx.compose.ui.text.input.ImeAction.Go),
+                    keyboardActions = androidx.compose.foundation.text.KeyboardActions(onGo = { onGo() }),
+                    textStyle = ThingsTheme.type.dialogRow.copy(color = ThingsTheme.colors.overlayContent),
+                    cursorBrush = SolidColor(ThingsTheme.colors.accent),
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .focusRequester(focusRequester)
+                        .onFocusChanged { state ->
+                            focused = state.isFocused
+                            onFocusChange(state.isFocused)
+                        }
                 )
             }
-            androidx.compose.foundation.text.BasicTextField(
-                value = query,
-                onValueChange = onQueryChange,
-                singleLine = true,
-                // «Go» на клавиатуре — подсвеченный результат
-                keyboardOptions = androidx.compose.foundation.text.KeyboardOptions(imeAction = androidx.compose.ui.text.input.ImeAction.Go),
-                keyboardActions = androidx.compose.foundation.text.KeyboardActions(onGo = { onGo() }),
-                textStyle = ThingsTheme.type.dialogRow.copy(color = ThingsTheme.colors.overlayContent),
-                cursorBrush = SolidColor(ThingsTheme.colors.accent),
-                modifier = (if (centered) Modifier.matchParentSize() else Modifier.fillMaxWidth())
-                    .onFocusChanged { state ->
-                        focused = state.isFocused
-                        onFocusChange(state.isFocused)
-                    }
-            )
         }
         // Есть текст — справа кнопка очистки
         if (query.isNotEmpty()) {
