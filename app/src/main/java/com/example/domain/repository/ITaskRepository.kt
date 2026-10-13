@@ -96,6 +96,9 @@ interface ITaskRepository {
     /** Задача (или другой элемент) по идентификатору — как она сейчас в базе. */
     suspend fun getTask(id: String): Item?
 
+    /** Сохраняет правило повтора шаблона (повторяющиеся задачи) */
+    suspend fun saveRecurrenceRule(rule: com.example.data.model.RecurrenceRule)
+
     /**
      * Удаляет задачу по ее идентификатору.
      * @param id Уникальный идентификатор задачи

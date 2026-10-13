@@ -199,4 +199,35 @@
     <string name="reminder_snooze_1h">In 1 hour</string>
     <string name="reminder_snooze_3h">In 3 hours</string>
     <string name="reminder_snooze_tomorrow">Tomorrow</string>
+    <string name="repeat_title">Repeat</string>
+    <string name="repeat_mode_after">After Completion</string>
+    <string name="repeat_mode_regular">Regularly</string>
+    <string name="repeat_hint_after_before">You\'ll get a new copy</string>
+    <string name="repeat_hint_after_after">after you\'ve completed the previous to-do.</string>
+    <string name="repeat_hint_regular">You\'ll get a new copy regularly, no matter if you\'ve completed the previous to-do or not.</string>
+    <string name="repeat_every">Every</string>
+    <string name="repeat_on">On</string>
+    <string name="repeat_and_on">And On</string>
+    <string name="repeat_next">Next</string>
+    <string name="repeat_ends">Ends</string>
+    <string name="repeat_never">Never</string>
+    <string name="repeat_on_date">On Date</string>
+    <string name="repeat_after">After</string>
+    <string name="repeat_add_deadline">Add Deadline</string>
+    <string name="repeat_deadline">Deadline</string>
+    <string name="repeat_deadline_hint">Each copy has a deadline. It will appear in your Today list</string>
+    <string name="repeat_same_day">on the same day</string>
+    <string name="repeat_add_more">Add More</string>
+    <string name="repeat_day_word">day</string>
+    <string name="repeat_last">last</string>
+    <string name="repeat_last_day">last day</string>
+    <string name="repeat_nth_day">%1$s day</string>
+    <string name="cd_repeat_remove_day">Remove</string>
+    <plurals name="repeat_unit_day"><item quantity="one">day</item><item quantity="other">days</item></plurals>
+    <plurals name="repeat_unit_week"><item quantity="one">week</item><item quantity="other">weeks</item></plurals>
+    <plurals name="repeat_unit_month"><item quantity="one">month</item><item quantity="other">months</item></plurals>
+    <plurals name="repeat_unit_year"><item quantity="one">year</item><item quantity="other">years</item></plurals>
+    <plurals name="repeat_days_earlier"><item quantity="one">%d day earlier</item><item quantity="other">%d days earlier</item></plurals>
+    <plurals name="repeat_repetitions"><item quantity="one">%d repetition</item><item quantity="other">%d repetitions</item></plurals>
+    <plurals name="repeat_ends_after"><item quantity="one">after %d repetition</item><item quantity="other">after %d repetitions</item></plurals>
 </resources>

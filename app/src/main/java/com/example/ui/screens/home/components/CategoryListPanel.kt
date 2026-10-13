@@ -269,6 +269,8 @@ fun ThingsCategoryListPanel(
     val view = androidx.compose.ui.platform.LocalView.current
 
     var showMoveDialog by remember { mutableStateOf(false) }
+    // Окно «Повторять» для раскрытой задачи
+    var showRepeatDialog by remember { mutableStateOf(false) }
     // Поле поиска забирает фокус один раз за показ экрана, а не при каждом возвращении в видимую часть списка
     var searchFieldAutoFocused by rememberSaveable(screen) { mutableStateOf(false) }
     var showDeleteConfirm by remember { mutableStateOf(false) }
@@ -1569,7 +1571,7 @@ fun ThingsCategoryListPanel(
     FloatingBottomCapsuleToolbar(
         // Пока открыто окно «Переместить», тулбар скрыт — как в Things
         visible = inlineExpandedTaskId != null && activeTask != null && !isWhenDialogOpen && !isTagDialogOpen && swipeWhenTask == null &&
-            !showMoveDialog,
+            !showMoveDialog && !showRepeatDialog,
         onMoveClick = { showMoveDialog = true },
         onDeleteClick = { showDeleteConfirm = true },
         onDuplicateClick = {
@@ -1590,8 +1592,26 @@ fun ThingsCategoryListPanel(
                 }
             }
         },
+        onRepeatClick = activeTask?.item?.takeIf { com.example.domain.repeat.RepeatSetup.canRepeat(it) }?.let { { showRepeatDialog = true } },
         modifier = Modifier.align(Alignment.BottomCenter)
     )
+
+    if (showRepeatDialog && activeTask != null) {
+        val repeatTask = activeTask
+        com.example.ui.screens.home.inlineeditor.dialogs.ThingsRepeatDialog(
+            task = repeatTask.item,
+            onDismissRequest = { showRepeatDialog = false },
+            onSave = { rule, reminderTime ->
+                // Сначала редактор сворачивается и сохраняет правки, потом задача становится шаблоном повтора:
+                // сохранение при сворачивании иначе вернуло бы её в обычные задачи
+                onEvent(ThingsCategoryListEvent.ChangeInlineExpandedTaskId(null))
+                coroutineScope.launch {
+                    kotlinx.coroutines.delay(com.example.ui.theme.AnimationConstants.TASK_EXPANSION_DURATION_MS)
+                    onEvent(ThingsCategoryListEvent.MakeRepeating(repeatTask.item.id, rule, reminderTime))
+                }
+            }
+        )
+    }
 
     // Диалоги для пакетных операций
     if (showBatchWhenDialog) {

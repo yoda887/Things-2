@@ -353,6 +353,12 @@ sealed interface ThingsCategoryListEvent {
     data class DuplicateTask(val taskWrapper: ItemWithChecklist) : ThingsCategoryListEvent
     /** Отменить задачу или вернуть отменённую */
     data class ToggleTaskCancel(val taskId: String) : ThingsCategoryListEvent
+    /** Сделать задачу повторяющейся: она становится шаблоном с правилом [rule], напоминание копий — [reminderTime] */
+    data class MakeRepeating(
+        val taskId: String,
+        val rule: com.example.domain.repeat.RepeatRule,
+        val reminderTime: Int?
+    ) : ThingsCategoryListEvent
     data class MoveTask(
         val taskWrapper: ItemWithChecklist,
         val projectId: String?,

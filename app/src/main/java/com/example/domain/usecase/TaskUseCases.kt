@@ -1,5 +1,6 @@
 package com.example.domain.usecase
 
+import com.example.domain.usecase.task.MakeTaskRepeatingUseCase
 import com.example.domain.usecase.task.*
 import javax.inject.Inject
 
@@ -12,5 +13,6 @@ class TaskUseCases @Inject constructor(
     val duplicateTask: DuplicateTaskUseCase,
     val toggleTaskCompletion: ToggleTaskCompletionUseCase,
     val toggleTaskCancel: ToggleTaskCancelUseCase,
-    val updateTask: UpdateTaskUseCase
+    val updateTask: UpdateTaskUseCase,
+    val makeRepeating: MakeTaskRepeatingUseCase
 )

@@ -48,6 +48,9 @@ class LocalTaskDataSource(private val taskDao: TaskDao) {
      * Находит задачу или проект по его уникальному идентификатору.
      * @param itemId Идентификатор искомого объекта
      */
+    /** Правило повтора шаблона */
+    suspend fun saveRecurrenceRule(rule: com.example.data.model.RecurrenceRule) = taskDao.upsertRecurrenceRule(rule)
+
     suspend fun getItemById(itemId: String): Item? {
         return taskDao.getItemById(itemId)
     }

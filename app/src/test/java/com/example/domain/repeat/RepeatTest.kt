@@ -158,4 +158,22 @@ class RepeatTest {
         assertEquals(copy.id, copyChecklist.single().itemId)
         assertFalse(copyChecklist.single().isCompleted)
     }
+
+    @Test
+    fun setup_taskBecomesTemplate_copiesOnlyFromRegularTasks() {
+        val task = Item(id = "t", title = "Water", start = Item.START_TODAY, startDate = 5L, dueDate = 7L, isTonight = true, cachedTags = "home")
+        assertTrue(RepeatSetup.canRepeat(task))
+        assertFalse(RepeatSetup.canRepeat(task.copy(repeatTemplateId = "tpl")))
+        assertFalse(RepeatSetup.canRepeat(task.copy(type = Item.TYPE_PROJECT)))
+        assertFalse(RepeatSetup.canRepeat(task.copy(status = Item.STATUS_COMPLETED)))
+        val template = RepeatSetup.template(task, reminderTime = 9 * 60, now = 1L)
+        assertEquals(Item.TYPE_TEMPLATE, template.type)
+        assertEquals("t", template.id)
+        assertEquals("Water", template.title)
+        assertEquals("home", template.cachedTags)
+        assertNull(template.startDate)
+        assertNull(template.dueDate)
+        assertFalse(template.isTonight)
+        assertEquals(9 * 60, template.reminderTime)
+    }
 }

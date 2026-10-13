@@ -114,6 +114,10 @@ class TaskRepositoryImpl @Inject constructor(
         }
     }
 
+    override suspend fun saveRecurrenceRule(rule: com.example.data.model.RecurrenceRule): Unit = withContext(Dispatchers.IO) {
+        localDataSource.saveRecurrenceRule(rule)
+    }
+
     override suspend fun insertTasks(items: List<Item>): Unit = withContext(Dispatchers.IO) {
         localDataSource.insertItems(detachForeignHeadings(items))
     }

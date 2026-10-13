@@ -73,6 +73,8 @@ fun FloatingBottomCapsuleToolbar(
     onDuplicateClick: () -> Unit,
     isCancelled: Boolean = false,
     onCancelClick: () -> Unit = {},
+    // «Повторять»: null — пункта нет (копия повторяющейся задачи повторяться не может, как в Things)
+    onRepeatClick: (() -> Unit)? = null,
     modifier: Modifier = Modifier
 ) {
     var expandedDotsMenu by remember { mutableStateOf(false) }
@@ -180,7 +182,13 @@ fun FloatingBottomCapsuleToolbar(
                                 expandedDotsMenu = false
                             }
                         )
-                        ThingsMenuItem(stringResource(R.string.ui_repeat), Icons.Default.Refresh, onClick = { expandedDotsMenu = false })
+                        if (onRepeatClick != null) {
+                            ThingsMenuItem(stringResource(R.string.ui_repeat), Icons.Default.Refresh, onClick = {
+                                view.performHapticFeedback(HapticFeedbackConstants.CLOCK_TICK)
+                                expandedDotsMenu = false
+                                onRepeatClick()
+                            })
+                        }
                         ThingsMenuItem(stringResource(R.string.ui_convert), Icons.Default.Transform, onClick = { expandedDotsMenu = false })
                         ThingsMenuItem(stringResource(R.string.batch_action_share), Icons.Default.Share, onClick = { expandedDotsMenu = false })
                     }

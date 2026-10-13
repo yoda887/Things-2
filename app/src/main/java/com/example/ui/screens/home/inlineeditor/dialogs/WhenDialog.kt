@@ -61,6 +61,10 @@ import androidx.compose.ui.window.DialogWindowProvider
 import androidx.compose.ui.window.DialogProperties
 import com.example.data.model.TaskSection
 import com.example.ui.theme.AppIcons
+import com.example.ui.components.Wheel
+import com.example.ui.components.WHEEL_HEIGHT
+import com.example.ui.components.WHEEL_ROW_HEIGHT
+import com.example.ui.components.rememberWheelState
 import com.example.ui.screens.home.inlineeditor.utils.isPastDate
 import com.example.ui.screens.home.inlineeditor.utils.isTodayDate
 import com.example.ui.screens.home.inlineeditor.utils.isTodayDateOrPast
@@ -927,28 +931,11 @@ private val WHEEL_CARD_EDGE_INSET = 4.dp
 private const val WHEEL_CARD_ENTER_MS = 150
 private const val WHEEL_CARD_START_SCALE = 0.9f
 
-/** Строка барабана в покое; видимая высота барабана — с учётом того, что к краям строки сжимаются */
-private val WHEEL_ROW_HEIGHT = 40.dp
-private val WHEEL_HEIGHT = 220.dp
-
-/** Барабан — цилиндр: соседние строки повёрнуты на этот угол; дальше [WHEEL_MAX_ANGLE] не видно */
-private const val WHEEL_ROW_ANGLE_DEG = 21f
-private const val WHEEL_MAX_ANGLE_DEG = 80f
-
-/** Строк, раскладываемых по каждую сторону от середины (сжатые края цилиндра) */
-private const val WHEEL_SIDE_ROWS = 4
-
 /** Колонки барабана — доли ширины карточки, как в эталоне */
 private const val WHEEL_COLUMN_FRACTION = 0.22f
 
 /** Шаг минут на барабане, как в Things */
 private const val WHEEL_MINUTE_STEP = 5
-
-/** Барабан бесконечный: столько повторов списка, начинаем с середины */
-private const val WHEEL_REPEATS = 1000
-
-/** Прозрачность самых дальних строк барабана */
-private const val WHEEL_EDGE_ALPHA = 0.2f
 
 /**
  * Карточка с барабаном времени напоминания, как в Things: светлее окна, часы, минуты с шагом 5 и, при
@@ -1030,93 +1017,6 @@ private fun ReminderWheelCard(
                         style = ThingsTheme.type.dialogButton.copy(color = ThingsTheme.colors.overlayContent)
                     )
                 }
-            }
-        }
-    }
-    }
-}
-
-/**
- * Состояние колонки барабана. Цикличная колонка — бесконечная: список повторён [WHEEL_REPEATS] раз,
- * начинаем с середины; выбранное значение — номер строки посередине по модулю длины списка.
- */
-private class WheelState(val list: androidx.compose.foundation.lazy.LazyListState, val size: Int, val cyclic: Boolean) {
-    val count: Int get() = if (cyclic) size * WHEEL_REPEATS else size
-    val selected: Int get() {
-        val first = list.firstVisibleItemIndex
-        val half = (list.layoutInfo.visibleItemsInfo.firstOrNull()?.size ?: 0) / 2
-        val index = first + if (list.firstVisibleItemScrollOffset > half) 1 else 0
-        return index % size
-    }
-}
-
-@Composable
-private fun rememberWheelState(initial: Int, size: Int, cyclic: Boolean): WheelState {
-    val start = if (cyclic) size * (WHEEL_REPEATS / 2) + initial else initial
-    val list = androidx.compose.foundation.lazy.rememberLazyListState(initialFirstVisibleItemIndex = start)
-    return remember(list) { WheelState(list, size, cyclic) }
-}
-
-/**
- * Колонка барабана — цилиндр, как в Things: строки встают по местам, к краям сжимаются, бледнеют и
- * сходятся к середине; выбранная — крупнее и жирнее. Раскладка шире видимой части, чтобы сжатые
- * крайние строки тоже были на месте.
- */
-@Composable
-private fun Wheel(items: List<String>, state: WheelState, width: androidx.compose.ui.unit.Dp) {
-    val density = androidx.compose.ui.platform.LocalDensity.current
-    val rowPx = with(density) { WHEEL_ROW_HEIGHT.toPx() }
-    val stepRad = Math.toRadians(WHEEL_ROW_ANGLE_DEG.toDouble()).toFloat()
-    val radiusPx = rowPx / stepRad
-    val maxRad = Math.toRadians(WHEEL_MAX_ANGLE_DEG.toDouble()).toFloat()
-    val layoutHeight = WHEEL_ROW_HEIGHT * (2 * WHEEL_SIDE_ROWS + 1)
-    // Тик на каждом значении, которое проходит через середину, — как у барабана в Things
-    val view = LocalView.current
-    LaunchedEffect(state) {
-        androidx.compose.runtime.snapshotFlow { state.selected }
-            .drop(1)
-            .collect { view.performHapticFeedback(HapticFeedbackConstants.CLOCK_TICK) }
-    }
-    Box(modifier = Modifier.width(width).height(WHEEL_HEIGHT), contentAlignment = Alignment.Center) {
-    androidx.compose.foundation.lazy.LazyColumn(
-        state = state.list,
-        flingBehavior = androidx.compose.foundation.gestures.snapping.rememberSnapFlingBehavior(state.list),
-        contentPadding = PaddingValues(vertical = WHEEL_ROW_HEIGHT * WHEEL_SIDE_ROWS),
-        horizontalAlignment = Alignment.CenterHorizontally,
-        modifier = Modifier
-            .width(width)
-            .requiredHeight(layoutHeight)
-    ) {
-        items(state.count) { index ->
-            val selected = remember { derivedStateOf { state.selected == index % state.size } }
-            Box(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .height(WHEEL_ROW_HEIGHT)
-                    .graphicsLayer {
-                        // Угол строки на цилиндре — по её удалению от середины, в строках
-                        val info = state.list.layoutInfo
-                        val item = info.visibleItemsInfo.firstOrNull { it.index == index }
-                        val center = (info.viewportEndOffset + info.viewportStartOffset) / 2f
-                        val offsetPx = item?.let { it.offset + it.size / 2f - center } ?: 0f
-                        val angle = (offsetPx / rowPx) * stepRad
-                        if (item == null || kotlin.math.abs(angle) > maxRad) {
-                            alpha = 0f
-                        } else {
-                            // На цилиндре строка стоит на высоте R·sin(угла) и сжата по cos(угла)
-                            translationY = radiusPx * kotlin.math.sin(angle) - offsetPx
-                            val c = kotlin.math.cos(angle)
-                            scaleY = c
-                            alpha = WHEEL_EDGE_ALPHA + (1f - WHEEL_EDGE_ALPHA) * c * c
-                        }
-                    },
-                contentAlignment = Alignment.Center
-            ) {
-                Text(
-                    text = items[index % state.size],
-                    style = (if (selected.value) ThingsTheme.type.wheelSelected else ThingsTheme.type.wheel)
-                        .copy(color = ThingsTheme.colors.overlayContent)
-                )
             }
         }
     }

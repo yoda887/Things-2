@@ -206,4 +206,35 @@
     <string name="reminder_snooze_1h">Через час</string>
     <string name="reminder_snooze_3h">Через 3 часа</string>
     <string name="reminder_snooze_tomorrow">Завтра</string>
+    <string name="repeat_title">Повторять</string>
+    <string name="repeat_mode_after">После выполнения</string>
+    <string name="repeat_mode_regular">Регулярно</string>
+    <string name="repeat_hint_after_before">Новая копия появится через</string>
+    <string name="repeat_hint_after_after">после выполнения предыдущей.</string>
+    <string name="repeat_hint_regular">Новая копия появляется регулярно — даже если предыдущая ещё не выполнена.</string>
+    <string name="repeat_every">Каждые</string>
+    <string name="repeat_on">В</string>
+    <string name="repeat_and_on">И в</string>
+    <string name="repeat_next">Следующая</string>
+    <string name="repeat_ends">Заканчивается</string>
+    <string name="repeat_never">Никогда</string>
+    <string name="repeat_on_date">Дата</string>
+    <string name="repeat_after">После</string>
+    <string name="repeat_add_deadline">Добавить срок</string>
+    <string name="repeat_deadline">Срок</string>
+    <string name="repeat_deadline_hint">У каждой копии будет срок. Она появится в «Сегодня»</string>
+    <string name="repeat_same_day">в тот же день</string>
+    <string name="repeat_add_more">Добавить ещё</string>
+    <string name="repeat_day_word">день</string>
+    <string name="repeat_last">последний</string>
+    <string name="repeat_last_day">последний день</string>
+    <string name="repeat_nth_day">%1$s день</string>
+    <string name="cd_repeat_remove_day">Убрать</string>
+    <plurals name="repeat_unit_day"><item quantity="one">день</item><item quantity="few">дня</item><item quantity="many">дней</item><item quantity="other">дня</item></plurals>
+    <plurals name="repeat_unit_week"><item quantity="one">неделя</item><item quantity="few">недели</item><item quantity="many">недель</item><item quantity="other">недели</item></plurals>
+    <plurals name="repeat_unit_month"><item quantity="one">месяц</item><item quantity="few">месяца</item><item quantity="many">месяцев</item><item quantity="other">месяца</item></plurals>
+    <plurals name="repeat_unit_year"><item quantity="one">год</item><item quantity="few">года</item><item quantity="many">лет</item><item quantity="other">года</item></plurals>
+    <plurals name="repeat_days_earlier"><item quantity="one">за %d день</item><item quantity="few">за %d дня</item><item quantity="many">за %d дней</item><item quantity="other">за %d дня</item></plurals>
+    <plurals name="repeat_repetitions"><item quantity="one">%d повтор</item><item quantity="few">%d повтора</item><item quantity="many">%d повторов</item><item quantity="other">%d повтора</item></plurals>
+    <plurals name="repeat_ends_after"><item quantity="one">после %d повтора</item><item quantity="few">после %d повторов</item><item quantity="many">после %d повторов</item><item quantity="other">после %d повтора</item></plurals>
 </resources>

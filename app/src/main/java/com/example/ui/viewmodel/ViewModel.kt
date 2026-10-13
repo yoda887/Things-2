@@ -602,6 +602,11 @@ class ThingsViewModel @Inject constructor(
         viewModelScope.launch { taskUseCases.toggleTaskCancel(taskId) }
     }
 
+    /** Сделать задачу повторяющейся ([com.example.domain.usecase.task.MakeTaskRepeatingUseCase]). */
+    fun makeRepeating(taskId: String, rule: com.example.domain.repeat.RepeatRule, reminderTime: Int?) {
+        viewModelScope.launch { taskUseCases.makeRepeating(taskId, rule, reminderTime) }
+    }
+
     fun toggleChecklistItem(wrapper: ItemWithChecklist, itemId: String) {
         viewModelScope.launch {
             checklistUseCases.toggleChecklistItem(wrapper, itemId)
