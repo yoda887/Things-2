@@ -36,7 +36,9 @@ class RemindersTest {
         assertNull(Reminders.fireAt(today.copy(status = Item.STATUS_COMPLETED), now))
         assertNull(Reminders.fireAt(today.copy(status = Item.STATUS_CANCELLED), now))
         assertNull(Reminders.fireAt(today.copy(trashed = true), now))
-        assertNull(Reminders.fireAt(today.copy(type = Item.TYPE_PROJECT), now))
+        assertNull(Reminders.fireAt(today.copy(type = Item.TYPE_HEADING), now))
+        // У проекта напоминание срабатывает так же, как у задачи
+        assertEquals(at(10, 1), Reminders.fireAt(today.copy(type = Item.TYPE_PROJECT), now))
     }
 
     @Test

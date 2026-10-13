@@ -1,5 +1,8 @@
 package com.example.reminders
 
+import kotlinx.coroutines.flow.first
+import com.example.data.model.Item
+import com.example.domain.usecase.ProjectUseCases
 import android.app.NotificationChannel
 import android.app.NotificationManager
 import android.app.PendingIntent
@@ -30,6 +33,7 @@ class ReminderReceiver : BroadcastReceiver() {
 
     @Inject lateinit var dao: TaskDao
     @Inject lateinit var taskUseCases: TaskUseCases
+    @Inject lateinit var projectUseCases: ProjectUseCases
     @Inject @ApplicationScope lateinit var scope: CoroutineScope
 
     override fun onReceive(context: Context, intent: Intent) {
@@ -51,7 +55,13 @@ class ReminderReceiver : BroadcastReceiver() {
             try {
                 val item = dao.getItemById(taskId) ?: return@launch
                 if (item.isClosed || item.trashed) return@launch
-                if (intent.action == ACTION_COMPLETE) {
+                if (intent.action == ACTION_COMPLETE && item.type == Item.TYPE_PROJECT) {
+                    // Проект завершается вместе с открытыми задачами — как «Завершить проект» в приложении
+                    val projectTasks = dao.getAllItems().first()
+                        .filter { it.projectId == item.id && it.type == Item.TYPE_TASK }
+                        .map { ItemWithChecklist(it) }
+                    projectUseCases.completeProject(item, projectTasks)
+                } else if (intent.action == ACTION_COMPLETE) {
                     taskUseCases.toggleTaskCompletion(ItemWithChecklist(item, dao.getChecklistItemsByItemId(taskId)))
                 } else {
                     val minutes = intent.getIntExtra(EXTRA_SNOOZE_MINUTES, SNOOZE_SHORT_MIN)

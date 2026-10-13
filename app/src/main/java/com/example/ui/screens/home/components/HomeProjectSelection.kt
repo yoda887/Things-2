@@ -1,5 +1,6 @@
 package com.example.ui.screens.home.components
 
+import com.example.domain.edits.ReminderChange
 import androidx.compose.foundation.layout.BoxScope
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
@@ -39,6 +40,7 @@ fun ProjectSwipeWhenDialog(
     var startDate by remember(project.id) { mutableStateOf(project.startDate) }
     var section by remember(project.id) { mutableStateOf(project.startSection) }
     var isTonight by remember(project.id) { mutableStateOf(project.isTonight) }
+    var reminderTime by remember(project.id) { mutableStateOf(project.reminderTime) }
     ThingsWhenDialog(
         startDate = startDate,
         onStartDateChange = { startDate = it },
@@ -47,9 +49,11 @@ fun ProjectSwipeWhenDialog(
         isTonight = isTonight,
         onIsTonightChange = { isTonight = it },
         onShowCalendarHelperChange = { },
+        reminderTime = reminderTime,
+        onReminderTimeChange = { reminderTime = it },
         growFromOffset = growFromOffset,
         onDismissRequest = {
-            onEditProject(project, ProjectEdit.Start(section, startDate, isTonight))
+            onEditProject(project, ProjectEdit.Start(section, startDate, isTonight, ReminderChange(reminderTime)))
             onDismiss()
         }
     )

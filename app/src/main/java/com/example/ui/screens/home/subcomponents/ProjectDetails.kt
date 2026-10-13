@@ -1,5 +1,6 @@
 package com.example.ui.screens.home.subcomponents
 
+import com.example.domain.edits.ReminderChange
 import com.example.domain.edits.ProjectEdit
 import android.view.HapticFeedbackConstants
 import androidx.compose.foundation.layout.ExperimentalLayoutApi
@@ -204,6 +205,24 @@ private fun ProjectStartRow(project: Item, textPrimaryColor: Color, onClick: () 
             overflow = TextOverflow.Ellipsis,
             style = ThingsTheme.type.editorDateStrong.copy(color = textPrimaryColor)
         )
+        // Напоминание — колокольчик и время рядом с днём, как у задачи
+        project.reminderTime?.let { minutes ->
+            Spacer(modifier = Modifier.width(ThingsSpacing.S))
+            Icon(
+                imageVector = AppIcons.Bell,
+                contentDescription = stringResource(R.string.reminder_title),
+                tint = textPrimaryColor,
+                modifier = Modifier.size(ThingsIconSize.XS)
+            )
+            Spacer(modifier = Modifier.width(ThingsSpacing.XXS))
+            Text(
+                text = com.example.ui.screens.home.inlineeditor.utils.formatReminderTime(
+                    androidx.compose.ui.platform.LocalContext.current, minutes
+                ),
+                maxLines = 1,
+                style = ThingsTheme.type.editorDateStrong.copy(color = textPrimaryColor)
+            )
+        }
     }
 }
 
@@ -304,6 +323,7 @@ fun ProjectDialogs(
             var startDate by remember(project.id) { mutableStateOf(project.startDate) }
             var section by remember(project.id) { mutableStateOf(project.startSection) }
             var isTonight by remember(project.id) { mutableStateOf(project.isTonight) }
+            var reminderTime by remember(project.id) { mutableStateOf(project.reminderTime) }
             ThingsWhenDialog(
                 startDate = startDate,
                 onStartDateChange = { startDate = it },
@@ -312,8 +332,10 @@ fun ProjectDialogs(
                 isTonight = isTonight,
                 onIsTonightChange = { isTonight = it },
                 onShowCalendarHelperChange = { },
+                reminderTime = reminderTime,
+                onReminderTimeChange = { reminderTime = it },
                 onDismissRequest = {
-                    onEditProject(ProjectEdit.Start(section, startDate, isTonight))
+                    onEditProject(ProjectEdit.Start(section, startDate, isTonight, ReminderChange(reminderTime)))
                     onClose()
                 }
             )

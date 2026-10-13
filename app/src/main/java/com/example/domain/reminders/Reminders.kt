@@ -4,7 +4,7 @@ import com.example.data.model.Item
 import java.util.Calendar
 
 /**
- * Когда срабатывает напоминание задачи. Закреплено тестами RemindersTest.
+ * Когда срабатывает напоминание задачи или проекта. Закреплено тестами RemindersTest.
  *
  * Напоминание — время дня ([Item.reminderTime], минуты от полуночи) в день задачи из «Когда»: в день
  * даты старта, а у задачи «Сегодня» без даты — сегодня. Без дня (без даты, «Когда-нибудь», «В любое
@@ -18,7 +18,8 @@ object Reminders {
     /** Момент срабатывания напоминания задачи (мс) или null, если оно не сработает ни в какой день. */
     fun fireAt(item: Item, now: Long = System.currentTimeMillis()): Long? {
         val minutes = item.reminderTime ?: return null
-        if (item.type != Item.TYPE_TASK || item.isClosed || item.trashed) return null
+        // Напоминания — у задач и проектов
+        if ((item.type != Item.TYPE_TASK && item.type != Item.TYPE_PROJECT) || item.isClosed || item.trashed) return null
         val day = item.startDate ?: if (item.start == Item.START_TODAY) now else return null
         return Calendar.getInstance().apply {
             timeInMillis = day

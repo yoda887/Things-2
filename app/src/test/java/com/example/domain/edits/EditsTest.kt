@@ -159,4 +159,17 @@ class EditsTest {
         assertEquals(Item.START_ANYTIME, moved.start)
         assertEquals("old", TaskMoves.moved(task, MoveTarget.Place("p", null)).headingId)
     }
+
+    @Test
+    fun projectStart_reminder_setKeptOrDroppedWithoutDay() {
+        val p = Item(id = "p", type = Item.TYPE_PROJECT, start = Item.START_ANYTIME, reminderTime = 60)
+        // Поставить
+        assertEquals(120, ProjectEdits.apply(p, ProjectEdit.Start(TaskSection.TODAY, now, false, ReminderChange(120)), now).reminderTime)
+        // Не менять (несколько проектов сразу)
+        assertEquals(60, ProjectEdits.apply(p, ProjectEdit.Start(TaskSection.TODAY, now, false), now).reminderTime)
+        // Убрать
+        assertNull(ProjectEdits.apply(p, ProjectEdit.Start(TaskSection.TODAY, now, false, ReminderChange(null)), now).reminderTime)
+        // Без дня — снимается
+        assertNull(ProjectEdits.apply(p, ProjectEdit.Start(TaskSection.SOMEDAY, null, false), now).reminderTime)
+    }
 }
