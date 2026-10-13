@@ -200,6 +200,48 @@ object AppIcons {
         }.build()
     }
 
+    /**
+     * Колокольчик напоминания — залитый, как в Things: на всю высоту квадрата, соразмерно звезде
+     * «Сегодня», луне и ящику «Когда-нибудь». Цвет задаёт tint.
+     */
+    val Bell: ImageVector by lazy(LazyThreadSafetyMode.NONE) {
+        ImageVector.Builder(
+            name = "Bell",
+            defaultWidth = 24.dp,
+            defaultHeight = 24.dp,
+            viewportWidth = 24f,
+            viewportHeight = 24f
+        ).apply {
+            path(fill = SolidColor(Color.Black)) {
+                // Купол с расширением книзу
+                moveTo(12f, 3.6f)
+                curveTo(8.1f, 3.6f, 5.8f, 6.4f, 5.8f, 10.2f)
+                lineTo(5.8f, 14.4f)
+                curveTo(5.8f, 15.2f, 5.3f, 15.8f, 4.5f, 16.5f)
+                lineTo(3.6f, 17.3f)
+                curveTo(3.3f, 17.6f, 3.5f, 18.2f, 4f, 18.2f)
+                lineTo(20f, 18.2f)
+                curveTo(20.5f, 18.2f, 20.7f, 17.6f, 20.4f, 17.3f)
+                lineTo(19.5f, 16.5f)
+                curveTo(18.7f, 15.8f, 18.2f, 15.2f, 18.2f, 14.4f)
+                lineTo(18.2f, 10.2f)
+                curveTo(18.2f, 6.4f, 15.9f, 3.6f, 12f, 3.6f)
+                close()
+                // Ушко сверху
+                moveTo(13.2f, 2.8f)
+                arcTo(1.2f, 1.2f, 0f, isMoreThanHalf = true, isPositiveArc = true, 10.8f, 2.8f)
+                arcTo(1.2f, 1.2f, 0f, isMoreThanHalf = true, isPositiveArc = true, 13.2f, 2.8f)
+                close()
+                // Язычок снизу
+                moveTo(9.4f, 19.4f)
+                lineTo(14.6f, 19.4f)
+                curveTo(14.4f, 20.9f, 13.3f, 22f, 12f, 22f)
+                curveTo(10.7f, 22f, 9.6f, 20.9f, 9.4f, 19.4f)
+                close()
+            }
+        }.build()
+    }
+
     // Кастомная иконка для Someday из ic_someday_black_24dp.xml
     val Someday: ImageVector by lazy(LazyThreadSafetyMode.NONE) {
         ImageVector.Builder(

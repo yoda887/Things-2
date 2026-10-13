@@ -421,7 +421,7 @@ fun TaskItemRow(
                             val reminderMinutes = task.reminderTime?.takeIf { !task.isClosed }
                             if (reminderMinutes != null) {
                                 Icon(
-                                    imageVector = Icons.Default.Notifications,
+                                    imageVector = AppIcons.Bell,
                                     contentDescription = stringResource(R.string.reminder_title),
                                     tint = textSecondaryColor,
                                     modifier = Modifier.size(ROW_META_ICON_SIZE)

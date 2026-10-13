@@ -55,6 +55,8 @@ data class ThingsColors(
     val overlayRowSelected: Color,
     /** Разделители на `overlaySurface` */
     val overlayDivider: Color,
+    /** Всплывающая карточка поверх тёмного окна — барабан времени напоминания */
+    val overlayPopover: Color,
     /** Текст заметок в редакторе задачи */
     val textNotes: Color,
     /** Текст задачи и чек-листа в редакторе */
@@ -165,6 +167,7 @@ internal val LightThingsColors = ThingsColors(
     overlayControl = ThingsDialogButton,
     overlayRowSelected = ThingsDialogRowSelected,
     overlayDivider = ThingsDialogDivider,
+    overlayPopover = ThingsDialogPopover,
     textNotes = ThingsTextNotesLight,
     editorText = ThingsInk,
     checkboxBorder = ThingsCheckboxBorder,
@@ -267,6 +270,10 @@ data class ThingsTypography(
     val dialogButton: TextStyle,
     /** Подпись «Перемістити» на плавающей панели действий. */
     val dialogButtonStrong: TextStyle,
+    /** Значения на барабане выбора (время напоминания) */
+    val wheel: TextStyle,
+    /** Выбранное значение на барабане — посередине, крупнее и плотнее */
+    val wheelSelected: TextStyle,
     /** Пункт выпадающего меню: «New To-Do», «Delete Project», меню подзаголовка */
     val menuItem: TextStyle,
     /** Название задачи в строке списка и в редакторе */
@@ -341,6 +348,8 @@ internal fun thingsTypography(scale: Float = 1f) = ThingsTypography(
     dialogBody = TextStyle(fontFamily = FontFamily.Default, fontWeight = FontWeight.Normal, fontSize = (15 * scale).sp),
     dialogButton = TextStyle(fontFamily = FontFamily.Default, fontWeight = FontWeight.Normal, fontSize = (18 * scale).sp),
     dialogButtonStrong = TextStyle(fontFamily = FontFamily.Default, fontWeight = FontWeight.Bold, fontSize = (18 * scale).sp),
+    wheel = TextStyle(fontFamily = FontFamily.Default, fontWeight = FontWeight.Normal, fontSize = (23 * scale).sp),
+    wheelSelected = TextStyle(fontFamily = FontFamily.Default, fontWeight = FontWeight.SemiBold, fontSize = (25 * scale).sp),
     menuItem = TextStyle(fontFamily = FontFamily.Default, fontWeight = FontWeight.Normal, fontSize = (18 * scale).sp),
     taskTitle = TextStyle(fontFamily = FontFamily.Default, fontWeight = FontWeight.Normal, fontSize = (19 * scale).sp),
     taskSubtitle = TextStyle(fontFamily = FontFamily.Default, fontWeight = FontWeight.Normal, fontSize = (15 * scale).sp),

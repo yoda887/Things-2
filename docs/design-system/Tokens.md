@@ -21,6 +21,7 @@
 | `dialog-button` | `#2c2e38` | `ThingsTheme.colors.overlayControl` | Кнопки и поля внутри тёмных диалогов (Move, теги) на overlaySurface. |
 | `dialog-row-selected` | `#1e2027` | `ThingsTheme.colors.overlayRowSelected` | Подсветка выбранной строки в диалоге Move. |
 | `overlay-divider` | `#3a3d47` | `ThingsTheme.colors.overlayDivider` | Разделители внутри тёмных диалогов и меню. |
+| `overlay-popover` | `#3f4559` | `ThingsTheme.colors.overlayPopover` | Всплывающая карточка поверх тёмного окна: барабан времени напоминания в окне «Когда». Голубоватая, светлее окна, как в Things. |
 | `text-notes` | `#424242` / `#8b8c8e` | `ThingsTheme.colors.textNotes` | Текст заметок в раскрытом редакторе. Редактор всегда светлый (белая карточка). |
 | `editor-text` | `#1c1c1e` / `#ececed` | `ThingsTheme.colors.editorText` | Название задачи и пункты чек-листа в раскрытом редакторе (на белой карточке); карточка Quick Find в светлой теме (ThingsInk). |
 | `checkbox-border` | `#c7c7cc` | `ThingsTheme.colors.checkboxBorder` | Рамка неотмеченного чекбокса, неактивные иконки панели редактора. |
@@ -94,6 +95,8 @@
 | `dialogRowAction` | 19.0 sp | Medium (500) | Строка-действие диалога цветом accent: «Новий тег», «Керування тегами». |
 | `dialogButton` | 18.0 sp | Normal (400) | Кнопка действия в диалоге: Cancel, Delete, Clear. |
 | `dialogButtonStrong` | 18.0 sp | Bold (700) | Подпись «Перемістити» на плавающей панели действий. |
+| `wheel` | 23.0 sp | Normal (400) | Значения на барабане выбора времени напоминания. |
+| `wheelSelected` | 25.0 sp | SemiBold (600) | Выбранное значение посередине барабана — крупнее и плотнее. |
 | `menuItem` | 18.0 sp | Normal (400) | Пункт выпадающего меню: «New To-Do», «Delete Project», меню подзаголовка. |
 | `editorNotes` | 18.0 sp | Normal (400) | Заметки в раскрытом редакторе. |
 | `editorDate` | 18.0 sp | Normal (400) | Строка даты и дедлайна в редакторе. |

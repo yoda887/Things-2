@@ -576,7 +576,7 @@ fun ThingsTaskInlineEditor(
                             reminderTime?.let { minutes ->
                                 Spacer(modifier = Modifier.width(ThingsSpacing.S))
                                 Icon(
-                                    imageVector = Icons.Default.Notifications,
+                                    imageVector = AppIcons.Bell,
                                     contentDescription = stringResource(R.string.reminder_title),
                                     tint = textPrimaryColor,
                                     modifier = Modifier.size(ThingsIconSize.XS)
