@@ -11,10 +11,27 @@ import com.example.data.model.Item
 import com.example.data.model.Tag
 import com.example.data.model.ItemTag
 import com.example.data.model.ChecklistItem
+import com.example.data.model.RecurrenceRule
 import kotlinx.coroutines.flow.Flow
 
 @Dao
 interface TaskDao {
+    // ПОВТОРЫ: правило повтора шаблона и копии шаблона
+    @Query("SELECT * FROM recurrence_rules")
+    suspend fun getAllRecurrenceRules(): List<RecurrenceRule>
+
+    @Query("SELECT * FROM recurrence_rules")
+    fun getAllRecurrenceRulesFlow(): Flow<List<RecurrenceRule>>
+
+    @Upsert
+    suspend fun upsertRecurrenceRule(rule: RecurrenceRule)
+
+    @Query("DELETE FROM recurrence_rules WHERE templateId = :templateId")
+    suspend fun deleteRecurrenceRulesOf(templateId: String)
+
+    @Query("SELECT * FROM items WHERE repeatTemplateId = :templateId")
+    suspend fun getRepeatCopiesOf(templateId: String): List<Item>
+
     // ITEMS (Single Table Inheritance: type 0=task, 1=project, 2=heading, 3=template)
     @Query("SELECT * FROM items ORDER BY sortOrder ASC, creationDate DESC")
     fun getAllItems(): Flow<List<Item>>

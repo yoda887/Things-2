@@ -42,6 +42,10 @@
         <receiver
             android:name="com.example.reminders.ReminderReceiver"
             android:exported="false" />
+        <!-- Полночь: копии повторяющихся задач на новый день -->
+        <receiver
+            android:name="com.example.repeat.RepeatDayReceiver"
+            android:exported="false" />
         <receiver
             android:name="com.example.reminders.ReminderRescheduleReceiver"
             android:exported="true">

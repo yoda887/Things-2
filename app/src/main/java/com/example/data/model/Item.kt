@@ -50,7 +50,8 @@ fun TaskSection.toStartVal(): Int {
         Index(value = ["areaId"]),
         Index(value = ["projectId"]),
         Index(value = ["headingId"]),
-        Index(value = ["status", "start", "trashed"])
+        Index(value = ["status", "start", "trashed"]),
+        Index(value = ["repeatTemplateId"])
     ]
 )
 data class Item(
@@ -86,7 +87,9 @@ data class Item(
      * (дата старта или «Сегодня»), поэтому при переносе задачи на другой день переезжает вместе с ней.
      * Правило срабатывания — [com.example.domain.reminders.Reminders].
      */
-    val reminderTime: Int? = null
+    val reminderTime: Int? = null,
+    /** Копия повторяющейся задачи — id её шаблона (TYPE_TEMPLATE); у обычных задач null */
+    val repeatTemplateId: String? = null
 ) {
     @get:Ignore
     val isCompleted: Boolean

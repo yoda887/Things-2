@@ -174,12 +174,15 @@ class ReminderReceiver : BroadcastReceiver() {
 class ReminderRescheduleReceiver : BroadcastReceiver() {
 
     @Inject lateinit var sync: ReminderSync
+    @Inject lateinit var repeatSync: com.example.repeat.RepeatSync
     @Inject @ApplicationScope lateinit var scope: CoroutineScope
 
     override fun onReceive(context: Context, intent: Intent) {
         val pending = goAsync()
         scope.launch {
             try {
+                // Копии повторяющихся задач на сегодня и будильник следующей полуночи — тоже заново
+                repeatSync.runNow()
                 sync.syncNow()
             } finally {
                 pending.finish()
