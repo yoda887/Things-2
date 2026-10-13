@@ -186,9 +186,9 @@
         <item quantity="other">The project “%1$s” has %2$d open to-dos. They will be marked as completed too.</item>
     </plurals>
     <string name="reminder_title">Reminder</string>
-    <string name="reminder_at">Reminder at %1$s</string>
     <string name="cd_remove_reminder">Remove reminder</string>
-    <string name="reminder_done">Done</string>
     <string name="reminder_channel_name">Reminders</string>
     <string name="reminder_channel_description">Reminders for to-dos at the time you set</string>
+    <string name="reminder_remove">Remove</string>
+    <string name="reminder_set">Set</string>
 </resources>

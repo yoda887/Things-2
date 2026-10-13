@@ -1,5 +1,14 @@
 package com.example.ui.screens.home.inlineeditor.dialogs
 
+import com.example.ui.theme.ThingsMotion
+import com.example.ui.theme.ThingsAlpha
+import androidx.compose.ui.graphics.compositeOver
+import androidx.compose.animation.fadeOut
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.animateContentSize
+import com.example.ui.theme.ThingsElevation
+import androidx.compose.ui.draw.shadow
+import androidx.compose.material.icons.filled.Cancel
 import com.example.ui.theme.dimens
 import com.example.ui.theme.ThingsStroke
 import com.example.ui.theme.ThingsSpacing
@@ -226,6 +235,22 @@ fun ThingsWhenDialog(
             notificationPermission.launch(android.Manifest.permission.POST_NOTIFICATIONS)
         }
     }
+    /**
+     * Ставит напоминание. Оно срабатывает в день задачи: без даты задача встаёт на сегодня, как в Things.
+     * Дата нужна и задаче «Сегодня» без даты: иначе её напоминание повторялось бы каждый день
+     */
+    fun setReminder(minutes: Int) {
+        onReminderTimeChange?.invoke(minutes)
+        if (startDate == null) {
+            onStartDateChange(System.currentTimeMillis())
+            if (section != TaskSection.TODAY) {
+                onSectionChange(TaskSection.TODAY)
+                onIsTonightChange(false)
+            }
+            onShowCalendarHelperChange(true)
+        }
+        ensureNotificationPermission()
+    }
     // Закрытие диалога: вызов onDismissRequest() сразу отдаёт закрытие системному
     // WindowManager (нативное уменьшение к центру, растворение и плавное снятие затемнения).
     val requestClose: () -> Unit = {
@@ -312,42 +337,14 @@ fun ThingsWhenDialog(
                 .width(WHEN_DIALOG_WIDTH)
                 .wrapContentHeight()
         ) {
-            // «Назад» на странице времени возвращает к календарю, а не закрывает окно
+            // «Назад» при открытом барабане закрывает только его
             androidx.activity.compose.BackHandler(enabled = pickingReminder) { pickingReminder = false }
-            androidx.compose.animation.AnimatedContent(
-                targetState = pickingReminder,
-                transitionSpec = {
-                    androidx.compose.animation.fadeIn(tween(com.example.ui.theme.ThingsMotion.QUICK)) togetherWith
-                        androidx.compose.animation.fadeOut(tween(com.example.ui.theme.ThingsMotion.QUICK)) using
-                        androidx.compose.animation.SizeTransform(clip = false)
-                },
-                label = "whenPage"
-            ) { picking ->
-            if (picking) {
-                ReminderTimePage(
-                    initialMinutes = reminderTime ?: com.example.domain.reminders.Reminders.defaultTime(),
-                    onBack = { pickingReminder = false },
-                    onDone = { minutes ->
-                        view.performHapticFeedback(HapticFeedbackConstants.CLOCK_TICK)
-                        onReminderTimeChange?.invoke(minutes)
-                        // Напоминание срабатывает в день задачи: без даты задача встаёт на сегодня, как в Things.
-                        // Дата нужна и задаче «Сегодня» без даты: иначе её напоминание повторялось бы каждый день
-                        if (startDate == null) {
-                            onStartDateChange(System.currentTimeMillis())
-                            if (section != TaskSection.TODAY) {
-                                onSectionChange(TaskSection.TODAY)
-                                onIsTonightChange(false)
-                            }
-                            onShowCalendarHelperChange(true)
-                        }
-                        ensureNotificationPermission()
-                        pickingReminder = false
-                    }
-                )
-            } else {
+            Box {
             Column(
                 modifier = Modifier
                     .fillMaxWidth()
+                    // Появилась или ушла строка напоминания, кнопка «Очистить» — окно меняет высоту плавно
+                    .animateContentSize(tween(ThingsMotion.QUICK, easing = FastOutSlowInEasing))
                     .padding(horizontal = ThingsSpacing.L, vertical = WHEN_DIALOG_VERTICAL_PADDING),
                 // Промежутки между блоками задаются поштучно: у ячеек календаря и у текстов свои
                 // внутренние поля, поэтому при одинаковом spacedBy расстояния выглядели разными
@@ -747,20 +744,44 @@ fun ThingsWhenDialog(
 
                 Spacer(modifier = Modifier.height(GAP_AFTER_SOMEDAY))
 
-                // 4. Напоминание: «+ Добавить напоминание» или время с крестиком; нажатие — выбор времени
+                // 4. Напоминание, как в Things: «+ Добавить напоминание» сразу ставит его на время по умолчанию;
+                // поставленное — строка «Напоминание» со временем и крестиком, нажатие открывает барабан
                 if (onReminderTimeChange != null) {
                     val reminderSet = reminderTime != null
+                    androidx.compose.animation.AnimatedVisibility(
+                        visible = reminderSet,
+                        enter = fadeIn(tween(ThingsMotion.QUICK)),
+                        exit = fadeOut(tween(ThingsMotion.QUICK))
+                    ) {
+                        HorizontalDivider(
+                            modifier = Modifier.padding(vertical = ThingsSpacing.XS),
+                            color = ThingsTheme.colors.overlayDivider,
+                            thickness = ThingsStroke.THIN
+                        )
+                    }
                     Row(
                         modifier = Modifier
                             .fillMaxWidth()
                             .clip(ThingsTheme.shapes.rowShape)
                             .clickable {
                                 view.performHapticFeedback(HapticFeedbackConstants.CLOCK_TICK)
-                                pickingReminder = true
+                                if (reminderSet) {
+                                    pickingReminder = true
+                                } else {
+                                    setReminder(com.example.domain.reminders.Reminders.defaultTime())
+                                }
                             }
                             .height(MaterialTheme.dimens.rowHeight),
                         verticalAlignment = Alignment.CenterVertically
                     ) {
+                        // «+ Добавить напоминание» плавно сменяется строкой «Напоминание» со временем, как в Things
+                        androidx.compose.animation.AnimatedContent(
+                            targetState = reminderTime,
+                            transitionSpec = { fadeIn(tween(ThingsMotion.QUICK)) togetherWith fadeOut(tween(ThingsMotion.QUICK)) },
+                            contentKey = { it != null },
+                            label = "reminderRow"
+                        ) { time ->
+                        Row(modifier = Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
                         Box(
                             modifier = Modifier
                                 .width(ROW_ICON_COLUMN_WIDTH)
@@ -768,44 +789,54 @@ fun ThingsWhenDialog(
                             contentAlignment = Alignment.CenterStart
                         ) {
                             Icon(
-                                imageVector = if (reminderSet) Icons.Default.Notifications else Icons.Default.Add,
+                                imageVector = if (time != null) Icons.Default.Notifications else Icons.Default.Add,
                                 contentDescription = null,
-                                tint = if (reminderSet) ThingsTheme.colors.accent else ThingsTheme.colors.overlayContentSecondary,
+                                tint = ThingsTheme.colors.overlayContentSecondary,
                                 modifier = Modifier.size(ThingsIconSize.S)
                             )
                         }
                         Text(
-                            text = if (reminderSet) {
-                                stringResource(R.string.reminder_at, com.example.ui.screens.home.inlineeditor.utils.formatReminderTime(context, reminderTime!!))
-                            } else {
-                                stringResource(R.string.ui_add_reminder)
-                            },
+                            text = stringResource(if (time != null) R.string.reminder_title else R.string.ui_add_reminder),
                             style = ThingsTheme.type.dialogRow.copy(
-                                color = if (reminderSet) ThingsTheme.colors.overlayContent else ThingsTheme.colors.overlayContentSecondary
+                                color = if (time != null) ThingsTheme.colors.overlayContent else ThingsTheme.colors.overlayContentSecondary
                             ),
-                            modifier = Modifier.weight(5f)
+                            modifier = Modifier.weight(1f)
                         )
-                        Box(modifier = Modifier.weight(1f), contentAlignment = Alignment.Center) {
-                            if (reminderSet) {
-                                Icon(
-                                    imageVector = Icons.Default.Close,
-                                    contentDescription = stringResource(R.string.cd_remove_reminder),
-                                    tint = ThingsTheme.colors.overlayContentSecondary,
-                                    modifier = Modifier
-                                        .size(ThingsIconSize.S)
-                                        .clickable {
-                                            view.performHapticFeedback(HapticFeedbackConstants.CLOCK_TICK)
-                                            onReminderTimeChange(null)
-                                        }
-                                )
-                            }
+                        if (time != null) {
+                            Text(
+                                text = com.example.ui.screens.home.inlineeditor.utils.formatReminderTime(context, time),
+                                style = ThingsTheme.type.dialogRow.copy(color = ThingsTheme.colors.accent)
+                            )
+                            Spacer(modifier = Modifier.width(ThingsSpacing.S))
+                            Icon(
+                                imageVector = Icons.Default.Cancel,
+                                contentDescription = stringResource(R.string.cd_remove_reminder),
+                                tint = ThingsTheme.colors.overlayContentSecondary,
+                                modifier = Modifier
+                                    .size(ThingsIconSize.S)
+                                    .clickable(
+                                        interactionSource = remember { androidx.compose.foundation.interaction.MutableInteractionSource() },
+                                        indication = null
+                                    ) {
+                                        view.performHapticFeedback(HapticFeedbackConstants.CLOCK_TICK)
+                                        onReminderTimeChange(null)
+                                    }
+                            )
+                            Spacer(modifier = Modifier.width(ThingsSpacing.S))
+                        }
+                        }
                         }
                     }
                 }
 
                 // Кнопка "Clear" для сброса даты в "Anytime" (форма полной пилюли, малиново-красный цвет)
                 val hasTimeAssignment = startDate != null || section != TaskSection.ANYTIME
-                if (hasTimeAssignment) {
+                androidx.compose.animation.AnimatedVisibility(
+                    visible = hasTimeAssignment,
+                    enter = fadeIn(tween(ThingsMotion.QUICK)),
+                    exit = fadeOut(tween(ThingsMotion.QUICK))
+                ) {
+                Column {
                     Spacer(modifier = Modifier.height(GAP_BEFORE_CLEAR))
                     Button(
                         onClick = {
@@ -832,7 +863,43 @@ fun ThingsWhenDialog(
                         )
                     }
                 }
+                }
             }
+            // Барабан времени — карточка поверх нижней части окна, как в Things. Нажатие мимо неё закрывает её
+            if (pickingReminder) {
+                Box(
+                    modifier = Modifier
+                        .matchParentSize()
+                        .clickable(
+                            interactionSource = remember { androidx.compose.foundation.interaction.MutableInteractionSource() },
+                            indication = null
+                        ) { pickingReminder = false }
+                )
+            }
+            // Карточка проявляется и вырастает от строки напоминания внизу окна, как в Things
+            androidx.compose.animation.AnimatedVisibility(
+                visible = pickingReminder,
+                enter = fadeIn(tween(WHEEL_CARD_ENTER_MS)) +
+                    androidx.compose.animation.scaleIn(tween(WHEEL_CARD_ENTER_MS, easing = FastOutSlowInEasing), initialScale = WHEEL_CARD_START_SCALE, transformOrigin = TransformOrigin(0.5f, 1f)),
+                exit = fadeOut(tween(ThingsMotion.FAST)) +
+                    androidx.compose.animation.scaleOut(tween(ThingsMotion.FAST), targetScale = WHEEL_CARD_START_SCALE, transformOrigin = TransformOrigin(0.5f, 1f)),
+                modifier = Modifier
+                    .align(Alignment.BottomEnd)
+                    .padding(end = WHEEL_CARD_EDGE_INSET, bottom = WHEEL_CARD_EDGE_INSET)
+            ) {
+                ReminderWheelCard(
+                    initialMinutes = reminderTime ?: com.example.domain.reminders.Reminders.defaultTime(),
+                    onRemove = {
+                        view.performHapticFeedback(HapticFeedbackConstants.CLOCK_TICK)
+                        onReminderTimeChange?.invoke(null)
+                        pickingReminder = false
+                    },
+                    onSet = { minutes ->
+                        view.performHapticFeedback(HapticFeedbackConstants.CLOCK_TICK)
+                        setReminder(minutes)
+                        pickingReminder = false
+                    }
+                )
             }
             }
         }
@@ -841,89 +908,195 @@ fun ThingsWhenDialog(
     }
 }
 
+/** Карточка барабана: ширина — доля окна, как в эталоне; почти вплотную к правому нижнему углу окна */
+private const val WHEEL_CARD_WIDTH_FRACTION = 0.88f
+private val WHEEL_CARD_EDGE_INSET = 4.dp
+
+/** Появление карточки: проявляется и вырастает из этого масштаба */
+private const val WHEEL_CARD_ENTER_MS = 150
+private const val WHEEL_CARD_START_SCALE = 0.9f
+
+/** Строка барабана в покое; видимая высота барабана — с учётом того, что к краям строки сжимаются */
+private val WHEEL_ROW_HEIGHT = 34.dp
+private val WHEEL_HEIGHT = 190.dp
+
+/** Барабан — цилиндр: соседние строки повёрнуты на этот угол; дальше [WHEEL_MAX_ANGLE] не видно */
+private const val WHEEL_ROW_ANGLE_DEG = 21f
+private const val WHEEL_MAX_ANGLE_DEG = 80f
+
+/** Строк, раскладываемых по каждую сторону от середины (сжатые края цилиндра) */
+private const val WHEEL_SIDE_ROWS = 4
+
+/** Колонки барабана — доли ширины карточки, как в эталоне */
+private const val WHEEL_COLUMN_FRACTION = 0.22f
+
+/** Шаг минут на барабане, как в Things */
+private const val WHEEL_MINUTE_STEP = 5
+
+/** Барабан бесконечный: столько повторов списка, начинаем с середины */
+private const val WHEEL_REPEATS = 1000
+
+/** Прозрачность самых дальних строк барабана */
+private const val WHEEL_EDGE_ALPHA = 0.2f
+
 /**
- * Страница выбора времени напоминания в окне «Когда»: циферблат в цветах окна, формат часов — как в
- * телефоне. «Готово» ставит напоминание, крестик и «Назад» возвращают к календарю.
+ * Карточка с барабаном времени напоминания, как в Things: светлее окна, часы, минуты с шагом 5 и, при
+ * 12-часовом формате телефона, AM/PM; полоса выбора во всю ширину; внизу «Убрать» и «Установить».
  */
-@OptIn(ExperimentalMaterial3Api::class)
 @Composable
-private fun ReminderTimePage(initialMinutes: Int, onBack: () -> Unit, onDone: (Int) -> Unit) {
+private fun ReminderWheelCard(
+    initialMinutes: Int,
+    onRemove: () -> Unit,
+    onSet: (Int) -> Unit,
+    modifier: Modifier = Modifier
+) {
     val context = androidx.compose.ui.platform.LocalContext.current
-    val state = rememberTimePickerState(
-        initialHour = initialMinutes / 60,
-        initialMinute = initialMinutes % 60,
-        is24Hour = android.text.format.DateFormat.is24HourFormat(context)
-    )
+    val is24 = remember { android.text.format.DateFormat.is24HourFormat(context) }
+    val rounded = (initialMinutes / WHEEL_MINUTE_STEP) * WHEEL_MINUTE_STEP
+    val hour24 = rounded / 60
+    val hours = if (is24) (0..23).map { "%02d".format(it) } else (1..12).map { it.toString() }
+    val minutes = (0 until 60 step WHEEL_MINUTE_STEP).map { "%02d".format(it) }
+    val periods = listOf("AM", "PM")
+    val hourState = rememberWheelState(if (is24) hour24 else (hour24 + 11) % 12, hours.size, cyclic = true)
+    val minuteState = rememberWheelState((rounded % 60) / WHEEL_MINUTE_STEP, minutes.size, cyclic = true)
+    val periodState = rememberWheelState(if (hour24 >= 12) 1 else 0, periods.size, cyclic = false)
+    // Светлее окна: поверх его фона — полупрозрачный светлый слой
+    val cardColor = ThingsTheme.colors.overlayContent.copy(alpha = ThingsAlpha.SUBTLE).compositeOver(ThingsTheme.colors.overlaySurface)
+    val buttonColor = ThingsTheme.colors.overlayContent.copy(alpha = ThingsAlpha.SUBTLE).compositeOver(cardColor)
+    BoxWithConstraints(modifier = modifier) {
+    val cardWidth = maxWidth * WHEEL_CARD_WIDTH_FRACTION
     Column(
         modifier = Modifier
-            .fillMaxWidth()
-            .padding(horizontal = ThingsSpacing.L, vertical = WHEN_DIALOG_VERTICAL_PADDING),
-        horizontalAlignment = Alignment.CenterHorizontally
+            .width(cardWidth)
+            .shadow(ThingsElevation.CARD, ThingsTheme.shapes.dialogShape)
+            .clip(ThingsTheme.shapes.dialogShape)
+            .background(cardColor)
+            .clickable(
+                interactionSource = remember { androidx.compose.foundation.interaction.MutableInteractionSource() },
+                indication = null
+            ) { }
+            .padding(ThingsSpacing.M)
     ) {
-        Row(modifier = Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
-            Box(modifier = Modifier.weight(1f))
-            Box(modifier = Modifier.weight(5f), contentAlignment = Alignment.Center) {
-                Text(
-                    text = stringResource(R.string.reminder_title),
-                    style = ThingsTheme.type.dialogTitle.copy(color = ThingsTheme.colors.overlayContent)
-                )
+        Box(
+            modifier = Modifier.fillMaxWidth().height(WHEEL_HEIGHT),
+            contentAlignment = Alignment.Center
+        ) {
+            // Полоса выбранной строки — во всю ширину карточки
+            Column(modifier = Modifier.fillMaxWidth()) {
+                HorizontalDivider(color = ThingsTheme.colors.overlayContentSecondary.copy(alpha = ThingsAlpha.MUTED), thickness = ThingsStroke.THIN)
+                Spacer(modifier = Modifier.height(WHEEL_ROW_HEIGHT))
+                HorizontalDivider(color = ThingsTheme.colors.overlayContentSecondary.copy(alpha = ThingsAlpha.MUTED), thickness = ThingsStroke.THIN)
             }
-            Box(modifier = Modifier.weight(1f), contentAlignment = Alignment.Center) {
+            Row(horizontalArrangement = Arrangement.Center, modifier = Modifier.fillMaxWidth()) {
+                Wheel(hours, hourState, cardWidth * WHEEL_COLUMN_FRACTION)
+                Wheel(minutes, minuteState, cardWidth * WHEEL_COLUMN_FRACTION)
+                if (!is24) Wheel(periods, periodState, cardWidth * WHEEL_COLUMN_FRACTION)
+            }
+        }
+        Spacer(modifier = Modifier.height(ThingsSpacing.M))
+        Row(horizontalArrangement = Arrangement.spacedBy(ThingsSpacing.M)) {
+            listOf(R.string.reminder_remove to onRemove, R.string.reminder_set to {
+                val h = hourState.selected
+                val m = minuteState.selected * WHEEL_MINUTE_STEP
+                val h24 = if (is24) h else (h + 1) % 12 + if (periodState.selected == 1) 12 else 0
+                onSet(h24 * 60 + m)
+            }).forEach { (label, action) ->
                 Box(
                     modifier = Modifier
-                        .size(MaterialTheme.dimens.dialogHeaderButtonSize)
-                        .clip(CircleShape)
-                        .background(ThingsTheme.colors.overlayControl)
-                        .clickable { onBack() },
+                        .weight(1f)
+                        .height(CLEAR_BUTTON_HEIGHT)
+                        .clip(ThingsTheme.shapes.rowShape)
+                        .background(buttonColor)
+                        .clickable { action() },
                     contentAlignment = Alignment.Center
                 ) {
-                    Icon(
-                        imageVector = Icons.Default.Close,
-                        contentDescription = stringResource(R.string.cd_close),
-                        tint = ThingsTheme.colors.overlayContent,
-                        modifier = Modifier.size(ThingsIconSize.S)
+                    Text(
+                        text = stringResource(label),
+                        style = ThingsTheme.type.dialogButton.copy(color = ThingsTheme.colors.overlayContent)
                     )
                 }
             }
         }
-        Spacer(modifier = Modifier.height(GAP_AFTER_TITLE))
-        // Двоеточие между часами и минутами циферблат красит в onSurface темы — на тёмном окне оно
-        // было чёрным и терялось; здесь это цвет содержимого окна
-        MaterialTheme(colorScheme = MaterialTheme.colorScheme.copy(onSurface = ThingsTheme.colors.overlayContent)) {
-        TimePicker(
-            state = state,
-            colors = TimePickerDefaults.colors(
-                clockDialColor = ThingsTheme.colors.overlayControl,
-                clockDialSelectedContentColor = ThingsTheme.colors.onAccent,
-                clockDialUnselectedContentColor = ThingsTheme.colors.overlayContent,
-                selectorColor = ThingsTheme.colors.accent,
-                containerColor = ThingsTheme.colors.overlaySurface,
-                periodSelectorBorderColor = ThingsTheme.colors.overlayControl,
-                periodSelectorSelectedContainerColor = ThingsTheme.colors.accent,
-                periodSelectorUnselectedContainerColor = Color.Transparent,
-                periodSelectorSelectedContentColor = ThingsTheme.colors.onAccent,
-                periodSelectorUnselectedContentColor = ThingsTheme.colors.overlayContentSecondary,
-                timeSelectorSelectedContainerColor = ThingsTheme.colors.accent,
-                timeSelectorUnselectedContainerColor = ThingsTheme.colors.overlayControl,
-                timeSelectorSelectedContentColor = ThingsTheme.colors.onAccent,
-                timeSelectorUnselectedContentColor = ThingsTheme.colors.overlayContent
-            )
-        )
-        }
-        Spacer(modifier = Modifier.height(GAP_BEFORE_CLEAR))
-        Button(
-            onClick = { onDone(state.hour * 60 + state.minute) },
-            colors = ButtonDefaults.buttonColors(
-                containerColor = ThingsTheme.colors.accent,
-                contentColor = ThingsTheme.colors.onAccent
-            ),
-            shape = ThingsTheme.shapes.capsuleShape,
-            modifier = Modifier
-                .fillMaxWidth()
-                .height(CLEAR_BUTTON_HEIGHT)
-        ) {
-            Text(text = stringResource(R.string.reminder_done), style = ThingsTheme.type.dialogButton)
-        }
+    }
     }
 }
 
+/**
+ * Состояние колонки барабана. Цикличная колонка — бесконечная: список повторён [WHEEL_REPEATS] раз,
+ * начинаем с середины; выбранное значение — номер строки посередине по модулю длины списка.
+ */
+private class WheelState(val list: androidx.compose.foundation.lazy.LazyListState, val size: Int, val cyclic: Boolean) {
+    val count: Int get() = if (cyclic) size * WHEEL_REPEATS else size
+    val selected: Int get() {
+        val first = list.firstVisibleItemIndex
+        val half = (list.layoutInfo.visibleItemsInfo.firstOrNull()?.size ?: 0) / 2
+        val index = first + if (list.firstVisibleItemScrollOffset > half) 1 else 0
+        return index % size
+    }
+}
+
+@Composable
+private fun rememberWheelState(initial: Int, size: Int, cyclic: Boolean): WheelState {
+    val start = if (cyclic) size * (WHEEL_REPEATS / 2) + initial else initial
+    val list = androidx.compose.foundation.lazy.rememberLazyListState(initialFirstVisibleItemIndex = start)
+    return remember(list) { WheelState(list, size, cyclic) }
+}
+
+/**
+ * Колонка барабана — цилиндр, как в Things: строки встают по местам, к краям сжимаются, бледнеют и
+ * сходятся к середине; выбранная — крупнее и жирнее. Раскладка шире видимой части, чтобы сжатые
+ * крайние строки тоже были на месте.
+ */
+@Composable
+private fun Wheel(items: List<String>, state: WheelState, width: androidx.compose.ui.unit.Dp) {
+    val density = androidx.compose.ui.platform.LocalDensity.current
+    val rowPx = with(density) { WHEEL_ROW_HEIGHT.toPx() }
+    val stepRad = Math.toRadians(WHEEL_ROW_ANGLE_DEG.toDouble()).toFloat()
+    val radiusPx = rowPx / stepRad
+    val maxRad = Math.toRadians(WHEEL_MAX_ANGLE_DEG.toDouble()).toFloat()
+    val layoutHeight = WHEEL_ROW_HEIGHT * (2 * WHEEL_SIDE_ROWS + 1)
+    Box(modifier = Modifier.width(width).height(WHEEL_HEIGHT), contentAlignment = Alignment.Center) {
+    androidx.compose.foundation.lazy.LazyColumn(
+        state = state.list,
+        flingBehavior = androidx.compose.foundation.gestures.snapping.rememberSnapFlingBehavior(state.list),
+        contentPadding = PaddingValues(vertical = WHEEL_ROW_HEIGHT * WHEEL_SIDE_ROWS),
+        horizontalAlignment = Alignment.CenterHorizontally,
+        modifier = Modifier
+            .width(width)
+            .requiredHeight(layoutHeight)
+    ) {
+        items(state.count) { index ->
+            val selected = remember { derivedStateOf { state.selected == index % state.size } }
+            Box(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(WHEEL_ROW_HEIGHT)
+                    .graphicsLayer {
+                        // Угол строки на цилиндре — по её удалению от середины, в строках
+                        val info = state.list.layoutInfo
+                        val item = info.visibleItemsInfo.firstOrNull { it.index == index }
+                        val center = (info.viewportEndOffset + info.viewportStartOffset) / 2f
+                        val offsetPx = item?.let { it.offset + it.size / 2f - center } ?: 0f
+                        val angle = (offsetPx / rowPx) * stepRad
+                        if (item == null || kotlin.math.abs(angle) > maxRad) {
+                            alpha = 0f
+                        } else {
+                            // На цилиндре строка стоит на высоте R·sin(угла) и сжата по cos(угла)
+                            translationY = radiusPx * kotlin.math.sin(angle) - offsetPx
+                            val c = kotlin.math.cos(angle)
+                            scaleY = c
+                            alpha = WHEEL_EDGE_ALPHA + (1f - WHEEL_EDGE_ALPHA) * c * c
+                        }
+                    },
+                contentAlignment = Alignment.Center
+            ) {
+                Text(
+                    text = items[index % state.size],
+                    style = if (selected.value) ThingsTheme.type.dialogTitle.copy(color = ThingsTheme.colors.overlayContent)
+                    else ThingsTheme.type.dialogRow.copy(color = ThingsTheme.colors.overlayContent)
+                )
+            }
+        }
+    }
+    }
+}

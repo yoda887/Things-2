@@ -193,9 +193,9 @@
         <item quantity="other">У проєкті «%1$s» є %2$d невиконаного завдання. Їх теж буде позначено виконаними.</item>
     </plurals>
     <string name="reminder_title">Нагадування</string>
-    <string name="reminder_at">Нагадування о %1$s</string>
     <string name="cd_remove_reminder">Прибрати нагадування</string>
-    <string name="reminder_done">Готово</string>
     <string name="reminder_channel_name">Нагадування</string>
     <string name="reminder_channel_description">Нагадування про завдання в призначений час</string>
+    <string name="reminder_remove">Прибрати</string>
+    <string name="reminder_set">Встановити</string>
 </resources>
