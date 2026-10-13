@@ -576,14 +576,14 @@ fun AnimatedTaskItem(
                         expansionProgress = expansionProgress,
                         onFullHeightMeasured = { cardGeometry.editorFullHeight = it },
                         screen = screen,
-                        onToggle = { currentTitle, currentNotes, currentSection, currentIsTonight, currentStartDate, currentDueDate, currentTags, currentProjectId, currentChecklist, currentPriority ->
+                        onToggle = { currentTitle, currentNotes, currentSection, currentIsTonight, currentStartDate, currentDueDate, currentTags, currentProjectId, currentChecklist, currentPriority, currentReminderTime ->
                             val fields = TaskEditorFields(
                                 currentTitle, currentNotes, currentSection, currentIsTonight, currentStartDate,
-                                currentDueDate, currentTags, currentProjectId, currentPriority
+                                currentDueDate, currentTags, currentProjectId, currentPriority, currentReminderTime
                             )
                             onEvent(ThingsCategoryListEvent.ToggleEditedTask(taskWrapper, fields, currentChecklist))
                         },
-                        onSave = { title, notes, section, isTonight, startDate, dueDate, tags, projectId, checklist, priority ->
+                        onSave = { title, notes, section, isTonight, startDate, dueDate, tags, projectId, checklist, priority, reminderTime ->
                             val hasPositionChange = (projectId != task.projectId) ||
                                     (isTonight != task.isTonight) ||
                                     (startDate != task.startDate) ||
@@ -609,7 +609,8 @@ fun AnimatedTaskItem(
                                             tags = tags,
                                             projectId = projectId,
                                             priority = priority,
-                                            checklist = checklist
+                                            checklist = checklist,
+                                            reminderTime = reminderTime
                                         )
                                     )
                                 }
@@ -627,7 +628,8 @@ fun AnimatedTaskItem(
                                         tags = tags,
                                         projectId = projectId,
                                         priority = priority,
-                                        checklist = checklist
+                                        checklist = checklist,
+                                        reminderTime = reminderTime
                                     )
                                 )
                                 onEvent(ThingsCategoryListEvent.ChangeInlineExpandedTaskId(null))
@@ -667,7 +669,8 @@ fun AnimatedTaskItem(
                                     tags = fields.tags,
                                     projectId = fields.projectId,
                                     priority = fields.priority,
-                                    checklist = checklist
+                                    checklist = checklist,
+                                    reminderTime = fields.reminderTime
                                 )
                             )
                         },

@@ -1,5 +1,6 @@
 package com.example.ui.screens.home.inlineeditor
 
+import androidx.compose.material.icons.filled.Notifications
 import com.example.ui.viewmodel.ActiveScreen
 import com.example.ui.theme.ThingsElevation
 import com.example.ui.theme.ThingsSpacing
@@ -89,7 +90,8 @@ fun ThingsTaskInlineEditor(
         tags: List<String>,
         projectId: String?,
         checklist: List<ChecklistItem>,
-        priority: Int
+        priority: Int,
+        reminderTime: Int?
     ) -> Unit,
     onDelete: (() -> Unit)? = null,
     onDone: () -> Unit = {},
@@ -105,8 +107,9 @@ fun ThingsTaskInlineEditor(
         tags: List<String>,
         projectId: String?,
         checklist: List<ChecklistItem>,
-        priority: Int
-    ) -> Unit = { _, _, _, _, _, _, _, _, _, _ -> },
+        priority: Int,
+        reminderTime: Int?
+    ) -> Unit = { _, _, _, _, _, _, _, _, _, _, _ -> },
     allSavedTags: List<String> = emptyList(),
     allSavedTagObjects: List<Tag> = emptyList(),
     onNewTagCreated: (String, String?) -> Unit = { _, _ -> },
@@ -141,6 +144,8 @@ fun ThingsTaskInlineEditor(
     var tagInput by remember(task.item.id) { mutableStateOf<String>(task.item.tags.joinToString(", ")) }
     var checklist by remember(task.item.id, task.checklist) { mutableStateOf<List<ChecklistItem>>(task.checklist) }
     var priority by remember(task.item.id) { mutableStateOf<Int>(task.item.priority) }
+    // Напоминание — время дня в минутах; задаётся в окне «Когда»
+    var reminderTime by remember(task.item.id) { mutableStateOf<Int?>(task.item.reminderTime) }
     var isCompleted by remember(task.item.id) { mutableStateOf<Boolean>(task.item.isCompleted) }
 
     LaunchedEffect(task.item.isCompleted) {
@@ -176,6 +181,7 @@ fun ThingsTaskInlineEditor(
     val currentTagInput by rememberUpdatedState(tagInput)
     val currentChecklist by rememberUpdatedState(checklist.filter { it.title.isNotBlank() })
     val currentPriority by rememberUpdatedState(priority)
+    val currentReminderTime by rememberUpdatedState(reminderTime)
     val currentOnSave by rememberUpdatedState(onSave)
     val currentIsDeletedExternally by rememberUpdatedState(isDeletedExternally)
     val currentProjectId by rememberUpdatedState(task.item.projectId)
@@ -195,6 +201,7 @@ fun ThingsTaskInlineEditor(
         val prevTags = prev.tags.joinToString(", ")
         if (now.tags != prev.tags && tagInput == prevTags) tagInput = now.tags.joinToString(", ")
         if (now.priority != prev.priority && priority == prev.priority) priority = now.priority
+        if (now.reminderTime != prev.reminderTime && reminderTime == prev.reminderTime) reminderTime = now.reminderTime
         lastSeenItem = now
     }
 
@@ -228,7 +235,7 @@ fun ThingsTaskInlineEditor(
                 val tagList = tagInput.split(",")
                     .map { it.trim() }
                     .filter { it.isNotEmpty() }
-                if (hasUnsavedChanges(task, title, notes, section, isTonight, startDate, dueDate, tagList, savedChecklist, priority)) {
+                if (hasUnsavedChanges(task, title, notes, section, isTonight, startDate, dueDate, tagList, savedChecklist, priority, reminderTime)) {
                     onSave(
                         title,
                         notes,
@@ -239,7 +246,8 @@ fun ThingsTaskInlineEditor(
                         tagList,
                         task.item.projectId,
                         savedChecklist,
-                        priority
+                        priority,
+                        reminderTime
                     )
                 }
             }
@@ -267,19 +275,19 @@ fun ThingsTaskInlineEditor(
             val saved = currentTask.item.let {
                 TaskEditorFields(
                     it.title, it.notes, it.section, it.isTonight, it.startDate,
-                    it.dueDate, it.tags, it.projectId, it.priority
+                    it.dueDate, it.tags, it.projectId, it.priority, it.reminderTime
                 )
             }
             val draft = TaskEdits.backgroundDraft(
                 saved,
                 TaskEditorFields(
                     currentTitle, currentNotes, currentSection, currentIsTonight, currentStartDate,
-                    currentDueDate, tagList, currentProjectId, currentPriority
+                    currentDueDate, tagList, currentProjectId, currentPriority, currentReminderTime
                 )
             )
             val changed = hasUnsavedChanges(
                 currentTask, draft.title, draft.notes, draft.section, draft.isTonight,
-                draft.startDate, draft.dueDate, draft.tags, currentChecklist, draft.priority
+                draft.startDate, draft.dueDate, draft.tags, currentChecklist, draft.priority, draft.reminderTime
             )
             if (changed) currentOnSaveDraft(draft, currentChecklist)
         }
@@ -299,7 +307,7 @@ fun ThingsTaskInlineEditor(
                         .filter { it.isNotEmpty() }
                     val changed = hasUnsavedChanges(
                         currentTask, currentTitle, currentNotes, currentSection, currentIsTonight,
-                        currentStartDate, currentDueDate, tagList, currentChecklist, currentPriority
+                        currentStartDate, currentDueDate, tagList, currentChecklist, currentPriority, currentReminderTime
                     )
                     if (changed) {
                         currentOnSave(
@@ -312,7 +320,8 @@ fun ThingsTaskInlineEditor(
                             tagList,
                             currentProjectId, // preserve original project safely
                             currentChecklist,
-                            currentPriority
+                            currentPriority,
+                            currentReminderTime
                         )
                     } else {
                         // Сохранение заодно сбрасывало раскрытую задачу; без изменений делаем только это
@@ -423,7 +432,8 @@ fun ThingsTaskInlineEditor(
                             tagList,
                             task.item.projectId,
                             savedChecklist,
-                            priority
+                            priority,
+                            reminderTime
                         )
                     }
                 )
@@ -562,6 +572,22 @@ fun ThingsTaskInlineEditor(
                                     color = textPrimaryColor
                                 )
                             )
+                            // Напоминание — колокольчик и время рядом с днём, как в Things
+                            reminderTime?.let { minutes ->
+                                Spacer(modifier = Modifier.width(ThingsSpacing.S))
+                                Icon(
+                                    imageVector = Icons.Default.Notifications,
+                                    contentDescription = stringResource(R.string.reminder_title),
+                                    tint = textPrimaryColor,
+                                    modifier = Modifier.size(ThingsIconSize.XS)
+                                )
+                                Spacer(modifier = Modifier.width(ThingsSpacing.XXS))
+                                Text(
+                                    text = com.example.ui.screens.home.inlineeditor.utils.formatReminderTime(view.context, minutes),
+                                    maxLines = 1,
+                                    style = ThingsTheme.type.editorDateStrong.copy(color = textPrimaryColor)
+                                )
+                            }
                         }
                     }
 
@@ -747,6 +773,8 @@ fun ThingsTaskInlineEditor(
             isTonight = isTonight,
             onIsTonightChange = { isTonight = it },
             onShowCalendarHelperChange = { showCalendarHelper = it },
+            reminderTime = reminderTime,
+            onReminderTimeChange = { reminderTime = it },
             onDismissRequest = { showWhenDialog = false }
         )
     }

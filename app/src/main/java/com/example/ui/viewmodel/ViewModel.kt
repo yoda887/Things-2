@@ -567,9 +567,10 @@ class ThingsViewModel @Inject constructor(
         tags: List<String>,
         projectId: String?,
         priority: Int,
+        reminderTime: Int?,
         untitledTitle: String
     ) {
-        val fields = TaskEditorFields(title, notes, section, isTonight, startDate, dueDate, tags, projectId, priority)
+        val fields = TaskEditorFields(title, notes, section, isTonight, startDate, dueDate, tags, projectId, priority, reminderTime)
         viewModelScope.launch {
             taskUseCases.updateTask(TaskEdits.apply(task, fields, untitledTitle), checklist)
         }

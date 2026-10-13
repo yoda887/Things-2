@@ -19,7 +19,8 @@ internal fun hasUnsavedChanges(
     dueDate: Long?,
     tags: List<String>,
     checklist: List<ChecklistItem>,
-    priority: Int
+    priority: Int,
+    reminderTime: Int?
 ): Boolean {
     val item = task.item
     return title != item.title ||
@@ -29,6 +30,7 @@ internal fun hasUnsavedChanges(
         startDate != item.startDate ||
         dueDate != item.dueDate ||
         priority != item.priority ||
+        reminderTime != item.reminderTime ||
         tags != item.tags.filter { it.isNotEmpty() } ||
         checklist != task.checklist
 }

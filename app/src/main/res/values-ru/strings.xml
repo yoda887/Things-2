@@ -192,4 +192,10 @@
         <item quantity="many">В проекте «%1$s» есть %2$d невыполненных задач. Они тоже будут отмечены выполненными.</item>
         <item quantity="other">В проекте «%1$s» есть %2$d невыполненной задачи. Они тоже будут отмечены выполненными.</item>
     </plurals>
+    <string name="reminder_title">Напоминание</string>
+    <string name="reminder_at">Напоминание в %1$s</string>
+    <string name="cd_remove_reminder">Убрать напоминание</string>
+    <string name="reminder_done">Готово</string>
+    <string name="reminder_channel_name">Напоминания</string>
+    <string name="reminder_channel_description">Напоминания о задачах в назначенное время</string>
 </resources>

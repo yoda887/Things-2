@@ -4,6 +4,7 @@ import com.example.data.model.Item
 import com.example.data.model.TaskSection
 import com.example.data.model.toStartVal
 import com.example.domain.tag.TagTitles
+import com.example.domain.reminders.Reminders
 
 /** Поля задачи, как их правят в редакторе. */
 data class TaskEditorFields(
@@ -15,7 +16,9 @@ data class TaskEditorFields(
     val dueDate: Long?,
     val tags: List<String>,
     val projectId: String?,
-    val priority: Int
+    val priority: Int,
+    /** Напоминание — время дня в минутах; null — нет */
+    val reminderTime: Int? = null
 )
 
 /**
@@ -24,24 +27,28 @@ data class TaskEditorFields(
  */
 object TaskEdits {
 
-    fun apply(task: Item, fields: TaskEditorFields, untitledTitle: String, now: Long = System.currentTimeMillis()): Item =
-        task.copy(
+    fun apply(task: Item, fields: TaskEditorFields, untitledTitle: String, now: Long = System.currentTimeMillis()): Item {
+        // Задача «Входящих», попавшая в проект, — уже разобрана
+        val start = if (fields.projectId != null && fields.section == TaskSection.INBOX) {
+            TaskSection.ANYTIME.toStartVal()
+        } else {
+            fields.section.toStartVal()
+        }
+        return task.copy(
             title = fields.title.ifBlank { untitledTitle },
             notes = fields.notes,
-            // Задача «Входящих», попавшая в проект, — уже разобрана
-            start = if (fields.projectId != null && fields.section == TaskSection.INBOX) {
-                TaskSection.ANYTIME.toStartVal()
-            } else {
-                fields.section.toStartVal()
-            },
+            start = start,
             isTonight = fields.isTonight,
             startDate = fields.startDate,
             dueDate = fields.dueDate,
             cachedTags = TagTitles.join(fields.tags),
             projectId = fields.projectId,
             priority = fields.priority,
+            // Напоминание срабатывает в день задачи: без дня (дату убрали, «Когда-нибудь») оно снимается
+            reminderTime = fields.reminderTime?.takeIf { Reminders.hasDay(fields.startDate, start) },
             modificationDate = now
         )
+    }
 
     /**
      * Черновик открытого редактора, который записывается при уходе приложения в фон, чтобы набранное
@@ -56,6 +63,8 @@ object TaskEdits {
             isTonight = saved.isTonight,
             startDate = saved.startDate,
             dueDate = saved.dueDate,
-            projectId = saved.projectId
+            projectId = saved.projectId,
+            // Напоминание привязано к дню задачи — сохраняется вместе с ним, при сворачивании
+            reminderTime = saved.reminderTime
         )
 }

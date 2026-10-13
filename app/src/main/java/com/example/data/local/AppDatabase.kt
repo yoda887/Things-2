@@ -10,8 +10,8 @@ import com.example.data.model.ItemTag
 import com.example.data.model.ChecklistItem
 import com.example.data.model.RecurrenceRule
 
-// [ИЗМЕНЕНИЕ]: Увеличена версия базы данных до 7 для добавления поля parentId в таблицу tags
-@Database(entities = [Area::class, Item::class, Tag::class, ItemTag::class, ChecklistItem::class, RecurrenceRule::class], version = 7, exportSchema = true)
+// Версия 8: напоминание задачи (items.reminderTime) — миграция MIGRATION_7_8
+@Database(entities = [Area::class, Item::class, Tag::class, ItemTag::class, ChecklistItem::class, RecurrenceRule::class], version = 8, exportSchema = true)
 @TypeConverters(Converters::class)
 abstract class AppDatabase : RoomDatabase() {
     abstract fun taskDao(): TaskDao

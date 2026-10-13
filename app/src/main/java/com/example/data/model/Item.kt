@@ -80,7 +80,13 @@ data class Item(
     val trashed: Boolean = false,
     val startDate: Long? = null,
     val modificationDate: Long = System.currentTimeMillis(),
-    val sortOrder: Int = 0
+    val sortOrder: Int = 0,
+    /**
+     * Напоминание: время дня в минутах от полуночи (null — нет). Срабатывает в день задачи из «Когда»
+     * (дата старта или «Сегодня»), поэтому при переносе задачи на другой день переезжает вместе с ней.
+     * Правило срабатывания — [com.example.domain.reminders.Reminders].
+     */
+    val reminderTime: Int? = null
 ) {
     @get:Ignore
     val isCompleted: Boolean

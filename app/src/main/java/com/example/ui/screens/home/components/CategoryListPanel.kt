@@ -1528,6 +1528,7 @@ fun ThingsCategoryListPanel(
         var pendingStartDate by remember(targetTask) { mutableStateOf(targetTask.item.startDate) }
         var pendingSection by remember(targetTask) { mutableStateOf(targetTask.item.section) }
         var pendingIsTonight by remember(targetTask) { mutableStateOf(targetTask.item.isTonight) }
+        var pendingReminderTime by remember(targetTask) { mutableStateOf(targetTask.item.reminderTime) }
 
         ThingsWhenDialog(
             startDate = pendingStartDate,
@@ -1537,6 +1538,8 @@ fun ThingsCategoryListPanel(
             isTonight = pendingIsTonight,
             onIsTonightChange = { pendingIsTonight = it },
             onShowCalendarHelperChange = { },
+            reminderTime = pendingReminderTime,
+            onReminderTimeChange = { pendingReminderTime = it },
             growFromOffset = swipeWhenOrigin,
             onDismissRequest = {
                 val tagsList = targetTask.item.tags
@@ -1553,7 +1556,8 @@ fun ThingsCategoryListPanel(
                         tags = tagsList,
                         projectId = targetTask.item.projectId,
                         priority = targetTask.item.priority,
-                        checklist = targetTask.checklist
+                        checklist = targetTask.checklist,
+                        reminderTime = pendingReminderTime
                     )
                 )
                 swipeWhenTask = null

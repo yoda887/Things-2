@@ -1,5 +1,6 @@
 package com.example.ui.screens.home.subcomponents
 
+import androidx.compose.material.icons.filled.Notifications
 import com.example.ui.viewmodel.ActiveScreen
 import com.example.R
 import androidx.compose.ui.res.stringResource
@@ -413,6 +414,26 @@ fun TaskItemRow(
                                         DateBadge(text = displayText)
                                     }
                                 }
+                                Spacer(modifier = Modifier.width(ThingsSpacing.XS_PLUS))
+                            }
+
+                            // Напоминание открытой задачи — колокольчик и время перед названием
+                            val reminderMinutes = task.reminderTime?.takeIf { !task.isClosed }
+                            if (reminderMinutes != null) {
+                                Icon(
+                                    imageVector = Icons.Default.Notifications,
+                                    contentDescription = stringResource(R.string.reminder_title),
+                                    tint = textSecondaryColor,
+                                    modifier = Modifier.size(ROW_META_ICON_SIZE)
+                                )
+                                Spacer(modifier = Modifier.width(ThingsSpacing.XXS))
+                                Text(
+                                    text = com.example.ui.screens.home.inlineeditor.utils.formatReminderTime(
+                                        androidx.compose.ui.platform.LocalContext.current, reminderMinutes
+                                    ),
+                                    style = ThingsTheme.type.caption.copy(color = textSecondaryColor),
+                                    maxLines = 1
+                                )
                                 Spacer(modifier = Modifier.width(ThingsSpacing.XS_PLUS))
                             }
 

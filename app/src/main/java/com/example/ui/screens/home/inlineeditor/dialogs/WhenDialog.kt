@@ -19,6 +19,8 @@ import androidx.compose.material.icons.filled.ChevronLeft
 import androidx.compose.material.icons.filled.ChevronRight
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.Star
+import androidx.compose.material.icons.filled.Notifications
+import androidx.compose.animation.togetherWith
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -154,6 +156,13 @@ fun ThingsWhenDialog(
     onIsTonightChange: (Boolean) -> Unit,
     onShowCalendarHelperChange: (Boolean) -> Unit,
     onDismissRequest: () -> Unit,
+    /** Напоминание задачи — время дня в минутах (null — нет) */
+    reminderTime: Int? = null,
+    /**
+     * Смена напоминания. Не передана — строки напоминания в окне нет (у проектов и пакетного выбора
+     * напоминаний нет)
+     */
+    onReminderTimeChange: ((Int?) -> Unit)? = null,
     /**
      * Смещение строки, по которой сделали свайп, от центра экрана. Из этой точки диалог вырастает.
      * Не передано — диалог просто проявляется по центру, как раньше.
@@ -202,6 +211,21 @@ fun ThingsWhenDialog(
 
     var isVisible by remember { mutableStateOf(false) }
     LaunchedEffect(Unit) { isVisible = true }
+    // Страница выбора времени напоминания вместо календаря
+    var pickingReminder by remember { mutableStateOf(false) }
+    val context = androidx.compose.ui.platform.LocalContext.current
+    // Без разрешения на уведомления (Android 13+) напоминание не покажется — спрашиваем, когда его ставят
+    val notificationPermission = androidx.activity.compose.rememberLauncherForActivityResult(
+        androidx.activity.result.contract.ActivityResultContracts.RequestPermission()
+    ) { }
+    fun ensureNotificationPermission() {
+        if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.TIRAMISU &&
+            androidx.core.content.ContextCompat.checkSelfPermission(context, android.Manifest.permission.POST_NOTIFICATIONS) !=
+            android.content.pm.PackageManager.PERMISSION_GRANTED
+        ) {
+            notificationPermission.launch(android.Manifest.permission.POST_NOTIFICATIONS)
+        }
+    }
     // Закрытие диалога: вызов onDismissRequest() сразу отдаёт закрытие системному
     // WindowManager (нативное уменьшение к центру, растворение и плавное снятие затемнения).
     val requestClose: () -> Unit = {
@@ -288,6 +312,39 @@ fun ThingsWhenDialog(
                 .width(WHEN_DIALOG_WIDTH)
                 .wrapContentHeight()
         ) {
+            // «Назад» на странице времени возвращает к календарю, а не закрывает окно
+            androidx.activity.compose.BackHandler(enabled = pickingReminder) { pickingReminder = false }
+            androidx.compose.animation.AnimatedContent(
+                targetState = pickingReminder,
+                transitionSpec = {
+                    androidx.compose.animation.fadeIn(tween(com.example.ui.theme.ThingsMotion.QUICK)) togetherWith
+                        androidx.compose.animation.fadeOut(tween(com.example.ui.theme.ThingsMotion.QUICK)) using
+                        androidx.compose.animation.SizeTransform(clip = false)
+                },
+                label = "whenPage"
+            ) { picking ->
+            if (picking) {
+                ReminderTimePage(
+                    initialMinutes = reminderTime ?: com.example.domain.reminders.Reminders.defaultTime(),
+                    onBack = { pickingReminder = false },
+                    onDone = { minutes ->
+                        view.performHapticFeedback(HapticFeedbackConstants.CLOCK_TICK)
+                        onReminderTimeChange?.invoke(minutes)
+                        // Напоминание срабатывает в день задачи: без даты задача встаёт на сегодня, как в Things.
+                        // Дата нужна и задаче «Сегодня» без даты: иначе её напоминание повторялось бы каждый день
+                        if (startDate == null) {
+                            onStartDateChange(System.currentTimeMillis())
+                            if (section != TaskSection.TODAY) {
+                                onSectionChange(TaskSection.TODAY)
+                                onIsTonightChange(false)
+                            }
+                            onShowCalendarHelperChange(true)
+                        }
+                        ensureNotificationPermission()
+                        pickingReminder = false
+                    }
+                )
+            } else {
             Column(
                 modifier = Modifier
                     .fillMaxWidth()
@@ -651,6 +708,7 @@ fun ThingsWhenDialog(
                             onStartDateChange(null)
                             onSectionChange(TaskSection.SOMEDAY)
                             onIsTonightChange(false)
+                            onReminderTimeChange?.invoke(null)
                             onShowCalendarHelperChange(true)
                             requestClose()
                         }
@@ -689,32 +747,60 @@ fun ThingsWhenDialog(
 
                 Spacer(modifier = Modifier.height(GAP_AFTER_SOMEDAY))
 
-                // 4. Add Reminder
-                Row(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .height(MaterialTheme.dimens.rowHeight),
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    Box(
+                // 4. Напоминание: «+ Добавить напоминание» или время с крестиком; нажатие — выбор времени
+                if (onReminderTimeChange != null) {
+                    val reminderSet = reminderTime != null
+                    Row(
                         modifier = Modifier
-                            .width(ROW_ICON_COLUMN_WIDTH)
-                            .padding(start = ROW_ICON_START_INSET),
-                        contentAlignment = Alignment.CenterStart
+                            .fillMaxWidth()
+                            .clip(ThingsTheme.shapes.rowShape)
+                            .clickable {
+                                view.performHapticFeedback(HapticFeedbackConstants.CLOCK_TICK)
+                                pickingReminder = true
+                            }
+                            .height(MaterialTheme.dimens.rowHeight),
+                        verticalAlignment = Alignment.CenterVertically
                     ) {
-                        Icon(
-                            imageVector = Icons.Default.Add,
-                            contentDescription = null,
-                            tint = ThingsTheme.colors.overlayContentSecondary,
-                            modifier = Modifier.size(ThingsIconSize.S)
+                        Box(
+                            modifier = Modifier
+                                .width(ROW_ICON_COLUMN_WIDTH)
+                                .padding(start = ROW_ICON_START_INSET),
+                            contentAlignment = Alignment.CenterStart
+                        ) {
+                            Icon(
+                                imageVector = if (reminderSet) Icons.Default.Notifications else Icons.Default.Add,
+                                contentDescription = null,
+                                tint = if (reminderSet) ThingsTheme.colors.accent else ThingsTheme.colors.overlayContentSecondary,
+                                modifier = Modifier.size(ThingsIconSize.S)
+                            )
+                        }
+                        Text(
+                            text = if (reminderSet) {
+                                stringResource(R.string.reminder_at, com.example.ui.screens.home.inlineeditor.utils.formatReminderTime(context, reminderTime!!))
+                            } else {
+                                stringResource(R.string.ui_add_reminder)
+                            },
+                            style = ThingsTheme.type.dialogRow.copy(
+                                color = if (reminderSet) ThingsTheme.colors.overlayContent else ThingsTheme.colors.overlayContentSecondary
+                            ),
+                            modifier = Modifier.weight(5f)
                         )
+                        Box(modifier = Modifier.weight(1f), contentAlignment = Alignment.Center) {
+                            if (reminderSet) {
+                                Icon(
+                                    imageVector = Icons.Default.Close,
+                                    contentDescription = stringResource(R.string.cd_remove_reminder),
+                                    tint = ThingsTheme.colors.overlayContentSecondary,
+                                    modifier = Modifier
+                                        .size(ThingsIconSize.S)
+                                        .clickable {
+                                            view.performHapticFeedback(HapticFeedbackConstants.CLOCK_TICK)
+                                            onReminderTimeChange(null)
+                                        }
+                                )
+                            }
+                        }
                     }
-                    Text(
-                        text = stringResource(R.string.ui_add_reminder),
-                        style = ThingsTheme.type.dialogRow.copy(color = ThingsTheme.colors.overlayContentSecondary),
-                        modifier = Modifier.weight(5f)
-                    )
-                    Box(modifier = Modifier.weight(1f))
                 }
 
                 // Кнопка "Clear" для сброса даты в "Anytime" (форма полной пилюли, малиново-красный цвет)
@@ -727,6 +813,7 @@ fun ThingsWhenDialog(
                             onStartDateChange(null)
                             onSectionChange(TaskSection.ANYTIME)
                             onIsTonightChange(false)
+                            onReminderTimeChange?.invoke(null)
                             onShowCalendarHelperChange(false)
                             requestClose()
                         },
@@ -746,8 +833,96 @@ fun ThingsWhenDialog(
                     }
                 }
             }
+            }
+            }
         }
         }
+        }
+    }
+}
+
+/**
+ * Страница выбора времени напоминания в окне «Когда»: циферблат в цветах окна, формат часов — как в
+ * телефоне. «Готово» ставит напоминание, крестик и «Назад» возвращают к календарю.
+ */
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+private fun ReminderTimePage(initialMinutes: Int, onBack: () -> Unit, onDone: (Int) -> Unit) {
+    val context = androidx.compose.ui.platform.LocalContext.current
+    val state = rememberTimePickerState(
+        initialHour = initialMinutes / 60,
+        initialMinute = initialMinutes % 60,
+        is24Hour = android.text.format.DateFormat.is24HourFormat(context)
+    )
+    Column(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(horizontal = ThingsSpacing.L, vertical = WHEN_DIALOG_VERTICAL_PADDING),
+        horizontalAlignment = Alignment.CenterHorizontally
+    ) {
+        Row(modifier = Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
+            Box(modifier = Modifier.weight(1f))
+            Box(modifier = Modifier.weight(5f), contentAlignment = Alignment.Center) {
+                Text(
+                    text = stringResource(R.string.reminder_title),
+                    style = ThingsTheme.type.dialogTitle.copy(color = ThingsTheme.colors.overlayContent)
+                )
+            }
+            Box(modifier = Modifier.weight(1f), contentAlignment = Alignment.Center) {
+                Box(
+                    modifier = Modifier
+                        .size(MaterialTheme.dimens.dialogHeaderButtonSize)
+                        .clip(CircleShape)
+                        .background(ThingsTheme.colors.overlayControl)
+                        .clickable { onBack() },
+                    contentAlignment = Alignment.Center
+                ) {
+                    Icon(
+                        imageVector = Icons.Default.Close,
+                        contentDescription = stringResource(R.string.cd_close),
+                        tint = ThingsTheme.colors.overlayContent,
+                        modifier = Modifier.size(ThingsIconSize.S)
+                    )
+                }
+            }
+        }
+        Spacer(modifier = Modifier.height(GAP_AFTER_TITLE))
+        // Двоеточие между часами и минутами циферблат красит в onSurface темы — на тёмном окне оно
+        // было чёрным и терялось; здесь это цвет содержимого окна
+        MaterialTheme(colorScheme = MaterialTheme.colorScheme.copy(onSurface = ThingsTheme.colors.overlayContent)) {
+        TimePicker(
+            state = state,
+            colors = TimePickerDefaults.colors(
+                clockDialColor = ThingsTheme.colors.overlayControl,
+                clockDialSelectedContentColor = ThingsTheme.colors.onAccent,
+                clockDialUnselectedContentColor = ThingsTheme.colors.overlayContent,
+                selectorColor = ThingsTheme.colors.accent,
+                containerColor = ThingsTheme.colors.overlaySurface,
+                periodSelectorBorderColor = ThingsTheme.colors.overlayControl,
+                periodSelectorSelectedContainerColor = ThingsTheme.colors.accent,
+                periodSelectorUnselectedContainerColor = Color.Transparent,
+                periodSelectorSelectedContentColor = ThingsTheme.colors.onAccent,
+                periodSelectorUnselectedContentColor = ThingsTheme.colors.overlayContentSecondary,
+                timeSelectorSelectedContainerColor = ThingsTheme.colors.accent,
+                timeSelectorUnselectedContainerColor = ThingsTheme.colors.overlayControl,
+                timeSelectorSelectedContentColor = ThingsTheme.colors.onAccent,
+                timeSelectorUnselectedContentColor = ThingsTheme.colors.overlayContent
+            )
+        )
+        }
+        Spacer(modifier = Modifier.height(GAP_BEFORE_CLEAR))
+        Button(
+            onClick = { onDone(state.hour * 60 + state.minute) },
+            colors = ButtonDefaults.buttonColors(
+                containerColor = ThingsTheme.colors.accent,
+                contentColor = ThingsTheme.colors.onAccent
+            ),
+            shape = ThingsTheme.shapes.capsuleShape,
+            modifier = Modifier
+                .fillMaxWidth()
+                .height(CLEAR_BUTTON_HEIGHT)
+        ) {
+            Text(text = stringResource(R.string.reminder_done), style = ThingsTheme.type.dialogButton)
         }
     }
 }

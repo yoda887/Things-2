@@ -658,6 +658,7 @@ fun ThingsHomeScreen(viewModel: ThingsViewModel = hiltViewModel()) {
                                         tags = event.tags,
                                         projectId = event.projectId,
                                         priority = event.priority,
+                                        reminderTime = event.reminderTime,
                                         untitledTitle = untitledTaskTitle
                                     )
                                 }

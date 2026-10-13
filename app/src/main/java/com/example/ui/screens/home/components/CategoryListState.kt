@@ -343,7 +343,9 @@ sealed interface ThingsCategoryListEvent {
         val tags: List<String>,
         val projectId: String?,
         val priority: Int,
-        val checklist: List<ChecklistItem>
+        val checklist: List<ChecklistItem>,
+        // Напоминание — время дня в минутах; передаётся всегда явно, иначе сохранение стирало бы его
+        val reminderTime: Int?
     ) : ThingsCategoryListEvent
     
     // Удаление, дублирование
