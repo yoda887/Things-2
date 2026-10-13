@@ -417,26 +417,6 @@ fun TaskItemRow(
                                 Spacer(modifier = Modifier.width(ThingsSpacing.XS_PLUS))
                             }
 
-                            // Напоминание открытой задачи — колокольчик и время перед названием
-                            val reminderMinutes = task.reminderTime?.takeIf { !task.isClosed }
-                            if (reminderMinutes != null) {
-                                Icon(
-                                    imageVector = AppIcons.Bell,
-                                    contentDescription = stringResource(R.string.reminder_title),
-                                    tint = textSecondaryColor,
-                                    modifier = Modifier.size(ROW_META_ICON_SIZE)
-                                )
-                                Spacer(modifier = Modifier.width(ThingsSpacing.XXS))
-                                Text(
-                                    text = com.example.ui.screens.home.inlineeditor.utils.formatReminderTime(
-                                        androidx.compose.ui.platform.LocalContext.current, reminderMinutes
-                                    ),
-                                    style = ThingsTheme.type.caption.copy(color = textSecondaryColor),
-                                    maxLines = 1
-                                )
-                                Spacer(modifier = Modifier.width(ThingsSpacing.XS_PLUS))
-                            }
-
                             Text(
                                 text = task.title,
                                 style = ThingsTheme.type.taskTitle.copy(
@@ -458,12 +438,22 @@ fun TaskItemRow(
                             )
 
                         // Inline note/subtask icons representation
-                        if (task.notes.isNotBlank() || task.checklistItemsCount > 0 || task.cachedTags.isNotBlank()) {
+                        // Напоминание открытой задачи — колокольчик в ряду с заметками, чек-листом и тегами, без времени
+                        val hasReminder = task.reminderTime != null && !task.isClosed
+                        if (hasReminder || task.notes.isNotBlank() || task.checklistItemsCount > 0 || task.cachedTags.isNotBlank()) {
                             Spacer(modifier = Modifier.width(ThingsSpacing.XS_PLUS))
                             Row(
                                 horizontalArrangement = Arrangement.spacedBy(ThingsSpacing.XS),
                                 verticalAlignment = Alignment.CenterVertically
                             ) {
+                                if (hasReminder) {
+                                    Icon(
+                                        imageVector = AppIcons.Bell,
+                                        contentDescription = stringResource(R.string.reminder_title),
+                                        tint = textSecondaryColor.copy(alpha = ThingsAlpha.MUTED),
+                                        modifier = Modifier.size(ROW_META_ICON_SIZE)
+                                    )
+                                }
                                 if (task.notes.isNotBlank()) {
                                     Icon(
                                         imageVector = Icons.Outlined.Description,
