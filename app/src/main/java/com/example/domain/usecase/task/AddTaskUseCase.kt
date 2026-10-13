@@ -1,5 +1,6 @@
 package com.example.domain.usecase.task
 
+import com.example.domain.reminders.Reminders
 import com.example.data.model.Item
 import com.example.data.model.ChecklistItem
 import com.example.data.model.TaskSection
@@ -22,6 +23,9 @@ class AddTaskUseCase @Inject constructor(private val repository: ITaskRepository
         section: TaskSection = TaskSection.INBOX,
         isTonight: Boolean = false,
         startDate: Long? = null,
+        dueDate: Long? = null,
+        /** Напоминание — время дня в минутах; без дня у задачи не ставится (см. Reminders) */
+        reminderTime: Int? = null,
         tags: List<String> = emptyList(),
         projectId: String? = null,
         checklist: List<ChecklistItem> = emptyList(),
@@ -44,9 +48,10 @@ class AddTaskUseCase @Inject constructor(private val repository: ITaskRepository
             start = startValue,
             isTonight = isTonight,
             startDate = computedStartDate,
-            dueDate = null,
+            dueDate = dueDate,
             projectId = projectId,
-            priority = priority
+            priority = priority,
+            reminderTime = reminderTime?.takeIf { Reminders.hasDay(computedStartDate, startValue) }
         )
         repository.inTransaction {
             repository.insertTask(item)

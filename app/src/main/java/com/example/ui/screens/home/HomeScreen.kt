@@ -1176,13 +1176,16 @@ fun ThingsHomeScreen(viewModel: ThingsViewModel = hiltViewModel()) {
             onDeleteTag = { tag -> viewModel.deleteTag(tag) },
             onUpdateTag = { tag -> viewModel.updateTag(tag) },
             onUpdateTagsOrder = { tags -> viewModel.updateTagsOrder(tags) },
-            onSave = { title, notes, section, isTonight, startDate, dueDate, tags, projectId, checklistItems, priority ->
+            onSave = { title, notes, section, isTonight, startDate, dueDate, tags, projectId, checklistItems, priority, reminderTime ->
                 viewModel.addTask(
                     title = title,
                     notes = notes,
                     section = section,
                     isTonight = isTonight,
                     startDate = startDate,
+                    // Срок из окна быстрого добавления раньше терялся: он не передавался при создании задачи
+                    dueDate = dueDate,
+                    reminderTime = reminderTime,
                     tags = tags,
                     projectId = projectId,
                     checklist = checklistItems,

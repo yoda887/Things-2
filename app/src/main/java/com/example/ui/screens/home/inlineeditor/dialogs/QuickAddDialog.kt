@@ -1,5 +1,6 @@
 package com.example.ui.screens.home.inlineeditor.dialogs
 
+import androidx.compose.material.icons.filled.Notifications
 import com.example.R
 import androidx.compose.ui.res.stringResource
 import com.example.ui.theme.ThingsTheme
@@ -106,7 +107,8 @@ fun QuickAddDialog(
         tags: List<String>,
         projectId: String?,
         checklist: List<ChecklistItem>,
-        priority: Int
+        priority: Int,
+        reminderTime: Int?
     ) -> Unit,
     onDismissRequest: () -> Unit
 ) {
@@ -120,6 +122,8 @@ fun QuickAddDialog(
     var selectedProjectId by remember { mutableStateOf<String?>(null) }
     var checklist by remember { mutableStateOf<List<ChecklistItem>>(emptyList()) }
     var priority by remember { mutableStateOf(0) }
+    // Напоминание — время дня в минутах; задаётся в окне «Когда»
+    var reminderTime by remember { mutableStateOf<Int?>(null) }
 
     // Visibility controllers
     var showWhenDialog by remember { mutableStateOf(false) }
@@ -245,7 +249,8 @@ fun QuickAddDialog(
                     tagList,
                     selectedProjectId,
                     checklist.filter { it.title.isNotBlank() },
-                    priority
+                    priority,
+                    reminderTime
                 )
                 onDismissRequest()
             }
@@ -489,6 +494,22 @@ fun QuickAddDialog(
                                             color = textPrimaryColor
                                         )
                                     )
+                                    // Напоминание — колокольчик и время рядом с днём, как в редакторе задачи
+                                    reminderTime?.let { minutes ->
+                                        Spacer(modifier = Modifier.width(ThingsSpacing.S))
+                                        Icon(
+                                            imageVector = AppIcons.Bell,
+                                            contentDescription = stringResource(R.string.reminder_title),
+                                            tint = textPrimaryColor,
+                                            modifier = Modifier.size(ThingsIconSize.XS)
+                                        )
+                                        Spacer(modifier = Modifier.width(ThingsSpacing.XXS))
+                                        Text(
+                                            text = com.example.ui.screens.home.inlineeditor.utils.formatReminderTime(view.context, minutes),
+                                            maxLines = 1,
+                                            style = ThingsTheme.type.editorDateStrong.copy(color = textPrimaryColor)
+                                        )
+                                    }
                                 }
                             }
 
@@ -733,6 +754,8 @@ fun QuickAddDialog(
             onSectionChange = { section = it },
             onIsTonightChange = { isTonight = it },
             onShowCalendarHelperChange = { /* no-op */ },
+            reminderTime = reminderTime,
+            onReminderTimeChange = { reminderTime = it },
             onDismissRequest = { showWhenDialog = false }
         )
     }
