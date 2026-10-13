@@ -198,4 +198,12 @@
     <string name="reminder_channel_description">Напоминания о задачах в назначенное время</string>
     <string name="reminder_remove">Убрать</string>
     <string name="reminder_set">Установить</string>
+    <string name="reminder_action_complete">Выполнено</string>
+    <string name="reminder_action_snooze_short">Через 15 мин</string>
+    <string name="reminder_action_snooze_more">Позже…</string>
+    <string name="reminder_snooze_title">Напомнить позже</string>
+    <string name="reminder_snooze_15m">Через 15 минут</string>
+    <string name="reminder_snooze_1h">Через час</string>
+    <string name="reminder_snooze_3h">Через 3 часа</string>
+    <string name="reminder_snooze_tomorrow">Завтра</string>
 </resources>

@@ -3,6 +3,14 @@
 
     <style name="Theme.MyApplication" parent="android:Theme.DeviceDefault.NoActionBar" />
 
+    <!-- Прозрачное окно поверх всего (выбор «Позже…» у напоминания): фон и затемнение рисует Compose -->
+    <style name="Theme.MyApplication.Translucent" parent="Theme.MyApplication">
+        <item name="android:windowIsTranslucent">true</item>
+        <item name="android:windowBackground">@android:color/transparent</item>
+        <item name="android:windowNoTitle">true</item>
+        <item name="android:backgroundDimEnabled">false</item>
+    </style>
+
     <!-- Стиль окна для диалога When: без входной анимации (рост делает Compose),
          но с нативной системной анимацией закрытия (уменьшение к центру + плавное угасание затемнения) -->
     <style name="DialogWindowAnimationGrowOpen" parent="@android:style/Animation.Dialog">

@@ -72,4 +72,35 @@ class RemindersTest {
         assertEquals(60, TaskEdits.backgroundDraft(saved, edited).reminderTime)
         assertEquals("new", TaskEdits.backgroundDraft(saved, edited).title)
     }
+
+    @Test
+    fun snooze_laterToday_keepsDay() {
+        val today = Item(id = "t", start = Item.START_TODAY, startDate = at(10, 8), reminderTime = 9 * 60)
+        val snoozed = Reminders.snoozed(today, 15, now)
+        assertEquals(9 * 60 + 45, snoozed.reminderTime)
+        assertEquals(at(10, 8), snoozed.startDate)
+        assertEquals(Item.START_TODAY, snoozed.start)
+        assertEquals(at(10, 9, 45), Reminders.fireAt(snoozed, now))
+    }
+
+    @Test
+    fun snoozeUntilTomorrow_sameTimeNextDay() {
+        val today = Item(id = "t", start = Item.START_TODAY, startDate = at(10, 8), isTonight = true, reminderTime = 9 * 60)
+        val snoozed = Reminders.snoozedUntilTomorrow(today, now)
+        assertEquals(9 * 60, snoozed.reminderTime)
+        assertEquals(Item.START_ANYTIME, snoozed.start)
+        assertEquals(false, snoozed.isTonight)
+        assertEquals(at(11, 9), Reminders.fireAt(snoozed, now))
+    }
+
+    @Test
+    fun snooze_pastMidnight_movesToTomorrow() {
+        val late = at(10, 23, 30)
+        val today = Item(id = "t", start = Item.START_TODAY, startDate = at(10, 8), isTonight = true, reminderTime = 23 * 60 + 30)
+        val snoozed = Reminders.snoozed(today, 60, late)
+        assertEquals(30, snoozed.reminderTime)
+        assertEquals(Item.START_ANYTIME, snoozed.start)
+        assertEquals(false, snoozed.isTonight)
+        assertEquals(at(11, 0, 30), Reminders.fireAt(snoozed, late))
+    }
 }

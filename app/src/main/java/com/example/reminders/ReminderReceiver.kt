@@ -13,6 +13,8 @@ import com.example.R
 import com.example.data.local.TaskDao
 import com.example.di.ApplicationScope
 import com.example.domain.reminders.Reminders
+import com.example.data.model.ItemWithChecklist
+import com.example.domain.usecase.TaskUseCases
 import dagger.hilt.android.AndroidEntryPoint
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.launch
@@ -27,11 +29,41 @@ import kotlin.math.abs
 class ReminderReceiver : BroadcastReceiver() {
 
     @Inject lateinit var dao: TaskDao
+    @Inject lateinit var taskUseCases: TaskUseCases
     @Inject @ApplicationScope lateinit var scope: CoroutineScope
 
     override fun onReceive(context: Context, intent: Intent) {
-        if (intent.action != ACTION_REMIND) return
         val taskId = intent.getStringExtra(EXTRA_TASK_ID) ?: return
+        when (intent.action) {
+            ACTION_REMIND -> remind(context, taskId)
+            ACTION_COMPLETE, ACTION_SNOOZE -> act(context, intent, taskId)
+        }
+    }
+
+    /**
+     * Кнопки уведомления: «Выполнено» отмечает задачу, «Через 15 мин» и «Через час» откладывают
+     * напоминание ([Reminders.snoozed]). Будильники пересчитает ReminderSync — задача изменилась в базе.
+     */
+    private fun act(context: Context, intent: Intent, taskId: String) {
+        NotificationManagerCompat.from(context).cancel(taskId.hashCode())
+        val pending = goAsync()
+        scope.launch {
+            try {
+                val item = dao.getItemById(taskId) ?: return@launch
+                if (item.isClosed || item.trashed) return@launch
+                if (intent.action == ACTION_COMPLETE) {
+                    taskUseCases.toggleTaskCompletion(ItemWithChecklist(item, dao.getChecklistItemsByItemId(taskId)))
+                } else {
+                    val minutes = intent.getIntExtra(EXTRA_SNOOZE_MINUTES, SNOOZE_SHORT_MIN)
+                    taskUseCases.updateTask(Reminders.snoozed(item, minutes))
+                }
+            } finally {
+                pending.finish()
+            }
+        }
+    }
+
+    private fun remind(context: Context, taskId: String) {
         val pending = goAsync()
         scope.launch {
             try {
@@ -65,6 +97,11 @@ class ReminderReceiver : BroadcastReceiver() {
             .setPriority(NotificationCompat.PRIORITY_HIGH)
             .setContentIntent(open)
             .setAutoCancel(true)
+            // Как в Things: отметить выполненной или напомнить позже — прямо из уведомления
+            .addAction(0, context.getString(R.string.reminder_action_complete), actionIntent(context, taskId, ACTION_COMPLETE))
+            .addAction(0, context.getString(R.string.reminder_action_snooze_short), actionIntent(context, taskId, ACTION_SNOOZE, SNOOZE_SHORT_MIN))
+            // Кнопок не больше трёх: остальные сроки (час, 3 часа, завтра) — в окне «Позже…»
+            .addAction(0, context.getString(R.string.reminder_action_snooze_more), laterIntent(context, taskId, title))
             .build()
         try {
             manager.notify(taskId.hashCode(), notification)
@@ -73,8 +110,33 @@ class ReminderReceiver : BroadcastReceiver() {
         }
     }
 
+    /** «Позже…» — окно выбора срока поверх всего */
+    private fun laterIntent(context: Context, taskId: String, title: String): PendingIntent =
+        PendingIntent.getActivity(
+            context,
+            ("later" + taskId).hashCode(),
+            ReminderSnoozeActivity.intent(context, taskId, title),
+            PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
+        )
+
+    /** Нажатие кнопки уведомления; адрес с задачей и действием делает намерения разных кнопок разными */
+    private fun actionIntent(context: Context, taskId: String, action: String, minutes: Int = 0): PendingIntent {
+        val intent = Intent(context, ReminderReceiver::class.java)
+            .setAction(action)
+            .setData(android.net.Uri.parse("things://reminder/$taskId/$action/$minutes"))
+            .putExtra(EXTRA_TASK_ID, taskId)
+            .putExtra(EXTRA_SNOOZE_MINUTES, minutes)
+        return PendingIntent.getBroadcast(context, 0, intent, PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE)
+    }
+
     companion object {
         const val ACTION_REMIND = "com.bgdlab.things.action.REMIND"
+        const val ACTION_COMPLETE = "com.bgdlab.things.action.REMINDER_COMPLETE"
+        const val ACTION_SNOOZE = "com.bgdlab.things.action.REMINDER_SNOOZE"
+        const val EXTRA_SNOOZE_MINUTES = "snooze_minutes"
+
+        /** «Напомнить позже» кнопкой уведомления — через 15 минут */
+        const val SNOOZE_SHORT_MIN = 15
         const val EXTRA_TASK_ID = "task_id"
         const val EXTRA_TITLE = "title"
         private const val CHANNEL_ID = "reminders"

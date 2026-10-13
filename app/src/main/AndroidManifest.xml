@@ -32,6 +32,13 @@
             </intent-filter>
         </activity>
 
+        <!-- «Позже…» из уведомления-напоминания: окно поверх всего, отдельно от основного экрана -->
+        <activity
+            android:name="com.example.reminders.ReminderSnoozeActivity"
+            android:exported="false"
+            android:excludeFromRecents="true"
+            android:taskAffinity=""
+            android:theme="@style/Theme.MyApplication.Translucent" />
         <receiver
             android:name="com.example.reminders.ReminderReceiver"
             android:exported="false" />

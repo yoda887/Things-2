@@ -198,4 +198,12 @@
     <string name="reminder_channel_description">Нагадування про завдання в призначений час</string>
     <string name="reminder_remove">Прибрати</string>
     <string name="reminder_set">Встановити</string>
+    <string name="reminder_action_complete">Виконано</string>
+    <string name="reminder_action_snooze_short">Через 15 хв</string>
+    <string name="reminder_action_snooze_more">Пізніше…</string>
+    <string name="reminder_snooze_title">Нагадати пізніше</string>
+    <string name="reminder_snooze_15m">Через 15 хвилин</string>
+    <string name="reminder_snooze_1h">Через годину</string>
+    <string name="reminder_snooze_3h">Через 3 години</string>
+    <string name="reminder_snooze_tomorrow">Завтра</string>
 </resources>
