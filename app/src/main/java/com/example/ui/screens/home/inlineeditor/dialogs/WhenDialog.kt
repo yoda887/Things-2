@@ -981,11 +981,7 @@ private fun ReminderWheelCard(
             contentAlignment = Alignment.Center
         ) {
             // Полоса выбранной строки — во всю ширину карточки
-            Column(modifier = Modifier.fillMaxWidth()) {
-                HorizontalDivider(color = ThingsTheme.colors.overlayContentSecondary.copy(alpha = ThingsAlpha.MUTED), thickness = ThingsStroke.THIN)
-                Spacer(modifier = Modifier.height(WHEEL_ROW_HEIGHT))
-                HorizontalDivider(color = ThingsTheme.colors.overlayContentSecondary.copy(alpha = ThingsAlpha.MUTED), thickness = ThingsStroke.THIN)
-            }
+            com.example.ui.components.WheelSelectionLines()
             Row(horizontalArrangement = Arrangement.Center, modifier = Modifier.fillMaxWidth()) {
                 Wheel(hours, hourState, cardWidth * WHEEL_COLUMN_FRACTION)
                 Wheel(minutes, minuteState, cardWidth * WHEEL_COLUMN_FRACTION)

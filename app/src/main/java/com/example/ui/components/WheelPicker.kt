@@ -3,6 +3,9 @@ package com.example.ui.components
 import android.view.HapticFeedbackConstants
 import androidx.compose.foundation.gestures.snapping.rememberSnapFlingBehavior
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Spacer
+import androidx.compose.material3.HorizontalDivider
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
@@ -24,6 +27,8 @@ import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.LocalView
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
+import com.example.ui.theme.ThingsAlpha
+import com.example.ui.theme.ThingsStroke
 import com.example.ui.theme.ThingsTheme
 import kotlinx.coroutines.flow.drop
 
@@ -134,5 +139,15 @@ internal fun Wheel(items: List<String>, state: WheelState, width: Dp) {
                 }
             }
         }
+    }
+}
+
+/** Полоса выбранной строки барабана, как у напоминания в Things: две тонкие линии во всю ширину карточки */
+@Composable
+internal fun WheelSelectionLines(modifier: Modifier = Modifier) {
+    Column(modifier = modifier.fillMaxWidth()) {
+        HorizontalDivider(color = ThingsTheme.colors.overlayContentSecondary.copy(alpha = ThingsAlpha.MUTED), thickness = ThingsStroke.THIN)
+        Spacer(modifier = Modifier.height(WHEEL_ROW_HEIGHT))
+        HorizontalDivider(color = ThingsTheme.colors.overlayContentSecondary.copy(alpha = ThingsAlpha.MUTED), thickness = ThingsStroke.THIN)
     }
 }

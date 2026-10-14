@@ -19,6 +19,7 @@ import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.ColumnScope
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
@@ -58,6 +59,8 @@ import androidx.compose.runtime.snapshotFlow
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.draw.drawBehind
 import androidx.compose.ui.graphics.compositeOver
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.platform.LocalConfiguration
@@ -364,7 +367,7 @@ private fun MainPage(draft: RepeatDraft, today: LocalDate, onOpen: (RepeatPage) 
 // ---------------------------------------------------------------- вложенные страницы
 
 @Composable
-private fun SubPage(title: String, onBack: () -> Unit, content: @Composable () -> Unit) {
+private fun ColumnScope.SubPage(title: String, onBack: () -> Unit, content: @Composable ColumnScope.() -> Unit) {
     Row(modifier = Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
         Row(
             modifier = Modifier
@@ -402,9 +405,12 @@ private fun IntervalWheels(interval: Int, unit: RepeatUnit, onChange: (Int, Repe
     WheelBox(listOf(Triple(numbers, numberState, REPEAT_WHEEL_NUMBER_WIDTH), Triple(units, unitState, REPEAT_WHEEL_WORD_WIDTH)))
 }
 
-/** «В»: у еженедельных — дни недели с галочками; у ежемесячных и ежегодных — дни списком и барабан */
+/**
+ * «В»: у еженедельных — дни недели с галочками; у ежемесячных и ежегодных — дни списком и барабан,
+ * «Добавить ещё» — внизу окна, как в Things
+ */
 @Composable
-private fun OnPage(draft: RepeatDraft) {
+private fun ColumnScope.OnPage(draft: RepeatDraft) {
     if (draft.unit == RepeatUnit.WEEK) {
         val view = LocalView.current
         DayOfWeek.entries.forEach { dow ->
@@ -465,7 +471,7 @@ private fun OnPage(draft: RepeatDraft) {
             Text(
                 text = entryText(entry, yearly),
                 style = ThingsTheme.type.dialogRow.copy(
-                    color = if (index == draft.selectedEntry) ThingsTheme.colors.accent else ThingsTheme.colors.overlayContentSecondary
+                    color = ThingsTheme.colors.accent
                 )
             )
         }
@@ -505,6 +511,7 @@ private fun OnPage(draft: RepeatDraft) {
         WheelBox(columns)
     }
     Spacer(Modifier.height(ThingsSpacing.M))
+    Spacer(Modifier.weight(1f))
     PillButton(stringResource(R.string.repeat_add_more)) {
         draft.entries.add(draft.entries[draft.selectedEntry])
         draft.selectedEntry = draft.entries.lastIndex
@@ -590,14 +597,15 @@ private fun ReminderPage(draft: RepeatDraft) {
 // ---------------------------------------------------------------- календарь
 
 /**
- * Календарь в стиле окна «Когда»: недели подряд с понедельника, на первом числе — подпись месяца,
- * выбранный день обведён; дни до [from] недоступны.
+ * Календарь в стиле окна «Когда», как в Things: недели подряд с понедельника; дни до [from] пустые,
+ * у первого дня и у первых чисел — подпись месяца, месяцы разделены ступенчатой линией; выбранный день обведён.
  */
 @Composable
 private fun RepeatCalendar(selected: LocalDate?, from: LocalDate, onPick: (LocalDate) -> Unit) {
     val view = LocalView.current
     val firstMonday = from.with(TemporalAdjusters.previousOrSame(DayOfWeek.MONDAY))
     val selectedWeek = selected?.let { java.time.temporal.ChronoUnit.WEEKS.between(firstMonday, it.with(TemporalAdjusters.previousOrSame(DayOfWeek.MONDAY))).toInt() } ?: 0
+    val lineColor = ThingsTheme.colors.overlayDivider
     Row(modifier = Modifier.fillMaxWidth()) {
         DayOfWeek.entries.forEach {
             Text(
@@ -613,25 +621,37 @@ private fun RepeatCalendar(selected: LocalDate?, from: LocalDate, onPick: (Local
             Row(modifier = Modifier.fillMaxWidth()) {
                 for (i in 0 until 7) {
                     val date = firstMonday.plusWeeks(week.toLong()).plusDays(i.toLong())
-                    val enabled = !date.isBefore(from)
+                    if (date.isBefore(from)) {
+                        Spacer(Modifier.weight(1f).height(REPEAT_CALENDAR_CELL_HEIGHT))
+                        continue
+                    }
                     val isSelected = date == selected
+                    // Граница месяца: линия сверху, если над днём — другой месяц, и слева, если слева — другой
+                    val above = date.minusWeeks(1)
+                    val lineTop = !above.isBefore(from) && above.month != date.month
+                    val lineStart = i > 0 && !date.minusDays(1).isBefore(from) && date.minusDays(1).month != date.month
                     Box(
                         modifier = Modifier
                             .weight(1f)
                             .height(REPEAT_CALENDAR_CELL_HEIGHT)
+                            .drawBehind {
+                                val w = ThingsStroke.THIN.toPx()
+                                if (lineTop) drawLine(lineColor, Offset(0f, w / 2), Offset(size.width, w / 2), w)
+                                if (lineStart) drawLine(lineColor, Offset(w / 2, 0f), Offset(w / 2, size.height), w)
+                            }
                             .clip(ThingsTheme.shapes.smallShape)
                             .then(if (isSelected) Modifier.border(ThingsStroke.FOCUS, ThingsTheme.colors.accent, ThingsTheme.shapes.smallShape) else Modifier)
-                            .clickable(enabled = enabled) {
+                            .clickable {
                                 view.performHapticFeedback(HapticFeedbackConstants.CLOCK_TICK)
                                 onPick(date)
                             },
                         contentAlignment = Alignment.Center
                     ) {
-                        val color = if (enabled) ThingsTheme.colors.overlayContent else ThingsTheme.colors.overlayContentSecondary.copy(alpha = ThingsAlpha.MUTED)
-                        if (date.dayOfMonth == 1) {
+                        val color = ThingsTheme.colors.overlayContent
+                        if (date.dayOfMonth == 1 || date == from) {
                             Column(horizontalAlignment = Alignment.CenterHorizontally) {
                                 Text(date.month.getDisplayName(TextStyle.SHORT_STANDALONE, Locale.getDefault()), style = ThingsTheme.type.bodySmall.copy(color = color))
-                                Text("1", style = ThingsTheme.type.bodySmall.copy(color = color))
+                                Text(date.dayOfMonth.toString(), style = ThingsTheme.type.bodySmall.copy(color = color))
                             }
                         } else {
                             Text(date.dayOfMonth.toString(), style = ThingsTheme.type.dialogRow.copy(color = color))
@@ -783,22 +803,23 @@ private fun RepeatDivider() {
     HorizontalDivider(modifier = Modifier.padding(vertical = ThingsSpacing.XS), color = ThingsTheme.colors.overlayDivider, thickness = ThingsStroke.THIN)
 }
 
-/** Барабаны рядом, с полосой выбранной строки во всю ширину, на подложке чуть светлее окна */
+/**
+ * Барабаны рядом на карточке, как у напоминания в окне «Когда»: те же скругления, поля и полоса выбора —
+ * две линии во всю ширину карточки
+ */
 @Composable
 private fun WheelBox(columns: List<Triple<List<String>, WheelState, androidx.compose.ui.unit.Dp>>) {
     Box(
         modifier = Modifier
             .fillMaxWidth()
-            .clip(ThingsTheme.shapes.rowShape)
-            .background(ThingsTheme.colors.overlayPopover),
+            .clip(ThingsTheme.shapes.dialogShape)
+            .background(ThingsTheme.colors.overlayPopover)
+            .padding(ThingsSpacing.M)
+            .height(WHEEL_HEIGHT),
         contentAlignment = Alignment.Center
     ) {
-        Column(modifier = Modifier.fillMaxWidth().height(WHEEL_HEIGHT), verticalArrangement = Arrangement.Center) {
-            HorizontalDivider(color = ThingsTheme.colors.overlayContentSecondary.copy(alpha = ThingsAlpha.MUTED), thickness = ThingsStroke.THIN)
-            Spacer(Modifier.height(WHEEL_ROW_HEIGHT))
-            HorizontalDivider(color = ThingsTheme.colors.overlayContentSecondary.copy(alpha = ThingsAlpha.MUTED), thickness = ThingsStroke.THIN)
-        }
-        Row(horizontalArrangement = Arrangement.Center) {
+        com.example.ui.components.WheelSelectionLines()
+        Row(horizontalArrangement = Arrangement.Center, modifier = Modifier.fillMaxWidth()) {
             columns.forEach { (items, state, width) -> Wheel(items, state, width) }
         }
     }
