@@ -967,7 +967,7 @@ fun ThingsCategoryListPanel(
 
             // Все экраны перечислены явно (без else): новый экран компилятор заставит указать и здесь
             val hasTasks = when (screen) {
-                ActiveScreen.TODAY -> !TodayScreen.isEmpty(standardToday, eveningToday, isDragging = dragDropState.draggedItemKey != null)
+                ActiveScreen.TODAY -> !TodayScreen.isEmpty(standardToday, eveningToday, isDragging = dragDropState.draggedItemKey != null, projects = com.example.domain.lists.TodayList.projects(projects))
                 ActiveScreen.UPCOMING -> !UpcomingScreen.isEmpty(upcomingSchedule)
                 ActiveScreen.AREA_DETAIL -> !AreaList.content(area?.id, displayTasks, projects).isEmpty
                 ActiveScreen.LOGBOOK -> LogbookList.entries(displayTasks, projects).isNotEmpty()
