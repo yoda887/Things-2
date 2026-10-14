@@ -110,6 +110,11 @@ data class Item(
     val isRepeatTemplate: Boolean
         get() = (type == TYPE_TEMPLATE && repeatTemplateId == null) || type == TYPE_PROJECT_TEMPLATE
 
+    /** Копия повторяющейся задачи — обычная задача, созданная по правилу шаблона [repeatTemplateId] */
+    @get:Ignore
+    val isRepeatCopy: Boolean
+        get() = type == TYPE_TASK && repeatTemplateId != null
+
     /** Задача внутри шаблона повторяющегося проекта: [repeatTemplateId] — этот шаблон; её копируют вместе с ним */
     @get:Ignore
     val isTemplatePart: Boolean

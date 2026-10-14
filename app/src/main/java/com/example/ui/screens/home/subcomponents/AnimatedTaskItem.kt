@@ -679,6 +679,7 @@ fun AnimatedTaskItem(
                         areas = areas,
                         onRepeatAction = { action -> onEvent(ThingsCategoryListEvent.RepeatTemplateAction(task.id, action)) },
                         onOpenRepeatTemplate = { task.repeatTemplateId?.let { onEvent(ThingsCategoryListEvent.OpenRepeatTemplate(it)) } },
+                        onRepeatMove = { day -> onEvent(ThingsCategoryListEvent.RequestRepeatMove(task.id, day)) },
                         onNavigateToProject = { project ->
                             onEvent(ThingsCategoryListEvent.ChangeInlineExpandedTaskId(null))
                             onEvent(ThingsCategoryListEvent.ClickProject(project))

@@ -48,6 +48,70 @@ class RepeatTemplateUseCase @Inject constructor(private val repository: ITaskRep
         }
     }
 
+    /**
+     * Отметить повторяющуюся задачу заранее ([RepeatControl.completedEarly]): копия ближайшего повтора
+     * сразу выполнена, следующая — по правилу. «После выполнения» с открытой копией — выполняется она.
+     */
+    suspend fun completeEarly(templateId: String) {
+        val stored = repository.getRecurrenceRule(templateId) ?: return
+        val state = stored.toState() ?: return
+        val template = repository.getTask(templateId) ?: return
+        val now = System.currentTimeMillis()
+        if (state.rule.afterCompletion) {
+            val open = repository.getRepeatCopies(templateId).filter { !it.isClosed && !it.trashed }.maxByOrNull { it.startDate ?: it.creationDate }
+            if (open != null) {
+                repository.insertTask(open.copy(status = Item.STATUS_COMPLETED, stopDate = now, modificationDate = now))
+                return
+            }
+        }
+        val (occurrence, next) = RepeatControl.completedEarly(state, today) ?: return
+        repository.inTransaction {
+            RepeatCopies.insert(repository, template, state.rule, occurrence, zone, completedAt = now)
+            repository.saveRecurrenceRule(stored.withState(next))
+        }
+    }
+
+    /**
+     * Перенести ближайший повтор на день появления [appearOn], как в Things: «после выполнения» — просто
+     * переносится; регулярное — «Исключение» ([updateRule] = false: копия этого повтора сразу, на новый день,
+     * расписание не меняется) или «Обновить правило» ([RepeatControl.ruleMovedTo]: все повторы — по новому дню).
+     * «После выполнения», который ждёт выполнения копии, переносит эту копию.
+     */
+    suspend fun move(templateId: String, appearOn: LocalDate, updateRule: Boolean) {
+        val stored = repository.getRecurrenceRule(templateId) ?: return
+        val state = stored.toState() ?: return
+        val rule = state.rule
+        // «После выполнения» ждёт выполнения копии — переносится сама открытая копия
+        if (rule.afterCompletion && state.nextOccurrence == null) {
+            val open = repository.getRepeatCopies(templateId).filter { !it.isClosed && !it.trashed }.maxByOrNull { it.startDate ?: it.creationDate } ?: return
+            val day = appearOn.atStartOfDay(zone).toInstant().toEpochMilli()
+            repository.insertTask(open.copy(
+                start = Item.START_ANYTIME,
+                startDate = day,
+                dueDate = rule.deadlineDaysBefore?.let { appearOn.plusDays(it.toLong()).atStartOfDay(zone).toInstant().toEpochMilli() },
+                modificationDate = System.currentTimeMillis()
+            ))
+            return
+        }
+        val old = state.nextOccurrence ?: return
+        val occurrence = appearOn.plusDays((rule.deadlineDaysBefore ?: 0).toLong())
+        when {
+            rule.afterCompletion -> repository.saveRecurrenceRule(stored.withState(state.copy(nextOccurrence = occurrence)))
+            updateRule -> {
+                val moved = RepeatControl.ruleMovedTo(rule, old, occurrence)
+                repository.saveRecurrenceRule(stored.copy(rrule = moved.encode()).withState(state.copy(rule = moved, nextOccurrence = occurrence)))
+            }
+            else -> {
+                val template = repository.getTask(templateId) ?: return
+                val (copyOccurrence, next) = RepeatControl.nextCopy(state, today) ?: return
+                repository.inTransaction {
+                    RepeatCopies.insert(repository, template, rule, copyOccurrence, zone, appearOn = appearOn)
+                    repository.saveRecurrenceRule(stored.withState(next))
+                }
+            }
+        }
+    }
+
     /** Копия на следующий повтор — заранее; появится в свой день */
     suspend fun createNextCopy(templateId: String) {
         val stored = repository.getRecurrenceRule(templateId) ?: return

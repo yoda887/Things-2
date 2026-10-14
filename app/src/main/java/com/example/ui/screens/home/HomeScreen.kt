@@ -702,12 +702,24 @@ fun ThingsHomeScreen(viewModel: ThingsViewModel = hiltViewModel()) {
                                 is ThingsCategoryListEvent.ToggleTaskCancel -> viewModel.toggleTaskCancel(event.taskId)
                                 is ThingsCategoryListEvent.MakeRepeating -> viewModel.makeRepeating(event.taskId, event.rule, event.reminderTime)
                                 is ThingsCategoryListEvent.UpdateRepeatRule -> viewModel.updateRepeatRule(event.templateId, event.rule, event.reminderTime)
+                                // Перенос из редактора панель уже превратила в MoveRepeat (после выбора)
+                                is ThingsCategoryListEvent.RequestRepeatMove -> Unit
+                                is ThingsCategoryListEvent.MoveRepeat -> viewModel.moveRepeat(event.templateId, event.appearOn, event.updateRule)
+                                is ThingsCategoryListEvent.BatchRepeatAction -> event.templateIds.forEach { id ->
+                                    when (event.action) {
+                                        RepeatAction.PAUSE -> viewModel.pauseRepeat(id)
+                                        RepeatAction.RESUME -> viewModel.resumeRepeat(id)
+                                        RepeatAction.STOP -> viewModel.stopRepeat(id)
+                                        else -> Unit
+                                    }
+                                }
                                 is ThingsCategoryListEvent.OpenRepeatTemplate -> {
                                     viewModel.setInlineExpandedTaskId(null)
                                     allTasksRaw.firstOrNull { it.item.id == event.templateId }?.let { revealTask(it) }
                                 }
                                 is ThingsCategoryListEvent.RepeatTemplateAction -> when (event.action) {
                                     RepeatAction.NEXT_COPY -> viewModel.repeatNextCopy(event.templateId)
+                                    RepeatAction.COMPLETE_EARLY -> viewModel.completeRepeatEarly(event.templateId)
                                     RepeatAction.PAUSE -> viewModel.pauseRepeat(event.templateId)
                                     RepeatAction.RESUME -> viewModel.resumeRepeat(event.templateId)
                                     RepeatAction.STOP -> viewModel.stopRepeat(event.templateId)

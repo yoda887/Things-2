@@ -226,7 +226,8 @@ class ThingsViewModel @Inject constructor(
                         ActiveScreen.SEARCH -> SearchList.includes(wrapper, query)
                         // У главного экрана и особых списков проектов нет списка задач
                         ActiveScreen.HOME, ActiveScreen.ALL_PROJECTS, ActiveScreen.LOGGED_PROJECTS -> false
-                        ActiveScreen.REPEATING -> com.example.domain.lists.RepeatingList.includes(task)
+                        ActiveScreen.REPEATING -> com.example.domain.lists.RepeatingList.includes(task) ||
+                            com.example.domain.lists.RepeatingList.includesCopy(task, bounds.endOfToday)
                     }
                 }
             }.sortedBy { it.item.sortOrder }
@@ -627,6 +628,8 @@ class ThingsViewModel @Inject constructor(
     }
 
     fun toggleTaskCompletion(wrapper: ItemWithChecklist) {
+        // Повторяющуюся задачу (шаблон) отмечают заранее: выполняется копия ближайшего повтора
+        if (wrapper.item.isRepeatTemplate) return completeRepeatEarly(wrapper.item.id)
         viewModelScope.launch {
             taskUseCases.toggleTaskCompletion(wrapper)
         }
@@ -642,6 +645,12 @@ class ThingsViewModel @Inject constructor(
     fun resumeRepeat(templateId: String) { viewModelScope.launch { taskUseCases.repeatTemplate.resume(templateId) } }
     fun stopRepeat(templateId: String) { viewModelScope.launch { taskUseCases.repeatTemplate.stop(templateId) } }
     fun repeatNextCopy(templateId: String) { viewModelScope.launch { taskUseCases.repeatTemplate.createNextCopy(templateId) } }
+    fun completeRepeatEarly(templateId: String) { viewModelScope.launch { taskUseCases.repeatTemplate.completeEarly(templateId) } }
+    /** Перенос ближайшего повтора на день появления [appearOn] (начало дня, мс) — исключением или новым правилом */
+    fun moveRepeat(templateId: String, appearOn: Long, updateRule: Boolean) {
+        val date = java.time.Instant.ofEpochMilli(appearOn).atZone(java.time.ZoneId.systemDefault()).toLocalDate()
+        viewModelScope.launch { taskUseCases.repeatTemplate.move(templateId, date, updateRule) }
+    }
     fun updateRepeatRule(templateId: String, rule: com.example.domain.repeat.RepeatRule, reminderTime: Int?) {
         viewModelScope.launch { taskUseCases.repeatTemplate.updateRule(templateId, rule, reminderTime) }
     }
@@ -698,8 +707,11 @@ class ThingsViewModel @Inject constructor(
      * Пакетно переключает статус выполнения для списка задач.
      */
     fun batchSetCompleted(taskWrappers: List<ItemWithChecklist>, isCompleted: Boolean) {
+        // Повторяющиеся задачи (шаблоны) отмечаются заранее — выполняются копии их ближайших повторов
+        val (templates, regular) = taskWrappers.partition { it.item.isRepeatTemplate }
+        if (isCompleted) templates.forEach { completeRepeatEarly(it.item.id) }
         viewModelScope.launch {
-            val updated = taskWrappers.map { wrapper ->
+            val updated = regular.map { wrapper ->
                 wrapper.item.copy(
                     status = if (isCompleted) 3 else 0,
                     stopDate = if (isCompleted) System.currentTimeMillis() else null

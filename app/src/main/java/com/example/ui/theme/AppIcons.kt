@@ -231,6 +231,34 @@ object AppIcons {
     }
 
     /**
+     * Повтор у копии повторяющейся задачи или проекта — та же круговая стрелка с наконечником-галочкой, но
+     * без круга под ней и на сетке 24 × 24: стоит мелко, в ряду служебных иконок строки справа от названия.
+     * Цвет задаёт tint (серый, как у соседних иконок).
+     */
+    val RepeatCopy: ImageVector by lazy(LazyThreadSafetyMode.NONE) {
+        ImageVector.Builder(
+            name = "RepeatCopy",
+            defaultWidth = 24.dp,
+            defaultHeight = 24.dp,
+            viewportWidth = 24f,
+            viewportHeight = 24f
+        ).apply {
+            val stroke = SolidColor(Color.Black)
+            // Дуга: от верха против часовой стрелки до правого верхнего угла, окружность по центру
+            path(stroke = stroke, strokeLineWidth = 2.2f, strokeLineCap = StrokeCap.Round) {
+                moveTo(12f, 4.4f)
+                arcTo(7.6f, 7.6f, 0f, isMoreThanHalf = true, isPositiveArc = false, 17.4f, 6.6f)
+            }
+            // Наконечник — галочка из двух линий, смотрит вправо
+            path(stroke = stroke, strokeLineWidth = 2.2f, strokeLineCap = StrokeCap.Round, strokeLineJoin = StrokeJoin.Round) {
+                moveTo(11.6f, 1.6f)
+                lineTo(14.4f, 4.4f)
+                lineTo(11.6f, 7.2f)
+            }
+        }.build()
+    }
+
+    /**
      * Колокольчик напоминания — залитый, как в Things: на всю высоту квадрата, соразмерно звезде
      * «Сегодня», луне и ящику «Когда-нибудь». Цвет задаёт tint.
      */

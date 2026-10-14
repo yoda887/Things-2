@@ -21,6 +21,9 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowForward
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.MoreHoriz
+import androidx.compose.material.icons.filled.Pause
+import androidx.compose.material.icons.filled.PlayArrow
+import androidx.compose.material.icons.filled.Stop
 import androidx.compose.material.icons.outlined.CalendarToday
 import androidx.compose.material.icons.outlined.CheckCircleOutline
 import androidx.compose.material.icons.outlined.ContentCopy
@@ -75,7 +78,9 @@ fun BatchActionToolbar(
     onSetDeadlineClick: () -> Unit,
     onDuplicateClick: () -> Unit,
     onShareClick: () -> Unit,
-    modifier: Modifier = Modifier
+    modifier: Modifier = Modifier,
+    // Среди выбранных есть повторяющиеся задачи: пауза, возобновить и остановить повтор у всех сразу
+    onRepeatAction: ((com.example.ui.screens.home.components.RepeatAction) -> Unit)? = null
 ) {
     var isMoreMenuExpanded by remember { mutableStateOf(false) }
     val isEnabled = selectedCount > 0
@@ -176,6 +181,24 @@ fun BatchActionToolbar(
                             isMoreMenuExpanded = false
                             onShareClick()
                         })
+                        if (onRepeatAction != null) {
+                            com.example.ui.components.ThingsMenuDivider()
+                            listOf(
+                                Triple(R.string.repeat_action_pause, Icons.Default.Pause, com.example.ui.screens.home.components.RepeatAction.PAUSE),
+                                Triple(R.string.repeat_action_resume, Icons.Default.PlayArrow, com.example.ui.screens.home.components.RepeatAction.RESUME),
+                                Triple(R.string.repeat_action_stop, Icons.Default.Stop, com.example.ui.screens.home.components.RepeatAction.STOP)
+                            ).forEach { (label, icon, action) ->
+                                ThingsMenuItem(
+                                    stringResource(label), icon,
+                                    destructive = action == com.example.ui.screens.home.components.RepeatAction.STOP,
+                                    onClick = {
+                                        view.performHapticFeedback(HapticFeedbackConstants.CLOCK_TICK)
+                                        isMoreMenuExpanded = false
+                                        onRepeatAction(action)
+                                    }
+                                )
+                            }
+                        }
                     }
                 }
             }

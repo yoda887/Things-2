@@ -64,7 +64,7 @@ object RepeatDates {
     }
 
     /** День повтора внутри месяца: число (31-е в коротком месяце — его последний день) или N-й день недели. */
-    private fun dayMatches(day: RepeatDay, date: LocalDate): Boolean = when (day) {
+    internal fun dayMatches(day: RepeatDay, date: LocalDate): Boolean = when (day) {
         is RepeatDay.OfMonth -> {
             val last = date.lengthOfMonth()
             val target = if (day.day == RepeatDay.LAST) last else minOf(day.day, last)

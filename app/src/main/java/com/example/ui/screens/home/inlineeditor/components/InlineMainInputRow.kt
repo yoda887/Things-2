@@ -68,9 +68,7 @@ fun InlineMainInputRow(
     // Новая задача: курсор встаёт в название, клавиатура выезжает вместе с раскрытием редактора
     autoFocusTitle: Boolean = false,
     // Не null — у названия кнопка «Done» на клавиатуре, по ней ввод заканчивается (новая задача сворачивается)
-    onTitleDone: (() -> Unit)? = null,
-    // Шаблон повтора: вместо чекбокса — синяя круговая стрелка, как в Things (шаблон не отмечают)
-    isTemplate: Boolean = false
+    onTitleDone: (() -> Unit)? = null
 ) {
     HideTextSelectionHandles(hidden = !showCursor) {
         InlineMainInputRowContent(
@@ -85,8 +83,7 @@ fun InlineMainInputRow(
             cursorBrush = SolidColor(if (showCursor) ThingsTheme.colors.accent else Color.Unspecified),
             checklistBelow = checklistBelow,
             autoFocusTitle = autoFocusTitle,
-            onTitleDone = onTitleDone,
-            isTemplate = isTemplate
+            onTitleDone = onTitleDone
         )
     }
 }
@@ -104,8 +101,7 @@ private fun InlineMainInputRowContent(
     cursorBrush: Brush,
     checklistBelow: Boolean,
     autoFocusTitle: Boolean,
-    onTitleDone: (() -> Unit)?,
-    isTemplate: Boolean
+    onTitleDone: (() -> Unit)?
 ) {
     val titleFocusRequester = androidx.compose.runtime.remember { androidx.compose.ui.focus.FocusRequester() }
     androidx.compose.runtime.LaunchedEffect(Unit) {
@@ -138,21 +134,14 @@ private fun InlineMainInputRowContent(
         modifier = Modifier.fillMaxWidth(),
         verticalAlignment = Alignment.Top
     ) {
-        if (isTemplate) {
-            com.example.ui.components.RepeatTemplateIcon(
-                modifier = Modifier
-                    .padding(end = titleSpacing, top = ThingsSpacing.XXS)
-                    .size(MaterialTheme.dimens.mainCheckboxSize)
-            )
-        } else {
-            ThingsCheckbox(
-                checked = isCompleted,
-                onCheckedChange = { onCheckboxClick() },
-                size = MaterialTheme.dimens.mainCheckboxSize,
-                uncheckedColor = ThingsTheme.colors.checkboxBorder,
-                modifier = Modifier.padding(end = titleSpacing, top = ThingsSpacing.XXS)
-            )
-        }
+        // Custom ThingsCheckbox
+        ThingsCheckbox(
+            checked = isCompleted,
+            onCheckedChange = { onCheckboxClick() },
+            size = MaterialTheme.dimens.mainCheckboxSize,
+            uncheckedColor = ThingsTheme.colors.checkboxBorder,
+            modifier = Modifier.padding(end = titleSpacing, top = ThingsSpacing.XXS)
+        )
 
         // Title and Notes Fields (Always black text on white background)
         Column(

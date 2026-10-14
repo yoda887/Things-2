@@ -130,6 +130,16 @@ fun ProjectItemRow(
                 overflow = TextOverflow.Ellipsis,
                 modifier = Modifier.weight(1f, fill = false)
             )
+            // Копия повторяющегося проекта — серая круговая стрелка справа от названия, как у копий задач
+            if (project.type == Item.TYPE_PROJECT && project.repeatTemplateId != null) {
+                Spacer(modifier = Modifier.width(NOTES_ICON_GAP))
+                Icon(
+                    imageVector = com.example.ui.theme.AppIcons.RepeatCopy,
+                    contentDescription = stringResource(R.string.cd_repeat_copy),
+                    tint = ThingsTheme.colors.textSecondary.copy(alpha = ThingsAlpha.MUTED),
+                    modifier = Modifier.size(NOTES_ICON_SIZE)
+                )
+            }
             if (project.notes.isNotBlank()) {
                 Spacer(modifier = Modifier.width(NOTES_ICON_GAP))
                 Icon(

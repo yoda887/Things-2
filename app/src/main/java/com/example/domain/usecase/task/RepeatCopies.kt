@@ -15,7 +15,19 @@ import java.time.ZoneId
  */
 object RepeatCopies {
 
-    suspend fun insert(repository: ITaskRepository, template: Item, rule: RepeatRule, occurrence: LocalDate, zone: ZoneId) {
+    /**
+     * @param appearOn другой день появления копии задачи — «Исключение» при переносе (срок сдвигается вместе с ним)
+     * @param completedAt копия задачи сразу выполнена в это время — повторяющуюся задачу отметили заранее
+     */
+    suspend fun insert(
+        repository: ITaskRepository,
+        template: Item,
+        rule: RepeatRule,
+        occurrence: LocalDate,
+        zone: ZoneId,
+        appearOn: LocalDate? = null,
+        completedAt: Long? = null
+    ) {
         if (template.type == Item.TYPE_PROJECT_TEMPLATE) {
             val inside = repository.getProjectItems(template.id)
             val parts = inside.filter { it.isTemplatePart && it.repeatTemplateId == template.id && !it.trashed }
@@ -29,7 +41,13 @@ object RepeatCopies {
                 if (task.tags.isNotEmpty()) repository.setItemTagsByTitles(task.id, task.tags)
             }
         } else {
-            val (copy, checklist) = RepeatPlan.copyOf(template, repository.getChecklist(template.id), rule, occurrence, zone)
+            val (planned, checklist) = RepeatPlan.copyOf(template, repository.getChecklist(template.id), rule, occurrence, zone)
+            var copy = planned
+            if (appearOn != null) copy = copy.copy(
+                startDate = appearOn.atStartOfDay(zone).toInstant().toEpochMilli(),
+                dueDate = rule.deadlineDaysBefore?.let { appearOn.plusDays(it.toLong()).atStartOfDay(zone).toInstant().toEpochMilli() }
+            )
+            if (completedAt != null) copy = copy.copy(status = Item.STATUS_COMPLETED, stopDate = completedAt)
             repository.insertTask(copy, checklist)
             if (copy.tags.isNotEmpty()) repository.setItemTagsByTitles(copy.id, copy.tags)
         }

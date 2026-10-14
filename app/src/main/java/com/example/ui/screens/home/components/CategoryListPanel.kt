@@ -273,6 +273,23 @@ fun ThingsCategoryListPanel(
     var showRepeatDialog by remember { mutableStateOf(false) }
     // Окно «Повторять» для проекта экрана: сделать повторяющимся или изменить правило шаблона
     var repeatDialogProject by remember { mutableStateOf<Item?>(null) }
+    // Перенос повторяющейся задачи по расписанию: id шаблона и новый день появления — ждёт выбора
+    // «Исключение» или «Обновить правило»
+    var repeatMove by remember { mutableStateOf<Pair<String, Long>?>(null) }
+
+    /**
+     * Перенести ближайший повтор шаблона [templateId] на день [day], как в Things: «после выполнения» — сразу,
+     * регулярный — после выбора «Исключение» / «Обновить правило». False — переносить нечего (нет правила).
+     */
+    fun requestRepeatMove(templateId: String, day: Long): Boolean {
+        val rule = state.repeatRules[templateId]?.let { com.example.domain.repeat.RepeatRule.decode(it.rrule) } ?: return false
+        if (rule.afterCompletion) {
+            onEvent(ThingsCategoryListEvent.MoveRepeat(templateId, day, updateRule = false))
+        } else {
+            repeatMove = templateId to day
+        }
+        return true
+    }
     // Поле поиска забирает фокус один раз за показ экрана, а не при каждом возвращении в видимую часть списка
     var searchFieldAutoFocused by rememberSaveable(screen) { mutableStateOf(false) }
     var showDeleteConfirm by remember { mutableStateOf(false) }
@@ -1045,6 +1062,20 @@ fun ThingsCategoryListPanel(
                                     if (event is ThingsCategoryListEvent.SwipeTaskRight) {
                                         swipeWhenTask = event.task
                                         swipeWhenOrigin = event.growFromOffset
+                                    } else if (event is ThingsCategoryListEvent.RequestRepeatMove) {
+                                        requestRepeatMove(event.templateId, event.day)
+                                    } else if (event is ThingsCategoryListEvent.ReorderTasks && event.items.any { it.isRepeatTemplate }) {
+                                        // Повторяющуюся задачу перенесли на другой день — переносится её ближайший повтор;
+                                        // сам шаблон дат не хранит и так не сохраняется
+                                        val (templates, others) = event.items.partition { it.isRepeatTemplate }
+                                        if (others.isNotEmpty()) onEvent(ThingsCategoryListEvent.ReorderTasks(others))
+                                        templates.firstOrNull { moved ->
+                                            val day = moved.startDate
+                                            day != null && day != state.displayTasks.firstOrNull { it.item.id == moved.id }?.item?.startDate
+                                        }?.let { moved ->
+                                            val day = moved.startDate ?: return@let
+                                            if (!requestRepeatMove(moved.id, day)) localTasksList = state.displayTasks
+                                        }
                                     } else if (event is ThingsCategoryListEvent.RepeatTemplateAction && event.action == RepeatAction.EDIT) {
                                         // «Изменить правило» — окно «Повторять» с правилом шаблона
                                         showRepeatDialog = true
@@ -1102,7 +1133,10 @@ fun ThingsCategoryListPanel(
                                     dateBadge = when (screen) {
                                         ActiveScreen.UPCOMING -> monthTaskBadges[task.id]
                                         // Шаблон проекта — день следующего повтора или «Пауза»
-                                        ActiveScreen.REPEATING -> com.example.ui.components.repeatBadge(state.repeatRules[task.id])
+                                        // Шаблон проекта — день следующего повтора, «Пауза» или «Ждёт»; копия, созданная заранее, — её день
+                                        ActiveScreen.REPEATING -> if (task.type == Item.TYPE_PROJECT_TEMPLATE) {
+                                            com.example.ui.components.repeatBadge(state.repeatRules[task.id])
+                                        } else task.startDate?.let { java.text.SimpleDateFormat("d MMM", java.util.Locale.getDefault()).format(java.util.Date(it)) }
                                         ActiveScreen.ALL_PROJECTS -> if (LogbookList.includesProject(task)) null else AllProjectsScreen.laterDateBadge(task)
                                         // В «Планах» области — дата старта запланированного проекта
                                         ActiveScreen.AREA_DETAIL -> if (HomeList.showsProject(task)) null else AllProjectsScreen.laterDateBadge(task)
@@ -1559,6 +1593,16 @@ fun ThingsCategoryListPanel(
             onReminderTimeChange = { pendingReminderTime = it },
             growFromOffset = swipeWhenOrigin,
             onDismissRequest = {
+                // Повторяющаяся задача: выбранный день — новый день её ближайшего повтора
+                if (targetTask.item.isRepeatTemplate) {
+                    val day = if (pendingSection == com.example.data.model.TaskSection.TODAY) {
+                        com.example.data.model.DayBounds.now().todayStart
+                    } else pendingStartDate
+                    if (day != null && day != targetTask.item.startDate) requestRepeatMove(targetTask.item.id, day)
+                    swipeWhenTask = null
+                    swipeWhenOrigin = null
+                    return@ThingsWhenDialog
+                }
                 val tagsList = targetTask.item.tags
 
                 onEvent(
@@ -1632,6 +1676,28 @@ fun ThingsCategoryListPanel(
                     kotlinx.coroutines.delay(com.example.ui.theme.AnimationConstants.TASK_EXPANSION_DURATION_MS)
                     onEvent(ThingsCategoryListEvent.MakeRepeating(repeatTask.item.id, rule, reminderTime))
                 }
+            }
+        )
+    }
+
+    repeatMove?.let { (templateId, day) ->
+        val finish = { repeatMove = null }
+        com.example.ui.components.ThingsChoiceDialog(
+            title = stringResource(R.string.repeat_move_title),
+            message = stringResource(R.string.repeat_move_message),
+            options = listOf(
+                stringResource(R.string.repeat_move_exception) to {
+                    onEvent(ThingsCategoryListEvent.MoveRepeat(templateId, day, updateRule = false)); finish()
+                },
+                stringResource(R.string.repeat_move_update_rule) to {
+                    onEvent(ThingsCategoryListEvent.MoveRepeat(templateId, day, updateRule = true)); finish()
+                }
+            ),
+            dismissText = stringResource(R.string.cancel),
+            onDismiss = {
+                // Отмена — задача возвращается на свой день
+                localTasksList = state.displayTasks
+                finish()
             }
         )
     }
@@ -1874,7 +1940,17 @@ fun ThingsCategoryListPanel(
                 context.startActivity(android.content.Intent.createChooser(sendIntent, null))
             }
         },
-        modifier = Modifier.align(Alignment.BottomCenter)
+        modifier = Modifier.align(Alignment.BottomCenter),
+        onRepeatAction = state.allTasks
+            .filter { state.selectedTaskIds.contains(it.item.id) && it.item.isRepeatTemplate }
+            .map { it.item.id }
+            .takeIf { it.isNotEmpty() }
+            ?.let { templateIds ->
+                { action ->
+                    onEvent(ThingsCategoryListEvent.BatchRepeatAction(templateIds, action))
+                    onEvent(ThingsCategoryListEvent.ExitSelectionMode)
+                }
+            }
     )
   }
 }

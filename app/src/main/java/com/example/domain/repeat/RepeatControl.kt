@@ -56,4 +56,54 @@ object RepeatControl {
             nextOccurrence = if (rule.afterCompletion && hasOpenCopy) null else started.nextOccurrence
         )
     }
+
+    /**
+     * Отметить повторяющуюся задачу заранее, как в Things: копия ближайшего повтора создаётся сразу
+     * выполненной, следующая — по правилу. Регулярное — повтор после неё ([nextCopy]); «после выполнения» —
+     * на интервал от сегодня. Null — повторов больше нет.
+     */
+    fun completedEarly(state: RepeatState, today: LocalDate): Pair<LocalDate, RepeatState>? {
+        val rule = state.rule
+        if (!rule.afterCompletion) return nextCopy(state, today)
+        if (rule.endCount != null && state.generated >= rule.endCount) return null
+        val occurrence = state.nextOccurrence ?: today
+        val generated = state.generated + 1
+        val ended = rule.endCount != null && generated >= rule.endCount
+        return occurrence to state.copy(
+            nextOccurrence = if (ended) null else RepeatDates.afterCompletion(rule, today),
+            generated = generated
+        )
+    }
+
+    /**
+     * «Обновить правило» при переносе: расписание сдвигается так, чтобы повтор [old] стал [new] — день недели,
+     * число или N-й день недели месяца (и месяц у ежегодных) берутся от новой даты, отсчёт «каждые N» — с неё.
+     * Остальные дни правила не меняются: еженедельное «пн и чт», перенесённое с пн на вт, — «вт и чт».
+     */
+    fun ruleMovedTo(rule: RepeatRule, old: LocalDate, new: LocalDate): RepeatRule {
+        val on = when (rule.unit) {
+            RepeatUnit.DAY -> rule.on
+            RepeatUnit.WEEK -> {
+                val days = rule.on.mapNotNull { (it.day as? RepeatDay.Weekday)?.dayOfWeek }.ifEmpty { listOf(rule.start.dayOfWeek.value) }
+                (days - old.dayOfWeek.value + new.dayOfWeek.value).distinct().sorted().map { RepeatOn(RepeatDay.Weekday(it)) }
+            }
+            RepeatUnit.MONTH, RepeatUnit.YEAR -> {
+                val yearly = rule.unit == RepeatUnit.YEAR
+                val on = rule.on.ifEmpty { listOf(RepeatOn(RepeatDay.OfMonth(rule.start.dayOfMonth), if (yearly) rule.start.monthValue else null)) }
+                val index = on.indexOfFirst { entry ->
+                    RepeatDates.dayMatches(entry.day, old) && (!yearly || (entry.month ?: rule.start.monthValue) == old.monthValue)
+                }.coerceAtLeast(0)
+                val day = when (val d = on[index].day) {
+                    is RepeatDay.OfMonth ->
+                        RepeatDay.OfMonth(if (d.day == RepeatDay.LAST && new.dayOfMonth == new.lengthOfMonth()) RepeatDay.LAST else new.dayOfMonth)
+                    is RepeatDay.Weekday -> RepeatDay.Weekday(
+                        new.dayOfWeek.value,
+                        if (d.ordinal == RepeatDay.LAST && new.plusWeeks(1).month != new.month) RepeatDay.LAST else (new.dayOfMonth - 1) / 7 + 1
+                    )
+                }
+                on.toMutableList().also { it[index] = RepeatOn(day, if (yearly) new.monthValue else on[index].month) }
+            }
+        }
+        return rule.copy(start = new, on = on)
+    }
 }

@@ -253,4 +253,10 @@
     <string name="repeat_action_pause">Призупинити</string>
     <string name="repeat_action_resume">Відновити</string>
     <string name="repeat_action_stop">Зупинити повтор</string>
+    <string name="repeat_move_title">Перенести повторюване завдання</string>
+    <string name="repeat_move_message">Завдання повторюється за розкладом. Перенести лише цю копію чи змінити правило, щоб усі наступні копії йшли від нової дати?</string>
+    <string name="repeat_move_exception">Зробити виняток</string>
+    <string name="repeat_move_update_rule">Оновити правило</string>
+    <string name="repeat_waiting">Чекає</string>
+    <string name="cd_repeat_copy">Копія повторюваного</string>
 </resources>

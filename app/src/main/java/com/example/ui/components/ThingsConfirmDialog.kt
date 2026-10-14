@@ -99,3 +99,61 @@ fun ThingsConfirmDialog(
         }
     }
 }
+
+/**
+ * Выбор из нескольких действий в стиле [ThingsConfirmDialog]: заголовок, пояснение, капсулы действий
+ * ([options] — подпись и действие) одна под другой и текстовая кнопка отмены внизу.
+ */
+@Composable
+fun ThingsChoiceDialog(
+    title: String,
+    message: String,
+    options: List<Pair<String, () -> Unit>>,
+    dismissText: String,
+    onDismiss: () -> Unit
+) {
+    Dialog(onDismissRequest = onDismiss) {
+        Card(
+            shape = ThingsTheme.shapes.dialogShape,
+            colors = CardDefaults.cardColors(containerColor = ThingsTheme.colors.background),
+            modifier = Modifier
+                .width(CONFIRM_DIALOG_WIDTH)
+                .padding(ThingsSpacing.L)
+        ) {
+            Column(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(ThingsSpacing.L),
+                horizontalAlignment = Alignment.CenterHorizontally
+            ) {
+                Text(
+                    text = title,
+                    color = ThingsTheme.colors.textPrimary,
+                    style = ThingsTheme.type.dialogTitle,
+                    textAlign = TextAlign.Center
+                )
+                Spacer(modifier = Modifier.height(ThingsSpacing.M))
+                Text(
+                    text = message,
+                    color = ThingsTheme.colors.textSecondary,
+                    style = ThingsTheme.type.dialogBody,
+                    textAlign = TextAlign.Center
+                )
+                Spacer(modifier = Modifier.height(ThingsSpacing.L_PLUS))
+                options.forEach { (label, action) ->
+                    Button(
+                        onClick = action,
+                        colors = ButtonDefaults.buttonColors(containerColor = ThingsTheme.colors.accent),
+                        modifier = Modifier.fillMaxWidth()
+                    ) {
+                        Text(text = label, color = ThingsTheme.colors.onAccent, style = ThingsTheme.type.dialogButton)
+                    }
+                    Spacer(modifier = Modifier.height(ThingsSpacing.S))
+                }
+                TextButton(onClick = onDismiss) {
+                    Text(text = dismissText, color = ThingsTheme.colors.textPrimary, style = ThingsTheme.type.dialogButton)
+                }
+            }
+        }
+    }
+}

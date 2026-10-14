@@ -246,4 +246,10 @@
     <string name="repeat_action_pause">Pause</string>
     <string name="repeat_action_resume">Resume</string>
     <string name="repeat_action_stop">Stop</string>
+    <string name="repeat_move_title">Move Repeating To-Do</string>
+    <string name="repeat_move_message">This to-do repeats on a fixed schedule. Move just this copy, or change the rule so that all future copies follow the new date?</string>
+    <string name="repeat_move_exception">Make Exception</string>
+    <string name="repeat_move_update_rule">Update Rule</string>
+    <string name="repeat_waiting">Waiting</string>
+    <string name="cd_repeat_copy">Copy of a repeating item</string>
 </resources>

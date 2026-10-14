@@ -68,6 +68,8 @@ private const val COMPLETE_TOGGLE_DELAY_MS = 220L
 // Служебные иконки строки (напоминание, заметки, чек-лист, теги): чуть крупнее и темнее подписей
 private val ROW_META_ICON_SIZE = 14.dp
 private const val ROW_META_ICON_ALPHA = ThingsAlpha.HALF
+/** Значок повтора перед названием повторяющейся задачи и её копий */
+private val ROW_REPEAT_ICON_SIZE = 15.dp
 private val DUE_ICON_SIZE = 15.dp
 private const val DUE_TEXT_ALPHA = 0.85f
 
@@ -282,12 +284,7 @@ fun TaskItemRow(
                 modifier = Modifier.size(leftColumnWidth),
                 contentAlignment = Alignment.Center
             ) {
-                if (task.isRepeatTemplate) {
-                    // Шаблон повтора — синяя круговая стрелка вместо чекбокса, как в Things: его не отмечают
-                    com.example.ui.components.RepeatTemplateIcon(
-                        modifier = Modifier.size(androidx.compose.material3.MaterialTheme.dimens.mainCheckboxSize)
-                    )
-                } else if (isCalendarTask) {
+                if (isCalendarTask) {
                     Icon(
                         imageVector = Icons.Outlined.CalendarToday,
                         contentDescription = stringResource(R.string.cd_calendar_event),
@@ -332,6 +329,12 @@ fun TaskItemRow(
                                     completionJob = scope.launch {
                                         delay(ThingsMotion.LONG.toLong())
                                         onToggle()
+                                        // Повторяющаяся задача отмечена заранее: выполнена копия, сама она остаётся —
+                                        // уже со следующим повтором, и чекбокс снова пуст
+                                        if (task.isRepeatTemplate) {
+                                            delay(ThingsMotion.LONG.toLong())
+                                            localCompleted = false
+                                        }
                                     }
                                 }
                             }
@@ -371,7 +374,13 @@ fun TaskItemRow(
                 com.example.ui.components.LocalRepeatRules.current[task.id]
             } else null
             val repeatBadge = com.example.ui.components.repeatBadge(repeatRule)
-            val dateBadge = if (repeatRule == null) dateBadge else repeatBadge
+            val dateBadge = when {
+                repeatRule != null -> repeatBadge
+                // Копия, созданная заранее, в «Повторяющихся» — под шаблоном, со своим днём
+                screen == ActiveScreen.REPEATING && task.isRepeatCopy && task.startDate != null ->
+                    java.text.SimpleDateFormat("d MMM", java.util.Locale.getDefault()).format(java.util.Date(task.startDate))
+                else -> dateBadge
+            }
             val badgeBesideBothLines = dateBadge != null && subtitle != null
 
             Row(
@@ -432,6 +441,12 @@ fun TaskItemRow(
                                 Spacer(modifier = Modifier.width(ThingsSpacing.XS_PLUS))
                             }
 
+                            // Повторяющаяся задача — синий значок повтора перед названием, как в Things
+                            // (у копий — серая стрелка в ряду служебных иконок справа)
+                            if (task.isRepeatTemplate) {
+                                com.example.ui.components.RepeatTemplateIcon(modifier = Modifier.size(ROW_REPEAT_ICON_SIZE))
+                                Spacer(modifier = Modifier.width(ThingsSpacing.XS_PLUS))
+                            }
                             Text(
                                 text = task.title,
                                 style = ThingsTheme.type.taskTitle.copy(
@@ -455,12 +470,21 @@ fun TaskItemRow(
                         // Inline note/subtask icons representation
                         // Напоминание открытой задачи — колокольчик в ряду с заметками, чек-листом и тегами, без времени
                         val hasReminder = task.reminderTime != null && !task.isClosed
-                        if (hasReminder || task.notes.isNotBlank() || task.checklistItemsCount > 0 || task.cachedTags.isNotBlank()) {
+                        if (task.isRepeatCopy || hasReminder || task.notes.isNotBlank() || task.checklistItemsCount > 0 || task.cachedTags.isNotBlank()) {
                             Spacer(modifier = Modifier.width(ThingsSpacing.XS_PLUS))
                             Row(
                                 horizontalArrangement = Arrangement.spacedBy(ThingsSpacing.XS),
                                 verticalAlignment = Alignment.CenterVertically
                             ) {
+                                // Копия повторяющейся задачи — серая круговая стрелка, первой в ряду
+                                if (task.isRepeatCopy) {
+                                    Icon(
+                                        imageVector = AppIcons.RepeatCopy,
+                                        contentDescription = stringResource(R.string.cd_repeat_copy),
+                                        tint = textSecondaryColor.copy(alpha = ROW_META_ICON_ALPHA),
+                                        modifier = Modifier.size(ROW_META_ICON_SIZE)
+                                    )
+                                }
                                 if (hasReminder) {
                                     Icon(
                                         imageVector = AppIcons.Bell,

@@ -243,7 +243,7 @@ fun rememberFlattenedList(
             // Завершённые проекты — разделами, как «Журнал»
             ActiveScreen.LOGGED_PROJECTS -> LogbookScreen.rows(LogbookList.sections(emptyList(), projects), todayLabel, yesterdayLabel)
             // Шаблоны повтора: без проекта — вверху, остальные — под проектом или областью
-            ActiveScreen.REPEATING -> PlaceGroupRows.rows(com.example.domain.lists.RepeatingList.groups(displayTasks, repeatRules, projects, areas, allTasks.map { it.item }))
+            ActiveScreen.REPEATING -> PlaceGroupRows.rows(com.example.domain.lists.RepeatingList.groups(displayTasks, repeatRules, projects, areas, allTasks.map { it.item }, com.example.data.model.DayBounds.now().endOfToday))
         }
     }
 }
@@ -359,6 +359,15 @@ sealed interface ThingsCategoryListEvent {
     data class ToggleTaskCancel(val taskId: String) : ThingsCategoryListEvent
     /** Действие с шаблоном повтора из его редактора */
     data class RepeatTemplateAction(val templateId: String, val action: RepeatAction) : ThingsCategoryListEvent
+    /**
+     * Перенести ближайший повтор шаблона на день появления [appearOn] (начало дня, мс): регулярный — исключением
+     * или новым правилом ([updateRule]), «после выполнения» — просто перенос
+     */
+    data class MoveRepeat(val templateId: String, val appearOn: Long, val updateRule: Boolean) : ThingsCategoryListEvent
+    /** Повторяющуюся задачу перенесли из её редактора на день [day] — панель спросит, как переносить */
+    data class RequestRepeatMove(val templateId: String, val day: Long) : ThingsCategoryListEvent
+    /** Шаблоны повтора, выбранные в режиме выбора: пауза, возобновить или остановить все сразу */
+    data class BatchRepeatAction(val templateIds: List<String>, val action: RepeatAction) : ThingsCategoryListEvent
     /** Копия повторяющейся задачи: перейти к её шаблону */
     data class OpenRepeatTemplate(val templateId: String) : ThingsCategoryListEvent
     /** Новое правило шаблона и напоминание его копий */
@@ -467,4 +476,4 @@ fun newTaskPlace(screen: ActiveScreen, projectId: String?, areaId: String?, tagT
 }
 
 /** Действия с шаблоном повтора, как в Things */
-enum class RepeatAction { EDIT, NEXT_COPY, PREVIOUS_COPY, PAUSE, RESUME, STOP }
+enum class RepeatAction { EDIT, NEXT_COPY, PREVIOUS_COPY, PAUSE, RESUME, STOP, COMPLETE_EARLY }

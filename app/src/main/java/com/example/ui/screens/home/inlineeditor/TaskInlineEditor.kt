@@ -1,5 +1,6 @@
 package com.example.ui.screens.home.inlineeditor
 
+import kotlinx.coroutines.launch
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Stop
 import androidx.compose.material.icons.filled.Pause
@@ -140,6 +141,8 @@ fun ThingsTaskInlineEditor(
     // Шаблон повтора: действия с ним; копия повтора: перейти к шаблону
     onRepeatAction: (com.example.ui.screens.home.components.RepeatAction) -> Unit = {},
     onOpenRepeatTemplate: () -> Unit = {},
+    // Шаблон повтора: в «Когда» выбрали новый день ближайшего повтора (начало дня, мс)
+    onRepeatMove: (Long) -> Unit = {},
     onNavigateToProject: ((Item) -> Unit)? = null,
     onNavigateToArea: ((com.example.data.model.Area) -> Unit)? = null,
     screen: ActiveScreen = ActiveScreen.INBOX
@@ -149,6 +152,8 @@ fun ThingsTaskInlineEditor(
     var section by remember(task.item.id) { mutableStateOf<TaskSection>(task.item.section) }
     var isTonight by remember(task.item.id) { mutableStateOf<Boolean>(task.item.isTonight) }
     var startDate by remember(task.item.id) { mutableStateOf<Long?>(task.item.startDate) }
+    // Отметка повторяющейся задачи заранее: чекбокс пустеет после выполнения копии
+    val repeatCheckScope = androidx.compose.runtime.rememberCoroutineScope()
     var dueDate by remember(task.item.id) { mutableStateOf<Long?>(task.item.dueDate) }
     var tagInput by remember(task.item.id) { mutableStateOf<String>(task.item.tags.joinToString(", ")) }
     var checklist by remember(task.item.id, task.checklist) { mutableStateOf<List<ChecklistItem>>(task.checklist) }
@@ -164,6 +169,9 @@ fun ThingsTaskInlineEditor(
     // Helpers visibility states
     var showCalendarHelper by remember(task.item.id) { mutableStateOf(false) }
     var showWhenDialog by remember(task.item.id) { mutableStateOf(false) }
+    // Шаблон повтора: «Когда» выбирает день ближайшего повтора, а не дату самого шаблона
+    var repeatDay by remember(task.item.id, showWhenDialog) { mutableStateOf(task.item.startDate) }
+    var repeatSection by remember(task.item.id, showWhenDialog) { mutableStateOf(task.item.section) }
     //var showTagHelper by remember(task.item.id) { mutableStateOf(false) }
     var showTagDialog by remember(task.item.id) { mutableStateOf(false) }
     var showChecklistHelper by remember(task.item.id, task.checklist) { mutableStateOf(task.checklist.isNotEmpty()) }
@@ -407,7 +415,6 @@ fun ThingsTaskInlineEditor(
         ) {
             // Main Top Content: Checkbox, Title and Notes
                 InlineMainInputRow(
-                    isTemplate = task.item.isRepeatTemplate,
                     title = title,
                     onTitleChange = { title = it },
                     notes = notes,
@@ -430,6 +437,17 @@ fun ThingsTaskInlineEditor(
                     onCheckboxClick = onCheckboxClick@{
                         // Задачу шаблона проекта не отмечают — отмечают её копии
                         if (task.item.isTemplatePart) return@onCheckboxClick
+                        // Повторяющуюся задачу отмечают заранее: выполняется копия ближайшего повтора, сама она
+                        // остаётся со следующим повтором — чекбокс отмечается и снова пустеет
+                        if (task.item.isRepeatTemplate) {
+                            isCompleted = true
+                            onRepeatAction(com.example.ui.screens.home.components.RepeatAction.COMPLETE_EARLY)
+                            repeatCheckScope.launch {
+                                kotlinx.coroutines.delay(com.example.ui.theme.ThingsMotion.LONG.toLong() * 2)
+                                isCompleted = false
+                            }
+                            return@onCheckboxClick
+                        }
                         val newCompleted = !isCompleted
                         isCompleted = newCompleted
                         val savedChecklist = checklist.filter { it.title.isNotBlank() }
@@ -695,7 +713,7 @@ fun ThingsTaskInlineEditor(
                 ) {
                     androidx.compose.animation.AnimatedVisibility(
                         // У шаблона повтора «Когда» задаёт правило — кнопки нет
-                        visible = !hasActiveDate && task.item.type != Item.TYPE_TEMPLATE,
+                        visible = !hasActiveDate && !task.item.isTemplatePart,
                         enter = fadeIn() + expandHorizontally(expandFrom = Alignment.End),
                         exit = fadeOut() + shrinkHorizontally(shrinkTowards = Alignment.End)
                     ) {
@@ -782,7 +800,26 @@ fun ThingsTaskInlineEditor(
     }
 }
 
-    if (showWhenDialog) {
+    if (showWhenDialog && task.item.isRepeatTemplate) {
+        ThingsWhenDialog(
+            startDate = repeatDay,
+            onStartDateChange = { repeatDay = it },
+            section = repeatSection,
+            onSectionChange = { repeatSection = it },
+            isTonight = false,
+            onIsTonightChange = { },
+            onShowCalendarHelperChange = { },
+            reminderTime = reminderTime,
+            onReminderTimeChange = { reminderTime = it },
+            onDismissRequest = {
+                val day = if (repeatSection == com.example.data.model.TaskSection.TODAY) {
+                    com.example.data.model.DayBounds.now().todayStart
+                } else repeatDay
+                if (day != null && day != task.item.startDate) onRepeatMove(day)
+                showWhenDialog = false
+            }
+        )
+    } else if (showWhenDialog) {
         ThingsWhenDialog(
             startDate = startDate,
             onStartDateChange = { startDate = it },

@@ -29,21 +29,28 @@ private const val REPEAT_ICON_BACKGROUND_ALPHA = 0.2f
  */
 val LocalRepeatRules = compositionLocalOf<Map<String, RecurrenceRule>> { emptyMap() }
 
-/** Плашка шаблона в «Повторяющихся»: день следующего повтора или «Пауза»; без правила и повторов — нет. */
+/**
+ * Плашка шаблона в «Повторяющихся»: день следующего повтора, «Пауза» или «Ждёт» — повтор «после выполнения»
+ * ждёт, когда отметят текущую копию, как в Things; без правила и у закончившихся — нет.
+ */
 @Composable
 fun repeatBadge(rule: RecurrenceRule?): String? = when {
     rule == null -> null
     !rule.isActive -> stringResource(R.string.repeat_paused)
+    rule.nextGenerationDate <= 0 && com.example.domain.repeat.RepeatRule.decode(rule.rrule)?.afterCompletion == true ->
+        stringResource(R.string.repeat_waiting)
     rule.nextGenerationDate > 0 ->
         java.text.SimpleDateFormat("d MMM", java.util.Locale.getDefault()).format(java.util.Date(rule.nextGenerationDate))
     else -> null
 }
 
-/** Значок шаблона повтора на месте чекбокса, как в Things: синяя круговая стрелка на бледно-синем круге */
+/**
+ * Значок повтора, как в Things: круговая стрелка на бледном круге её цвета. Шаблон — тёмно-синий, как кольцо
+ * проекта; у копий повторяющейся задачи — серый ([color]).
+ */
 @Composable
-fun RepeatTemplateIcon(modifier: Modifier = Modifier) {
-    // Стрелка — тёмно-синяя, как кольцо проекта; круг под ней — бледно-синий
-    val accent = ThingsTheme.colors.project
+fun RepeatTemplateIcon(modifier: Modifier = Modifier, color: androidx.compose.ui.graphics.Color = ThingsTheme.colors.project) {
+    val accent = color
     Box(
         modifier = modifier.scale(REPEAT_ICON_SCALE).background(accent.copy(alpha = REPEAT_ICON_BACKGROUND_ALPHA), CircleShape),
         contentAlignment = Alignment.Center

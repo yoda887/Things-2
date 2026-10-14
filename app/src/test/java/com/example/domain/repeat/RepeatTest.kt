@@ -340,4 +340,71 @@ class RepeatTest {
         val shown = copy.tasks.map { it.first }.sortedWith(compareBy<Item> { it.sortOrder }.thenByDescending { it.creationDate })
         assertEquals(listOf("t2", "t1"), shown.map { it.title })
     }
+
+    // ---------------------------------------------------------------- выполнить заранее и перенос
+
+    @Test
+    fun completedEarly_fixedTakesNextOccurrence_afterCompletionCountsFromToday() {
+        val weekly = RepeatRule(afterCompletion = false, unit = RepeatUnit.WEEK, start = wed)
+        val (occurrence, next) = RepeatControl.completedEarly(RepeatState(weekly, d(2026, 10, 21)), wed)!!
+        assertEquals(d(2026, 10, 21), occurrence)
+        assertEquals(d(2026, 10, 28), next.nextOccurrence)
+        assertEquals(1, next.generated)
+
+        val after = RepeatRule(afterCompletion = true, interval = 3, unit = RepeatUnit.DAY, start = wed)
+        val (afterOccurrence, afterNext) = RepeatControl.completedEarly(RepeatState(after, d(2026, 10, 20)), wed)!!
+        assertEquals(d(2026, 10, 20), afterOccurrence)
+        assertEquals(d(2026, 10, 17), afterNext.nextOccurrence)
+        // Повторов больше нет — отмечать нечего
+        assertNull(RepeatControl.completedEarly(RepeatState(after.copy(endCount = 1), null, generated = 1), wed))
+    }
+
+    @Test
+    fun ruleMovedTo_weekdayDayOfMonthAndNthWeekday() {
+        // Каждый понедельник → вторник: «каждый вторник»; «пн и чт», пн → вт: «вт и чт»
+        val mon = d(2026, 10, 19)
+        val weekly = RepeatRule(afterCompletion = false, unit = RepeatUnit.WEEK, start = d(2026, 10, 5), on = listOf(RepeatOn(RepeatDay.Weekday(1))))
+        val moved = RepeatControl.ruleMovedTo(weekly, mon, mon.plusDays(1))
+        assertEquals(listOf(RepeatOn(RepeatDay.Weekday(2))), moved.on)
+        assertEquals(mon.plusDays(1), RepeatDates.nextOccurrence(moved, mon))
+        assertEquals(mon.plusDays(8), RepeatDates.nextOccurrence(moved, mon.plusDays(2)))
+        val twice = weekly.copy(on = listOf(RepeatOn(RepeatDay.Weekday(1)), RepeatOn(RepeatDay.Weekday(4))))
+        assertEquals(listOf(2, 4), RepeatControl.ruleMovedTo(twice, mon, mon.plusDays(1)).on.map { (it.day as RepeatDay.Weekday).dayOfWeek })
+
+        // 14-го каждого месяца → 16-го
+        val monthly = RepeatRule(afterCompletion = false, unit = RepeatUnit.MONTH, start = wed, on = listOf(RepeatOn(RepeatDay.OfMonth(14))))
+        val movedMonthly = RepeatControl.ruleMovedTo(monthly, d(2026, 11, 14), d(2026, 11, 16))
+        assertEquals(listOf(RepeatOn(RepeatDay.OfMonth(16))), movedMonthly.on)
+        assertEquals(d(2026, 12, 16), RepeatDates.nextOccurrence(movedMonthly, d(2026, 11, 17)))
+
+        // 2-й понедельник → 2-й вторник (10 ноября 2026 — вторник)
+        val nth = monthly.copy(on = listOf(RepeatOn(RepeatDay.Weekday(1, 2))))
+        val movedNth = RepeatControl.ruleMovedTo(nth, d(2026, 11, 9), d(2026, 11, 10))
+        assertEquals(listOf(RepeatOn(RepeatDay.Weekday(2, 2))), movedNth.on)
+    }
+
+    @Test
+    fun repeatingList_upcomingCopiesUnderTheirTemplate() {
+        val endOfToday = 1_000L
+        val template = com.example.data.model.ItemWithChecklist(Item(id = "t", type = Item.TYPE_TEMPLATE))
+        val later = com.example.data.model.ItemWithChecklist(Item(id = "c2", repeatTemplateId = "t", startDate = 3_000L))
+        val soon = com.example.data.model.ItemWithChecklist(Item(id = "c1", repeatTemplateId = "t", startDate = 2_000L))
+        assertTrue(com.example.domain.lists.RepeatingList.includesCopy(later.item, endOfToday))
+        assertFalse(com.example.domain.lists.RepeatingList.includesCopy(later.item.copy(startDate = 500L), endOfToday))
+        assertFalse(com.example.domain.lists.RepeatingList.includesCopy(later.item.copy(status = Item.STATUS_COMPLETED), endOfToday))
+        val ordered = com.example.domain.lists.RepeatingList.order(listOf(later, soon, template), emptyMap())
+        assertEquals(listOf("t", "c1", "c2"), ordered.map { it.item.id })
+    }
+
+    @Test
+    fun repeatingList_upcomingProjectCopiesUnderTheirTemplate() {
+        val endOfToday = 1_000L
+        val template = Item(id = "p", type = Item.TYPE_PROJECT_TEMPLATE)
+        val later = Item(id = "c2", type = Item.TYPE_PROJECT, repeatTemplateId = "p", startDate = 3_000L)
+        val soon = Item(id = "c1", type = Item.TYPE_PROJECT, repeatTemplateId = "p", startDate = 2_000L)
+        val today = Item(id = "c0", type = Item.TYPE_PROJECT, repeatTemplateId = "p", startDate = 500L)
+        val plain = Item(id = "x", type = Item.TYPE_PROJECT, startDate = 3_000L)
+        val rows = com.example.domain.lists.RepeatingList.projectRows(listOf(later, plain, today, soon, template), emptyMap(), endOfToday)
+        assertEquals(listOf("p", "c1", "c2"), rows.map { it.id })
+    }
 }
