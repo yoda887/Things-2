@@ -68,8 +68,6 @@ private const val COMPLETE_TOGGLE_DELAY_MS = 220L
 // Служебные иконки строки (напоминание, заметки, чек-лист, теги): чуть крупнее и темнее подписей
 private val ROW_META_ICON_SIZE = 14.dp
 private const val ROW_META_ICON_ALPHA = ThingsAlpha.HALF
-/** У рисунков иконок под ними пустое поле — на столько ряд опущен, чтобы низ рисунков встал на линию букв */
-private val ROW_META_ICON_BASELINE_SHIFT = 1.5.dp
 private val DUE_ICON_SIZE = 15.dp
 private const val DUE_TEXT_ALPHA = 0.85f
 
@@ -435,8 +433,6 @@ fun TaskItemRow(
                                 overflow = TextOverflow.Ellipsis,
                                 modifier = Modifier
                                     .weight(1f, fill = false)
-                                    // По базовой линии названия выравнивается низ служебных иконок
-                                    .alignByBaseline()
                                     .graphicsLayer {
                                         scaleX = animatedTitleScaleX
                                         transformOrigin = androidx.compose.ui.graphics.TransformOrigin(0f, 0.5f)
@@ -450,11 +446,7 @@ fun TaskItemRow(
                             Spacer(modifier = Modifier.width(ThingsSpacing.XS_PLUS))
                             Row(
                                 horizontalArrangement = Arrangement.spacedBy(ThingsSpacing.XS),
-                                verticalAlignment = Alignment.Bottom,
-                                // Низ иконок — на базовой линии названия, как в Things
-                                modifier = Modifier
-                                    .alignBy { it.measuredHeight }
-                                    .offset(y = ROW_META_ICON_BASELINE_SHIFT)
+                                verticalAlignment = Alignment.CenterVertically
                             ) {
                                 if (hasReminder) {
                                     Icon(
