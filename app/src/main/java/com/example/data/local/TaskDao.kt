@@ -26,13 +26,21 @@ interface TaskDao {
     @Upsert
     suspend fun upsertRecurrenceRule(rule: RecurrenceRule)
 
+    @Query("SELECT * FROM recurrence_rules WHERE templateId = :templateId LIMIT 1")
+    suspend fun getRecurrenceRuleOf(templateId: String): RecurrenceRule?
+
     @Query("DELETE FROM recurrence_rules WHERE templateId = :templateId")
     suspend fun deleteRecurrenceRulesOf(templateId: String)
 
-    @Query("SELECT * FROM items WHERE repeatTemplateId = :templateId")
+    /** Копии шаблона (задачи или проекты); задачи внутри шаблона проекта ссылаются на него же, но копиями не являются */
+    @Query("SELECT * FROM items WHERE repeatTemplateId = :templateId AND type != ${Item.TYPE_TEMPLATE}")
     suspend fun getRepeatCopiesOf(templateId: String): List<Item>
 
-    // ITEMS (Single Table Inheritance: type 0=task, 1=project, 2=heading, 3=template)
+    /** Всё внутри проекта: задачи и заголовки */
+    @Query("SELECT * FROM items WHERE projectId = :projectId")
+    suspend fun getItemsOfProject(projectId: String): List<Item>
+
+    // ITEMS (Single Table Inheritance: type 0=task, 1=project, 2=heading, 3=template, 4=project template)
     @Query("SELECT * FROM items ORDER BY sortOrder ASC, creationDate DESC")
     fun getAllItems(): Flow<List<Item>>
 

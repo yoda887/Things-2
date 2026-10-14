@@ -282,7 +282,12 @@ fun TaskItemRow(
                 modifier = Modifier.size(leftColumnWidth),
                 contentAlignment = Alignment.Center
             ) {
-                if (isCalendarTask) {
+                if (task.isRepeatTemplate) {
+                    // Шаблон повтора — синяя круговая стрелка вместо чекбокса, как в Things: его не отмечают
+                    com.example.ui.components.RepeatTemplateIcon(
+                        modifier = Modifier.size(androidx.compose.material3.MaterialTheme.dimens.mainCheckboxSize)
+                    )
+                } else if (isCalendarTask) {
                     Icon(
                         imageVector = Icons.Outlined.CalendarToday,
                         contentDescription = stringResource(R.string.cd_calendar_event),
@@ -298,7 +303,9 @@ fun TaskItemRow(
                     }
                     ThingsCheckbox(
                         checked = localCompleted || (isSearchLogbookStyle && isCancelledTask),
-                        onCheckedChange = {
+                        onCheckedChange = onCheckedChange@{
+                            // Задачу шаблона повторяющегося проекта не отмечают — отмечают её копии
+                            if (task.isTemplatePart) return@onCheckedChange
                             val newChecked = !localCompleted
                             localCompleted = newChecked
                             completionJob?.cancel()
@@ -359,6 +366,12 @@ fun TaskItemRow(
             }
             // Когда под заголовком есть вторая строка, плашка с датой встаёт слева от обеих строк
             // и центрируется по вертикали, а заголовок с подписью идут после неё
+            // У шаблона повтора вместо даты — день следующего повтора или «Пауза»
+            val repeatRule = if (task.isRepeatTemplate && screen == ActiveScreen.REPEATING) {
+                com.example.ui.components.LocalRepeatRules.current[task.id]
+            } else null
+            val repeatBadge = com.example.ui.components.repeatBadge(repeatRule)
+            val dateBadge = if (repeatRule == null) dateBadge else repeatBadge
             val badgeBesideBothLines = dateBadge != null && subtitle != null
 
             Row(

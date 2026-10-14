@@ -85,7 +85,8 @@ object PlaceGroups {
         val byProject = tasks.filter { it.project() != null }.groupBy { it.project()!!.id }.mapValues { it.value.withPinnedInPlace() }
         val byArea = tasks.filter { it.project() == null && it.area() != null }.groupBy { it.area()!!.id }.mapValues { it.value.withPinnedInPlace() }
 
-        val rows = projectRows.filter { it.type == Item.TYPE_PROJECT && !it.trashed }
+        // Строками стоят и шаблоны повторяющихся проектов («Повторяющиеся»)
+        val rows = projectRows.filter { (it.type == Item.TYPE_PROJECT || it.type == Item.TYPE_PROJECT_TEMPLATE) && !it.trashed }
         val rowsWithoutArea = rows.filter { it.areaId.isNullOrEmpty() || it.areaId !in areasById }
         val rowsByArea = (rows - rowsWithoutArea.toSet()).groupBy { it.areaId!! }
 

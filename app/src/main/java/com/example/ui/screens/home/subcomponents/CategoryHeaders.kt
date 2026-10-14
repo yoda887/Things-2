@@ -234,22 +234,43 @@ fun MainCategoryHeader(
                     style = ThingsTheme.type.largeTitle.copy(color = textPrimaryColor)
                 )
             }
+            ActiveScreen.REPEATING -> {
+                com.example.ui.components.RepeatTemplateIcon(
+                    modifier = Modifier.size((26 * scaleFactor).dp)
+                )
+                Spacer(modifier = Modifier.width((10 * scaleFactor).dp))
+                Text(
+                    text = androidx.compose.ui.res.stringResource(com.example.R.string.special_repeating),
+                    style = ThingsTheme.type.largeTitle.copy(color = textPrimaryColor)
+                )
+            }
             ActiveScreen.PROJECT_DETAIL -> {
                 // Завершённый проект — кольцо полное, даже если задач в нём нет
                 val projectDone = project != null && (project.isCompleted || project.status == Item.STATUS_CANCELLED)
                 val totalCount = tasks.count { it.item.projectId == project?.id }.let { if (projectDone) maxOf(it, 1) else it }
                 val completedCount = if (projectDone) totalCount else tasks.count { it.item.projectId == project?.id && it.item.isClosed }
                 // Иконка проекта (ProgressArc) окрашена в синий цвет и выровнена по верхнему краю заголовка с компенсационным отступом
-                ProjectProgressArc(
-                    completed = completedCount,
-                    total = totalCount,
-                    color = ThingsTheme.colors.project,
-                    dashed = project?.start == com.example.data.model.Item.START_SOMEDAY,
-                    modifier = Modifier
-                        .size((26 * scaleFactor).dp)
-                        .align(Alignment.Top)
-                        .padding(top = (4 * scaleFactor).dp)
-                )
+                if (project?.type == Item.TYPE_PROJECT_TEMPLATE) {
+                    // Шаблон повторяющегося проекта — круговая стрелка вместо кольца, как у шаблонов задач
+                    // Круг — по размеру кольца проекта: то же место 26 dp, круг 22 dp
+                    com.example.ui.components.RepeatTemplateIcon(
+                        modifier = Modifier
+                            .align(Alignment.Top)
+                            .padding(start = (2 * scaleFactor).dp, top = (4 * scaleFactor).dp, end = (2 * scaleFactor).dp)
+                            .size((22 * scaleFactor).dp)
+                    )
+                } else {
+                    ProjectProgressArc(
+                        completed = completedCount,
+                        total = totalCount,
+                        color = ThingsTheme.colors.project,
+                        dashed = project?.start == com.example.data.model.Item.START_SOMEDAY,
+                        modifier = Modifier
+                            .size((26 * scaleFactor).dp)
+                            .align(Alignment.Top)
+                            .padding(top = (4 * scaleFactor).dp)
+                    )
+                }
                 Spacer(modifier = Modifier.width(ThingsSpacing.M))
 
                 val projectNameText = project?.name ?: stringResource(R.string.fallback_project)
@@ -296,23 +317,35 @@ fun MainCategoryHeader(
                                     showOptionsMenu = false
                                     onProjectAction(a)
                                 }
-                                if (project?.isCompleted != true) {
+                                // У шаблона повтора нет своих дат и завершения — их задаёт правило
+                                val isTemplate = project?.type == Item.TYPE_PROJECT_TEMPLATE
+                                if (project?.isCompleted != true && !isTemplate) {
                                     ThingsMenuItem(stringResource(R.string.project_complete), Icons.Outlined.CheckCircle, onClick = { action(ProjectAction.COMPLETE) })
                                 }
                                 ThingsMenuItem(stringResource(R.string.ui_rename), Icons.Default.Edit, onClick = {
                                     showOptionsMenu = false
                                     isEditingTitle = true
                                 })
-                                ThingsMenuItem(stringResource(R.string.batch_action_when), AppIcons.Upcoming, onClick = { action(ProjectAction.WHEN) })
+                                if (!isTemplate) {
+                                    ThingsMenuItem(stringResource(R.string.batch_action_when), AppIcons.Upcoming, onClick = { action(ProjectAction.WHEN) })
+                                }
+                                // Копию повторяющегося проекта повторяющейся не делают — повторяется её шаблон
+                                if (project != null && (isTemplate || com.example.domain.repeat.RepeatProjects.canRepeat(project))) {
+                                    ThingsMenuItem(stringResource(R.string.ui_repeat), AppIcons.Repeat, onClick = { action(ProjectAction.REPEAT) })
+                                }
                                 ThingsMenuItem(stringResource(R.string.batch_action_set_tags), AppIcons.Tag, onClick = { action(ProjectAction.TAGS) })
-                                ThingsMenuItem(stringResource(R.string.batch_action_set_deadline), AppIcons.Deadline, onClick = { action(ProjectAction.DEADLINE) })
+                                if (!isTemplate) {
+                                    ThingsMenuItem(stringResource(R.string.batch_action_set_deadline), AppIcons.Deadline, onClick = { action(ProjectAction.DEADLINE) })
+                                }
                                 ThingsMenuItem(stringResource(R.string.ui_add_heading), Icons.Default.Add, onClick = {
                                     showOptionsMenu = false
                                     onAddHeading()
                                 })
                                 ThingsMenuDivider()
                                 ThingsMenuItem(stringResource(R.string.batch_action_move), Icons.AutoMirrored.Filled.ArrowForward, onClick = { action(ProjectAction.MOVE) })
-                                ThingsMenuItem(stringResource(R.string.batch_action_duplicate), Icons.Default.ContentCopy, onClick = { action(ProjectAction.DUPLICATE) })
+                                if (!isTemplate) {
+                                    ThingsMenuItem(stringResource(R.string.batch_action_duplicate), Icons.Default.ContentCopy, onClick = { action(ProjectAction.DUPLICATE) })
+                                }
                                 ThingsMenuItem(stringResource(R.string.ui_delete_project), Icons.Default.Delete, destructive = true, onClick = {
                                     showOptionsMenu = false
                                     showDeleteConfirmDialog = true

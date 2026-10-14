@@ -271,6 +271,8 @@ fun ThingsCategoryListPanel(
     var showMoveDialog by remember { mutableStateOf(false) }
     // Окно «Повторять» для раскрытой задачи
     var showRepeatDialog by remember { mutableStateOf(false) }
+    // Окно «Повторять» для проекта экрана: сделать повторяющимся или изменить правило шаблона
+    var repeatDialogProject by remember { mutableStateOf<Item?>(null) }
     // Поле поиска забирает фокус один раз за показ экрана, а не при каждом возвращении в видимую часть списка
     var searchFieldAutoFocused by rememberSaveable(screen) { mutableStateOf(false) }
     var showDeleteConfirm by remember { mutableStateOf(false) }
@@ -364,7 +366,8 @@ fun ThingsCategoryListPanel(
         headings = if (screen == ActiveScreen.PROJECT_DETAIL) localHeadings else emptyList(),
         pinnedPlaces = pinnedPlaces,
         expandedLaterProjects = expandedLaterProjects,
-        showLoggedProjects = showLoggedProjects
+        showLoggedProjects = showLoggedProjects,
+        repeatRules = state.repeatRules
     )
 
     // ── Добавление перетаскиванием кнопки «+» (см. FabDragController) ──
@@ -871,6 +874,7 @@ fun ThingsCategoryListPanel(
                             val currentProject = project ?: return@MainCategoryHeader
                             when (projectAction) {
                                 ProjectAction.DUPLICATE -> onEvent(ThingsCategoryListEvent.DuplicateProject(currentProject))
+                                ProjectAction.REPEAT -> repeatDialogProject = currentProject
                                 ProjectAction.SHARE -> {
                                     val sendIntent = android.content.Intent().apply {
                                         action = android.content.Intent.ACTION_SEND
@@ -902,6 +906,11 @@ fun ThingsCategoryListPanel(
                         onNotesChange = { notes ->
                             onEvent(ThingsCategoryListEvent.EditProject(project, ProjectEdit.Notes(notes)))
                         },
+                        onRepeatAction = { action ->
+                            if (action == RepeatAction.EDIT) repeatDialogProject = project
+                            else onEvent(ThingsCategoryListEvent.RepeatTemplateAction(project.id, action))
+                        },
+                        onOpenRepeatTemplate = { project.repeatTemplateId?.let { onEvent(ThingsCategoryListEvent.OpenRepeatTemplate(it)) } },
                         modifier = Modifier
                             .padding(horizontal = ThingsSpacing.S)
                             .graphicsLayer { alpha = headerScrollAlpha * globalDimAlpha }
@@ -971,6 +980,7 @@ fun ThingsCategoryListPanel(
                 ActiveScreen.INBOX, ActiveScreen.SEARCH, ActiveScreen.HOME -> displayTasks.isNotEmpty()
                 ActiveScreen.ALL_PROJECTS -> AllProjectsList.hasContent(AllProjectsList.content(projects, areasState))
                 ActiveScreen.LOGGED_PROJECTS -> projects.any { LogbookList.includesProject(it) }
+                ActiveScreen.REPEATING -> displayTasks.isNotEmpty()
             }
 
             if (screen == ActiveScreen.SEARCH && flattened.isEmpty()) {
@@ -1035,6 +1045,9 @@ fun ThingsCategoryListPanel(
                                     if (event is ThingsCategoryListEvent.SwipeTaskRight) {
                                         swipeWhenTask = event.task
                                         swipeWhenOrigin = event.growFromOffset
+                                    } else if (event is ThingsCategoryListEvent.RepeatTemplateAction && event.action == RepeatAction.EDIT) {
+                                        // «Изменить правило» — окно «Повторять» с правилом шаблона
+                                        showRepeatDialog = true
                                     } else {
                                         onEvent(event)
                                     }
@@ -1072,8 +1085,8 @@ fun ThingsCategoryListPanel(
                         }
                         is Item -> {
                             val task = item
-                            if (task.type == Item.TYPE_PROJECT) {
-                                // Извлеченный подкомпонент строки проекта
+                            if (task.type == Item.TYPE_PROJECT || task.type == Item.TYPE_PROJECT_TEMPLATE) {
+                                // Извлеченный подкомпонент строки проекта (и шаблона повторяющегося проекта)
                                 ProjectItemRow(
                                     project = task,
                                     tasks = state.displayTasks,
@@ -1088,6 +1101,8 @@ fun ThingsCategoryListPanel(
                                     ) LogbookList.closedAt(task) else null,
                                     dateBadge = when (screen) {
                                         ActiveScreen.UPCOMING -> monthTaskBadges[task.id]
+                                        // Шаблон проекта — день следующего повтора или «Пауза»
+                                        ActiveScreen.REPEATING -> com.example.ui.components.repeatBadge(state.repeatRules[task.id])
                                         ActiveScreen.ALL_PROJECTS -> if (LogbookList.includesProject(task)) null else AllProjectsScreen.laterDateBadge(task)
                                         // В «Планах» области — дата старта запланированного проекта
                                         ActiveScreen.AREA_DETAIL -> if (HomeList.showsProject(task)) null else AllProjectsScreen.laterDateBadge(task)
@@ -1598,16 +1613,40 @@ fun ThingsCategoryListPanel(
 
     if (showRepeatDialog && activeTask != null) {
         val repeatTask = activeTask
+        val isTemplate = repeatTask.item.type == Item.TYPE_TEMPLATE
+        val currentRule = state.repeatRules[repeatTask.item.id]?.let { com.example.domain.repeat.RepeatRule.decode(it.rrule) }
         com.example.ui.screens.home.inlineeditor.dialogs.ThingsRepeatDialog(
             task = repeatTask.item,
+            initialRule = currentRule,
             onDismissRequest = { showRepeatDialog = false },
             onSave = { rule, reminderTime ->
+                if (isTemplate) {
+                    // Шаблон: только новое правило, редактор остаётся открытым
+                    onEvent(ThingsCategoryListEvent.UpdateRepeatRule(repeatTask.item.id, rule, reminderTime))
+                    return@ThingsRepeatDialog
+                }
                 // Сначала редактор сворачивается и сохраняет правки, потом задача становится шаблоном повтора:
                 // сохранение при сворачивании иначе вернуло бы её в обычные задачи
                 onEvent(ThingsCategoryListEvent.ChangeInlineExpandedTaskId(null))
                 coroutineScope.launch {
                     kotlinx.coroutines.delay(com.example.ui.theme.AnimationConstants.TASK_EXPANSION_DURATION_MS)
                     onEvent(ThingsCategoryListEvent.MakeRepeating(repeatTask.item.id, rule, reminderTime))
+                }
+            }
+        )
+    }
+
+    repeatDialogProject?.let { repeatProject ->
+        val currentRule = state.repeatRules[repeatProject.id]?.let { com.example.domain.repeat.RepeatRule.decode(it.rrule) }
+        com.example.ui.screens.home.inlineeditor.dialogs.ThingsRepeatDialog(
+            task = repeatProject,
+            initialRule = currentRule,
+            onDismissRequest = { repeatDialogProject = null },
+            onSave = { rule, reminderTime ->
+                if (repeatProject.isRepeatTemplate) {
+                    onEvent(ThingsCategoryListEvent.UpdateRepeatRule(repeatProject.id, rule, reminderTime))
+                } else {
+                    onEvent(ThingsCategoryListEvent.MakeRepeating(repeatProject.id, rule, reminderTime))
                 }
             }
         )

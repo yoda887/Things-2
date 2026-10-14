@@ -10,5 +10,6 @@ class QueryUseCases @Inject constructor(
     val observeAllTasks: ObserveAllTasksUseCase,
     val observeAllProjects: ObserveAllProjectsUseCase,
     val observeAllAreas: ObserveAllAreasUseCase,
-    val observeAllTags: ObserveAllTagsUseCase
+    val observeAllTags: ObserveAllTagsUseCase,
+    val observeRecurrenceRules: ObserveRecurrenceRulesUseCase
 )

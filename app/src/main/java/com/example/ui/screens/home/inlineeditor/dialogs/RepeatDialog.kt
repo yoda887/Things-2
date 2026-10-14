@@ -165,6 +165,31 @@ private class RepeatDraft(task: Item, today: LocalDate) {
     var deadlineDays by mutableIntStateOf(0)
     var reminderTime by mutableStateOf(task.reminderTime)
 
+    /** Окно открыто с правилом шаблона — черновик берёт его значения */
+    fun load(rule: RepeatRule) {
+        afterCompletion = rule.afterCompletion
+        if (rule.afterCompletion) {
+            afterInterval = rule.interval
+            afterUnit = rule.unit
+        } else {
+            interval = rule.interval
+            unit = rule.unit
+            start = rule.start
+        }
+        val days = rule.on.mapNotNull { (it.day as? RepeatDay.Weekday)?.takeIf { d -> d.ordinal == 0 }?.dayOfWeek }
+        if (rule.unit == RepeatUnit.WEEK && days.isNotEmpty()) { weekdays.clear(); weekdays.addAll(days) }
+        if ((rule.unit == RepeatUnit.MONTH || rule.unit == RepeatUnit.YEAR) && rule.on.isNotEmpty()) {
+            entries.clear(); entries.addAll(rule.on.map { if (it.month == null) it.copy(month = rule.start.monthValue) else it })
+        }
+        when {
+            rule.endDate != null -> { end = RepeatEnd.DATE; endDate = rule.endDate }
+            rule.endCount != null -> { end = RepeatEnd.COUNT; endCount = rule.endCount }
+            else -> end = RepeatEnd.NEVER
+        }
+        deadlineOn = rule.deadlineDaysBefore != null
+        deadlineDays = rule.deadlineDaysBefore ?: 0
+    }
+
     fun rule(today: LocalDate): RepeatRule {
         val deadline = if (deadlineOn) deadlineDays else null
         if (afterCompletion) {
@@ -193,11 +218,13 @@ private class RepeatDraft(task: Item, today: LocalDate) {
 @Composable
 fun ThingsRepeatDialog(
     task: Item,
+    // Правило шаблона: окно открывается с ним («Изменить правило»)
+    initialRule: RepeatRule? = null,
     onDismissRequest: () -> Unit,
     onSave: (rule: RepeatRule, reminderTime: Int?) -> Unit
 ) {
     val today = remember { LocalDate.now() }
-    val draft = remember(task.id) { RepeatDraft(task, today) }
+    val draft = remember(task.id) { RepeatDraft(task, today).also { d -> initialRule?.let { d.load(it) } } }
     var page by remember { mutableStateOf(RepeatPage.MAIN) }
     var visible by remember { mutableStateOf(false) }
     LaunchedEffect(Unit) { visible = true }
@@ -844,3 +871,29 @@ private fun wheelIndices(day: RepeatDay): Pair<Int, Int> = when (day) {
 
 @Composable
 private fun key(value: Any, content: @Composable () -> Unit) = androidx.compose.runtime.key(value) { content() }
+
+/**
+ * Краткое описание правила для редактора шаблона: «Щотижня: ср», «Кожні 2 місяці: 1-й пн»,
+ * «Через тиждень після виконання».
+ */
+@Composable
+fun repeatRuleSummary(rule: RepeatRule): String {
+    if (rule.afterCompletion) return stringResource(R.string.repeat_summary_after, unitText(rule.unit, rule.interval))
+    val every = if (rule.interval == 1) {
+        stringResource(
+            when (rule.unit) {
+                RepeatUnit.DAY -> R.string.repeat_every_one_day
+                RepeatUnit.WEEK -> R.string.repeat_every_one_week
+                RepeatUnit.MONTH -> R.string.repeat_every_one_month
+                RepeatUnit.YEAR -> R.string.repeat_every_one_year
+            }
+        )
+    } else "${stringResource(R.string.repeat_every)} ${rule.interval} ${unitName(rule.unit, rule.interval)}"
+    val on = when (rule.unit) {
+        RepeatUnit.DAY -> ""
+        RepeatUnit.WEEK -> rule.on.mapNotNull { (it.day as? RepeatDay.Weekday)?.dayOfWeek }
+            .joinToString(", ") { DayOfWeek.of(it).getDisplayName(TextStyle.SHORT_STANDALONE, Locale.getDefault()) }
+        else -> rule.on.map { entryText(it, rule.unit == RepeatUnit.YEAR) }.joinToString("; ")
+    }
+    return if (on.isEmpty()) every else "$every: $on"
+}

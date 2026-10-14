@@ -99,6 +99,22 @@ interface ITaskRepository {
     /** Сохраняет правило повтора шаблона (повторяющиеся задачи) */
     suspend fun saveRecurrenceRule(rule: com.example.data.model.RecurrenceRule)
 
+    /** Правила повтора всех шаблонов */
+    fun observeRecurrenceRules(): kotlinx.coroutines.flow.Flow<List<com.example.data.model.RecurrenceRule>>
+
+    suspend fun getRecurrenceRule(templateId: String): com.example.data.model.RecurrenceRule?
+
+    suspend fun deleteRecurrenceRule(templateId: String)
+
+    /** Копии шаблона повтора */
+    suspend fun getRepeatCopies(templateId: String): List<Item>
+
+    /** Пункты чек-листа задачи */
+    suspend fun getChecklist(itemId: String): List<ChecklistItem>
+
+    /** Задачи и заголовки внутри проекта (в том числе закрытые и удалённые) */
+    suspend fun getProjectItems(projectId: String): List<Item>
+
     /**
      * Удаляет задачу по ее идентификатору.
      * @param id Уникальный идентификатор задачи

@@ -89,7 +89,11 @@ fun ProjectItemRow(
             modifier = Modifier.size(MaterialTheme.dimens.taskLeftColumnWidthDefault),
             contentAlignment = Alignment.Center
         ) {
-            if (isDone) {
+            if (project.type == Item.TYPE_PROJECT_TEMPLATE) {
+                com.example.ui.components.RepeatTemplateIcon(
+                    modifier = Modifier.requiredSize(ThingsIconSize.M)
+                )
+            } else if (isDone) {
                 ClosedProjectIcon(
                     cancelled = project.status == Item.STATUS_CANCELLED,
                     modifier = Modifier.requiredSize(ThingsIconSize.M)

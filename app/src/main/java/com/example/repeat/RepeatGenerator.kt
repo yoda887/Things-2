@@ -4,6 +4,8 @@ import com.example.data.local.TaskDao
 import com.example.data.model.Item
 import com.example.data.model.RecurrenceRule
 import com.example.domain.repeat.RepeatPlan
+import com.example.domain.repeat.RepeatProjects
+import com.example.domain.usecase.task.RepeatCopies
 import com.example.domain.repeat.RepeatRule
 import com.example.domain.repeat.RepeatState
 import com.example.domain.repository.ITaskRepository
@@ -16,7 +18,7 @@ import javax.inject.Inject
 import javax.inject.Singleton
 
 /**
- * Создаёт копии повторяющихся задач по их правилам ([RepeatPlan]): копии, которые пора показать, появляются
+ * Создаёт копии повторяющихся задач и проектов по их правилам ([RepeatPlan]): копии, которые пора показать, появляются
  * в «Сегодня». Для «после выполнения» — назначает следующий повтор, когда текущую копию закрыли (выполнили,
  * отменили или удалили). Запуск повторный безопасен: состояние правила сохраняется вместе с копиями,
  * и уже созданное второй раз не создаётся.
@@ -29,9 +31,18 @@ class RepeatGenerator @Inject constructor(
     private val mutex = Mutex()
 
     suspend fun run(today: LocalDate = LocalDate.now(), zone: ZoneId = ZoneId.systemDefault()) = mutex.withLock {
+        // Задачи, добавленные в шаблон проекта или вынесенные из него, — частями шаблона или обычными задачами
+        val fixes = RepeatProjects.normalize(dao.getAllItemsSync())
+        if (fixes.isNotEmpty()) dao.insertItems(fixes)
         for (stored in dao.getAllRecurrenceRules()) {
             val rule = RepeatRule.decode(stored.rrule) ?: continue
-            val template = dao.getItemById(stored.templateId)?.takeIf { !it.trashed } ?: continue
+            val found = dao.getItemById(stored.templateId)
+            // Шаблон удалён насовсем — правило без него больше не нужно (из «Корзины» шаблон ещё вернут)
+            if (found == null) {
+                dao.deleteRecurrenceRulesOf(stored.templateId)
+                continue
+            }
+            val template = found.takeIf { !it.trashed } ?: continue
             val initial = RepeatState(
                 rule = rule,
                 nextOccurrence = stored.nextGenerationDate.takeIf { it > 0 }?.let { dateOf(it, zone) },
@@ -50,13 +61,8 @@ class RepeatGenerator @Inject constructor(
             }
             val (occurrences, next) = RepeatPlan.due(state, today)
             if (occurrences.isEmpty() && next == initial) continue
-            val checklist = dao.getChecklistItemsByItemId(template.id)
             repository.inTransaction {
-                occurrences.forEach { occurrence ->
-                    val (copy, copyChecklist) = RepeatPlan.copyOf(template, checklist, rule, occurrence, zone)
-                    repository.insertTask(copy, copyChecklist)
-                    if (copy.tags.isNotEmpty()) repository.setItemTagsByTitles(copy.id, copy.tags)
-                }
+                occurrences.forEach { occurrence -> RepeatCopies.insert(repository, template, rule, occurrence, zone) }
                 dao.upsertRecurrenceRule(stored.withState(next, zone))
             }
         }

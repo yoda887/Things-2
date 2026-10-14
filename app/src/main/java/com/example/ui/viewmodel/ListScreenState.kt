@@ -11,7 +11,9 @@ import kotlinx.serialization.Serializable
 enum class ActiveScreen {
     HOME, INBOX, TODAY, UPCOMING, ANYTIME, SOMEDAY, LOGBOOK, PROJECT_DETAIL, AREA_DETAIL, SEARCH, TAG_DETAIL,
     // Особые списки — открываются из «Швидкого пошуку» по названию, как в Things
-    ALL_PROJECTS, LOGGED_PROJECTS
+    ALL_PROJECTS, LOGGED_PROJECTS,
+    // «Повторяющиеся» — шаблоны повторяющихся задач
+    REPEATING
 }
 
 /** Прогресс проекта: сколько задач выполнено из скольких. */
@@ -45,5 +47,7 @@ data class ThingsCategoryListState(
     // Активные заголовки проекта по порядку (экран проекта)
     val headings: List<Item> = emptyList(),
     // Все подзаголовки проектов — для поиска в окне «Переместить»
-    val allHeadings: List<Item> = emptyList()
+    val allHeadings: List<Item> = emptyList(),
+    /** Правила повтора шаблонов — по id шаблона (строки шаблонов, редактор шаблона и его копий) */
+    val repeatRules: Map<String, com.example.data.model.RecurrenceRule> = emptyMap()
 )

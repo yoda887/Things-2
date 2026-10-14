@@ -346,11 +346,13 @@ fun ThingsSearchOverlay(
         ActiveScreen.LOGBOOK to stringResource(R.string.category_logbook),
         // Особые списки, как в Things: находятся только по названию — на языке приложения или по-английски
         ActiveScreen.ALL_PROJECTS to stringResource(R.string.special_all_projects),
-        ActiveScreen.LOGGED_PROJECTS to stringResource(R.string.special_logged_projects)
+        ActiveScreen.LOGGED_PROJECTS to stringResource(R.string.special_logged_projects),
+        ActiveScreen.REPEATING to stringResource(R.string.special_repeating)
     )
     val specialListEnglishNames = mapOf(
         ActiveScreen.ALL_PROJECTS to "All Projects",
-        ActiveScreen.LOGGED_PROJECTS to "Logged Projects"
+        ActiveScreen.LOGGED_PROJECTS to "Logged Projects",
+        ActiveScreen.REPEATING to "Repeating"
     )
     val searchResults = remember(searchQuery, allTasks, projects, areas, allSavedTagObjects, smartListNames) {
         if (searchQuery.isBlank()) {
@@ -1125,6 +1127,7 @@ fun SearchResultRow(
                                 ActiveScreen.ANYTIME -> Pair(AppIcons.Anytime, Color.Unspecified)
                                 ActiveScreen.SOMEDAY -> Pair(AppIcons.Someday, Color.Unspecified)
                                 ActiveScreen.LOGBOOK -> Pair(AppIcons.Logbook, Color.Unspecified)
+                                ActiveScreen.REPEATING -> Pair(AppIcons.Repeat, ThingsTheme.colors.accent)
                                 else -> Pair(Icons.Default.Layers, ThingsTheme.colors.someday)
                             }
                             Icon(

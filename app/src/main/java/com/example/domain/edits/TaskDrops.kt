@@ -67,6 +67,8 @@ object TaskDrops {
     ): List<ItemWithChecklist>? {
         val fromIndex = list.indexOfFirst { it.item.id == draggedId }
         if (fromIndex == -1) return null
+        // Шаблон повтора стоит в «Предстоящих» на дне следующей копии — этот день задаёт правило, не перенос
+        if (dropList is DropList.Upcoming && list[fromIndex].item.type == Item.TYPE_TEMPLATE) return null
 
         return when {
             target == DropTarget.MainHeader -> planMainHeaderDrop(list, fromIndex)

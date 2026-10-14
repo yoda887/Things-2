@@ -677,6 +677,8 @@ fun AnimatedTaskItem(
                         onWhenDialogVisibilityChange = onWhenDialogVisibilityChange,
                         onTagDialogVisibilityChange = onTagDialogVisibilityChange,
                         areas = areas,
+                        onRepeatAction = { action -> onEvent(ThingsCategoryListEvent.RepeatTemplateAction(task.id, action)) },
+                        onOpenRepeatTemplate = { task.repeatTemplateId?.let { onEvent(ThingsCategoryListEvent.OpenRepeatTemplate(it)) } },
                         onNavigateToProject = { project ->
                             onEvent(ThingsCategoryListEvent.ChangeInlineExpandedTaskId(null))
                             onEvent(ThingsCategoryListEvent.ClickProject(project))

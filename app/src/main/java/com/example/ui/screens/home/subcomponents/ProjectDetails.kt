@@ -77,7 +77,7 @@ internal val Item.startSection: TaskSection
     }
 
 /** Пункты меню опций проекта, которые открывают окно или выполняют действие над проектом. */
-enum class ProjectAction { COMPLETE, WHEN, TAGS, DEADLINE, MOVE, DUPLICATE, SHARE }
+enum class ProjectAction { COMPLETE, WHEN, REPEAT, TAGS, DEADLINE, MOVE, DUPLICATE, SHARE }
 
 /** Дней от сегодняшнего до [dueDate] по календарным дням; отрицательное — просрочено. */
 private fun deadlineDeltaDays(dueDate: Long): Int {
@@ -110,7 +110,10 @@ fun ProjectDetailsBlock(
     textPrimaryColor: Color,
     onAction: (ProjectAction) -> Unit,
     onNotesChange: (String) -> Unit,
-    modifier: Modifier = Modifier
+    modifier: Modifier = Modifier,
+    // Повторяющийся проект: у шаблона — правило и его меню, у копии — ссылка на шаблон
+    onRepeatAction: (com.example.ui.screens.home.components.RepeatAction) -> Unit = {},
+    onOpenRepeatTemplate: () -> Unit = {}
 ) {
     val view = LocalView.current
     // Строки свойств — только заданные; между ними, над первой и под последней — тонкие разделители
@@ -124,6 +127,9 @@ fun ProjectDetailsBlock(
         if (dueDate != null) add { ProjectDeadlineRow(dueDate) { onAction(ProjectAction.DEADLINE) } }
     }
     Column(modifier = modifier.fillMaxWidth()) {
+        if (project.isRepeatTemplate || project.repeatTemplateId != null) {
+            com.example.ui.screens.home.inlineeditor.RepeatEditorRow(project, onRepeatAction, onOpenRepeatTemplate)
+        }
         rows.forEach { row ->
             ProjectDetailsDivider()
             row()

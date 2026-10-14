@@ -13,6 +13,8 @@ import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.FlowPreview
 import kotlinx.coroutines.flow.debounce
+import kotlinx.coroutines.flow.map
+import kotlinx.coroutines.flow.merge
 import kotlinx.coroutines.launch
 import java.time.LocalDate
 import java.time.ZoneId
@@ -40,8 +42,12 @@ class RepeatSync @Inject constructor(
         started = true
         scheduleNextDay()
         scope.launch {
-            // Первое значение — сразу при запуске, дальше — после изменений задач
-            dao.getAllItems().debounce(CHANGE_DEBOUNCE_MS).collect { generator.run() }
+            // Первое значение — сразу при запуске, дальше — после изменений задач и правил (новое правило,
+            // пауза и возобновление меняют только правила). Генератор пишет правило, лишь когда что-то создал,
+            // поэтому сам себя не перезапускает бесконечно
+            merge(dao.getAllItems().map { }, dao.getAllRecurrenceRulesFlow().map { })
+                .debounce(CHANGE_DEBOUNCE_MS)
+                .collect { generator.run() }
         }
     }
 

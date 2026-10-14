@@ -105,12 +105,24 @@ data class Item(
     val isHeading: Boolean
         get() = type == TYPE_HEADING
 
+    /** Шаблон повтора — задачи или проекта, со своим правилом (задача внутри шаблона проекта — не он) */
+    @get:Ignore
+    val isRepeatTemplate: Boolean
+        get() = (type == TYPE_TEMPLATE && repeatTemplateId == null) || type == TYPE_PROJECT_TEMPLATE
+
+    /** Задача внутри шаблона повторяющегося проекта: [repeatTemplateId] — этот шаблон; её копируют вместе с ним */
+    @get:Ignore
+    val isTemplatePart: Boolean
+        get() = type == TYPE_TEMPLATE && repeatTemplateId != null
+
     companion object {
         // type
         const val TYPE_TASK = 0
         const val TYPE_PROJECT = 1
         const val TYPE_HEADING = 2
         const val TYPE_TEMPLATE = 3
+        /** Шаблон повторяющегося проекта: его заголовки и задачи-части копируются в каждый повтор */
+        const val TYPE_PROJECT_TEMPLATE = 4
 
         // status
         const val STATUS_OPEN = 0

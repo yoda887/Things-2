@@ -210,7 +210,9 @@ fun rememberFlattenedList(
     pinnedPlaces: Map<String, PlaceGroups.Place> = emptyMap(),
     // «Все проекты»: раскрытые группы поздних проектов и показ завершённых
     expandedLaterProjects: Set<String> = emptySet(),
-    showLoggedProjects: Boolean = false
+    showLoggedProjects: Boolean = false,
+    // «Повторяющиеся»: правила шаблонов — для порядка по ближайшему повтору
+    repeatRules: Map<String, com.example.data.model.RecurrenceRule> = emptyMap()
 ): List<Any> {
     val headerLogbook = stringResource(R.string.category_logbook)
     val todayLabel = stringResource(R.string.category_today)
@@ -218,7 +220,7 @@ fun rememberFlattenedList(
     val resources = androidx.compose.ui.platform.LocalContext.current.resources
     val showLoggedLabel = stringResource(R.string.all_projects_show_logged)
     val hideLoggedLabel = stringResource(R.string.all_projects_hide_logged)
-    return remember(expandedLaterProjects, showLoggedProjects, resources, screen, standardToday, eveningToday, headerLogbook, todayLabel, yesterdayLabel, draggedItemKey, upcomingDays, upcomingMonths, projects, area, displayTasks, isLaterItemsHidden, tag, allTasks, areas, savedTags, searchQuery, headings, pinnedPlaces) {
+    return remember(repeatRules, expandedLaterProjects, showLoggedProjects, resources, screen, standardToday, eveningToday, headerLogbook, todayLabel, yesterdayLabel, draggedItemKey, upcomingDays, upcomingMonths, projects, area, displayTasks, isLaterItemsHidden, tag, allTasks, areas, savedTags, searchQuery, headings, pinnedPlaces) {
         // Все экраны перечислены явно (без else): новый экран компилятор заставит указать и здесь
         when (screen) {
             ActiveScreen.TODAY -> TodayScreen.rows(standardToday, eveningToday, isDragging = draggedItemKey != null)
@@ -240,6 +242,8 @@ fun rememberFlattenedList(
             )
             // Завершённые проекты — разделами, как «Журнал»
             ActiveScreen.LOGGED_PROJECTS -> LogbookScreen.rows(LogbookList.sections(emptyList(), projects), todayLabel, yesterdayLabel)
+            // Шаблоны повтора: без проекта — вверху, остальные — под проектом или областью
+            ActiveScreen.REPEATING -> PlaceGroupRows.rows(com.example.domain.lists.RepeatingList.groups(displayTasks, repeatRules, projects, areas, allTasks.map { it.item }))
         }
     }
 }
@@ -353,6 +357,16 @@ sealed interface ThingsCategoryListEvent {
     data class DuplicateTask(val taskWrapper: ItemWithChecklist) : ThingsCategoryListEvent
     /** Отменить задачу или вернуть отменённую */
     data class ToggleTaskCancel(val taskId: String) : ThingsCategoryListEvent
+    /** Действие с шаблоном повтора из его редактора */
+    data class RepeatTemplateAction(val templateId: String, val action: RepeatAction) : ThingsCategoryListEvent
+    /** Копия повторяющейся задачи: перейти к её шаблону */
+    data class OpenRepeatTemplate(val templateId: String) : ThingsCategoryListEvent
+    /** Новое правило шаблона и напоминание его копий */
+    data class UpdateRepeatRule(
+        val templateId: String,
+        val rule: com.example.domain.repeat.RepeatRule,
+        val reminderTime: Int?
+    ) : ThingsCategoryListEvent
     /** Сделать задачу повторяющейся: она становится шаблоном с правилом [rule], напоминание копий — [reminderTime] */
     data class MakeRepeating(
         val taskId: String,
@@ -449,5 +463,8 @@ fun newTaskPlace(screen: ActiveScreen, projectId: String?, areaId: String?, tagT
     ActiveScreen.AREA_DETAIL -> areaId?.let { NewTaskPlace.Area(it) } ?: NewTaskPlace.Anytime
     ActiveScreen.TAG_DETAIL -> NewTaskPlace.Tag(tagTitle.orEmpty())
     ActiveScreen.INBOX, ActiveScreen.LOGBOOK, ActiveScreen.SEARCH, ActiveScreen.HOME,
-    ActiveScreen.ALL_PROJECTS, ActiveScreen.LOGGED_PROJECTS -> NewTaskPlace.Inbox
+    ActiveScreen.ALL_PROJECTS, ActiveScreen.LOGGED_PROJECTS, ActiveScreen.REPEATING -> NewTaskPlace.Inbox
 }
+
+/** Действия с шаблоном повтора, как в Things */
+enum class RepeatAction { EDIT, NEXT_COPY, PREVIOUS_COPY, PAUSE, RESUME, STOP }

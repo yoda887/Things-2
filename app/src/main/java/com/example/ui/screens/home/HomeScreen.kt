@@ -1,5 +1,6 @@
 package com.example.ui.screens.home
 
+import com.example.ui.screens.home.components.RepeatAction
 import androidx.navigation.NavDestination.Companion.hasRoute
 import com.example.ui.screens.home.components.HomeProjectBatchLayer
 import com.example.ui.screens.home.components.ProjectSwipeWhenDialog
@@ -106,6 +107,7 @@ fun ThingsHomeScreen(viewModel: ThingsViewModel = hiltViewModel()) {
     val tasks by viewModel.filteredTasks.collectAsState()
     val allTasksRaw by viewModel.tasks.collectAsState()
     val projects by viewModel.projects.collectAsState()
+    val projectTemplates by viewModel.projectTemplates.collectAsState()
     val areas by viewModel.areas.collectAsState()
     val collapsedAreaIds by viewModel.collapsedAreaIds.collectAsState()
     val searchQuery by viewModel.searchQuery.collectAsState()
@@ -144,7 +146,7 @@ fun ThingsHomeScreen(viewModel: ThingsViewModel = hiltViewModel()) {
     var selectedArea by remember { mutableStateOf<Area?>(null) }
     var selectedTagDetail by remember { mutableStateOf<Tag?>(null) }
 
-    LaunchedEffect(navBackStackEntry, projects, areas, allSavedTagObjects) {
+    LaunchedEffect(navBackStackEntry, projects, projectTemplates, areas, allSavedTagObjects) {
         navBackStackEntry?.let { entry ->
             val route = entry.destination.route ?: ""
             val newScreen = when {
@@ -159,7 +161,7 @@ fun ThingsHomeScreen(viewModel: ThingsViewModel = hiltViewModel()) {
                     try {
                         val listRoute = entry.toRoute<ListRoute>()
                         if (listRoute.screen == ActiveScreen.PROJECT_DETAIL) {
-                            selectedProject = projects.firstOrNull { it.id == listRoute.entityId } ?: selectedProject
+                            selectedProject = (projects + projectTemplates).firstOrNull { it.id == listRoute.entityId } ?: selectedProject
                             selectedArea = null
                             selectedTagDetail = null
                         } else if (listRoute.screen == ActiveScreen.AREA_DETAIL) {
@@ -293,6 +295,33 @@ fun ThingsHomeScreen(viewModel: ThingsViewModel = hiltViewModel()) {
      * Клавиатура уходит сразу, а не после окна.
      * @param keepQuery запрос нужен дальше («Продолжить поиск» открывает с ним экран поиска)
      */
+    /**
+     * Показать задачу на её экране и подсветить — копию повторяющейся задачи («Предыдущая копия») или шаблон
+     * в «Повторяющихся» («Это копия повторяющейся задачи»). Экран — по месту задачи, как в Quick Find.
+     */
+    fun revealTask(task: ItemWithChecklist) {
+        val item = task.item
+        val (target, entity) = when {
+            // Проект — его экран: копия повторяющегося проекта или шаблон
+            item.type == Item.TYPE_PROJECT || item.type == Item.TYPE_PROJECT_TEMPLATE -> ActiveScreen.PROJECT_DETAIL to item.id
+            item.type == Item.TYPE_TEMPLATE -> ActiveScreen.REPEATING to null
+            item.projectId != null -> ActiveScreen.PROJECT_DETAIL to item.projectId
+            item.areaId != null -> ActiveScreen.AREA_DETAIL to item.areaId
+            item.isClosed -> ActiveScreen.LOGBOOK to null
+            item.isToday -> ActiveScreen.TODAY to null
+            item.isUpcoming -> ActiveScreen.UPCOMING to null
+            item.isInbox -> ActiveScreen.INBOX to null
+            item.isSomeday -> ActiveScreen.SOMEDAY to null
+            else -> ActiveScreen.ANYTIME to null
+        }
+        navigateTo(target, entity)
+        viewModel.setHighlightedTaskId(item.id)
+        scope.launch {
+            kotlinx.coroutines.delay(com.example.ui.screens.home.subcomponents.FOUND_HIGHLIGHT_DELAY_MS + 1500)
+            if (viewModel.highlightedTaskId.value == item.id) viewModel.setHighlightedTaskId(null)
+        }
+    }
+
     fun leaveSearchOverlay(keepQuery: Boolean = false) {
         rootView.hideSoftKeyboardNow()
         scope.launch {
@@ -547,9 +576,10 @@ fun ThingsHomeScreen(viewModel: ThingsViewModel = hiltViewModel()) {
                     // экран держит последний найденный объект, иначе на время ухода он оставался без него —
                     // мелькали заголовок «Проект» и пустой список
                     val lastFound = remember(screen, entityId) { arrayOfNulls<Any>(2) }
-                    val screenProject = remember(screen, entityId, projects) {
+                    val screenProject = remember(screen, entityId, projects, projectTemplates) {
                         if (screen == ActiveScreen.PROJECT_DETAIL) {
-                            (projects.firstOrNull { it.id == entityId } ?: lastFound[0] as Item? ?: selectedProject)
+                            // Шаблон повторяющегося проекта — тоже экран проекта, хотя в списке проектов его нет
+                            ((projects + projectTemplates).firstOrNull { it.id == entityId } ?: lastFound[0] as Item? ?: selectedProject)
                                 ?.also { lastFound[0] = it }
                         } else null
                     }
@@ -577,10 +607,14 @@ fun ThingsHomeScreen(viewModel: ThingsViewModel = hiltViewModel()) {
                     // Проект или область удалены, а экран ещё уходит — показываем последнее состояние,
                     // а не опустевший список
                     val keptState = remember(screen, entityId) { arrayOfNulls<com.example.ui.viewmodel.ThingsCategoryListState>(1) }
-                    val entityGone = (screen == ActiveScreen.PROJECT_DETAIL && projects.none { it.id == entityId }) ||
+                    val entityGone = (screen == ActiveScreen.PROJECT_DETAIL && projects.none { it.id == entityId } && projectTemplates.none { it.id == entityId }) ||
                         (screen == ActiveScreen.AREA_DETAIL && areas.none { it.id == entityId })
                     val screenState = if (entityGone) keptState[0] ?: liveScreenState else liveScreenState.also { keptState[0] = it }
 
+                    // Правила повтора — строкам шаблонов и редактору шаблона и его копий
+                    androidx.compose.runtime.CompositionLocalProvider(
+                        com.example.ui.components.LocalRepeatRules provides screenState.repeatRules
+                    ) {
                     ThingsCategoryListPanel(
                         state = screenState.copy(
                             isSelectionMode = isSelectionMode,
@@ -667,6 +701,28 @@ fun ThingsHomeScreen(viewModel: ThingsViewModel = hiltViewModel()) {
                                 }
                                 is ThingsCategoryListEvent.ToggleTaskCancel -> viewModel.toggleTaskCancel(event.taskId)
                                 is ThingsCategoryListEvent.MakeRepeating -> viewModel.makeRepeating(event.taskId, event.rule, event.reminderTime)
+                                is ThingsCategoryListEvent.UpdateRepeatRule -> viewModel.updateRepeatRule(event.templateId, event.rule, event.reminderTime)
+                                is ThingsCategoryListEvent.OpenRepeatTemplate -> {
+                                    viewModel.setInlineExpandedTaskId(null)
+                                    allTasksRaw.firstOrNull { it.item.id == event.templateId }?.let { revealTask(it) }
+                                }
+                                is ThingsCategoryListEvent.RepeatTemplateAction -> when (event.action) {
+                                    RepeatAction.NEXT_COPY -> viewModel.repeatNextCopy(event.templateId)
+                                    RepeatAction.PAUSE -> viewModel.pauseRepeat(event.templateId)
+                                    RepeatAction.RESUME -> viewModel.resumeRepeat(event.templateId)
+                                    RepeatAction.STOP -> viewModel.stopRepeat(event.templateId)
+                                    // Предыдущая копия — самая поздняя из созданных
+                                    RepeatAction.PREVIOUS_COPY -> {
+                                        val previous = allTasksRaw
+                                            .filter { it.item.repeatTemplateId == event.templateId && !it.item.isTemplatePart && !it.item.trashed }
+                                            .maxByOrNull { it.item.startDate ?: it.item.creationDate }
+                                        if (previous != null) {
+                                            viewModel.setInlineExpandedTaskId(null)
+                                            revealTask(previous)
+                                        }
+                                    }
+                                    RepeatAction.EDIT -> Unit
+                                }
                                 is ThingsCategoryListEvent.DuplicateTask -> {
                                     viewModel.duplicateTask(event.taskWrapper)
                                 }
@@ -807,6 +863,7 @@ fun ThingsHomeScreen(viewModel: ThingsViewModel = hiltViewModel()) {
                             }
                         }
                     )
+                    }
                 }
 
                 composable<ListRoute> { backStackEntry ->
@@ -845,7 +902,8 @@ fun ThingsHomeScreen(viewModel: ThingsViewModel = hiltViewModel()) {
                 ActiveScreen.SOMEDAY to stringResource(R.string.category_someday),
                 ActiveScreen.LOGBOOK to stringResource(R.string.category_logbook),
                 ActiveScreen.ALL_PROJECTS to stringResource(R.string.special_all_projects),
-                ActiveScreen.LOGGED_PROJECTS to stringResource(R.string.special_logged_projects)
+                ActiveScreen.LOGGED_PROJECTS to stringResource(R.string.special_logged_projects),
+                ActiveScreen.REPEATING to stringResource(R.string.special_repeating)
             )
             if (isSearchOverlayActive) {
                 Box(modifier = Modifier.graphicsLayer { alpha = searchOverlayFade.value }) {

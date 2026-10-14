@@ -237,4 +237,20 @@
     <plurals name="repeat_days_earlier"><item quantity="one">за %d день</item><item quantity="few">за %d дня</item><item quantity="many">за %d дней</item><item quantity="other">за %d дня</item></plurals>
     <plurals name="repeat_repetitions"><item quantity="one">%d повтор</item><item quantity="few">%d повтора</item><item quantity="many">%d повторов</item><item quantity="other">%d повтора</item></plurals>
     <plurals name="repeat_ends_after"><item quantity="one">после %d повтора</item><item quantity="few">после %d повторов</item><item quantity="many">после %d повторов</item><item quantity="other">после %d повтора</item></plurals>
+    <string name="special_repeating">Повторяющиеся</string>
+    <string name="repeat_paused">Пауза</string>
+    <string name="repeat_summary_after">Через %1$s после выполнения</string>
+    <string name="repeat_every_one_day">Ежедневно</string>
+    <string name="repeat_every_one_week">Еженедельно</string>
+    <string name="repeat_every_one_month">Ежемесячно</string>
+    <string name="repeat_every_one_year">Ежегодно</string>
+    <string name="repeat_next_short">следующая %1$s</string>
+    <string name="repeat_copy_link">Это копия повторяющейся задачи</string>
+    <string name="repeat_project_copy_link">Это копия повторяющегося проекта</string>
+    <string name="repeat_action_edit">Изменить правило…</string>
+    <string name="repeat_action_next_copy">Создать следующую копию</string>
+    <string name="repeat_action_previous">Показать предыдущую копию</string>
+    <string name="repeat_action_pause">Приостановить</string>
+    <string name="repeat_action_resume">Возобновить</string>
+    <string name="repeat_action_stop">Остановить повтор</string>
 </resources>

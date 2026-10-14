@@ -230,4 +230,20 @@
     <plurals name="repeat_days_earlier"><item quantity="one">%d day earlier</item><item quantity="other">%d days earlier</item></plurals>
     <plurals name="repeat_repetitions"><item quantity="one">%d repetition</item><item quantity="other">%d repetitions</item></plurals>
     <plurals name="repeat_ends_after"><item quantity="one">after %d repetition</item><item quantity="other">after %d repetitions</item></plurals>
+    <string name="special_repeating">Repeating</string>
+    <string name="repeat_paused">Paused</string>
+    <string name="repeat_summary_after">%1$s after completion</string>
+    <string name="repeat_every_one_day">Daily</string>
+    <string name="repeat_every_one_week">Weekly</string>
+    <string name="repeat_every_one_month">Monthly</string>
+    <string name="repeat_every_one_year">Yearly</string>
+    <string name="repeat_next_short">next %1$s</string>
+    <string name="repeat_copy_link">This is a copy of a repeating to-do</string>
+    <string name="repeat_project_copy_link">This is a copy of a repeating project</string>
+    <string name="repeat_action_edit">Edit Rule…</string>
+    <string name="repeat_action_next_copy">Create Next Copy</string>
+    <string name="repeat_action_previous">Show Previous Copy</string>
+    <string name="repeat_action_pause">Pause</string>
+    <string name="repeat_action_resume">Resume</string>
+    <string name="repeat_action_stop">Stop</string>
 </resources>

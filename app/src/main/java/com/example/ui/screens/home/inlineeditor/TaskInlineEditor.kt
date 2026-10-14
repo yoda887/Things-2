@@ -1,5 +1,11 @@
 package com.example.ui.screens.home.inlineeditor
 
+import androidx.compose.material.icons.filled.Add
+import androidx.compose.material.icons.filled.Stop
+import androidx.compose.material.icons.filled.Pause
+import androidx.compose.material.icons.filled.PlayArrow
+import androidx.compose.material.icons.filled.History
+import androidx.compose.material.icons.filled.ChevronRight
 import androidx.compose.material.icons.filled.Notifications
 import com.example.ui.viewmodel.ActiveScreen
 import com.example.ui.theme.ThingsElevation
@@ -131,6 +137,9 @@ fun ThingsTaskInlineEditor(
     onWhenDialogVisibilityChange: (Boolean) -> Unit = {},
     onTagDialogVisibilityChange: (Boolean) -> Unit = {},
     areas: List<com.example.data.model.Area> = emptyList(),
+    // Шаблон повтора: действия с ним; копия повтора: перейти к шаблону
+    onRepeatAction: (com.example.ui.screens.home.components.RepeatAction) -> Unit = {},
+    onOpenRepeatTemplate: () -> Unit = {},
     onNavigateToProject: ((Item) -> Unit)? = null,
     onNavigateToArea: ((com.example.data.model.Area) -> Unit)? = null,
     screen: ActiveScreen = ActiveScreen.INBOX
@@ -398,6 +407,7 @@ fun ThingsTaskInlineEditor(
         ) {
             // Main Top Content: Checkbox, Title and Notes
                 InlineMainInputRow(
+                    isTemplate = task.item.isRepeatTemplate,
                     title = title,
                     onTitleChange = { title = it },
                     notes = notes,
@@ -417,7 +427,9 @@ fun ThingsTaskInlineEditor(
                             currentOnDone()
                         }
                     } else null,
-                    onCheckboxClick = {
+                    onCheckboxClick = onCheckboxClick@{
+                        // Задачу шаблона проекта не отмечают — отмечают её копии
+                        if (task.item.isTemplatePart) return@onCheckboxClick
                         val newCompleted = !isCompleted
                         isCompleted = newCompleted
                         val savedChecklist = checklist.filter { it.title.isNotBlank() }
@@ -462,7 +474,9 @@ fun ThingsTaskInlineEditor(
             // Серые иконки нижней строки (теги, флажок и т. п.) — цвет как в Things 3
             val iconInactiveColor = ThingsTheme.colors.editorIconInactive
 
-            val hasActiveDate = startDate != null || section == TaskSection.TODAY || section == TaskSection.SOMEDAY
+            // У шаблона повтора даты нет: дни задаёт правило (в «Предстоящих» дата лишь подставлена для показа)
+            val hasActiveDate = task.item.type != Item.TYPE_TEMPLATE &&
+                (startDate != null || section == TaskSection.TODAY || section == TaskSection.SOMEDAY)
 
             val activeDateLabel = if (hasActiveDate) {
                 com.example.ui.screens.home.inlineeditor.utils.formatStartDateLabel(startDate, section, isTonight)
@@ -506,6 +520,9 @@ fun ThingsTaskInlineEditor(
                         .padding(start = startRelativePadding),
                     verticalArrangement = Arrangement.Center
                 ) {
+                    // Повтор: у шаблона — правило и действия, у копии — ссылка на шаблон
+                    RepeatEditorRow(task.item, onRepeatAction, onOpenRepeatTemplate)
+
                     // 0. Active Tags Chips
                     val activeTags = remember(tagInput) {
                         tagInput.split(",")
@@ -677,7 +694,8 @@ fun ThingsTaskInlineEditor(
                     modifier = Modifier.padding(bottom = ThingsSpacing.XS) // Align slightly with indicator row text/icon padding
                 ) {
                     androidx.compose.animation.AnimatedVisibility(
-                        visible = !hasActiveDate,
+                        // У шаблона повтора «Когда» задаёт правило — кнопки нет
+                        visible = !hasActiveDate && task.item.type != Item.TYPE_TEMPLATE,
                         enter = fadeIn() + expandHorizontally(expandFrom = Alignment.End),
                         exit = fadeOut() + shrinkHorizontally(shrinkTowards = Alignment.End)
                     ) {
@@ -857,5 +875,82 @@ fun DeadlineDatePickerDialog(
         }
     ) {
         DatePicker(state = datePickerState)
+    }
+}
+
+/**
+ * Строка повтора в редакторе, как в Things. У шаблона — синяя стрелка, правило и следующий повтор
+ * («Щотижня: ср · наступна 21 жовт.»), нажатие — меню действий; у копии — «Это копия повторяющейся
+ * задачи ›», ведёт к шаблону. У обычной задачи строки нет.
+ */
+@Composable
+internal fun RepeatEditorRow(
+    item: Item,
+    onAction: (com.example.ui.screens.home.components.RepeatAction) -> Unit,
+    onOpenTemplate: () -> Unit
+) {
+    // Шаблон задачи или проекта — правило и меню действий; копия — ссылка на шаблон; часть шаблона проекта — ничего
+    val isTemplate = item.isRepeatTemplate
+    if (item.isTemplatePart || (!isTemplate && item.repeatTemplateId == null)) return
+    val view = LocalView.current
+    var menu by remember { mutableStateOf(false) }
+    val stored = com.example.ui.components.LocalRepeatRules.current[item.id]
+    val rule = stored?.let { com.example.domain.repeat.RepeatRule.decode(it.rrule) }
+    val text = when {
+        !isTemplate -> stringResource(if (item.type == Item.TYPE_PROJECT) R.string.repeat_project_copy_link else R.string.repeat_copy_link)
+        rule == null -> stringResource(R.string.special_repeating)
+        else -> {
+            val summary = com.example.ui.screens.home.inlineeditor.dialogs.repeatRuleSummary(rule)
+            val next = when {
+                !stored.isActive -> stringResource(R.string.repeat_paused)
+                stored.nextGenerationDate > 0 -> stringResource(
+                    R.string.repeat_next_short,
+                    java.text.SimpleDateFormat("d MMM", java.util.Locale.getDefault()).format(java.util.Date(stored.nextGenerationDate))
+                )
+                else -> null
+            }
+            if (next != null) "$summary · $next" else summary
+        }
+    }
+    Box {
+        Row(
+            verticalAlignment = Alignment.CenterVertically,
+            modifier = Modifier
+                .clickable {
+                    view.performHapticFeedback(HapticFeedbackConstants.CLOCK_TICK)
+                    if (isTemplate) menu = true else onOpenTemplate()
+                }
+                .padding(vertical = MaterialTheme.dimens.taskEditorIndicatorVerticalPadding)
+        ) {
+            Icon(AppIcons.Repeat, contentDescription = null, tint = ThingsTheme.colors.accent, modifier = Modifier.size(ThingsIconSize.S))
+            Spacer(modifier = Modifier.width(ThingsSpacing.XS_PLUS))
+            Text(
+                text = text,
+                maxLines = 2,
+                overflow = TextOverflow.Ellipsis,
+                style = ThingsTheme.type.editorDateStrong.copy(color = ThingsTheme.colors.accent)
+            )
+            if (!isTemplate) {
+                Icon(Icons.Default.ChevronRight, contentDescription = null, tint = ThingsTheme.colors.accent, modifier = Modifier.size(ThingsIconSize.S))
+            }
+        }
+        if (isTemplate) {
+            com.example.ui.components.ThingsDropdownMenu(expanded = menu, onDismissRequest = { menu = false }) {
+                fun pick(action: com.example.ui.screens.home.components.RepeatAction) {
+                    view.performHapticFeedback(HapticFeedbackConstants.CLOCK_TICK)
+                    menu = false
+                    onAction(action)
+                }
+                com.example.ui.components.ThingsMenuItem(stringResource(R.string.repeat_action_edit), AppIcons.Repeat, onClick = { pick(com.example.ui.screens.home.components.RepeatAction.EDIT) })
+                com.example.ui.components.ThingsMenuItem(stringResource(R.string.repeat_action_next_copy), Icons.Default.Add, onClick = { pick(com.example.ui.screens.home.components.RepeatAction.NEXT_COPY) })
+                com.example.ui.components.ThingsMenuItem(stringResource(R.string.repeat_action_previous), Icons.Default.History, onClick = { pick(com.example.ui.screens.home.components.RepeatAction.PREVIOUS_COPY) })
+                if (stored?.isActive == false) {
+                    com.example.ui.components.ThingsMenuItem(stringResource(R.string.repeat_action_resume), Icons.Default.PlayArrow, onClick = { pick(com.example.ui.screens.home.components.RepeatAction.RESUME) })
+                } else {
+                    com.example.ui.components.ThingsMenuItem(stringResource(R.string.repeat_action_pause), Icons.Default.Pause, onClick = { pick(com.example.ui.screens.home.components.RepeatAction.PAUSE) })
+                }
+                com.example.ui.components.ThingsMenuItem(stringResource(R.string.repeat_action_stop), Icons.Default.Stop, onClick = { pick(com.example.ui.screens.home.components.RepeatAction.STOP) }, destructive = true)
+            }
+        }
     }
 }

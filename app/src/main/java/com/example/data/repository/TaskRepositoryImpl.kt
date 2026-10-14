@@ -118,6 +118,18 @@ class TaskRepositoryImpl @Inject constructor(
         localDataSource.saveRecurrenceRule(rule)
     }
 
+    override fun observeRecurrenceRules() = localDataSource.observeRecurrenceRules()
+
+    override suspend fun getRecurrenceRule(templateId: String) = withContext(Dispatchers.IO) { localDataSource.getRecurrenceRule(templateId) }
+
+    override suspend fun deleteRecurrenceRule(templateId: String): Unit = withContext(Dispatchers.IO) { localDataSource.deleteRecurrenceRule(templateId) }
+
+    override suspend fun getRepeatCopies(templateId: String) = withContext(Dispatchers.IO) { localDataSource.getRepeatCopies(templateId) }
+
+    override suspend fun getChecklist(itemId: String) = withContext(Dispatchers.IO) { localDataSource.getChecklist(itemId) }
+
+    override suspend fun getProjectItems(projectId: String) = withContext(Dispatchers.IO) { localDataSource.getProjectItems(projectId) }
+
     override suspend fun insertTasks(items: List<Item>): Unit = withContext(Dispatchers.IO) {
         localDataSource.insertItems(detachForeignHeadings(items))
     }

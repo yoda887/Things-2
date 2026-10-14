@@ -50,6 +50,12 @@ class LocalTaskDataSource(private val taskDao: TaskDao) {
      */
     /** Правило повтора шаблона */
     suspend fun saveRecurrenceRule(rule: com.example.data.model.RecurrenceRule) = taskDao.upsertRecurrenceRule(rule)
+    fun observeRecurrenceRules() = taskDao.getAllRecurrenceRulesFlow()
+    suspend fun getRecurrenceRule(templateId: String) = taskDao.getRecurrenceRuleOf(templateId)
+    suspend fun deleteRecurrenceRule(templateId: String) = taskDao.deleteRecurrenceRulesOf(templateId)
+    suspend fun getRepeatCopies(templateId: String) = taskDao.getRepeatCopiesOf(templateId)
+    suspend fun getChecklist(itemId: String) = taskDao.getChecklistItemsByItemId(itemId)
+    suspend fun getProjectItems(projectId: String) = taskDao.getItemsOfProject(projectId)
 
     suspend fun getItemById(itemId: String): Item? {
         return taskDao.getItemById(itemId)

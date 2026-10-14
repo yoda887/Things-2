@@ -101,6 +101,16 @@ class ThingsViewModel @Inject constructor(
     val tasks: StateFlow<List<ItemWithChecklist>> = queryUseCases.observeAllTasks()
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
 
+    /** Шаблоны повторяющихся проектов: в [projects] их нет, а экран шаблона открывают из «Повторяющихся» */
+    val projectTemplates: StateFlow<List<Item>> = tasks
+        .map { list -> list.map { it.item }.filter { com.example.domain.lists.RepeatingList.includesProject(it) } }
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
+
+    /** Правила повтора шаблонов повторяющихся задач — по id шаблона */
+    val recurrenceRules: StateFlow<Map<String, com.example.data.model.RecurrenceRule>> = queryUseCases.observeRecurrenceRules()
+        .map { rules -> rules.associateBy { it.templateId } }
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyMap())
+
     /** Заголовки всех проектов, включая архивные; экран проекта берёт свои активные */
     val headings: StateFlow<List<Item>> = headingUseCases.observe()
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
@@ -190,14 +200,15 @@ class ThingsViewModel @Inject constructor(
             allTagsSet: Set<String>,
             highlighted: String?,
             query: String = "",
-            headingList: List<Item> = emptyList()
+            headingList: List<Item> = emptyList(),
+            repeatRules: Map<String, com.example.data.model.RecurrenceRule> = emptyMap()
         ): ThingsCategoryListState {
             // Границы дня считаем один раз на весь список, а не в геттерах каждой задачи
             val bounds = DayBounds.now()
             val somedayProjectIds = AnytimeList.somedayProjectIds(projectList)
 
             // Все экраны перечислены явно (без else): новый экран компилятор заставит указать и здесь
-            val listTasks = taskList.filter { wrapper ->
+            val screenTasks = taskList.filter { wrapper ->
                 val task = wrapper.item
                 if (task.id == expandedTaskId) {
                     true
@@ -215,9 +226,22 @@ class ThingsViewModel @Inject constructor(
                         ActiveScreen.SEARCH -> SearchList.includes(wrapper, query)
                         // У главного экрана и особых списков проектов нет списка задач
                         ActiveScreen.HOME, ActiveScreen.ALL_PROJECTS, ActiveScreen.LOGGED_PROJECTS -> false
+                        ActiveScreen.REPEATING -> com.example.domain.lists.RepeatingList.includes(task)
                     }
                 }
             }.sortedBy { it.item.sortOrder }
+
+            // «Предстоящие» показывают и шаблоны повтора — на день их следующей копии; шаблоны проектов —
+            // строками проектов
+            val previews = if (screen == ActiveScreen.UPCOMING) {
+                com.example.domain.lists.RepeatingList.upcomingPreviews(taskList, repeatRules, bounds.endOfToday)
+            } else emptyList()
+            val (projectPreviews, taskPreviews) = previews.partition { it.item.type == Item.TYPE_PROJECT_TEMPLATE }
+            val listTasks = if (screen == ActiveScreen.UPCOMING) {
+                // Раскрытый шаблон тоже остаётся на дне копии: его подставленная дата заменяет «без даты»
+                val previewIds = taskPreviews.mapTo(HashSet()) { it.item.id }
+                screenTasks.filter { it.item.id !in previewIds } + taskPreviews
+            } else screenTasks
 
             // Заголовки экрана проекта
             val projectHeadings = if (screen == ActiveScreen.PROJECT_DETAIL) ProjectList.headings(headingList, project?.id) else emptyList()
@@ -232,6 +256,7 @@ class ThingsViewModel @Inject constructor(
                 // Порядок экрана — общий порядок задач (sortOrder)
                 ActiveScreen.INBOX, ActiveScreen.TODAY, ActiveScreen.UPCOMING, ActiveScreen.TAG_DETAIL,
                 ActiveScreen.SEARCH, ActiveScreen.HOME, ActiveScreen.ALL_PROJECTS, ActiveScreen.LOGGED_PROJECTS -> listTasks
+                ActiveScreen.REPEATING -> com.example.domain.lists.RepeatingList.order(listTasks, repeatRules)
             }
 
             val displayTasks = if (selectedTag == null) {
@@ -263,13 +288,14 @@ class ThingsViewModel @Inject constructor(
                 allSavedTags = savedTags,
                 allSavedTagObjects = savedTagObjs,
                 areas = areaList,
-                projects = projectList,
+                projects = if (projectPreviews.isEmpty()) projectList else projectList + projectPreviews.map { it.item },
                 highlightedTaskId = highlighted,
                 allTasks = taskList,
                 projectProgressMap = projectProgressMap,
                 searchQuery = query,
                 headings = projectHeadings,
-                allHeadings = headingList.filter { !it.trashed }
+                allHeadings = headingList.filter { !it.trashed },
+                repeatRules = repeatRules
             )
         }
     }
@@ -301,7 +327,8 @@ class ThingsViewModel @Inject constructor(
             allTagsSet = allTags.value,
             highlighted = highlightedTaskId.value,
             query = searchQuery.value,
-            headingList = headings.value
+            headingList = headings.value,
+            repeatRules = recurrenceRules.value
         )
     }
 
@@ -335,7 +362,8 @@ class ThingsViewModel @Inject constructor(
                 allTags,
                 highlightedTaskId,
                 searchQuery,
-                headings
+                headings,
+                recurrenceRules
             )
         ) { array ->
             val expandedTaskId = array[0] as? String
@@ -375,7 +403,8 @@ class ThingsViewModel @Inject constructor(
                 allTagsSet = allTagsSet,
                 highlighted = highlighted,
                 query = query,
-                headingList = headingList
+                headingList = headingList,
+                repeatRules = @Suppress("UNCHECKED_CAST") (array[12] as Map<String, com.example.data.model.RecurrenceRule>)
             )
         }.flowOn(Dispatchers.Default)
     }
@@ -423,6 +452,12 @@ class ThingsViewModel @Inject constructor(
         viewModelScope.launch { headingUseCases.insert(headings, movedTasks) }
     }
 
+    /** Задача, созданная в шаблоне повторяющегося проекта, сразу становится его частью ([RepeatProjects.normalize]) */
+    private fun Item.inRepeatingProject(): Item {
+        val template = projectTemplates.value.firstOrNull { it.id == projectId } ?: return this
+        return com.example.domain.repeat.RepeatProjects.normalize(listOf(template, this)).firstOrNull { it.id == id } ?: this
+    }
+
     /** Новая задача по «+» на экране: поля по месту ([NewTasks]); задача сразу раскрывается для ввода. */
     fun createTask(place: NewTaskPlace, id: String = UUID.randomUUID().toString()) {
         val resolved = if (place is NewTaskPlace.Upcoming && place.startDate == null) {
@@ -430,7 +465,7 @@ class ThingsViewModel @Inject constructor(
         } else {
             place
         }
-        updateTask(NewTasks.create(resolved, id))
+        updateTask(NewTasks.create(resolved, id).inRepeatingProject())
         setInlineExpandedTaskId(id)
     }
 
@@ -439,7 +474,7 @@ class ThingsViewModel @Inject constructor(
      * перед задачей [insertIndex] списка экрана [listTasks]; соседи при нужде перенумеровываются.
      */
     fun createTaskAt(id: String, place: NewTaskPlace, spot: DropSpot, insertIndex: Int, listTasks: List<Item>) {
-        val insertion = SortOrders.insert(listTasks, insertIndex, NewTasks.atDrop(NewTasks.create(place, id), spot))
+        val insertion = SortOrders.insert(listTasks, insertIndex, NewTasks.atDrop(NewTasks.create(place, id), spot).inRepeatingProject())
         viewModelScope.launch {
             taskUseCases.updateTask(insertion.created)
             if (insertion.reordered.isNotEmpty()) taskUseCases.updateTask(insertion.reordered)
@@ -600,6 +635,15 @@ class ThingsViewModel @Inject constructor(
     /** Отменить задачу или вернуть отменённую ([TaskStatuses]). */
     fun toggleTaskCancel(taskId: String) {
         viewModelScope.launch { taskUseCases.toggleTaskCancel(taskId) }
+    }
+
+    // Действия с шаблоном повтора ([com.example.domain.usecase.task.RepeatTemplateUseCase])
+    fun pauseRepeat(templateId: String) { viewModelScope.launch { taskUseCases.repeatTemplate.pause(templateId) } }
+    fun resumeRepeat(templateId: String) { viewModelScope.launch { taskUseCases.repeatTemplate.resume(templateId) } }
+    fun stopRepeat(templateId: String) { viewModelScope.launch { taskUseCases.repeatTemplate.stop(templateId) } }
+    fun repeatNextCopy(templateId: String) { viewModelScope.launch { taskUseCases.repeatTemplate.createNextCopy(templateId) } }
+    fun updateRepeatRule(templateId: String, rule: com.example.domain.repeat.RepeatRule, reminderTime: Int?) {
+        viewModelScope.launch { taskUseCases.repeatTemplate.updateRule(templateId, rule, reminderTime) }
     }
 
     /** Сделать задачу повторяющейся ([com.example.domain.usecase.task.MakeTaskRepeatingUseCase]). */

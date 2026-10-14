@@ -39,13 +39,16 @@ object TaskEdits {
             notes = fields.notes,
             start = start,
             isTonight = fields.isTonight,
-            startDate = fields.startDate,
+            // У шаблона повтора своей даты нет — дни задаёт правило (в «Предстоящих» дата лишь подставлена)
+            startDate = if (task.type == Item.TYPE_TEMPLATE) null else fields.startDate,
             dueDate = fields.dueDate,
             cachedTags = TagTitles.join(fields.tags),
             projectId = fields.projectId,
             priority = fields.priority,
-            // Напоминание срабатывает в день задачи: без дня (дату убрали, «Когда-нибудь») оно снимается
-            reminderTime = fields.reminderTime?.takeIf { Reminders.hasDay(fields.startDate, start) },
+            // Напоминание срабатывает в день задачи: без дня (дату убрали, «Когда-нибудь») оно снимается.
+            // У шаблона повтора дня нет вовсе — его напоминание переходит в копии и сохраняется как есть
+            reminderTime = if (task.type == Item.TYPE_TEMPLATE) fields.reminderTime
+            else fields.reminderTime?.takeIf { Reminders.hasDay(fields.startDate, start) },
             modificationDate = now
         )
     }

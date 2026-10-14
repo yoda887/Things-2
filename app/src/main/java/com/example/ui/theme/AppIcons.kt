@@ -201,6 +201,36 @@ object AppIcons {
     }
 
     /**
+     * Повтор — круговая стрелка по часовой стрелке с наконечником вверху, как у повторяющихся задач в Things.
+     * В строке шаблона она стоит на бледном круге ([com.example.ui.components.RepeatTemplateIcon]). Цвет задаёт tint.
+     */
+    val Repeat: ImageVector by lazy(LazyThreadSafetyMode.NONE) {
+        ImageVector.Builder(
+            name = "Repeat",
+            defaultWidth = 24.dp,
+            defaultHeight = 24.dp,
+            viewportWidth = 28f,
+            viewportHeight = 28f
+        ).apply {
+            val stroke = SolidColor(Color.Black)
+            // Поле 2 вокруг рисунка 24×24: длинный наконечник выходит за верх дуги. Окружность — по центру
+            group(translationX = 2f, translationY = 2f) {
+                // Дуга: от верха против часовой стрелки — через левый край и низ — до правого верхнего угла
+                path(stroke = stroke, strokeLineWidth = 2.4f, strokeLineCap = StrokeCap.Round) {
+                    moveTo(12f, 2.8f)
+                    arcTo(9.2f, 9.2f, 0f, isMoreThanHalf = true, isPositiveArc = false, 18.5f, 5.5f)
+                }
+                // Наконечник в начале дуги — галочка из двух линий, смотрит вправо
+                path(stroke = stroke, strokeLineWidth = 2.4f, strokeLineCap = StrokeCap.Round, strokeLineJoin = StrokeJoin.Round) {
+                    moveTo(11.3f, -0.9f)
+                    lineTo(15f, 2.8f)
+                    lineTo(11.3f, 6.5f)
+                }
+            }
+        }.build()
+    }
+
+    /**
      * Колокольчик напоминания — залитый, как в Things: на всю высоту квадрата, соразмерно звезде
      * «Сегодня», луне и ящику «Когда-нибудь». Цвет задаёт tint.
      */

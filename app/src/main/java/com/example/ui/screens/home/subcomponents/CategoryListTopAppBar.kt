@@ -370,6 +370,17 @@ private fun CategoryTopAppBarTitleContent(
                     color = textPrimaryColor
                 )
             }
+            ActiveScreen.REPEATING -> {
+                com.example.ui.components.RepeatTemplateIcon(
+                    modifier = Modifier.size(TOP_APP_BAR_ICON_SIZE * 0.8f)
+                )
+                Spacer(modifier = Modifier.width(TOP_APP_BAR_SPACING))
+                Text(
+                    text = stringResource(R.string.special_repeating),
+                    style = ThingsTheme.type.topAppBarTitle,
+                    color = textPrimaryColor
+                )
+            }
             ActiveScreen.PROJECT_DETAIL -> {
                 val completedCount = tasks.count { it.item.projectId == project?.id && it.item.isClosed }
                 val totalCount = tasks.count { it.item.projectId == project?.id }
