@@ -577,6 +577,9 @@ fun ThingsTaskInlineEditor(
                                 ) {
                                     Text(
                                         text = tag,
+                                        maxLines = 1,
+                                        softWrap = false,
+                                        overflow = TextOverflow.Ellipsis,
                                         style = ThingsTheme.type.tagChip.copy(
                                             color = ThingsTheme.colors.tagChipText
                                         )

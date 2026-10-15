@@ -181,7 +181,7 @@ private fun ProjectTagsRow(tags: List<String>, onClick: () -> Unit) {
                     .background(ThingsTheme.colors.tagChipBackground)
                     .padding(horizontal = ThingsSpacing.S_PLUS, vertical = ThingsSpacing.XS)
             ) {
-                Text(text = tag, style = ThingsTheme.type.tagChip.copy(color = ThingsTheme.colors.tagChipText))
+                Text(text = tag, maxLines = 1, softWrap = false, overflow = TextOverflow.Ellipsis, style = ThingsTheme.type.tagChip.copy(color = ThingsTheme.colors.tagChipText))
             }
         }
     }
