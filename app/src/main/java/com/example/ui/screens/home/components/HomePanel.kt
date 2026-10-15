@@ -54,6 +54,7 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import com.example.ui.components.selectionTint
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.clipToBounds
 import androidx.compose.ui.draw.alpha
@@ -1290,8 +1291,12 @@ private fun LazyItemScope.ProjectItemRow(
                 .clip(projectChipShape)
                 .background(
                     if (isDragging || dragElev > ThingsElevation.NONE) cardSurfaceColor
-                    else if (isSelected) ThingsTheme.colors.accentSelection
                     else if (isEditing) ThingsTheme.colors.accent.copy(alpha = ThingsAlpha.SUBTLE)
+                    else Color.Transparent
+                )
+                // Выделение — поверх строки, на всех её элементах
+                .selectionTint(
+                    if (isSelected && !isDragging && dragElev <= ThingsElevation.NONE) ThingsTheme.colors.accentSelection
                     else Color.Transparent
                 )
                 .clickable(enabled = !isEditing && !isDragging) {

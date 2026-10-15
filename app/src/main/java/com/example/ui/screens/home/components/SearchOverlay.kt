@@ -38,6 +38,7 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import com.example.ui.components.selectionTint
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.drawWithContent
 import androidx.compose.ui.focus.FocusRequester
@@ -1030,7 +1031,8 @@ fun SearchResultRow(
                     .fillMaxWidth()
                     .height(MaterialTheme.dimens.quickFindRowHeight)
                     .clip(ThingsTheme.shapes.capsuleShape)
-                    .background(rowBg)
+                    // Выделение — поверх строки, на всех её элементах
+                    .selectionTint(rowBg)
                     .clickable { onProjectClick(result.project) }
                     .padding(start = ThingsSpacing.S, end = ThingsSpacing.M),
                 verticalAlignment = Alignment.CenterVertically
@@ -1084,7 +1086,8 @@ fun SearchResultRow(
                     .fillMaxWidth()
                     .height(MaterialTheme.dimens.quickFindRowHeight)
                     .clip(ThingsTheme.shapes.capsuleShape)
-                    .background(rowBg)
+                    // Выделение — поверх строки, на всех её элементах
+                    .selectionTint(rowBg)
                     .clickable {
                         when (result) {
                             is SearchResultItem.SmartListResult -> onSmartListClick(result.screen)

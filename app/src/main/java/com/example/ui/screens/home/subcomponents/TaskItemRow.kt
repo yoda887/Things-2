@@ -30,6 +30,7 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import com.example.ui.components.selectionTint
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.drawBehind
 import androidx.compose.ui.graphics.drawOutline
@@ -201,13 +202,19 @@ fun TaskItemRow(
     }
 
     val animatedRowBgColor by androidx.compose.animation.animateColorAsState(
+        targetValue = if (isDragging) ThingsTheme.colors.surface else Color.Transparent,
+        animationSpec = androidx.compose.animation.core.tween(durationMillis = ThingsMotion.BASE),
+        label = "rowBgColor_${task.id}"
+    )
+    // Выделение — поверх всей строки (foreground), чтобы ложилось и на плашки, чипы и чекбокс
+    val animatedRowTint by androidx.compose.animation.animateColorAsState(
         targetValue = when {
-            isDragging -> ThingsTheme.colors.surface
+            isDragging -> Color.Transparent
             isSelected -> ThingsTheme.colors.accentSelection
             else -> highlightColor
         },
         animationSpec = androidx.compose.animation.core.tween(durationMillis = ThingsMotion.BASE),
-        label = "rowBgColor_${task.id}"
+        label = "rowTint_${task.id}"
     )
 
     val fillBgColor = ThingsTheme.colors.dropPlaceholder
@@ -252,6 +259,7 @@ fun TaskItemRow(
             }
             .shadow(elevation, ThingsTheme.shapes.rowShape)
             .background(animatedRowBgColor, ThingsTheme.shapes.rowShape)
+            .selectionTint(animatedRowTint, ThingsTheme.shapes.rowShape)
             // Жёлтый найденной задачи — поверх, по кадрам своей анимации (без сглаживания фона)
             .drawBehind {
                 if (foundGlow.value > 0f) drawOutline(rowShapeForGlow.createOutline(size, layoutDirection, this), foundGlowColor.copy(alpha = foundGlow.value))
