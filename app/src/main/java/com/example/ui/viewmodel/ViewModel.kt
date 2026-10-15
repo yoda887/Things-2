@@ -255,7 +255,9 @@ class ThingsViewModel @Inject constructor(
                 ActiveScreen.AREA_DETAIL -> AreaList.order(listTasks, area?.id, bounds)
                 ActiveScreen.LOGBOOK -> LogbookList.order(listTasks)
                 // Порядок экрана — общий порядок задач (sortOrder)
-                ActiveScreen.INBOX, ActiveScreen.TODAY, ActiveScreen.UPCOMING, ActiveScreen.TAG_DETAIL,
+                // Тег — в порядке групп по месту, как видно на экране
+                ActiveScreen.TAG_DETAIL -> com.example.domain.lists.PlaceGroups.order(listTasks, projectList, areaList)
+                ActiveScreen.INBOX, ActiveScreen.TODAY, ActiveScreen.UPCOMING,
                 ActiveScreen.SEARCH, ActiveScreen.HOME, ActiveScreen.ALL_PROJECTS, ActiveScreen.LOGGED_PROJECTS -> listTasks
                 ActiveScreen.REPEATING -> com.example.domain.lists.RepeatingList.order(listTasks, repeatRules)
             }

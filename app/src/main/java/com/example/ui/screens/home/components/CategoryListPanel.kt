@@ -988,7 +988,7 @@ fun ThingsCategoryListPanel(
                 ActiveScreen.UPCOMING -> !UpcomingScreen.isEmpty(upcomingSchedule)
                 ActiveScreen.AREA_DETAIL -> !AreaList.content(area?.id, displayTasks, projects).isEmpty
                 ActiveScreen.LOGBOOK -> LogbookList.entries(displayTasks, projects).isNotEmpty()
-                ActiveScreen.TAG_DETAIL -> !TagList.content(state.tag?.title, displayTasks, state.allTasks, projects).isEmpty
+                ActiveScreen.TAG_DETAIL -> !TagList.content(state.tag?.title, displayTasks, state.allTasks, projects, areasState).isEmpty
                 ActiveScreen.PROJECT_DETAIL -> !ProjectScreen.isEmpty(displayTasks, localHeadings)
                 ActiveScreen.ANYTIME -> displayTasks.isNotEmpty()
                 // «Когда-нибудь» показывает и отложенные проекты — без задач экран не пуст

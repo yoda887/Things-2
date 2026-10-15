@@ -206,7 +206,7 @@ fun rememberFlattenedList(
     savedTags: List<Tag> = emptyList(),
     searchQuery: String = "",
     headings: List<Item> = emptyList(),
-    // Место задачи в открытом редакторе — «В любое время» и «Когда-нибудь» держат её там до закрытия
+    // Место задачи в открытом редакторе — «В любое время», «Когда-нибудь» и тег держат её там до закрытия
     pinnedPlaces: Map<String, PlaceGroups.Place> = emptyMap(),
     // «Все проекты»: раскрытые группы поздних проектов и показ завершённых
     expandedLaterProjects: Set<String> = emptySet(),
@@ -227,7 +227,7 @@ fun rememberFlattenedList(
             ActiveScreen.UPCOMING -> UpcomingScreen.rows(upcomingDays, upcomingMonths)
             ActiveScreen.AREA_DETAIL -> AreaScreen.rows(AreaList.content(area?.id, displayTasks, projects), isLaterItemsHidden)
             ActiveScreen.LOGBOOK -> LogbookScreen.rows(LogbookList.sections(displayTasks, projects), todayLabel, yesterdayLabel)
-            ActiveScreen.TAG_DETAIL -> TagScreen.rows(TagList.content(tag?.title, displayTasks, allTasks, projects))
+            ActiveScreen.TAG_DETAIL -> TagScreen.rows(TagList.content(tag?.title, displayTasks, allTasks, projects, areas, pinnedPlaces))
             ActiveScreen.PROJECT_DETAIL -> ProjectScreen.rows(displayTasks, headings, draggedItemKey)
             ActiveScreen.ANYTIME -> PlaceGroupRows.rows(AnytimeList.groups(displayTasks, projects, areas, pinnedPlaces))
             ActiveScreen.SOMEDAY -> PlaceGroupRows.rows(SomedayList.groups(displayTasks, projects, areas, pinnedPlaces))
