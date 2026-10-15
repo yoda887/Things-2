@@ -951,6 +951,8 @@ fun ThingsHomeScreen(viewModel: ThingsViewModel = hiltViewModel()) {
                         
                         // [ИЗМЕНЕНИЕ]: Переход на соответствующий экран через navigateTo вместо прямого присвоения activeScreen
                         val targetScreen = when {
+                            // Повторяющаяся задача (шаблон) живёт в «Повторяющихся» — даже если у неё есть проект или область
+                            task.item.isRepeatTemplate -> ActiveScreen.REPEATING
                             task.item.projectId != null -> ActiveScreen.PROJECT_DETAIL
                             task.item.areaId != null -> ActiveScreen.AREA_DETAIL
                             task.item.isCompleted -> ActiveScreen.LOGBOOK
@@ -962,6 +964,7 @@ fun ThingsHomeScreen(viewModel: ThingsViewModel = hiltViewModel()) {
                             else -> ActiveScreen.INBOX
                         }
                         val targetEntityId = when {
+                            task.item.isRepeatTemplate -> null
                             task.item.projectId != null -> proj?.id
                             task.item.areaId != null -> area?.id
                             else -> null

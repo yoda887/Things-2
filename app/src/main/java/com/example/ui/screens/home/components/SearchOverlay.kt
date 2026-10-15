@@ -390,9 +390,10 @@ fun ThingsSearchOverlay(
             }
             results.addAll(matchedTags.map { SearchResultItem.TagResult(it) })
 
-            // 3. Поиск по задачам (только активные по названию, заметкам, чеклистам; исключая удаленные и завершенные/отмененные)
+            // 3. Поиск по задачам (только активные по названию, заметкам, чеклистам; исключая удаленные и завершенные/отмененные).
+            // Повторяющиеся задачи (шаблоны) находятся тоже — со своим значком, как в «Повторяющихся»; их копии — обычные задачи
             val matchedTasks = allTasks.filter { wrapper ->
-                wrapper.item.type == Item.TYPE_TASK && !wrapper.item.trashed && !wrapper.item.isCompleted && wrapper.item.status != Item.STATUS_CANCELLED && (
+                (wrapper.item.type == Item.TYPE_TASK || com.example.domain.lists.RepeatingList.includes(wrapper.item)) && !wrapper.item.trashed && !wrapper.item.isCompleted && wrapper.item.status != Item.STATUS_CANCELLED && (
                     wrapper.item.title.contains(query, ignoreCase = true) ||
                     wrapper.item.notes.contains(query, ignoreCase = true) ||
                     wrapper.checklist.any { it.title.contains(query, ignoreCase = true) }
@@ -909,7 +910,7 @@ fun ContinueSearchTaskRow(
                 imageVector = Icons.Default.Search,
                 contentDescription = null,
                 tint = textPrimary,
-                modifier = Modifier.size(ThingsIconSize.L)
+                modifier = Modifier.requiredSize(ThingsIconSize.L)
             )
         }
         Spacer(modifier = Modifier.width(MaterialTheme.dimens.searchSpacingToText))
@@ -1043,7 +1044,7 @@ fun SearchResultRow(
                         total = totalCount,
                         color = arcColor,
                         dashed = result.project.start == com.example.data.model.Item.START_SOMEDAY,
-                        modifier = Modifier.size(ThingsIconSize.M)
+                        modifier = Modifier.requiredSize(ThingsIconSize.M)
                     )
                 }
                 Spacer(modifier = Modifier.width(MaterialTheme.dimens.searchSpacingToText))
@@ -1112,12 +1113,21 @@ fun SearchResultRow(
                         )
 
                     when (result) {
-                        is SearchResultItem.SmartListResult -> if (
+                        is SearchResultItem.SmartListResult -> if (result.screen == ActiveScreen.REPEATING) {
+                            // «Повторяющиеся» — тот же значок, что в заголовке списка и у повторяющихся задач. Подсветка
+                            // рисует в своём слое и обрезает всё за его краем: слой — на рамке полного размера, а значок
+                            // внутри меньше на своё увеличение и после него ровно заполняет рамку
+                            Box(modifier = iconModifier.requiredSize(RESULT_ICON_SIZE), contentAlignment = Alignment.Center) {
+                                com.example.ui.components.RepeatTemplateIcon(
+                                    modifier = Modifier.size(RESULT_ICON_SIZE / com.example.ui.components.REPEAT_ICON_SCALE)
+                                )
+                            }
+                        } else if (
                             result.screen == ActiveScreen.ALL_PROJECTS || result.screen == ActiveScreen.LOGGED_PROJECTS
                         ) {
                             com.example.ui.components.ProjectStackIcon(
                                 logged = result.screen == ActiveScreen.LOGGED_PROJECTS,
-                                modifier = iconModifier.width(RESULT_ICON_SIZE)
+                                modifier = iconModifier.requiredWidth(RESULT_ICON_SIZE)
                             )
                         } else {
                             val info = when (result.screen) {
@@ -1134,7 +1144,7 @@ fun SearchResultRow(
                                 imageVector = info.first,
                                 contentDescription = null,
                                 tint = info.second,
-                                modifier = iconModifier.size(RESULT_ICON_SIZE)
+                                modifier = iconModifier.requiredSize(RESULT_ICON_SIZE)
                             )
                         }
                         is SearchResultItem.SpecialResult -> {
@@ -1142,7 +1152,7 @@ fun SearchResultRow(
                                 imageVector = result.icon,
                                 contentDescription = null,
                                 tint = result.iconColor,
-                                modifier = iconModifier.size(ThingsIconSize.M)
+                                modifier = iconModifier.requiredSize(ThingsIconSize.M)
                             )
                         }
                         is SearchResultItem.AreaResult -> {
@@ -1150,7 +1160,7 @@ fun SearchResultRow(
                                 imageVector = AppIcons.Area,
                                 contentDescription = null,
                                 tint = ThingsTheme.colors.area,
-                                modifier = iconModifier.size(ThingsIconSize.M)
+                                modifier = iconModifier.requiredSize(ThingsIconSize.M)
                             )
                         }
                         is SearchResultItem.TagResult -> {
@@ -1158,7 +1168,7 @@ fun SearchResultRow(
                                 imageVector = AppIcons.Tag,
                                 contentDescription = null,
                                 tint = ThingsTheme.colors.someday,
-                                modifier = iconModifier.size(ThingsIconSize.M)
+                                modifier = iconModifier.requiredSize(ThingsIconSize.M)
                             )
                         }
                         else -> {}

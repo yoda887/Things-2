@@ -14,7 +14,8 @@ data class AppDimens(
     val mainCheckboxSize: Dp = 16.dp,
     val taskLeftColumnWidthDefault: Dp = 16.dp,
     val taskSpacingToTextDefault: Dp = 8.dp,
-    val searchLeftColumnWidth: Dp = 28.dp,
+    // Колонка чекбокса или значка в Quick Find — как в списках задач: расстояние до названия то же, что в «Сегодня»
+    val searchLeftColumnWidth: Dp = 16.dp,
     val searchSpacingToText: Dp = 8.dp,
     val taskItemEstimatedHeight: Dp = 56.dp,
     val mainHeaderPaddingTop: Dp = 24.dp,
