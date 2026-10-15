@@ -215,10 +215,11 @@ object AppIcons {
             val stroke = SolidColor(Color.Black)
             // Поле 2 вокруг рисунка 24×24: длинный наконечник выходит за верх дуги. Окружность — по центру
             group(translationX = 2f, translationY = 2f) {
-                // Дуга: от верха против часовой стрелки — через левый край и низ — до правого верхнего угла
+                // Дуга: от верха против часовой стрелки — через левый край и низ — почти до правого края: между концом
+                // и наконечником заметный зазор
                 path(stroke = stroke, strokeLineWidth = 2.4f, strokeLineCap = StrokeCap.Round) {
                     moveTo(12f, 2.8f)
-                    arcTo(9.2f, 9.2f, 0f, isMoreThanHalf = true, isPositiveArc = false, 18.5f, 5.5f)
+                    arcTo(9.2f, 9.2f, 0f, isMoreThanHalf = true, isPositiveArc = false, 20.12f, 7.68f)
                 }
                 // Наконечник в начале дуги — галочка из двух линий, смотрит вправо
                 path(stroke = stroke, strokeLineWidth = 2.4f, strokeLineCap = StrokeCap.Round, strokeLineJoin = StrokeJoin.Round) {
@@ -244,10 +245,10 @@ object AppIcons {
             viewportHeight = 24f
         ).apply {
             val stroke = SolidColor(Color.Black)
-            // Дуга: от верха против часовой стрелки до правого верхнего угла, окружность по центру
+            // Дуга: от верха против часовой стрелки почти до правого края (зазор до наконечника), окружность по центру
             path(stroke = stroke, strokeLineWidth = 2.2f, strokeLineCap = StrokeCap.Round) {
                 moveTo(12f, 4.4f)
-                arcTo(7.6f, 7.6f, 0f, isMoreThanHalf = true, isPositiveArc = false, 17.4f, 6.6f)
+                arcTo(7.6f, 7.6f, 0f, isMoreThanHalf = true, isPositiveArc = false, 18.71f, 8.43f)
             }
             // Наконечник — галочка из двух линий, смотрит вправо
             path(stroke = stroke, strokeLineWidth = 2.2f, strokeLineCap = StrokeCap.Round, strokeLineJoin = StrokeJoin.Round) {
