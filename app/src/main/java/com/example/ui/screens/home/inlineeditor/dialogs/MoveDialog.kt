@@ -5,6 +5,12 @@ import androidx.compose.foundation.layout.ExperimentalLayoutApi
 import com.example.ui.components.IME_FOCUS_CLEAR_DIALOG_SETTLE_MS
 import com.example.ui.components.ClearFocusOnImeHidden
 import androidx.compose.ui.layout.onSizeChanged
+import androidx.compose.ui.layout.layout
+import androidx.compose.ui.draw.clipToBounds
+import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.input.nestedscroll.nestedScroll
+import androidx.compose.ui.unit.Velocity
+import kotlin.math.roundToInt
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.LocalSoftwareKeyboardController
 import androidx.compose.ui.platform.LocalFocusManager
@@ -172,6 +178,7 @@ fun ThingsMoveDialog(
         // Выход из поиска: «Назад» при активном поиске очищает запрос и снимает курсор, окно остаётся
         val focusManager = LocalFocusManager.current
         val searchFocusRequester = remember { FocusRequester() }
+        val keyboardController = LocalSoftwareKeyboardController.current
         fun leaveSearch() {
             query = ""
             focusManager.clearFocus()
@@ -192,6 +199,61 @@ fun ThingsMoveDialog(
         }
         // Поиск активен, пока курсор в поле и клавиатура не уходит (до её появления — тоже активен)
         val searchActive = searchFocused && !(keyboardWasShown && keyboardGoingAway)
+
+        // Тяга списка вниз, как у быстрого поиска на главном экране: [searchPull] — общий вытянутый путь (px).
+        // Первая его часть — поле поиска выезжает из-под заголовка (до своей полной высоты [searchFullPx]),
+        // дальше поле стоит, а сам список тянется ниже со всё большим сопротивлением
+        val searchPull = remember { androidx.compose.animation.core.Animatable(0f) }
+        var searchFullPx by remember { mutableIntStateOf(0) }
+        val overPullMaxPx = with(LocalDensity.current) { SEARCH_OVERPULL_MAX.toPx() }
+        // Отпущенный список возвращается резко, без раскачки
+        val springBack = androidx.compose.animation.core.spring<Float>(stiffness = androidx.compose.animation.core.Spring.StiffnessMedium)
+        val currentSearchPinned by rememberUpdatedState(searchFocused || query.isNotEmpty())
+        // Отпустили вытянутое до конца поле — курсор в поле, клавиатура, можно сразу набирать
+        var focusSearchAfterPull by remember { mutableStateOf(false) }
+        val searchPullConnection = remember(overPullMaxPx) {
+            object : androidx.compose.ui.input.nestedscroll.NestedScrollConnection {
+                /** Ниже этого поле не прячется: пока в нём курсор или текст, оно видно целиком */
+                fun floor() = if (currentSearchPinned) searchFullPx.toFloat() else 0f
+
+                // Палец вверх: сначала уходит перетяжка списка и пустое поле, потом листается список
+                override fun onPreScroll(available: Offset, source: androidx.compose.ui.input.nestedscroll.NestedScrollSource): Offset {
+                    val delta = available.y
+                    val low = floor()
+                    if (delta >= 0f || searchPull.value <= low) return Offset.Zero
+                    val next = (searchPull.value + delta).coerceAtLeast(low)
+                    val consumed = next - searchPull.value
+                    scope.launch { searchPull.snapTo(next) }
+                    return Offset(0f, consumed)
+                }
+
+                // Палец вниз, список уже наверху: вытягивается поле — пружиной вполовину хода пальца, а за его
+                // полной высотой список идёт дальше всё туже, до предела
+                override fun onPostScroll(consumed: Offset, available: Offset, source: androidx.compose.ui.input.nestedscroll.NestedScrollSource): Offset {
+                    val delta = available.y
+                    if (source != androidx.compose.ui.input.nestedscroll.NestedScrollSource.UserInput || delta <= 0f || searchFullPx == 0) return Offset.Zero
+                    val full = searchFullPx.toFloat()
+                    val value = searchPull.value
+                    val factor = if (value < full) SEARCH_PULL_RESISTANCE
+                    else SEARCH_PULL_RESISTANCE * (1f - (value - full) / overPullMaxPx).coerceAtLeast(0f)
+                    val next = (value + delta * factor).coerceAtMost(full + overPullMaxPx)
+                    scope.launch { searchPull.snapTo(next) }
+                    return Offset(0f, delta)
+                }
+
+                // Отпустили: поле вытянуто до конца — оно остаётся и получает курсор, список пружиной
+                // возвращается под него; не дотянули — поле уезжает обратно
+                override suspend fun onPreFling(available: Velocity): Velocity {
+                    val full = searchFullPx.toFloat()
+                    val value = searchPull.value
+                    if (full <= 0f || value <= floor() && value <= full) return Velocity.Zero
+                    val opened = value >= full || currentSearchPinned
+                    if (opened && !currentSearchPinned) focusSearchAfterPull = true
+                    searchPull.animateTo(if (opened) full else 0f, springBack)
+                    return available
+                }
+            }
+        }
 
         val scrimColor = ThingsTheme.colors.scrim
         BoxWithConstraints(
@@ -291,11 +353,35 @@ fun ThingsMoveDialog(
                             MoveFound.NoPlace -> moveAnimated(null, null, false)
                         }
                     }
+                    // Поле поиска спрятано под заголовком окна и вытягивается тягой списка вниз, как поиск на
+                    // главном экране: тянут от верха списка — поле выезжает, отпустили дальше половины — остаётся,
+                    // ближе — уезжает обратно; толчок списка вверх снова прячет пустое поле. Пока в нём курсор
+                    // или текст, оно видно целиком
+                    val searchPinned = searchFocused || query.isNotEmpty()
+                    LaunchedEffect(searchPinned, searchFullPx) {
+                        if (searchPinned && searchFullPx > 0 && searchPull.value < searchFullPx) {
+                            searchPull.animateTo(searchFullPx.toFloat(), springBack)
+                        }
+                    }
+                    // Поле вытянуто до конца — уже можно искать и отпускать: оно заливается акцентом, как подсказка
+                    // поиска на главном экране, и телефон отвечает лёгким щелчком
+                    val searchArmed = searchFullPx > 0 && searchPull.value >= searchFullPx && !searchPinned
+                    LaunchedEffect(searchArmed) {
+                        if (searchArmed) dialogView.performHapticFeedback(android.view.HapticFeedbackConstants.CLOCK_TICK)
+                    }
+                    LaunchedEffect(focusSearchAfterPull) {
+                        if (focusSearchAfterPull) {
+                            focusSearchAfterPull = false
+                            searchFocusRequester.requestFocus()
+                            keyboardController?.show()
+                        }
+                    }
                     MoveSearchField(
                         query = query,
                         onQueryChange = { query = it },
                         onFocusChange = { searchFocused = it },
                         active = searchActive,
+                        armed = searchArmed,
                         focusRequester = searchFocusRequester,
                         onGo = {
                             val first = found.firstOrNull()
@@ -305,6 +391,17 @@ fun ThingsMoveDialog(
                             }
                         },
                         modifier = Modifier
+                            // Видна только вытянутая часть поля — нижняя: оно выезжает из-под заголовка
+                            .clipToBounds()
+                            .layout { measurable, constraints ->
+                                val placeable = measurable.measure(constraints)
+                                if (searchFullPx != placeable.height) searchFullPx = placeable.height
+                                val shown = searchPull.value.roundToInt().coerceIn(0, placeable.height)
+                                layout(placeable.width, shown) { placeable.place(0, shown - placeable.height) }
+                            }
+                            .graphicsLayer {
+                                alpha = if (searchFullPx > 0) (searchPull.value / searchFullPx).coerceIn(0f, 1f) else 0f
+                            }
                             .padding(horizontal = MaterialTheme.dimens.dialogInnerContentPadding)
                             // Зазор до «Входящих» — как между строками списка (их поле S_PLUS + промежуток XXS)
                             .padding(bottom = ThingsSpacing.S_PLUS)
@@ -321,7 +418,12 @@ fun ThingsMoveDialog(
                     LazyColumn(
                         modifier = Modifier
                             .fillMaxSize()
-                            .graphicsLayer { alpha = listAlpha }
+                            .nestedScroll(searchPullConnection)
+                            .graphicsLayer {
+                                alpha = listAlpha
+                                // Перетяжка за полной высотой поля — сам список ниже
+                                translationY = (searchPull.value - searchFullPx).coerceAtLeast(0f)
+                            }
                             // Строки и разделители — чуть дальше от краёв окна, чем крестик и поле поиска:
                             // этот отступ + их собственный L_PLUS
                             .padding(horizontal = MaterialTheme.dimens.dialogInnerContentPadding - ThingsSpacing.M),
@@ -622,6 +724,12 @@ private fun androidx.compose.foundation.lazy.LazyListScope.laterToggleItem(
     }
 }
 
+/** Тяга списка вниз вытягивает поле поиска вполовину хода пальца — пружиной, как поиск на главном экране */
+private const val SEARCH_PULL_RESISTANCE = 0.5f
+
+/** Насколько список можно протянуть ниже вытянутого поля — сопротивление растёт к этому пределу */
+private val SEARCH_OVERPULL_MAX = 120.dp
+
 /** Окно «Переместить» начинается на этой доле высоты экрана — ближе к верху, как в эталоне Things */
 private const val MOVE_DIALOG_TOP_FRACTION = 0.17f
 
@@ -633,10 +741,19 @@ private fun MoveSearchField(
     onFocusChange: (Boolean) -> Unit,
     // Поиск активен: курсор в поле и клавиатура не уходит
     active: Boolean,
+    // Вытянуто тягой списка до конца — отпусти, и курсор встанет в поле: плашка залита акцентом
+    armed: Boolean,
     focusRequester: FocusRequester,
     onGo: () -> Unit,
     modifier: Modifier = Modifier
 ) {
+    val armSpec = androidx.compose.animation.core.tween<androidx.compose.ui.graphics.Color>(ThingsMotion.FAST)
+    val fieldColor by androidx.compose.animation.animateColorAsState(
+        if (armed) ThingsTheme.colors.accent else ThingsTheme.colors.overlayControl, armSpec, label = "moveSearchField"
+    )
+    val hintColor by androidx.compose.animation.animateColorAsState(
+        if (armed) ThingsTheme.colors.onAccent else ThingsTheme.colors.overlayContentSecondary, armSpec, label = "moveSearchHint"
+    )
     val keyboard = LocalSoftwareKeyboardController.current
     // Не в фокусе и пусто — лупа и подсказка по центру; в фокусе или с текстом — у левого края, как в эталоне.
     // Поле ввода всегда во всю ширину, а лупа с подсказкой плавно съезжают сдвигом [shift]
@@ -667,7 +784,7 @@ private fun MoveSearchField(
             .fillMaxWidth()
             .height(MaterialTheme.dimens.dialogFieldHeight)
             .clip(CircleShape)
-            .background(ThingsTheme.colors.overlayControl)
+            .background(fieldColor)
             .onSizeChanged { fieldWidth = it.width }
             // Нажатие в любом месте плашки ставит курсор в поле
             .clickable(
@@ -692,7 +809,7 @@ private fun MoveSearchField(
             Icon(
                 imageVector = Icons.Default.Search,
                 contentDescription = null,
-                tint = ThingsTheme.colors.overlayContentSecondary,
+                tint = hintColor,
                 modifier = Modifier.size(ThingsIconSize.S)
             )
             Spacer(modifier = Modifier.width(ThingsSpacing.XS_PLUS))
@@ -700,7 +817,7 @@ private fun MoveSearchField(
                 if (query.isEmpty()) {
                     Text(
                         text = stringResource(R.string.cd_search),
-                        style = ThingsTheme.type.dialogRow.copy(color = ThingsTheme.colors.overlayContentSecondary),
+                        style = ThingsTheme.type.dialogRow.copy(color = hintColor),
                         modifier = Modifier.onSizeChanged { hintWidth = it.width }
                     )
                 }
