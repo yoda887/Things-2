@@ -221,7 +221,7 @@ class RepeatTest {
         fun t(id: String) = com.example.data.model.ItemWithChecklist(Item(id = id, type = Item.TYPE_TEMPLATE))
         fun r(id: String, next: Long, active: Boolean = true) = com.example.data.model.RecurrenceRule(templateId = id, rrule = "", nextGenerationDate = next, isActive = active)
         val rules = listOf(r("late", 300), r("soon", 100), r("paused", 50, active = false), r("ended", 0)).associateBy { it.templateId }
-        val order = com.example.domain.lists.RepeatingList.order(listOf(t("late"), t("paused"), t("ended"), t("soon")), rules).map { it.item.id }
+        val order = com.example.domain.lists.RepeatingList.order(listOf(t("late"), t("paused"), t("ended"), t("soon")), rules, todayStart = 0L, endOfToday = 0L).map { it.item.id }
         assertEquals(listOf("soon", "late"), order.take(2))
         assertEquals(setOf("paused", "ended"), order.drop(2).toSet())
         assertTrue(com.example.domain.lists.RepeatingList.includes(Item(id = "x", type = Item.TYPE_TEMPLATE)))
@@ -384,27 +384,109 @@ class RepeatTest {
     }
 
     @Test
-    fun repeatingList_upcomingCopiesUnderTheirTemplate() {
-        val endOfToday = 1_000L
-        val template = com.example.data.model.ItemWithChecklist(Item(id = "t", type = Item.TYPE_TEMPLATE))
-        val later = com.example.data.model.ItemWithChecklist(Item(id = "c2", repeatTemplateId = "t", startDate = 3_000L))
-        val soon = com.example.data.model.ItemWithChecklist(Item(id = "c1", repeatTemplateId = "t", startDate = 2_000L))
-        assertTrue(com.example.domain.lists.RepeatingList.includesCopy(later.item, endOfToday))
-        assertFalse(com.example.domain.lists.RepeatingList.includesCopy(later.item.copy(startDate = 500L), endOfToday))
-        assertFalse(com.example.domain.lists.RepeatingList.includesCopy(later.item.copy(status = Item.STATUS_COMPLETED), endOfToday))
-        val ordered = com.example.domain.lists.RepeatingList.order(listOf(later, soon, template), emptyMap())
-        assertEquals(listOf("t", "c1", "c2"), ordered.map { it.item.id })
+    fun repeatingList_allOpenCopiesByDate_undatedThenWaitingLast() {
+        val rl = com.example.domain.lists.RepeatingList
+        fun w(item: Item) = com.example.data.model.ItemWithChecklist(item)
+        fun r(id: String, next: Long, active: Boolean = true) = com.example.data.model.RecurrenceRule(templateId = id, rrule = "", nextGenerationDate = next, isActive = active)
+        val template = Item(id = "t", type = Item.TYPE_TEMPLATE)
+        val waiting = Item(id = "w", type = Item.TYPE_TEMPLATE)
+        val today = Item(id = "c0", repeatTemplateId = "t", startDate = 500L, isTonight = true)
+        val later = Item(id = "c2", repeatTemplateId = "t", startDate = 3_000L)
+        val someday = Item(id = "cs", repeatTemplateId = "t", start = Item.START_SOMEDAY)
+        // Копии видны с любой датой — сегодня, вечером, когда-нибудь; закрытые — нет
+        assertTrue(listOf(today, later, someday).all { rl.includesCopy(it) })
+        assertFalse(rl.includesCopy(later.copy(status = Item.STATUS_COMPLETED)))
+        val rules = listOf(r("t", 2_000L), r("w", 0L)).associateBy { it.templateId }
+        val ordered = rl.order(listOf(waiting, someday, later, template, today).map(::w), rules, todayStart = 0L, endOfToday = 0L).map { it.item.id }
+        assertEquals(listOf("c0", "t", "c2", "cs", "w"), ordered)
     }
 
     @Test
-    fun repeatingList_upcomingProjectCopiesUnderTheirTemplate() {
-        val endOfToday = 1_000L
-        val template = Item(id = "p", type = Item.TYPE_PROJECT_TEMPLATE)
-        val later = Item(id = "c2", type = Item.TYPE_PROJECT, repeatTemplateId = "p", startDate = 3_000L)
-        val soon = Item(id = "c1", type = Item.TYPE_PROJECT, repeatTemplateId = "p", startDate = 2_000L)
-        val today = Item(id = "c0", type = Item.TYPE_PROJECT, repeatTemplateId = "p", startDate = 500L)
-        val plain = Item(id = "x", type = Item.TYPE_PROJECT, startDate = 3_000L)
-        val rows = com.example.domain.lists.RepeatingList.projectRows(listOf(later, plain, today, soon, template), emptyMap(), endOfToday)
-        assertEquals(listOf("p", "c1", "c2"), rows.map { it.id })
+    fun repeatingList_tasksThenProjects_eachByDate() {
+        val rl = com.example.domain.lists.RepeatingList
+        fun r(id: String, next: Long, active: Boolean = true) = com.example.data.model.RecurrenceRule(templateId = id, rrule = "", nextGenerationDate = next, isActive = active)
+        val projectTemplate = Item(id = "p", type = Item.TYPE_PROJECT_TEMPLATE)
+        val projectCopy = Item(id = "pc", type = Item.TYPE_PROJECT, repeatTemplateId = "p", startDate = 500L)
+        val taskTemplate = com.example.data.model.ItemWithChecklist(Item(id = "t", type = Item.TYPE_TEMPLATE))
+        val plain = Item(id = "x", type = Item.TYPE_PROJECT, startDate = 100L)
+        val rules = listOf(r("p", 3_000L), r("t", 1_000L)).associateBy { it.templateId }
+        val group = rl.groups(listOf(taskTemplate), rules, emptyList(), emptyList(), listOf(projectTemplate, projectCopy, plain)).single()
+        // Задачи и проекты — отдельно: сначала задачи, потом проекты, каждые по дате
+        assertEquals(listOf("t", "pc", "p"), rl.rows(group, rules, todayStart = 0L, endOfToday = 0L).map { if (it is Item) it.id else (it as com.example.data.model.ItemWithChecklist).item.id })
+    }
+
+    @Test
+    fun search_findsRepeatingTasksAndCopies() {
+        fun wrap(item: Item) = com.example.data.model.ItemWithChecklist(item)
+        val template = Item(id = "t", type = Item.TYPE_TEMPLATE, title = "Полить цветы")
+        val copy = Item(id = "c", repeatTemplateId = "t", title = "Полить цветы")
+        val part = Item(id = "p", type = Item.TYPE_TEMPLATE, repeatTemplateId = "proj", title = "Полить цветы")
+        assertTrue(com.example.domain.lists.SearchList.includes(wrap(template), "цвет"))
+        assertTrue(com.example.domain.lists.SearchList.includes(wrap(copy), "цвет"))
+        // Задача внутри шаблона проекта — не отдельная повторяющаяся задача
+        assertFalse(com.example.domain.lists.SearchList.includes(wrap(part), "цвет"))
+    }
+
+    @Test
+    fun afterCompletion_deletedCopyStartsNextFromToday() {
+        val zone = ZoneId.of("Europe/Kyiv")
+        val rule = RepeatRule(afterCompletion = true, interval = 3, unit = RepeatUnit.DAY, start = wed)
+        val waiting = RepeatState(rule, nextOccurrence = null, generated = 1)
+        // Копию удалили насовсем — её нет: следующий повтор через 3 дня от сегодня
+        assertEquals(wed.plusDays(3), RepeatControl.afterCopiesClosed(waiting, emptyList(), wed, zone).nextOccurrence)
+        // Открытая копия есть — ждёт
+        val open = Item(id = "c", repeatTemplateId = "t")
+        assertNull(RepeatControl.afterCopiesClosed(waiting, listOf(open), wed, zone).nextOccurrence)
+        // Выполнили вчера — от вчера
+        val yesterday = wed.minusDays(1).atStartOfDay(zone).toInstant().toEpochMilli()
+        val done = open.copy(status = Item.STATUS_COMPLETED, stopDate = yesterday)
+        assertEquals(wed.plusDays(2), RepeatControl.afterCopiesClosed(waiting, listOf(done), wed, zone).nextOccurrence)
+        // Ещё ничего не создано — ждать нечего
+        assertNull(RepeatControl.afterCopiesClosed(waiting.copy(generated = 0), emptyList(), wed, zone).nextOccurrence)
+    }
+
+    @Test
+    fun orphanCopies_unlinkedWhenTemplateDeleted() {
+        val template = Item(id = "t", type = Item.TYPE_TEMPLATE)
+        val trashedTemplate = Item(id = "z", type = Item.TYPE_TEMPLATE, trashed = true)
+        val live = Item(id = "a", repeatTemplateId = "t")
+        val ofTrashed = Item(id = "b", repeatTemplateId = "z")
+        val orphan = Item(id = "c", repeatTemplateId = "gone")
+        val orphanProject = Item(id = "d", type = Item.TYPE_PROJECT, repeatTemplateId = "gone")
+        val fixed = RepeatControl.orphanCopies(listOf(template, trashedTemplate, live, ofTrashed, orphan, orphanProject), now = 5L)
+        assertEquals(listOf("c", "d"), fixed.map { it.id })
+        assertTrue(fixed.all { it.repeatTemplateId == null })
+        assertEquals(Item.TYPE_PROJECT, fixed.last().type)
+    }
+
+    @Test
+    fun logbookDeletions_doNotTouchActiveRepeats() {
+        val zone = ZoneId.of("Europe/Kyiv")
+        val after = RepeatRule(afterCompletion = true, unit = RepeatUnit.WEEK, start = wed)
+        // Создано 5 копий, в «Журнале» остались не все (часть удалили), текущая копия открыта — повтор ждёт её дальше
+        val open = Item(id = "c5", repeatTemplateId = "t")
+        val waiting = RepeatState(after, nextOccurrence = null, generated = 5)
+        assertEquals(waiting, RepeatControl.afterCopiesClosed(waiting, listOf(open), wed, zone))
+        // Следующий повтор уже назначен — удаление старых копий его не меняет
+        val scheduled = RepeatState(after, nextOccurrence = wed.plusDays(7), generated = 5)
+        assertEquals(scheduled, RepeatControl.afterCopiesClosed(scheduled, emptyList(), wed, zone))
+        // Регулярный повтор от копий не зависит вовсе
+        val fixed = RepeatState(after.copy(afterCompletion = false), nextOccurrence = wed.plusDays(7), generated = 5)
+        assertEquals(fixed, RepeatControl.afterCopiesClosed(fixed, emptyList(), wed, zone))
+        // Шаблон на месте — его копии не отвязываются
+        assertTrue(RepeatControl.orphanCopies(listOf(Item(id = "t", type = Item.TYPE_TEMPLATE), open)).isEmpty())
+    }
+
+    @Test
+    fun repeatingList_todayBeforeTonight() {
+        val day = 500L
+        val evening = com.example.data.model.ItemWithChecklist(Item(id = "e", repeatTemplateId = "t", startDate = day, isTonight = true, sortOrder = 0))
+        val today = com.example.data.model.ItemWithChecklist(Item(id = "d", repeatTemplateId = "t", startDate = day, sortOrder = 5))
+        assertEquals(listOf("d", "e"), com.example.domain.lists.RepeatingList.order(listOf(evening, today), emptyMap(), todayStart = 0L, endOfToday = 0L).map { it.item.id })
+        // Вчерашняя вечерняя копия (просрочена) — всё равно ниже сегодняшней дневной
+        val rl = com.example.domain.lists.RepeatingList
+        val yesterdayEvening = Item(id = "ye", repeatTemplateId = "t", startDate = 100L, isTonight = true)
+        val todayDay = Item(id = "td", repeatTemplateId = "t", startDate = 900L)
+        assertEquals(listOf("td", "ye"), listOf(yesterdayEvening, todayDay).sortedWith(rl.comparator(emptyMap(), todayStart = 800L, endOfToday = 999L)).map { it.id })
     }
 }

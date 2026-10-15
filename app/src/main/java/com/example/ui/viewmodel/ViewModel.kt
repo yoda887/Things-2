@@ -227,7 +227,7 @@ class ThingsViewModel @Inject constructor(
                         // У главного экрана и особых списков проектов нет списка задач
                         ActiveScreen.HOME, ActiveScreen.ALL_PROJECTS, ActiveScreen.LOGGED_PROJECTS -> false
                         ActiveScreen.REPEATING -> com.example.domain.lists.RepeatingList.includes(task) ||
-                            com.example.domain.lists.RepeatingList.includesCopy(task, bounds.endOfToday)
+                            com.example.domain.lists.RepeatingList.includesCopy(task)
                     }
                 }
             }.sortedBy { it.item.sortOrder }

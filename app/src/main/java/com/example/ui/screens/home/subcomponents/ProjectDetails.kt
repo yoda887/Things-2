@@ -117,19 +117,26 @@ fun ProjectDetailsBlock(
 ) {
     val view = LocalView.current
     // Строки свойств — только заданные; между ними, над первой и под последней — тонкие разделители
-    val section = project.startSection
-    val startDate = project.startDate
+    // Шаблон повторяющегося проекта своей даты не хранит — показывается день его ближайшей копии по правилу
+    // (у ждущего «после выполнения» даты нет); «Когда» переносит этот повтор
+    val shown = if (project.type == Item.TYPE_PROJECT_TEMPLATE) {
+        val day = com.example.domain.lists.RepeatingList.dayOf(project, com.example.ui.components.LocalRepeatRules.current)
+        project.copy(startDate = day, start = Item.START_ANYTIME, isTonight = false)
+    } else project
+    val section = shown.startSection
+    val startDate = shown.startDate
     val hasStart = startDate != null || section == TaskSection.TODAY || section == TaskSection.SOMEDAY
     val dueDate = project.dueDate
     val rows = buildList<@Composable () -> Unit> {
         if (project.tags.isNotEmpty()) add { ProjectTagsRow(project.tags) { onAction(ProjectAction.TAGS) } }
-        if (hasStart) add { ProjectStartRow(project, textPrimaryColor) { onAction(ProjectAction.WHEN) } }
+        if (hasStart) add { ProjectStartRow(shown, textPrimaryColor) { onAction(ProjectAction.WHEN) } }
         if (dueDate != null) add { ProjectDeadlineRow(dueDate) { onAction(ProjectAction.DEADLINE) } }
+        // Повтор — под «Когда» и дедлайном, как в редакторе задачи
+        if (project.isRepeatTemplate || project.repeatTemplateId != null) {
+            add { com.example.ui.screens.home.inlineeditor.RepeatEditorRow(project, onRepeatAction, onOpenRepeatTemplate) }
+        }
     }
     Column(modifier = modifier.fillMaxWidth()) {
-        if (project.isRepeatTemplate || project.repeatTemplateId != null) {
-            com.example.ui.screens.home.inlineeditor.RepeatEditorRow(project, onRepeatAction, onOpenRepeatTemplate)
-        }
         rows.forEach { row ->
             ProjectDetailsDivider()
             row()
@@ -322,10 +329,33 @@ fun ProjectDialogs(
     onUpdateTag: (Tag) -> Unit,
     onUpdateTagsOrder: (List<Tag>) -> Unit,
     onEditProject: (ProjectEdit) -> Unit,
-    onCompleteProject: (Item) -> Unit
+    onCompleteProject: (Item) -> Unit,
+    // Шаблон повторяющегося проекта: выбранный в «Когда» день — новый день ближайшего повтора (начало дня, мс)
+    onRepeatMove: (Long) -> Unit = {}
 ) {
     when (openDialog) {
-        ProjectAction.WHEN -> {
+        ProjectAction.WHEN -> if (project.type == Item.TYPE_PROJECT_TEMPLATE) {
+            val initial = com.example.domain.lists.RepeatingList.dayOf(project, com.example.ui.components.LocalRepeatRules.current)
+            var startDate by remember(project.id) { mutableStateOf(initial) }
+            var section by remember(project.id) { mutableStateOf(TaskSection.UPCOMING) }
+            var reminderTime by remember(project.id) { mutableStateOf(project.reminderTime) }
+            ThingsWhenDialog(
+                startDate = startDate,
+                onStartDateChange = { startDate = it },
+                section = section,
+                onSectionChange = { section = it },
+                isTonight = false,
+                onIsTonightChange = { },
+                onShowCalendarHelperChange = { },
+                reminderTime = reminderTime,
+                onReminderTimeChange = { reminderTime = it },
+                onDismissRequest = {
+                    val day = if (section == TaskSection.TODAY) com.example.data.model.DayBounds.now().todayStart else startDate
+                    if (day != null && day != initial) onRepeatMove(day)
+                    onClose()
+                }
+            )
+        } else {
             var startDate by remember(project.id) { mutableStateOf(project.startDate) }
             var section by remember(project.id) { mutableStateOf(project.startSection) }
             var isTonight by remember(project.id) { mutableStateOf(project.isTonight) }

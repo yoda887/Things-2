@@ -243,7 +243,17 @@ fun rememberFlattenedList(
             // Завершённые проекты — разделами, как «Журнал»
             ActiveScreen.LOGGED_PROJECTS -> LogbookScreen.rows(LogbookList.sections(emptyList(), projects), todayLabel, yesterdayLabel)
             // Шаблоны повтора: без проекта — вверху, остальные — под проектом или областью
-            ActiveScreen.REPEATING -> PlaceGroupRows.rows(com.example.domain.lists.RepeatingList.groups(displayTasks, repeatRules, projects, areas, allTasks.map { it.item }, com.example.data.model.DayBounds.now().endOfToday))
+            ActiveScreen.REPEATING -> PlaceGroupRows.rows(
+                com.example.domain.lists.RepeatingList.groups(displayTasks, repeatRules, projects, areas, allTasks.map { it.item })
+            ) { group ->
+                val repeating = com.example.domain.lists.RepeatingList
+                val tasks = repeating.order(group.tasks, repeatRules)
+                val projectRows = repeating.projectRowsOf(group, repeatRules)
+                // Задачи без проекта и области и проекты без области — отдельными блоками, с промежутком между ними
+                val loose = group.project == null && group.area == null
+                if (loose && tasks.isNotEmpty() && projectRows.isNotEmpty()) tasks + TaskListKeys.AREA_PROJECTS_SPACER + projectRows
+                else tasks + projectRows
+            }
         }
     }
 }

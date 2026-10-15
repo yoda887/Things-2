@@ -363,6 +363,10 @@ fun TaskItemRow(
                 // В поиске и «В любое время» задачи стоят под заголовком своего проекта или области — подпись повторяла бы его
                 screen == ActiveScreen.SEARCH && !isSearchLogbookStyle -> null
                 screen == ActiveScreen.ANYTIME || screen == ActiveScreen.SOMEDAY -> null
+                // «Повторяющиеся» сгруппированы под проектом или областью — подпись повторяла бы заголовок
+                screen == ActiveScreen.REPEATING -> null
+                // Тег — тоже по проектам и областям
+                screen == ActiveScreen.TAG_DETAIL -> null
                 project != null && screen != ActiveScreen.PROJECT_DETAIL -> project.name
                 project == null && area != null && screen != ActiveScreen.AREA_DETAIL -> area.title
                 else -> null
@@ -377,11 +381,17 @@ fun TaskItemRow(
             val dateBadge = when {
                 repeatRule != null -> repeatBadge
                 // Копия, созданная заранее, в «Повторяющихся» — под шаблоном, со своим днём
-                screen == ActiveScreen.REPEATING && task.isRepeatCopy && task.startDate != null ->
-                    java.text.SimpleDateFormat("d MMM", java.util.Locale.getDefault()).format(java.util.Date(task.startDate))
+                // Копия в «Повторяющихся» — как задача на экране проекта: звезда или луна сегодня, иначе день
+                // (это показывает индикатор даты ниже); у отложенной — «Когда-нибудь»
+                screen == ActiveScreen.REPEATING && task.isRepeatCopy ->
+                    if (task.start == Item.START_SOMEDAY) stringResource(R.string.category_someday) else null
                 else -> dateBadge
             }
             val badgeBesideBothLines = dateBadge != null && subtitle != null
+            // Копия в «Повторяющихся»: звезда, луна или день — как у задачи на экране проекта; с подписью под
+            // названием — слева от обеих строк, по центру, как плашка. Шаблоны — только своей плашкой
+            val repeatingCopyIndicator = screen == ActiveScreen.REPEATING && task.isRepeatCopy && dateBadge == null && dateIndicator != null
+            val indicatorBesideBothLines = repeatingCopyIndicator && subtitle != null
 
             Row(
                 modifier = Modifier.weight(1f),
@@ -389,6 +399,9 @@ fun TaskItemRow(
             ) {
                 if (badgeBesideBothLines) {
                     DateBadge(text = dateBadge!!)
+                    Spacer(modifier = Modifier.width(ThingsSpacing.XS_PLUS))
+                } else if (indicatorBesideBothLines) {
+                    DateIndicatorMark(dateIndicator!!)
                     Spacer(modifier = Modifier.width(ThingsSpacing.XS_PLUS))
                 }
 
@@ -411,33 +424,18 @@ fun TaskItemRow(
                             if (dateBadge != null && !badgeBesideBothLines) {
                                 DateBadge(text = dateBadge)
                                 Spacer(modifier = Modifier.width(ThingsSpacing.XS_PLUS))
-                            } else if (dateIndicator != null && (
+                            } else if (dateBadge == null && !indicatorBesideBothLines && dateIndicator != null && (
                                     screen == ActiveScreen.PROJECT_DETAIL || screen == ActiveScreen.AREA_DETAIL ||
+                                        repeatingCopyIndicator ||
                                         // В «В любое время» звезда или луна отмечают задачи «Сегодня»
                                         screen == ActiveScreen.ANYTIME ||
+                                        // На экране тега — звезда, луна или день старта, как на экране проекта
+                                        screen == ActiveScreen.TAG_DETAIL ||
                                         // В поиске открытые задачи стоят под проектом или областью — срок виден в строке
                                         (screen == ActiveScreen.SEARCH && !isSearchLogbookStyle)
                                 )
                             ) {
-                                when (dateIndicator) {
-                                    is DateIndicatorResult.IconIndicator -> {
-                                        Icon(
-                                            imageVector = dateIndicator.icon,
-                                            contentDescription = dateIndicator.contentDescription,
-                                            tint = dateIndicator.color,
-                                            modifier = Modifier.size(ThingsIconSize.XS)
-                                        )
-                                    }
-                                    is DateIndicatorResult.TextIndicator -> {
-                                        val displayText = if (dateIndicator.text == "TOMORROW_PLACEHOLDER") {
-                                            androidx.compose.ui.res.stringResource(com.example.R.string.tomorrow)
-                                        } else {
-                                            dateIndicator.text
-                                        }
-                                    
-                                        DateBadge(text = displayText)
-                                    }
-                                }
+                                DateIndicatorMark(dateIndicator)
                                 Spacer(modifier = Modifier.width(ThingsSpacing.XS_PLUS))
                             }
 
@@ -630,6 +628,36 @@ internal fun DateBadge(text: String) {
             .padding(horizontal = ThingsSpacing.XS_PLUS, vertical = ThingsSpacing.XXS)
     )
 }
+
+/** Звезда или луна (сегодня, вечер) либо плашка с днём — индикатор дня старта задачи в строке */
+@Composable
+private fun DateIndicatorMark(indicator: DateIndicatorResult) {
+    when (indicator) {
+        is DateIndicatorResult.IconIndicator -> Icon(
+            imageVector = indicator.icon,
+            contentDescription = indicator.contentDescription,
+            tint = indicator.color,
+            modifier = Modifier.size(ThingsIconSize.XS)
+        )
+        is DateIndicatorResult.TextIndicator -> DateBadge(
+            text = if (indicator.text == "TOMORROW_PLACEHOLDER") stringResource(R.string.tomorrow) else indicator.text
+        )
+    }
+}
+
+/**
+ * Текст плашки дня старта — в том же формате, что у задач на экране проекта: «Сегодня», «Завтра», день
+ * недели на этой неделе («Пт»), год у следующих лет («2027»), иначе число и месяц («22 жовт.»). Им пишут
+ * плашки и в списках, где дата — не «Когда» задачи: «Повторяющиеся», «Все проекты», «Планы» области.
+ */
+@Composable
+internal fun startDateBadgeText(startDate: Long, isTonight: Boolean = false): String =
+    when (val indicator = getStartDateIndicator(startDate, false, Color.Unspecified, "", "")) {
+        is DateIndicatorResult.IconIndicator ->
+            stringResource(if (isTonight) R.string.category_this_evening else R.string.category_today)
+        is DateIndicatorResult.TextIndicator ->
+            if (indicator.text == "TOMORROW_PLACEHOLDER") stringResource(R.string.tomorrow) else indicator.text
+    }
 
 private fun getStartDateIndicator(
     startDate: Long,

@@ -492,36 +492,48 @@ fun ThingsTaskInlineEditor(
             // Серые иконки нижней строки (теги, флажок и т. п.) — цвет как в Things 3
             val iconInactiveColor = ThingsTheme.colors.editorIconInactive
 
-            // У шаблона повтора даты нет: дни задаёт правило (в «Предстоящих» дата лишь подставлена для показа)
-            val hasActiveDate = task.item.type != Item.TYPE_TEMPLATE &&
-                (startDate != null || section == TaskSection.TODAY || section == TaskSection.SOMEDAY)
+            // У шаблона повтора своей даты нет — показывается день, когда появится его ближайшая копия по правилу;
+            // у ждущего «после выполнения» (копию ещё не отметили) даты нет. Нажатие — «Когда»: перенос повтора
+            val repeatStored = if (task.item.isRepeatTemplate) com.example.ui.components.LocalRepeatRules.current[task.item.id] else null
+            val templateDay: Long? = repeatStored?.takeIf { it.nextGenerationDate > 0 }?.let { stored ->
+                com.example.domain.repeat.RepeatRule.decode(stored.rrule)?.let { rule ->
+                    val zone = java.time.ZoneId.systemDefault()
+                    val occurrence = java.time.Instant.ofEpochMilli(stored.nextGenerationDate).atZone(zone).toLocalDate()
+                    com.example.domain.repeat.RepeatPlan.appearsOn(rule, occurrence).atStartOfDay(zone).toInstant().toEpochMilli()
+                }
+            }
+            val isTemplateItem = task.item.type == Item.TYPE_TEMPLATE
+            val shownStart = if (isTemplateItem) templateDay else startDate
+            val shownSection = if (isTemplateItem) TaskSection.UPCOMING else section
+            val hasActiveDate = if (isTemplateItem) templateDay != null
+                else (startDate != null || section == TaskSection.TODAY || section == TaskSection.SOMEDAY)
 
             val activeDateLabel = if (hasActiveDate) {
-                com.example.ui.screens.home.inlineeditor.utils.formatStartDateLabel(startDate, section, isTonight)
+                com.example.ui.screens.home.inlineeditor.utils.formatStartDateLabel(shownStart, shownSection, isTonight)
             } else ""
 
             val activeDateIcon = if (hasActiveDate) {
                 when {
-                    startDate != null && isTodayDateOrPast(startDate) -> {
+                    shownStart != null && isTodayDateOrPast(shownStart) -> {
                         if (isTonight) AppIcons.Evening else AppIcons.Today
                     }
-                    startDate == null && section == TaskSection.TODAY -> {
+                    shownStart == null && shownSection == TaskSection.TODAY -> {
                         if (isTonight) AppIcons.Evening else AppIcons.Today
                     }
-                    section == TaskSection.SOMEDAY -> AppIcons.Someday
+                    shownSection == TaskSection.SOMEDAY -> AppIcons.Someday
                     else -> AppIcons.Upcoming
                 }
             } else AppIcons.Upcoming
 
             val activeDateColor = if (hasActiveDate) {
                 when {
-                    startDate != null && isTodayDateOrPast(startDate) -> {
+                    shownStart != null && isTodayDateOrPast(shownStart) -> {
                         if (isTonight) Color.Unspecified else ThingsTheme.colors.today
                     }
-                    startDate == null && section == TaskSection.TODAY -> {
+                    shownStart == null && shownSection == TaskSection.TODAY -> {
                         if (isTonight) Color.Unspecified else ThingsTheme.colors.today
                     }
-                    section == TaskSection.SOMEDAY -> ThingsTheme.colors.someday
+                    shownSection == TaskSection.SOMEDAY -> ThingsTheme.colors.someday
                     else -> Color.Unspecified
                 }
             } else Color.Unspecified
@@ -538,9 +550,6 @@ fun ThingsTaskInlineEditor(
                         .padding(start = startRelativePadding),
                     verticalArrangement = Arrangement.Center
                 ) {
-                    // Повтор: у шаблона — правило и действия, у копии — ссылка на шаблон
-                    RepeatEditorRow(task.item, onRepeatAction, onOpenRepeatTemplate)
-
                     // 0. Active Tags Chips
                     val activeTags = remember(tagInput) {
                         tagInput.split(",")
@@ -702,6 +711,12 @@ fun ThingsTaskInlineEditor(
                             )
                         }
                     }
+
+                    // 3. Повтор — под датой и дедлайном: у шаблона — правило и действия, у копии — ссылка на шаблон
+                    if (hasActiveDate || dueDate != null) {
+                        Spacer(modifier = Modifier.height(MaterialTheme.dimens.taskEditorDateToDeadlineSpacer))
+                    }
+                    RepeatEditorRow(task.item, onRepeatAction, onOpenRepeatTemplate)
                 }
 
                 Spacer(modifier = Modifier.width(ThingsSpacing.L))
@@ -937,6 +952,7 @@ internal fun RepeatEditorRow(
         !isTemplate -> stringResource(if (item.type == Item.TYPE_PROJECT) R.string.repeat_project_copy_link else R.string.repeat_copy_link)
         rule == null -> stringResource(R.string.special_repeating)
         else -> {
+            // Правило и ближайший повтор («наступна 22 жовт.») или пауза — вместе со строкой даты выше
             val summary = com.example.ui.screens.home.inlineeditor.dialogs.repeatRuleSummary(rule)
             val next = when {
                 !stored.isActive -> stringResource(R.string.repeat_paused)
@@ -951,7 +967,7 @@ internal fun RepeatEditorRow(
     }
     Box {
         Row(
-            verticalAlignment = Alignment.CenterVertically,
+            verticalAlignment = Alignment.Top,
             modifier = Modifier
                 .clickable {
                     view.performHapticFeedback(HapticFeedbackConstants.CLOCK_TICK)
@@ -959,16 +975,22 @@ internal fun RepeatEditorRow(
                 }
                 .padding(vertical = MaterialTheme.dimens.taskEditorIndicatorVerticalPadding)
         ) {
-            Icon(AppIcons.Repeat, contentDescription = null, tint = ThingsTheme.colors.accent, modifier = Modifier.size(ThingsIconSize.S))
+            if (isTemplate) {
+                // Обычный значок повтора — синяя стрелка в голубом круге, как у строки шаблона в списке
+                com.example.ui.components.RepeatTemplateIcon(modifier = Modifier.size(ThingsIconSize.S))
+            } else {
+                // Копия — серая круговая стрелка, как в строке списка
+                Icon(AppIcons.RepeatCopy, contentDescription = null, tint = ThingsTheme.colors.textSecondary, modifier = Modifier.size(ThingsIconSize.S))
+            }
             Spacer(modifier = Modifier.width(ThingsSpacing.XS_PLUS))
+            // Чёрным, мельче даты и обычной толщины; переносится, чтобы правило помещалось целиком
             Text(
                 text = text,
-                maxLines = 2,
-                overflow = TextOverflow.Ellipsis,
-                style = ThingsTheme.type.editorDateStrong.copy(color = ThingsTheme.colors.accent)
+                style = ThingsTheme.type.subhead.copy(color = ThingsTheme.colors.editorText),
+                modifier = Modifier.weight(1f, fill = false)
             )
             if (!isTemplate) {
-                Icon(Icons.Default.ChevronRight, contentDescription = null, tint = ThingsTheme.colors.accent, modifier = Modifier.size(ThingsIconSize.S))
+                Icon(Icons.Default.ChevronRight, contentDescription = null, tint = ThingsTheme.colors.textSecondary, modifier = Modifier.size(ThingsIconSize.S))
             }
         }
         if (isTemplate) {

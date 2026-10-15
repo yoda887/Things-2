@@ -250,27 +250,17 @@ fun MainCategoryHeader(
                 val totalCount = tasks.count { it.item.projectId == project?.id }.let { if (projectDone) maxOf(it, 1) else it }
                 val completedCount = if (projectDone) totalCount else tasks.count { it.item.projectId == project?.id && it.item.isClosed }
                 // Иконка проекта (ProgressArc) окрашена в синий цвет и выровнена по верхнему краю заголовка с компенсационным отступом
-                if (project?.type == Item.TYPE_PROJECT_TEMPLATE) {
-                    // Шаблон повторяющегося проекта — круговая стрелка вместо кольца, как у шаблонов задач
-                    // Круг — по размеру кольца проекта: то же место 26 dp, круг 22 dp
-                    com.example.ui.components.RepeatTemplateIcon(
-                        modifier = Modifier
-                            .align(Alignment.Top)
-                            .padding(start = (2 * scaleFactor).dp, top = (4 * scaleFactor).dp, end = (2 * scaleFactor).dp)
-                            .size((22 * scaleFactor).dp)
-                    )
-                } else {
-                    ProjectProgressArc(
-                        completed = completedCount,
-                        total = totalCount,
-                        color = ThingsTheme.colors.project,
-                        dashed = project?.start == com.example.data.model.Item.START_SOMEDAY,
-                        modifier = Modifier
-                            .size((26 * scaleFactor).dp)
-                            .align(Alignment.Top)
-                            .padding(top = (4 * scaleFactor).dp)
-                    )
-                }
+                // У шаблона повторяющегося проекта — тоже кольцо: что он повторяется, видно по строке правила под заголовком
+                ProjectProgressArc(
+                    completed = completedCount,
+                    total = totalCount,
+                    color = ThingsTheme.colors.project,
+                    dashed = project?.start == com.example.data.model.Item.START_SOMEDAY,
+                    modifier = Modifier
+                        .size((26 * scaleFactor).dp)
+                        .align(Alignment.Top)
+                        .padding(top = (4 * scaleFactor).dp)
+                )
                 Spacer(modifier = Modifier.width(ThingsSpacing.M))
 
                 val projectNameText = project?.name ?: stringResource(R.string.fallback_project)
@@ -326,9 +316,8 @@ fun MainCategoryHeader(
                                     showOptionsMenu = false
                                     isEditingTitle = true
                                 })
-                                if (!isTemplate) {
-                                    ThingsMenuItem(stringResource(R.string.batch_action_when), AppIcons.Upcoming, onClick = { action(ProjectAction.WHEN) })
-                                }
+                                // У шаблона «Когда» переносит его ближайший повтор
+                                ThingsMenuItem(stringResource(R.string.batch_action_when), AppIcons.Upcoming, onClick = { action(ProjectAction.WHEN) })
                                 // Копию повторяющегося проекта повторяющейся не делают — повторяется её шаблон
                                 if (project != null && (isTemplate || com.example.domain.repeat.RepeatProjects.canRepeat(project))) {
                                     ThingsMenuItem(stringResource(R.string.ui_repeat), AppIcons.Repeat, onClick = { action(ProjectAction.REPEAT) })

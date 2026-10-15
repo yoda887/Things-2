@@ -106,4 +106,45 @@ object RepeatControl {
         }
         return rule.copy(start = new, on = on)
     }
+
+    /**
+     * «После выполнения» ждёт своей копии ([RepeatState.nextOccurrence] пуст). Открытых копий не осталось —
+     * следующий повтор назначается: от дня, когда закрыли последнюю, а если копию удалили насовсем (копий
+     * меньше, чем создано, — день удаления не известен) — от сегодня, как в Things: удаление тоже закрывает
+     * очередь. Открытая копия есть — ждёт дальше.
+     */
+    fun afterCopiesClosed(
+        state: RepeatState,
+        copies: List<Item>,
+        today: LocalDate,
+        zone: java.time.ZoneId = java.time.ZoneId.systemDefault()
+    ): RepeatState {
+        if (!state.rule.afterCompletion || !state.active || state.nextOccurrence != null) return state
+        if (copies.any { !it.isClosed && !it.trashed }) return state
+        val deleted = copies.size < state.generated
+        val lastClosed = copies.maxOfOrNull { it.stopDate ?: it.modificationDate }
+            ?.let { java.time.Instant.ofEpochMilli(it).atZone(zone).toLocalDate() }
+        val day = when {
+            deleted -> today
+            lastClosed != null -> lastClosed
+            else -> return state
+        }
+        return RepeatPlan.completed(state, day)
+    }
+
+    /**
+     * Копии, чей шаблон удалён насовсем, становятся обычными задачами и проектами: без серого значка и без
+     * ссылки «Это копия повторяющейся задачи». Шаблон в «Корзине» связь не рвёт — его ещё вернут.
+     * Возвращает исправленные записи.
+     */
+    fun orphanCopies(items: List<Item>, now: Long = System.currentTimeMillis()): List<Item> {
+        val ids = items.mapTo(HashSet()) { it.id }
+        return items.filter { it.repeatTemplateId != null && it.repeatTemplateId !in ids }.map { item ->
+            item.copy(
+                type = if (item.type == Item.TYPE_TEMPLATE) Item.TYPE_TASK else item.type,
+                repeatTemplateId = null,
+                modificationDate = now
+            )
+        }
+    }
 }

@@ -31,8 +31,12 @@ class RepeatGenerator @Inject constructor(
     private val mutex = Mutex()
 
     suspend fun run(today: LocalDate = LocalDate.now(), zone: ZoneId = ZoneId.systemDefault()) = mutex.withLock {
-        // Задачи, добавленные в шаблон проекта или вынесенные из него, — частями шаблона или обычными задачами
-        val fixes = RepeatProjects.normalize(dao.getAllItemsSync())
+        // Задачи, добавленные в шаблон проекта или вынесенные из него, — частями шаблона или обычными задачами;
+        // копии удалённого шаблона — обычными задачами и проектами
+        val items = dao.getAllItemsSync()
+        val partFixes = RepeatProjects.normalize(items)
+        val fixedIds = partFixes.mapTo(HashSet()) { it.id }
+        val fixes = partFixes + com.example.domain.repeat.RepeatControl.orphanCopies(items).filter { it.id !in fixedIds }
         if (fixes.isNotEmpty()) dao.insertItems(fixes)
         for (stored in dao.getAllRecurrenceRules()) {
             val rule = RepeatRule.decode(stored.rrule) ?: continue
@@ -50,14 +54,9 @@ class RepeatGenerator @Inject constructor(
                 active = stored.isActive
             )
             var state = initial
-            // «После выполнения»: открытых копий не осталось — следующий повтор от дня, когда закрыли последнюю
+            // «После выполнения»: открытых копий не осталось (выполнили, отменили или удалили) — следующий повтор
             if (rule.afterCompletion && state.active && state.nextOccurrence == null) {
-                val copies = dao.getRepeatCopiesOf(template.id)
-                val done = copies.filter { it.isClosed || it.trashed }
-                if (copies.isNotEmpty() && copies.none { !it.isClosed && !it.trashed }) {
-                    val last = done.maxOf { it.stopDate ?: it.modificationDate }
-                    state = RepeatPlan.completed(state, dateOf(last, zone))
-                }
+                state = com.example.domain.repeat.RepeatControl.afterCopiesClosed(state, dao.getRepeatCopiesOf(template.id), today, zone)
             }
             val (occurrences, next) = RepeatPlan.due(state, today)
             if (occurrences.isEmpty() && next == initial) continue

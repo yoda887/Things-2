@@ -36,6 +36,8 @@ private val NOTES_ICON_GAP = 5.dp
 private val CHEVRON_GAP = 3.dp
 
 private val NOTES_ICON_SIZE = 14.dp
+/** Значок повтора перед названием шаблона повторяющегося проекта — как у шаблона задачи */
+private val ROW_REPEAT_ICON_SIZE = 15.dp
 
 /**
  * Строка проекта в списке проектов области.
@@ -56,6 +58,9 @@ fun ProjectItemRow(
     dateBadge: String? = null,
     // Вторая строка под названием — область проекта (у закрытых проектов, как в Logbook Things)
     subtitle: String? = null,
+    // Проект на сегодня — звезда, на вечер — луна перед названием вместо плашки, как у задач («Повторяющиеся»)
+    todayIcon: androidx.compose.ui.graphics.vector.ImageVector? = null,
+    todayIconTint: Color = Color.Unspecified,
     modifier: Modifier = Modifier
 ) {
     val progress = projectProgressMap[project.id]
@@ -89,11 +94,7 @@ fun ProjectItemRow(
             modifier = Modifier.size(MaterialTheme.dimens.taskLeftColumnWidthDefault),
             contentAlignment = Alignment.Center
         ) {
-            if (project.type == Item.TYPE_PROJECT_TEMPLATE) {
-                com.example.ui.components.RepeatTemplateIcon(
-                    modifier = Modifier.requiredSize(ThingsIconSize.M)
-                )
-            } else if (isDone) {
+            if (isDone) {
                 ClosedProjectIcon(
                     cancelled = project.status == Item.STATUS_CANCELLED,
                     modifier = Modifier.requiredSize(ThingsIconSize.M)
@@ -113,7 +114,10 @@ fun ProjectItemRow(
             ClosedDateLabel(closedAt = closedAt, inLogbook = true)
             Spacer(modifier = Modifier.width(com.example.ui.theme.ThingsSpacing.S))
         }
-        if (dateBadge != null) {
+        if (todayIcon != null) {
+            Icon(todayIcon, contentDescription = null, tint = todayIconTint, modifier = Modifier.size(ThingsIconSize.XS))
+            Spacer(modifier = Modifier.width(com.example.ui.theme.ThingsSpacing.XS_PLUS))
+        } else if (dateBadge != null) {
             DateBadge(text = dateBadge)
             Spacer(modifier = Modifier.width(com.example.ui.theme.ThingsSpacing.XS_PLUS))
         }
@@ -121,6 +125,11 @@ fun ProjectItemRow(
         Row(
             verticalAlignment = Alignment.CenterVertically
         ) {
+            // Шаблон повторяющегося проекта — как шаблон задачи: кольцо проекта на месте, синий значок повтора перед названием
+            if (project.type == Item.TYPE_PROJECT_TEMPLATE) {
+                com.example.ui.components.RepeatTemplateIcon(modifier = Modifier.size(ROW_REPEAT_ICON_SIZE))
+                Spacer(modifier = Modifier.width(com.example.ui.theme.ThingsSpacing.XS_PLUS))
+            }
             Text(
                 text = project.title,
                 style = ThingsTheme.type.listTitle.copy(

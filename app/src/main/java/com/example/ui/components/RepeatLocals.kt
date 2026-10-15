@@ -18,8 +18,11 @@ import com.example.ui.theme.ThingsTheme
 
 /** Стрелка занимает эту долю бледного круга значка шаблона */
 private const val REPEAT_ICON_ARROW_FRACTION = 0.86f
-/** Значок чуть крупнее места чекбокса — соразмерно соседним значкам; на раскладку не влияет */
-private const val REPEAT_ICON_SCALE = 1.15f
+/**
+ * Значок чуть крупнее места чекбокса — соразмерно соседним значкам; на раскладку не влияет. Где края
+ * обрезаются (значок в своём слое, как в Quick Find), место задаётся меньше на этот коэффициент.
+ */
+internal const val REPEAT_ICON_SCALE = 1.15f
 /** Плотность бледного круга под стрелкой, как в Things */
 private const val REPEAT_ICON_BACKGROUND_ALPHA = 0.2f
 
@@ -39,8 +42,7 @@ fun repeatBadge(rule: RecurrenceRule?): String? = when {
     !rule.isActive -> stringResource(R.string.repeat_paused)
     rule.nextGenerationDate <= 0 && com.example.domain.repeat.RepeatRule.decode(rule.rrule)?.afterCompletion == true ->
         stringResource(R.string.repeat_waiting)
-    rule.nextGenerationDate > 0 ->
-        java.text.SimpleDateFormat("d MMM", java.util.Locale.getDefault()).format(java.util.Date(rule.nextGenerationDate))
+    rule.nextGenerationDate > 0 -> com.example.ui.screens.home.subcomponents.startDateBadgeText(rule.nextGenerationDate)
     else -> null
 }
 

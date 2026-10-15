@@ -1136,12 +1136,26 @@ fun ThingsCategoryListPanel(
                                         // Шаблон проекта — день следующего повтора, «Пауза» или «Ждёт»; копия, созданная заранее, — её день
                                         ActiveScreen.REPEATING -> if (task.type == Item.TYPE_PROJECT_TEMPLATE) {
                                             com.example.ui.components.repeatBadge(state.repeatRules[task.id])
-                                        } else task.startDate?.let { java.text.SimpleDateFormat("d MMM", java.util.Locale.getDefault()).format(java.util.Date(it)) }
+                                        } else task.startDate?.let { com.example.ui.screens.home.subcomponents.startDateBadgeText(it) }
                                         ActiveScreen.ALL_PROJECTS -> if (LogbookList.includesProject(task)) null else AllProjectsScreen.laterDateBadge(task)
+                                            ?.let { com.example.ui.screens.home.subcomponents.startDateBadgeText(task.startDate!!) }
                                         // В «Планах» области — дата старта запланированного проекта
                                         ActiveScreen.AREA_DETAIL -> if (HomeList.showsProject(task)) null else AllProjectsScreen.laterDateBadge(task)
+                                            ?.let { com.example.ui.screens.home.subcomponents.startDateBadgeText(task.startDate!!) }
+                                        // На экране тега — дата старта запланированного проекта (сегодня — звезда или луна)
+                                        ActiveScreen.TAG_DETAIL -> task.startDate
+                                            ?.takeIf { it > com.example.data.model.DayBounds.now().endOfToday }
+                                            ?.let { com.example.ui.screens.home.subcomponents.startDateBadgeText(it) }
                                         else -> null
                                     },
+                                    // Копия проекта на сегодня в «Повторяющихся» и проект на сегодня на экране тега — звезда или луна вместо плашки
+                                    todayIcon = if (
+                                        (screen == ActiveScreen.REPEATING || screen == ActiveScreen.TAG_DETAIL) && task.type == Item.TYPE_PROJECT &&
+                                        (task.start == Item.START_TODAY || (task.startDate ?: Long.MAX_VALUE) <= com.example.data.model.DayBounds.now().endOfToday)
+                                    ) {
+                                        if (task.isTonight) com.example.ui.theme.AppIcons.Evening else com.example.ui.theme.AppIcons.Today
+                                    } else null,
+                                    todayIconTint = if (task.isTonight) ThingsTheme.colors.eveningIndicator else Color.Unspecified,
                                     // Под закрытым проектом — его область, как в Logbook Things
                                     subtitle = if (
                                         (screen == ActiveScreen.LOGBOOK || screen == ActiveScreen.LOGGED_PROJECTS || screen == ActiveScreen.ALL_PROJECTS) &&
@@ -1810,7 +1824,8 @@ fun ThingsCategoryListPanel(
             onUpdateTag = { tag -> onEvent(ThingsCategoryListEvent.UpdateTag(tag)) },
             onUpdateTagsOrder = { tags -> onEvent(ThingsCategoryListEvent.UpdateTagsOrder(tags)) },
             onEditProject = { edit -> onEvent(ThingsCategoryListEvent.EditProject(project, edit)) },
-            onCompleteProject = { onEvent(ThingsCategoryListEvent.CompleteProject(it)) }
+            onCompleteProject = { onEvent(ThingsCategoryListEvent.CompleteProject(it)) },
+            onRepeatMove = { day -> requestRepeatMove(project.id, day) }
         )
     }
 
