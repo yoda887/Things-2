@@ -219,6 +219,31 @@ fun ThingsCategoryListPanel(
     // Предыдущий ID развёрнутой задачи для обнаружения момента сворачивания
     var previousExpandedId by remember { mutableStateOf(inlineExpandedTaskId) }
 
+    // Задача в открытом редакторе держит место в списке до сворачивания: правки (день, «Сегодня вечером»,
+    // проект, правило повтора…) сохраняются сразу, но список раскладывается по её снимку, снятому при
+    // раскрытии (у новой задачи — когда она появилась в списке). Сам редактор показывает живые данные
+    var frozenEdited by remember { mutableStateOf<ItemWithChecklist?>(null) }
+    var frozenRule by remember { mutableStateOf<com.example.data.model.RecurrenceRule?>(null) }
+    val currentRepeatRules by rememberUpdatedState(state.repeatRules)
+
+    fun freeze(id: String?) {
+        val snapshot = id?.let { editedId -> currentDisplayTasks.firstOrNull { it.item.id == editedId } }
+        frozenEdited = snapshot
+        frozenRule = snapshot?.let { currentRepeatRules[it.item.id] }
+    }
+
+    /** Список для раскладки: живой, но задача из редактора — снимком и на прежнем месте */
+    fun layoutOf(fresh: List<ItemWithChecklist>): List<ItemWithChecklist> {
+        val frozen = frozenEdited ?: return fresh
+        val freshIndex = fresh.indexOfFirst { it.item.id == frozen.item.id }
+        // Задачу удалили — уходит сразу
+        if (freshIndex == -1) return fresh
+        val others = fresh.filterIndexed { index, _ -> index != freshIndex }
+        val oldIndex = localTasksList.indexOfFirst { it.item.id == frozen.item.id }
+        val at = (if (oldIndex >= 0) oldIndex else freshIndex).coerceAtMost(others.size)
+        return others.toMutableList().apply { add(at, frozen) }
+    }
+
     // Обнаружение момента сворачивания редактора и задержка удаления задачи из списка
     LaunchedEffect(inlineExpandedTaskId) {
         val wasExpanded = previousExpandedId != null
@@ -228,24 +253,46 @@ fun ThingsCategoryListPanel(
             isEditorCollapsing = true
             delay(com.example.ui.theme.AnimationConstants.TASK_EXPANSION_DURATION_MS)
             isEditorCollapsing = false
-            // После завершения анимации — полная синхронизация списка с ViewModel
+            // После завершения анимации — полная синхронизация списка с ViewModel: только теперь
+            // отредактированная задача переезжает туда, куда её перенесли
+            frozenEdited = null
+            frozenRule = null
             localTasksList = currentDisplayTasks
         } else {
             isEditorCollapsing = false
+            freeze(inlineExpandedTaskId)
+            localTasksList = layoutOf(currentDisplayTasks)
         }
     }
 
     // Синхронизация localTasksList с displayTasks из ViewModel
     LaunchedEffect(state.displayTasks) {
+        // Новая задача раскрывается раньше, чем появляется в списке, — снимок снимается при появлении
+        if (frozenEdited == null && inlineExpandedTaskId != null) freeze(inlineExpandedTaskId)
         if (isEditorCollapsing) {
             // Во время сворачивания: обновляем ДАННЫЕ задач (новый заголовок и т.д.),
-            // но НЕ УДАЛЯЕМ задачи из списка (чтобы анимация сворачивания не прерывалась)
+            // но НЕ УДАЛЯЕМ задачи из списка (чтобы анимация сворачивания не прерывалась);
+            // отредактированная задача остаётся снимком до конца сворачивания
             localTasksList = localTasksList.map { localTask ->
-                currentDisplayTasks.find { it.item.id == localTask.item.id } ?: localTask
+                if (localTask.item.id == frozenEdited?.item?.id) localTask
+                else currentDisplayTasks.find { it.item.id == localTask.item.id } ?: localTask
             }
         } else {
-            localTasksList = state.displayTasks
+            localTasksList = layoutOf(state.displayTasks)
         }
+    }
+    // Остальные данные раскладки — тоже со снимком задачи из редактора: её правило повтора («Повторяющиеся»)
+    // и она среди всех задач (Logbook тега, иначе выполненная из редактора задача встала бы в нём второй раз)
+    val layoutRepeatRules = remember(state.repeatRules, frozenEdited, frozenRule) {
+        val frozen = frozenEdited ?: return@remember state.repeatRules
+        state.repeatRules.toMutableMap().apply {
+            val rule = frozenRule
+            if (rule != null) put(frozen.item.id, rule) else remove(frozen.item.id)
+        }
+    }
+    val layoutAllTasks = remember(state.allTasks, frozenEdited) {
+        val frozen = frozenEdited ?: return@remember state.allTasks
+        state.allTasks.map { if (it.item.id == frozen.item.id) frozen else it }
     }
 
     // Заголовки проекта: локальный порядок на время перетаскивания, из базы — когда ничего не несут
@@ -376,7 +423,7 @@ fun ThingsCategoryListPanel(
         displayTasks = displayTasks,
         isLaterItemsHidden = isLaterItemsHidden,
         tag = state.tag,
-        allTasks = state.allTasks,
+        allTasks = layoutAllTasks,
         areas = areasState,
         savedTags = allSavedTagObjects,
         searchQuery = state.searchQuery,
@@ -384,7 +431,7 @@ fun ThingsCategoryListPanel(
         pinnedPlaces = pinnedPlaces,
         expandedLaterProjects = expandedLaterProjects,
         showLoggedProjects = showLoggedProjects,
-        repeatRules = state.repeatRules
+        repeatRules = layoutRepeatRules
     )
 
     // ── Добавление перетаскиванием кнопки «+» (см. FabDragController) ──
@@ -1042,8 +1089,12 @@ fun ThingsCategoryListPanel(
                 }) { item ->
                     when (item) {
                         is ItemWithChecklist -> {
+                            // Задача из редактора стоит в списке снимком — сама строка и редактор берут живые данные
+                            val liveItem = if (item.item.id == frozenEdited?.item?.id) {
+                                state.displayTasks.firstOrNull { it.item.id == item.item.id } ?: item
+                            } else item
                             AnimatedTaskItem(
-                                taskWrapper = item,
+                                taskWrapper = liveItem,
                                 dateBadge = if (screen == ActiveScreen.UPCOMING) monthTaskBadges[item.item.id] else null,
                                 dragDropState = dragDropState,
                                 inlineExpandedTaskId = inlineExpandedTaskId,
