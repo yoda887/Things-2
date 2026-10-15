@@ -367,7 +367,7 @@ private fun MainPage(draft: RepeatDraft, today: LocalDate, onOpen: (RepeatPage) 
 // ---------------------------------------------------------------- вложенные страницы
 
 @Composable
-private fun ColumnScope.SubPage(title: String, onBack: () -> Unit, content: @Composable ColumnScope.() -> Unit) {
+internal fun ColumnScope.SubPage(title: String, onBack: () -> Unit, content: @Composable ColumnScope.() -> Unit) {
     Row(modifier = Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
         Row(
             modifier = Modifier
@@ -601,7 +601,7 @@ private fun ReminderPage(draft: RepeatDraft) {
  * у первого дня и у первых чисел — подпись месяца, месяцы разделены ступенчатой линией; выбранный день обведён.
  */
 @Composable
-private fun RepeatCalendar(selected: LocalDate?, from: LocalDate, onPick: (LocalDate) -> Unit) {
+internal fun RepeatCalendar(selected: LocalDate?, from: LocalDate, modifier: Modifier = Modifier, onPick: (LocalDate) -> Unit) {
     val view = LocalView.current
     val firstMonday = from.with(TemporalAdjusters.previousOrSame(DayOfWeek.MONDAY))
     val selectedWeek = selected?.let { java.time.temporal.ChronoUnit.WEEKS.between(firstMonday, it.with(TemporalAdjusters.previousOrSame(DayOfWeek.MONDAY))).toInt() } ?: 0
@@ -616,7 +616,7 @@ private fun RepeatCalendar(selected: LocalDate?, from: LocalDate, onPick: (Local
             )
         }
     }
-    LazyColumn(state = rememberLazyListState(initialFirstVisibleItemIndex = maxOf(0, selectedWeek - 1))) {
+    LazyColumn(modifier = modifier, state = rememberLazyListState(initialFirstVisibleItemIndex = maxOf(0, selectedWeek - 1))) {
         items(REPEAT_CALENDAR_WEEKS) { week ->
             Row(modifier = Modifier.fillMaxWidth()) {
                 for (i in 0 until 7) {

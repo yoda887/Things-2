@@ -230,6 +230,8 @@ fun ThingsWhenDialog(
     LaunchedEffect(Unit) { isVisible = true }
     // Страница выбора времени напоминания вместо календаря
     var pickingReminder by remember { mutableStateOf(false) }
+    // Календарь на всё окно — открывается стрелками у краёв дат, как строка «Следующая» в окне «Повторять»
+    var pickingDate by remember { mutableStateOf(false) }
     val context = androidx.compose.ui.platform.LocalContext.current
     // Без разрешения на уведомления (Android 13+) напоминание не покажется — спрашиваем, когда его ставят
     val notificationPermission = androidx.activity.compose.rememberLauncherForActivityResult(
@@ -347,6 +349,7 @@ fun ThingsWhenDialog(
         ) {
             // «Назад» при открытом барабане закрывает только его
             androidx.activity.compose.BackHandler(enabled = pickingReminder) { pickingReminder = false }
+            androidx.activity.compose.BackHandler(enabled = pickingDate) { pickingDate = false }
             Box {
             Column(
                 modifier = Modifier
@@ -358,6 +361,25 @@ fun ThingsWhenDialog(
                 // внутренние поля, поэтому при одинаковом spacedBy расстояния выглядели разными
                 verticalArrangement = Arrangement.spacedBy(ThingsSpacing.NONE)
             ) {
+                if (pickingDate) {
+                    val zone = java.time.ZoneId.systemDefault()
+                    val selected = startDate?.takeIf { section == TaskSection.UPCOMING }
+                        ?.let { java.time.Instant.ofEpochMilli(it).atZone(zone).toLocalDate() }
+                    SubPage(stringResource(R.string.ui_when), onBack = { pickingDate = false }) {
+                        RepeatCalendar(
+                            selected = selected,
+                            from = java.time.LocalDate.now(zone),
+                            modifier = Modifier.height(WHEN_FULL_CALENDAR_HEIGHT)
+                        ) { date ->
+                            val millis = date.atStartOfDay(zone).toInstant().toEpochMilli()
+                            onStartDateChange(millis)
+                            onSectionChange(if (isTodayDate(millis)) TaskSection.TODAY else TaskSection.UPCOMING)
+                            onIsTonightChange(false)
+                            onShowCalendarHelperChange(true)
+                            requestClose()
+                        }
+                    }
+                } else {
                 // Top bar: "When?" and Close "✕" Button
                 Row(
                     modifier = Modifier.fillMaxWidth(),
@@ -610,7 +632,8 @@ fun ThingsWhenDialog(
                                             modifier = Modifier
                                                 .size(ThingsIconSize.M)
                                                 .clickable {
-                                                    calendarWeekOffset = maxOf(0, calendarWeekOffset - 3)
+                                                    view.performHapticFeedback(HapticFeedbackConstants.CLOCK_TICK)
+                                                    pickingDate = true
                                                 }
                                         )
                                     }
@@ -622,7 +645,8 @@ fun ThingsWhenDialog(
                                             modifier = Modifier
                                                 .size(ThingsIconSize.M)
                                                 .clickable {
-                                                    calendarWeekOffset += 3
+                                                    view.performHapticFeedback(HapticFeedbackConstants.CLOCK_TICK)
+                                                    pickingDate = true
                                                 }
                                         )
                                     }
@@ -880,6 +904,7 @@ fun ThingsWhenDialog(
                     }
                 }
                 }
+                }
             }
             // Барабан времени — карточка поверх нижней части окна, как в Things. Нажатие мимо неё закрывает её
             if (pickingReminder) {
@@ -923,6 +948,9 @@ fun ThingsWhenDialog(
         }
     }
 }
+
+/** Календарь на всё окно: шесть недель видно сразу, остальные — прокруткой */
+private val WHEN_FULL_CALENDAR_HEIGHT = 264.dp
 
 /** Карточка барабана: ширина — доля окна, как в эталоне; почти вплотную к правому нижнему углу окна */
 private const val WHEEL_CARD_WIDTH_FRACTION = 0.88f
