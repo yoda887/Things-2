@@ -96,9 +96,10 @@ fun formatStartDateLabel(
         return tomorrowLabel
     }
 
+    // Неделя — с понедельника, как во всём приложении (календари, «Планы», плашки дат)
     val startOfWeek = (todayCal.clone() as Calendar).apply {
-        firstDayOfWeek = Calendar.SUNDAY
-        set(Calendar.DAY_OF_WEEK, Calendar.SUNDAY)
+        firstDayOfWeek = Calendar.MONDAY
+        set(Calendar.DAY_OF_WEEK, Calendar.MONDAY)
     }
     val endOfWeek = (startOfWeek.clone() as Calendar).apply {
         add(Calendar.DAY_OF_MONTH, 6)

@@ -553,7 +553,8 @@ fun ThingsWhenDialog(
                                      dNum == todayCal.get(Calendar.DAY_OF_MONTH))
                                      
                         val mLabel = if (dNum == 1 || (i == 0 && calendarWeekOffset == 0) || (i == 1 && calendarWeekOffset > 0)) {
-                            SimpleDateFormat("MMM", Locale.US).format(tempCal.time)
+                            // Подпись месяца — на языке телефона, в именительном падеже («квіт.»), как в календаре «Повторять»
+                            SimpleDateFormat("LLL", Locale.getDefault()).format(tempCal.time)
                         } else null
                         
                         val cTime = tempCal.timeInMillis
@@ -653,7 +654,7 @@ fun ThingsWhenDialog(
                                                     horizontalAlignment = Alignment.CenterHorizontally,
                                                     verticalArrangement = Arrangement.Center
                                                 ) {
-                                                    val monthLabel = SimpleDateFormat("MMM", Locale.US).format(Date(cell.timestamp))
+                                                    val monthLabel = SimpleDateFormat("LLL", Locale.getDefault()).format(Date(cell.timestamp))
                                                     Text(
                                                         text = monthLabel,
                                                         style = ThingsTheme.type.bodySmall.copy(color = ThingsTheme.colors.overlayContent)
