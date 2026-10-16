@@ -1113,6 +1113,8 @@ fun ThingsCategoryListPanel(
                                     if (event is ThingsCategoryListEvent.SwipeTaskRight) {
                                         swipeWhenTask = event.task
                                         swipeWhenOrigin = event.growFromOffset
+                                    } else if (event is ThingsCategoryListEvent.RequestMoveDialog) {
+                                        showMoveDialog = true
                                     } else if (event is ThingsCategoryListEvent.RequestRepeatMove) {
                                         requestRepeatMove(event.templateId, event.day)
                                     } else if (event is ThingsCategoryListEvent.ReorderTasks && event.items.any { it.isRepeatTemplate }) {

@@ -704,6 +704,8 @@ fun ThingsHomeScreen(viewModel: ThingsViewModel = hiltViewModel()) {
                                 is ThingsCategoryListEvent.UpdateRepeatRule -> viewModel.updateRepeatRule(event.templateId, event.rule, event.reminderTime)
                                 // Перенос из редактора панель уже превратила в MoveRepeat (после выбора)
                                 is ThingsCategoryListEvent.RequestRepeatMove -> Unit
+                                // Окно «Перемістити» открывает сама панель списка
+                                is ThingsCategoryListEvent.RequestMoveDialog -> Unit
                                 is ThingsCategoryListEvent.MoveRepeat -> viewModel.moveRepeat(event.templateId, event.appearOn, event.updateRule)
                                 is ThingsCategoryListEvent.BatchRepeatAction -> event.templateIds.forEach { id ->
                                     when (event.action) {

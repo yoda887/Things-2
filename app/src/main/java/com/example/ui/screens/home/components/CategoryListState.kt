@@ -332,6 +332,8 @@ sealed interface ThingsCategoryListEvent {
     data class ClickProject(val project: Item) : ThingsCategoryListEvent
     data class ClickArea(val area: Area) : ThingsCategoryListEvent
     data class ChangeInlineExpandedTaskId(val taskId: String?) : ThingsCategoryListEvent
+    /** Плашка «Без проєкту» под раскрытой задачей: открыть окно «Перемістити» */
+    object RequestMoveDialog : ThingsCategoryListEvent
     // sourceBounds — круг индикатора оттяжки в координатах корня, из него вырастает Quick Find
     data class ClickSearch(val sourceBounds: Rect? = null) : ThingsCategoryListEvent
     object ClickBack : ThingsCategoryListEvent

@@ -85,6 +85,7 @@ import com.example.ui.components.ProjectProgressArc
 import com.example.ui.components.hideSoftKeyboardNow
 import androidx.compose.ui.platform.LocalView
 import androidx.compose.material.icons.outlined.ChevronRight
+import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.outlined.FormatListBulleted
 import com.example.ui.components.swipe.SwipeableTaskContainer
@@ -765,9 +766,10 @@ fun AnimatedTaskItem(
                 }
             }
 
-        // Project/Area indicator row (drawn under/outside the Card)
+        // Плашка проекта или области под карточкой — всегда; у задачи без них — «Без проєкту», нажатие
+        // открывает окно «Перемістити»
         if (showEditor) {
-            if (currentProject != null || currentArea != null) {
+            run {
                 androidx.compose.animation.AnimatedVisibility(
                     visible = isExpanded,
                     enter = androidx.compose.animation.expandVertically() + androidx.compose.animation.fadeIn(),
@@ -778,6 +780,21 @@ fun AnimatedTaskItem(
                     val totalCount = progress?.total ?: 0
 
                     val pillContentColor = ThingsTheme.colors.textSecondary
+                    // Плашки шире строки на отступы раскрытой карточки — справа вровень с её краем
+                    val pillRowModifier = Modifier
+                        .fillMaxWidth()
+                        .layout { measurable, constraints ->
+                            val extraPaddingPx = (EDITOR_EXTRA_PADDING * expansionProgress()).roundToPx()
+                            val extendedConstraints = constraints.copy(
+                                minWidth = (constraints.minWidth + extraPaddingPx * 2).coerceAtMost(constraints.maxWidth + extraPaddingPx * 2),
+                                maxWidth = (constraints.maxWidth + extraPaddingPx * 2)
+                            )
+                            val placeable = measurable.measure(extendedConstraints)
+                            layout(placeable.width - extraPaddingPx * 2, placeable.height) {
+                                placeable.place(-extraPaddingPx, 0)
+                            }
+                        }
+                    Column {
                     Row(
                         modifier = Modifier
                             .fillMaxWidth()
@@ -801,12 +818,16 @@ fun AnimatedTaskItem(
                                 .clip(ThingsTheme.shapes.smallShape)
                                 .clickable {
                                     // Save task automatically and navigate
-                                    editorOutsideTouch?.onCollapseRequested()
-                                    onEvent(ThingsCategoryListEvent.ChangeInlineExpandedTaskId(null))
-                                    if (currentProject != null) {
-                                        onEvent(ThingsCategoryListEvent.ClickProject(currentProject))
-                                    } else if (currentArea != null) {
-                                        onEvent(ThingsCategoryListEvent.ClickArea(currentArea))
+                                    if (currentProject == null && currentArea == null) {
+                                        onEvent(ThingsCategoryListEvent.RequestMoveDialog)
+                                    } else {
+                                        editorOutsideTouch?.onCollapseRequested()
+                                        onEvent(ThingsCategoryListEvent.ChangeInlineExpandedTaskId(null))
+                                        if (currentProject != null) {
+                                            onEvent(ThingsCategoryListEvent.ClickProject(currentProject))
+                                        } else if (currentArea != null) {
+                                            onEvent(ThingsCategoryListEvent.ClickArea(currentArea))
+                                        }
                                     }
                                 }
                                 .padding(start = ThingsSpacing.S, top = ThingsSpacing.XS, end = ThingsSpacing.NONE, bottom = ThingsSpacing.XS),
@@ -820,7 +841,7 @@ fun AnimatedTaskItem(
                                     dashed = currentProject.start == com.example.data.model.Item.START_SOMEDAY,
                                     modifier = Modifier.size(ThingsIconSize.XS)
                                 )
-                            } else {
+                            } else if (currentArea != null) {
                                 Icon(
                                     imageVector = AppIcons.Area,
                                     contentDescription = null,
@@ -828,21 +849,87 @@ fun AnimatedTaskItem(
                                     modifier = Modifier.size(ThingsIconSize.XS)
                                 )
                             }
-                            Spacer(modifier = Modifier.width(ThingsSpacing.XS_PLUS))
+                            if (currentProject != null || currentArea != null) Spacer(modifier = Modifier.width(ThingsSpacing.XS_PLUS))
                             Text(
-                                text = currentProject?.title ?: currentArea?.title ?: "",
+                                text = currentProject?.title ?: currentArea?.title ?: androidx.compose.ui.res.stringResource(com.example.R.string.move_no_project),
                                 style = ThingsTheme.type.editorChecklist.copy(
                                     color = pillContentColor
                                 )
                             )
                             Spacer(modifier = Modifier.width(ThingsSpacing.XXS))
-                            Icon(
-                                imageVector = androidx.compose.material.icons.Icons.Outlined.ChevronRight,
-                                contentDescription = null,
-                                tint = pillContentColor,
-                                modifier = Modifier.size(ThingsIconSize.M)
-                            )
+                            // Без проекта и области справа — крестик, как у строки «Без проєкту» в окне «Перемістити»
+                            if (currentProject == null && currentArea == null) {
+                                Box(modifier = Modifier.size(ThingsIconSize.M), contentAlignment = Alignment.Center) {
+                                    Icon(
+                                        imageVector = androidx.compose.material.icons.Icons.Default.Close,
+                                        contentDescription = null,
+                                        tint = pillContentColor,
+                                        modifier = Modifier.size(ThingsIconSize.XS)
+                                    )
+                                }
+                            } else {
+                                Icon(
+                                    imageVector = androidx.compose.material.icons.Icons.Outlined.ChevronRight,
+                                    contentDescription = null,
+                                    tint = pillContentColor,
+                                    modifier = Modifier.size(ThingsIconSize.M)
+                                )
+                            }
                         }
+                    }
+                    // Повторяющаяся задача — под плашкой места такая же плашка с правилом повтора, как в Things:
+                    // у шаблона нажатие открывает окно «Повторювати», у копии — переход к её шаблону
+                    val templateId = when {
+                        task.isRepeatTemplate -> task.id
+                        else -> task.repeatTemplateId
+                    }
+                    val repeatRule = templateId
+                        ?.let { com.example.ui.components.LocalRepeatRules.current[it] }
+                        ?.let { com.example.domain.repeat.RepeatRule.decode(it.rrule) }
+                    if (templateId != null && repeatRule != null) {
+                        val summary = com.example.ui.screens.home.inlineeditor.dialogs.repeatRuleSummary(repeatRule)
+                            .replaceFirstChar { it.lowercase() }
+                        Row(
+                            modifier = pillRowModifier.padding(bottom = ThingsSpacing.XS, end = ThingsSpacing.L),
+                            horizontalArrangement = Arrangement.End,
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Row(
+                                modifier = Modifier
+                                    .clip(ThingsTheme.shapes.smallShape)
+                                    .clickable {
+                                        if (task.isRepeatTemplate) {
+                                            onEvent(ThingsCategoryListEvent.RepeatTemplateAction(templateId, com.example.ui.screens.home.components.RepeatAction.EDIT))
+                                        } else {
+                                            editorOutsideTouch?.onCollapseRequested()
+                                            onEvent(ThingsCategoryListEvent.ChangeInlineExpandedTaskId(null))
+                                            onEvent(ThingsCategoryListEvent.OpenRepeatTemplate(templateId))
+                                        }
+                                    }
+                                    .padding(start = ThingsSpacing.S, top = ThingsSpacing.XS, end = ThingsSpacing.NONE, bottom = ThingsSpacing.XS),
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+                                Icon(
+                                    imageVector = AppIcons.RepeatCopy,
+                                    contentDescription = null,
+                                    tint = pillContentColor,
+                                    modifier = Modifier.size(ThingsIconSize.XS)
+                                )
+                                Spacer(modifier = Modifier.width(ThingsSpacing.XS_PLUS))
+                                Text(
+                                    text = androidx.compose.ui.res.stringResource(com.example.R.string.repeat_pill, summary),
+                                    style = ThingsTheme.type.editorChecklist.copy(color = pillContentColor)
+                                )
+                                Spacer(modifier = Modifier.width(ThingsSpacing.XXS))
+                                Icon(
+                                    imageVector = androidx.compose.material.icons.Icons.Outlined.ChevronRight,
+                                    contentDescription = null,
+                                    tint = pillContentColor,
+                                    modifier = Modifier.size(ThingsIconSize.M)
+                                )
+                            }
+                        }
+                    }
                     }
                 }
             }

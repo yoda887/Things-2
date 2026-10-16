@@ -715,11 +715,14 @@ fun ThingsTaskInlineEditor(
                         }
                     }
 
-                    // 3. Повтор — под датой и дедлайном: у шаблона — правило и действия, у копии — ссылка на шаблон
-                    if (hasActiveDate || dueDate != null) {
-                        Spacer(modifier = Modifier.height(MaterialTheme.dimens.taskEditorDateToDeadlineSpacer))
+                    // 3. Повтор шаблона — под датой и дедлайном: правило и меню действий. У копии строки в карточке
+                    // нет — правило и переход к шаблону в плашке повтора под карточкой (AnimatedTaskItem)
+                    if (task.item.isRepeatTemplate) {
+                        if (hasActiveDate || dueDate != null) {
+                            Spacer(modifier = Modifier.height(MaterialTheme.dimens.taskEditorDateToDeadlineSpacer))
+                        }
+                        RepeatEditorRow(task.item, onRepeatAction, onOpenRepeatTemplate)
                     }
-                    RepeatEditorRow(task.item, onRepeatAction, onOpenRepeatTemplate)
                 }
 
                 Spacer(modifier = Modifier.width(ThingsSpacing.L))
