@@ -848,8 +848,16 @@ fun AnimatedTaskItem(
                                     tint = pillContentColor,
                                     modifier = Modifier.size(ThingsIconSize.XS)
                                 )
+                            } else {
+                                // Без проекта и области — крестик в начале, как у строки «Без проєкту» в окне «Перемістити»
+                                Icon(
+                                    imageVector = androidx.compose.material.icons.Icons.Default.Close,
+                                    contentDescription = null,
+                                    tint = pillContentColor,
+                                    modifier = Modifier.size(ThingsIconSize.XS)
+                                )
                             }
-                            if (currentProject != null || currentArea != null) Spacer(modifier = Modifier.width(ThingsSpacing.XS_PLUS))
+                            Spacer(modifier = Modifier.width(ThingsSpacing.XS_PLUS))
                             Text(
                                 text = currentProject?.title ?: currentArea?.title ?: androidx.compose.ui.res.stringResource(com.example.R.string.move_no_project),
                                 style = ThingsTheme.type.editorChecklist.copy(
@@ -857,24 +865,12 @@ fun AnimatedTaskItem(
                                 )
                             )
                             Spacer(modifier = Modifier.width(ThingsSpacing.XXS))
-                            // Без проекта и области справа — крестик, как у строки «Без проєкту» в окне «Перемістити»
-                            if (currentProject == null && currentArea == null) {
-                                Box(modifier = Modifier.size(ThingsIconSize.M), contentAlignment = Alignment.Center) {
-                                    Icon(
-                                        imageVector = androidx.compose.material.icons.Icons.Default.Close,
-                                        contentDescription = null,
-                                        tint = pillContentColor,
-                                        modifier = Modifier.size(ThingsIconSize.XS)
-                                    )
-                                }
-                            } else {
-                                Icon(
-                                    imageVector = androidx.compose.material.icons.Icons.Outlined.ChevronRight,
-                                    contentDescription = null,
-                                    tint = pillContentColor,
-                                    modifier = Modifier.size(ThingsIconSize.M)
-                                )
-                            }
+                            Icon(
+                                imageVector = androidx.compose.material.icons.Icons.Outlined.ChevronRight,
+                                contentDescription = null,
+                                tint = pillContentColor,
+                                modifier = Modifier.size(ThingsIconSize.M)
+                            )
                         }
                     }
                     // Повторяющаяся задача — под плашкой места такая же плашка с правилом повтора, как в Things:
