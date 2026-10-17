@@ -19,6 +19,11 @@ import androidx.compose.animation.core.FastOutSlowInEasing
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.text.appendInlineContent
+import kotlin.math.roundToInt
+import androidx.compose.foundation.layout.offset
+import androidx.compose.ui.unit.IntOffset
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.lazy.LazyListState
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -909,25 +914,68 @@ fun AnimatedTaskItem(
                                     .padding(start = ThingsSpacing.S, top = ThingsSpacing.XS, end = ThingsSpacing.NONE, bottom = ThingsSpacing.XS),
                                 verticalAlignment = Alignment.CenterVertically
                             ) {
+                                // Значок — напротив середины первой строки: при переносе текста он остаётся вверху
+                                var firstLineCenterPx by remember { mutableStateOf<Float?>(null) }
+                                // Перенесённый текст занимает ширину самой длинной строки, а не всю доступную —
+                                // плашка не оставляет пустоты перед «›» и стоит вплотную к правому краю
+                                val textLayoutRef = remember { arrayOfNulls<androidx.compose.ui.text.TextLayoutResult>(1) }
                                 Icon(
                                     imageVector = AppIcons.RepeatCopy,
                                     contentDescription = null,
                                     tint = pillContentColor,
-                                    modifier = Modifier.size(ThingsIconSize.XS)
+                                    modifier = Modifier
+                                        .align(Alignment.Top)
+                                        .offset {
+                                            val center = firstLineCenterPx ?: return@offset IntOffset.Zero
+                                            IntOffset(0, (center - ThingsIconSize.XS.toPx() / 2f).roundToInt())
+                                        }
+                                        .size(ThingsIconSize.XS)
                                 )
                                 Spacer(modifier = Modifier.width(ThingsSpacing.XS_PLUS))
-                                // Текст переносится и оставляет место «›» справа
+                                // «›» — в конце текста, сразу за последним словом (неразрывный пробел не даёт ей уйти
+                                // на строку одной): плашка читается одной ссылкой и при переносе
+                                val chevronSize = with(androidx.compose.ui.platform.LocalDensity.current) { ThingsIconSize.M.toSp() }
+                                val pillText = androidx.compose.ui.res.stringResource(com.example.R.string.repeat_pill, summary)
                                 Text(
-                                    text = androidx.compose.ui.res.stringResource(com.example.R.string.repeat_pill, summary),
+                                    text = androidx.compose.ui.text.buildAnnotatedString {
+                                        append(pillText)
+                                        append(' ')
+                                        appendInlineContent(REPEAT_PILL_CHEVRON, "›")
+                                    },
+                                    inlineContent = mapOf(
+                                        REPEAT_PILL_CHEVRON to androidx.compose.foundation.text.InlineTextContent(
+                                            androidx.compose.ui.text.Placeholder(
+                                                width = chevronSize,
+                                                height = chevronSize,
+                                                placeholderVerticalAlign = androidx.compose.ui.text.PlaceholderVerticalAlign.TextCenter
+                                            )
+                                        ) {
+                                            Icon(
+                                                imageVector = androidx.compose.material.icons.Icons.Outlined.ChevronRight,
+                                                contentDescription = null,
+                                                tint = pillContentColor,
+                                                modifier = Modifier.fillMaxSize()
+                                            )
+                                        }
+                                    ),
                                     style = ThingsTheme.type.editorChecklist.copy(color = pillContentColor),
-                                    modifier = Modifier.weight(1f, fill = false)
-                                )
-                                Spacer(modifier = Modifier.width(ThingsSpacing.XXS))
-                                Icon(
-                                    imageVector = androidx.compose.material.icons.Icons.Outlined.ChevronRight,
-                                    contentDescription = null,
-                                    tint = pillContentColor,
-                                    modifier = Modifier.size(ThingsIconSize.M)
+                                    onTextLayout = { layout ->
+                                        textLayoutRef[0] = layout
+                                        firstLineCenterPx = (layout.getLineTop(0) + layout.getLineBottom(0)) / 2f
+                                    },
+                                    modifier = Modifier
+                                        .align(Alignment.Top)
+                                        .weight(1f, fill = false)
+                                        .layout { measurable, constraints ->
+                                            val placeable = measurable.measure(constraints)
+                                            val layout = textLayoutRef[0]
+                                            val width = if (layout != null && layout.lineCount > 1) {
+                                                (0 until layout.lineCount).maxOf { layout.getLineRight(it) }
+                                                    .let { kotlin.math.ceil(it).toInt() }
+                                                    .coerceIn(constraints.minWidth, placeable.width)
+                                            } else placeable.width
+                                            layout(width, placeable.height) { placeable.place(0, 0) }
+                                        }
                                 )
                             }
                         }
@@ -974,3 +1022,6 @@ private class ExpandedCardGeometry {
     var editorFullHeight = 0
     var measured = false
 }
+
+/** Место «›» в конце текста плашки повтора под раскрытой задачей */
+private const val REPEAT_PILL_CHEVRON = "repeat_pill_chevron"
