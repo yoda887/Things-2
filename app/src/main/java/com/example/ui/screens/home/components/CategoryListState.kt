@@ -66,7 +66,9 @@ data class UpcomingHeaderItem(
  */
 data class UpcomingMonthHeaderItem(
     val monthMillis: Long,
-    val monthLabel: String
+    val monthLabel: String,
+    // Остаток месяца («16 – 31 жовтня»): числа в заголовке — серые
+    val isRemainder: Boolean = false
 )
 
 /**
@@ -75,6 +77,8 @@ data class UpcomingMonthHeaderItem(
 data class UpcomingMonth(
     val monthMillis: Long,
     val monthLabel: String,
+    // Остаток месяца, а не целый месяц
+    val isRemainder: Boolean = false,
     val calendarEvents: List<UpcomingEventItem>,
     val tasks: List<ItemWithChecklist>,
     // Проекты, которые стартуют в этом разделе

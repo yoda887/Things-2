@@ -744,8 +744,22 @@ fun UpcomingMonthHeader(
     monthLabel: String,
     textPrimaryColor: Color,
     dividerColor: Color,
-    modifier: Modifier = Modifier
+    modifier: Modifier = Modifier,
+    // Остаток месяца («16 – 31 жовтня»): числа и тире — серым, название месяца — основным цветом
+    isRemainder: Boolean = false
 ) {
+    val secondaryColor = ThingsTheme.colors.textSecondary
+    val label = if (!isRemainder) androidx.compose.ui.text.AnnotatedString(monthLabel) else {
+        androidx.compose.ui.text.buildAnnotatedString {
+            monthLabel.forEach { char ->
+                if (char.isDigit() || char == '–') {
+                    pushStyle(androidx.compose.ui.text.SpanStyle(color = secondaryColor))
+                    append(char)
+                    pop()
+                } else append(char)
+            }
+        }
+    }
     Column(
         modifier = modifier
             .fillMaxWidth()
@@ -759,7 +773,7 @@ fun UpcomingMonthHeader(
         )
         Spacer(modifier = Modifier.height(ThingsSpacing.XS_PLUS))
         Text(
-            text = monthLabel,
+            text = label,
             style = ThingsTheme.type.headlineStrong.copy(color = textPrimaryColor
             )
         )

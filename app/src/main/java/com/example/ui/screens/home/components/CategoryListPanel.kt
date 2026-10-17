@@ -1298,6 +1298,7 @@ fun ThingsCategoryListPanel(
                             )
                             UpcomingMonthHeader(
                                 monthLabel = header.monthLabel,
+                                isRemainder = header.isRemainder,
                                 textPrimaryColor = textPrimaryColor,
                                 dividerColor = dividerColor,
                                 modifier = Modifier

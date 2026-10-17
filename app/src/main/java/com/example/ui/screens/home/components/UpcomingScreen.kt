@@ -66,6 +66,7 @@ object UpcomingScreen {
             UpcomingMonth(
                 monthMillis = period.start,
                 monthLabel = label,
+                isRemainder = period.isRemainder,
                 calendarEvents = period.events.map { event ->
                     val start = event.eventStartMillis ?: 0L
                     UpcomingEventItem(event = event, dateMillis = start, dayOfMonthLabel = dayNumFormat.format(Date(start)))
@@ -102,7 +103,7 @@ object UpcomingScreen {
             }
         }
         upcomingMonths.forEach { month ->
-            add(UpcomingMonthHeaderItem(month.monthMillis, month.monthLabel))
+            add(UpcomingMonthHeaderItem(month.monthMillis, month.monthLabel, month.isRemainder))
             // События календаря месяца выводятся первыми, не смешиваясь с задачами
             month.calendarEvents.forEachIndexed { index, event ->
                 // Как и у дней: отступ не зависит от наличия задач, иначе высота строки
