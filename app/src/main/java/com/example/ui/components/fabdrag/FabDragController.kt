@@ -147,6 +147,11 @@ class FabDragController {
         isSettling = true
     }
 
+    /** Уточнить, куда летит кнопка, не прерывая полёт (место стало известно точно, пока она в воздухе) */
+    fun retarget(anchor: Offset) {
+        if (isSettling) settleTo = anchor
+    }
+
     /** Приземление закончено: кнопка исчезла, подготовка к следующему жесту. */
     fun endSettle(hideUntilEditorCloses: Boolean) {
         hiddenAfterSettle = hideUntilEditorCloses || hideAfterTapSettle
