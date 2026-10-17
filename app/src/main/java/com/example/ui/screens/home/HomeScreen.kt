@@ -392,6 +392,9 @@ fun ThingsHomeScreen(viewModel: ThingsViewModel = hiltViewModel()) {
                             taskToEdit = null
                             newTaskTitlePrefill = searchQuery
                             showAddDialog = true
+                        } else if (fabDragController.tapToList()) {
+                            // Как в Things: список поднимается к началу, кнопка влетает в промежуток вверху,
+                            // оттуда раскрывается новая задача (экран списка, CategoryListPanel.tapFab)
                         } else {
                             // Поля новой задачи по месту назначает домен (NewTasks); задача сразу раскрывается,
                             // курсор — в названии

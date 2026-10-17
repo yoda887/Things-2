@@ -123,6 +123,23 @@ class FabDragController {
         return handled
     }
 
+    /**
+     * Нажатие на «+», как в Things: экран поднимает список к началу и раскрывает там промежуток, кнопка
+     * влетает в него из угла ([settleFromHome]), а из его центра раскрывается новая задача.
+     * @return false — экран так не умеет, задачу создаёт обычный путь нажатия
+     */
+    fun tapToList(): Boolean = !isDragging && !isSettling && dropTarget?.onFabTap() == true
+
+    /** Кнопка летит из покоя в [anchor] и уменьшается до нуля — приземление после нажатия */
+    fun settleFromHome(anchor: Offset) {
+        hiddenAfterSettle = false
+        settleFrom = homeCenter
+        settleTo = anchor
+        settleProgress = 0f
+        settleToken++
+        isSettling = true
+    }
+
     /** Приземление закончено: кнопка исчезла, подготовка к следующему жесту. */
     fun endSettle(hideUntilEditorCloses: Boolean) {
         hiddenAfterSettle = hideUntilEditorCloses
@@ -141,6 +158,9 @@ class FabDragController {
 fun interface FabDropTarget {
     /** Создать объект на месте промежутка. @return false — места нет, сброс не принят */
     fun onFabDrop(): Boolean
+
+    /** Нажатие на «+»: новая задача вверху списка с приземлением кнопки. @return false — не умеет */
+    fun onFabTap(): Boolean = false
 }
 
 val LocalFabDragController = staticCompositionLocalOf<FabDragController?> { null }

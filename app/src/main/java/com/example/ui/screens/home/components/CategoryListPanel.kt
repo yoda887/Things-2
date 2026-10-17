@@ -475,7 +475,7 @@ fun ThingsCategoryListPanel(
     val currentLocalTasks by rememberUpdatedState(localTasksList)
 
     /** Сброс кнопки «+» на промежуток: задача на его месте, у левого края проекта — заголовок */
-    fun dropFab(): Boolean {
+    fun dropFab(focusTitle: Boolean = false): Boolean {
         val slot = fabSlot ?: return false
         // Центр промежутка после раздвигания — туда приземлится кнопка; считаем, пока промежуток ещё на месте.
         // Задача раскрывается на высоту [FabDragController.expandedRowHeightPx], поэтому центр — на её половине
@@ -535,6 +535,8 @@ fun ThingsCategoryListPanel(
                     androidx.compose.animation.core.tween(FAB_SPREAD_MS, easing = androidx.compose.animation.core.FastOutSlowInEasing)
                 )
                 fabDrag?.freshTaskId = newTaskId
+                // Новая задача от нажатия на «+» — сразу с курсором в названии и клавиатурой
+                if (focusTitle) fabDrag?.focusTaskId = newTaskId
                 commit()
                 // Промежуток уйдёт в том же кадре, в котором в списке появится новая строка
                 kotlinx.coroutines.withTimeoutOrNull(800) {
@@ -557,9 +559,53 @@ fun ThingsCategoryListPanel(
             ?.takeIf { it > 0 }?.let { fabDrag?.expandedRowHeightPx = it.toFloat() }
     }
 
+    /**
+     * Нажатие на «+», как в Things: список плавно поднимается к началу, на месте первой строки раскрывается
+     * промежуток, кнопка влетает в его центр из угла, и оттуда раскрывается новая задача с курсором в названии
+     */
+    fun tapFab(): Boolean {
+        if (screen !in FAB_TAP_SCREENS || state.isSelectionMode || inlineExpandedTaskId != null) return false
+        spreadScope.launch {
+            lazyListState.animateScrollToItem(0)
+            val flat = currentFlattened
+            val first = flat.indexOfFirst { FabInsertion.isAnchor(it) }
+            val slot = FabInsertion.normalizeSlot(flat, FabSlot(if (first >= 0) first else flat.size, asHeading = false))
+            // Кнопка летит в том же кадре, когда прокрутка закончилась: центр будущего промежутка известен заранее —
+            // верх строки, перед которой он встанет, плюс половина его высоты. Промежуток раскрывается, пока она летит
+            val coords = listCoordinates
+            val rowKey = flat.getOrNull(slot.index)?.let { listItemKey(it) }
+            val rowInfo = rowKey?.let { key -> lazyListState.layoutInfo.visibleItemsInfo.firstOrNull { it.key == key } }
+            val earlyAnchor = if (coords != null && coords.isAttached && rowInfo != null) {
+                val origin = coords.positionInRoot()
+                androidx.compose.ui.geometry.Offset(
+                    origin.x + coords.size.width / 2f,
+                    origin.y + (rowInfo.offset - lazyListState.layoutInfo.viewportStartOffset) + fabDefaultGapPx / 2f
+                )
+            } else null
+            fabSlot = slot
+            earlyAnchor?.let { fabDrag?.settleFromHome(it) }
+            // Промежуток должен встать в список, прежде чем раздвинуться под новую задачу
+            kotlinx.coroutines.withTimeoutOrNull(FAB_TAP_GAP_WAIT_MS) {
+                snapshotFlow { lazyListState.layoutInfo.visibleItemsInfo.any { it.key == FabGapItem.KEY } }.first { it }
+            }
+            withFrameNanos { }
+            if (!dropFab(focusTitle = true)) {
+                fabSlot = null
+                return@launch
+            }
+            // Без строки впереди (пустой конец списка) — летит, когда промежуток уже на месте
+            if (earlyAnchor == null) fabDrag?.dropAnchor?.let { fabDrag.settleFromHome(it) }
+            fabDrag?.dropAnchor = null
+        }
+        return true
+    }
+
     if (fabDrag != null && acceptsFabDrop) {
         DisposableEffect(fabDrag) {
-            val target = FabDropTarget { dropFab() }
+            val target = object : FabDropTarget {
+                override fun onFabDrop(): Boolean = dropFab()
+                override fun onFabTap(): Boolean = tapFab()
+            }
             fabDrag.dropTarget = target
             onDispose { if (fabDrag.dropTarget === target) fabDrag.dropTarget = null }
         }
@@ -2105,6 +2151,18 @@ private fun SearchSectionIcon(
 }
 
 /** Экраны, на которые можно сбросить кнопку «+» */
+/**
+ * Экраны, где нажатие на «+» добавляет задачу вверху списка с приземлением кнопки. В «Предстоящих» — первой
+ * в «Завтра»: промежуток встаёт сразу под заголовком первого дня (FabInsertion.normalizeSlot), дата — его
+ */
+private val FAB_TAP_SCREENS = setOf(
+    ActiveScreen.INBOX, ActiveScreen.TODAY, ActiveScreen.UPCOMING, ActiveScreen.ANYTIME, ActiveScreen.SOMEDAY,
+    ActiveScreen.PROJECT_DETAIL, ActiveScreen.AREA_DETAIL, ActiveScreen.TAG_DETAIL
+)
+
+/** Нажатие на «+»: сколько ждать, пока промежуток встанет в список, мс */
+private const val FAB_TAP_GAP_WAIT_MS = 500L
+
 private val FAB_DROP_SCREENS = setOf(
     ActiveScreen.INBOX, ActiveScreen.TODAY, ActiveScreen.UPCOMING, ActiveScreen.ANYTIME, ActiveScreen.SOMEDAY,
     ActiveScreen.PROJECT_DETAIL, ActiveScreen.AREA_DETAIL, ActiveScreen.TAG_DETAIL
