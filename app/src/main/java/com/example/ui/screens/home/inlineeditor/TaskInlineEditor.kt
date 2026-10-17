@@ -715,9 +715,9 @@ fun ThingsTaskInlineEditor(
                         }
                     }
 
-                    // 3. Повтор шаблона — под датой и дедлайном: правило и меню действий. У копии строки в карточке
-                    // нет — правило и переход к шаблону в плашке повтора под карточкой (AnimatedTaskItem)
-                    if (task.item.isRepeatTemplate) {
+                    // 3. Повтор — под датой и дедлайном: у шаблона — правило и меню действий, у копии — что это
+                    // копия, и переход к шаблону (правило — в плашке повтора под карточкой, AnimatedTaskItem)
+                    if (task.item.isRepeatTemplate || task.item.isRepeatCopy) {
                         if (hasActiveDate || dueDate != null) {
                             Spacer(modifier = Modifier.height(MaterialTheme.dimens.taskEditorDateToDeadlineSpacer))
                         }
