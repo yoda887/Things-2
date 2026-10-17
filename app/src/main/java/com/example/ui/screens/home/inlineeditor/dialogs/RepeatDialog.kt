@@ -25,6 +25,7 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
@@ -350,16 +351,33 @@ private fun MainPage(draft: RepeatDraft, today: LocalDate, onOpen: (RepeatPage) 
                 ValueRow(stringResource(R.string.repeat_ends), endsText(draft)) { onOpen(RepeatPage.ENDS) }
             }
             RepeatDivider()
-            IconRow(
-                icon = { Icon(Icons.Outlined.Flag, null, tint = ThingsTheme.colors.overlayContentSecondary, modifier = Modifier.size(ThingsIconSize.S)) },
-                label = stringResource(if (draft.deadlineOn) R.string.repeat_deadline else R.string.repeat_add_deadline),
-                value = if (draft.deadlineOn) deadlineText(draft.deadlineDays) else null
-            ) { onOpen(RepeatPage.DEADLINE) }
-            IconRow(
-                icon = { Icon(AppIcons.Bell, null, tint = ThingsTheme.colors.overlayContentSecondary, modifier = Modifier.size(ThingsIconSize.S)) },
-                label = stringResource(if (draft.reminderTime != null) R.string.reminder_title else R.string.ui_add_reminder),
-                value = draft.reminderTime?.let { formatReminderTime(LocalContext.current, it) }
-            ) { onOpen(RepeatPage.REMINDER) }
+            // Поставленные срок и напоминание — фразой акцентом, как в Things: «Кожна копія матиме термін.
+            // Вона з’явиться в «Сьогодні» за 2 дні.», «Кожна копія матиме нагадування о 12:00.»
+            if (draft.deadlineOn) {
+                SetIconRow(
+                    icon = Icons.Outlined.Flag,
+                    text = stringResource(R.string.repeat_deadline_each, deadlineText(draft.deadlineDays))
+                ) { onOpen(RepeatPage.DEADLINE) }
+            } else {
+                IconRow(
+                    icon = { Icon(Icons.Outlined.Flag, null, tint = ThingsTheme.colors.overlayContentSecondary, modifier = Modifier.size(ThingsIconSize.S)) },
+                    label = stringResource(R.string.repeat_add_deadline),
+                    value = null
+                ) { onOpen(RepeatPage.DEADLINE) }
+            }
+            val reminder = draft.reminderTime
+            if (reminder != null) {
+                SetIconRow(
+                    icon = AppIcons.Bell,
+                    text = stringResource(R.string.repeat_reminder_each, formatReminderTime(LocalContext.current, reminder))
+                ) { onOpen(RepeatPage.REMINDER) }
+            } else {
+                IconRow(
+                    icon = { Icon(AppIcons.Bell, null, tint = ThingsTheme.colors.overlayContentSecondary, modifier = Modifier.size(ThingsIconSize.S)) },
+                    label = stringResource(R.string.ui_add_reminder),
+                    value = null
+                ) { onOpen(RepeatPage.REMINDER) }
+            }
         }
     }
 }
@@ -758,6 +776,39 @@ private fun IconRow(icon: @Composable () -> Unit, label: String, value: String?,
             tint = if (value != null) ThingsTheme.colors.accent else ThingsTheme.colors.overlayContentSecondary,
             modifier = Modifier.size(ThingsIconSize.S)
         )
+    }
+}
+
+/**
+ * Поставленный срок или напоминание: значок и фраза акцентом, с переносом строк, чтобы фраза помещалась
+ * целиком; значок — по первой строке, «›» — по центру, тоже акцентом
+ */
+@Composable
+private fun SetIconRow(icon: androidx.compose.ui.graphics.vector.ImageVector, text: String, onClick: () -> Unit) {
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .heightIn(min = MaterialTheme.dimens.rowHeight)
+            .clickable { onClick() }
+            .padding(vertical = ThingsSpacing.S),
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        Icon(
+            icon, null,
+            tint = ThingsTheme.colors.accent,
+            modifier = Modifier
+                .align(Alignment.Top)
+                .padding(top = ThingsSpacing.XXS)
+                .size(ThingsIconSize.S)
+        )
+        Spacer(Modifier.width(ThingsSpacing.S))
+        Text(
+            text = text,
+            style = ThingsTheme.type.bodyLarge.copy(color = ThingsTheme.colors.accent),
+            modifier = Modifier.weight(1f)
+        )
+        Spacer(Modifier.width(ThingsSpacing.S))
+        Icon(Icons.Default.ChevronRight, null, tint = ThingsTheme.colors.accent, modifier = Modifier.size(ThingsIconSize.S))
     }
 }
 

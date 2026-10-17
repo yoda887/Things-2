@@ -223,6 +223,8 @@
     <string name="repeat_add_deadline">Добавить срок</string>
     <string name="repeat_deadline">Срок</string>
     <string name="repeat_deadline_hint">У каждой копии будет срок. Она появится в «Сегодня»</string>
+    <string name="repeat_reminder_each">У каждой копии будет напоминание в %1$s.</string>
+    <string name="repeat_deadline_each">У каждой копии будет срок. Она появится в «Сегодня» %1$s.</string>
     <string name="repeat_same_day">в тот же день</string>
     <string name="repeat_add_more">Добавить ещё</string>
     <string name="repeat_day_word">день</string>
