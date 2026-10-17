@@ -1228,11 +1228,12 @@ fun ThingsCategoryListPanel(
                                         if (task.isTonight) com.example.ui.theme.AppIcons.Evening else com.example.ui.theme.AppIcons.Today
                                     } else null,
                                     todayIconTint = if (task.isTonight) ThingsTheme.colors.eveningIndicator else Color.Unspecified,
-                                    // Под закрытым проектом — его область, как в Logbook Things
+                                    // Под закрытым проектом — его область, как в Logbook Things; в «Предстоящих» — область
+                                    // запланированного проекта, как подпись под задачей проекта или области
                                     subtitle = if (
-                                        (screen == ActiveScreen.LOGBOOK || screen == ActiveScreen.LOGGED_PROJECTS || screen == ActiveScreen.ALL_PROJECTS) &&
-                                        LogbookList.includesProject(task)
-                                    ) areasState.firstOrNull { it.id == task.areaId }?.title else null,
+                                        ((screen == ActiveScreen.LOGBOOK || screen == ActiveScreen.LOGGED_PROJECTS || screen == ActiveScreen.ALL_PROJECTS) &&
+                                            LogbookList.includesProject(task)) || screen == ActiveScreen.UPCOMING
+                                    ) areasState.firstOrNull { it.id == task.areaId && !it.trashed }?.title else null,
                                     modifier = Modifier.animateItem(
                                         placementSpec = placementSpec
                                     )
