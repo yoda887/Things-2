@@ -64,6 +64,7 @@ import androidx.compose.runtime.*
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.text.withStyle
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.clipToBounds
 import androidx.compose.ui.draw.shadow
@@ -295,6 +296,16 @@ fun ThingsCategoryListPanel(
         state.allTasks.map { if (it.item.id == frozen.item.id) frozen else it }
     }
 
+    // Плашка «Входящих» с ушедшими задачами живёт, пока открыт экран: при входе и при уходе с него она снимается,
+    // как по «OK»
+    if (screen == ActiveScreen.INBOX) {
+        val currentOnEvent by rememberUpdatedState(onEvent)
+        DisposableEffect(Unit) {
+            currentOnEvent(ThingsCategoryListEvent.DismissInboxMoved)
+            onDispose { currentOnEvent(ThingsCategoryListEvent.DismissInboxMoved) }
+        }
+    }
+
     // Заголовки проекта: локальный порядок на время перетаскивания, из базы — когда ничего не несут
     var localHeadings by remember { mutableStateOf(state.headings) }
     LaunchedEffect(state.headings, dragDropState.draggedItemKey) {
@@ -431,7 +442,8 @@ fun ThingsCategoryListPanel(
         pinnedPlaces = pinnedPlaces,
         expandedLaterProjects = expandedLaterProjects,
         showLoggedProjects = showLoggedProjects,
-        repeatRules = layoutRepeatRules
+        repeatRules = layoutRepeatRules,
+        inboxGhosts = state.inboxGhosts
     )
 
     // ── Добавление перетаскиванием кнопки «+» (см. FabDragController) ──
@@ -1041,7 +1053,9 @@ fun ThingsCategoryListPanel(
                 // «Когда-нибудь» показывает и отложенные проекты — без задач экран не пуст
                 ActiveScreen.SOMEDAY -> SomedayList.hasContent(displayTasks, projects)
                 // Поиск показывает свою пустую заглушку отдельно; у главного экрана списка нет
-                ActiveScreen.INBOX, ActiveScreen.SEARCH, ActiveScreen.HOME -> displayTasks.isNotEmpty()
+                // «Входящие» не пусты, пока над ними плашка с ушедшими задачами
+                ActiveScreen.INBOX -> displayTasks.isNotEmpty() || state.inboxGhosts.isNotEmpty()
+                ActiveScreen.SEARCH, ActiveScreen.HOME -> displayTasks.isNotEmpty()
                 ActiveScreen.ALL_PROJECTS -> AllProjectsList.hasContent(AllProjectsList.content(projects, areasState))
                 ActiveScreen.LOGGED_PROJECTS -> projects.any { LogbookList.includesProject(it) }
                 ActiveScreen.REPEATING -> displayTasks.isNotEmpty()
@@ -1083,6 +1097,8 @@ fun ThingsCategoryListPanel(
                         is SearchSectionHeaderItem -> item.key
                         is SearchAreaItem -> "search_area_${item.area.id}"
                         is SearchTagItem -> "search_tag_${item.tag.id}"
+                        is InboxMovedBannerItem -> TaskListKeys.INBOX_MOVED_BANNER
+                        is InboxGhostItem -> "${TaskListKeys.INBOX_GHOST_PREFIX}${item.task.item.id}"
                         is ProjectHeadingItem -> item.key
                         else -> item.toString()
                     }
@@ -1222,6 +1238,33 @@ fun ThingsCategoryListPanel(
                                     )
                                 )
                             }
+                        }
+                        is InboxMovedBannerItem -> {
+                            InboxMovedBanner(
+                                count = item.count,
+                                onOk = { onEvent(ThingsCategoryListEvent.DismissInboxMoved) },
+                                modifier = Modifier.animateItem(placementSpec = placementSpec)
+                            )
+                        }
+                        is InboxGhostItem -> {
+                            // Ушедшая задача — бледно и без касаний, уже с новой датой, проектом или областью
+                            TaskItemRow(
+                                task = item.task.item,
+                                textPrimaryColor = textPrimaryColor,
+                                textSecondaryColor = textSecondaryColor,
+                                dividerColor = dividerColor,
+                                onToggle = {},
+                                onClick = {},
+                                projects = projects,
+                                areas = areasState,
+                                screen = ActiveScreen.INBOX,
+                                dateBadge = item.task.item.startDate
+                                    ?.takeIf { it > com.example.data.model.DayBounds.now().endOfToday }
+                                    ?.let { com.example.ui.screens.home.subcomponents.startDateBadgeText(it) },
+                                modifier = Modifier
+                                    .animateItem(placementSpec = placementSpec)
+                                    .graphicsLayer { alpha = ThingsAlpha.HALF }
+                            )
                         }
                         is UpcomingHeaderItem -> {
                             val header = item
@@ -2171,3 +2214,53 @@ private fun FabGapRow(asHeading: Boolean, extraPx: () -> Float, modifier: Modifi
     }
 }
 
+/**
+ * Плашка «Входящих» над ушедшими оттуда задачами, как в Things: «**2** завдання переміщено з «Вхідних»» и «OK» —
+ * после него эти задачи там больше не показываются.
+ */
+@Composable
+private fun InboxMovedBanner(count: Int, onOk: () -> Unit, modifier: Modifier = Modifier) {
+    val view = androidx.compose.ui.platform.LocalView.current
+    val text = androidx.compose.ui.res.pluralStringResource(R.plurals.inbox_moved_out, count, count)
+    val number = count.toString()
+    Row(
+        modifier = modifier
+            .fillMaxWidth()
+            .padding(vertical = ThingsSpacing.XS)
+            .clip(ThingsTheme.shapes.rowShape)
+            .background(ThingsTheme.colors.searchField)
+            .padding(start = ThingsSpacing.M, end = ThingsSpacing.S, top = ThingsSpacing.S, bottom = ThingsSpacing.S),
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        Text(
+            text = androidx.compose.ui.text.buildAnnotatedString {
+                val at = text.indexOf(number)
+                if (at < 0) append(text) else {
+                    append(text.substring(0, at))
+                    // Число — жирным, начертанием из темы
+                    withStyle(androidx.compose.ui.text.SpanStyle(fontWeight = ThingsTheme.type.headlineStrong.fontWeight)) { append(number) }
+                    append(text.substring(at + number.length))
+                }
+            },
+            style = ThingsTheme.type.bodyMedium.copy(color = ThingsTheme.colors.textPrimary),
+            modifier = Modifier.weight(1f)
+        )
+        Spacer(modifier = Modifier.width(ThingsSpacing.S))
+        Box(
+            modifier = Modifier
+                .clip(ThingsTheme.shapes.smallShape)
+                .background(ThingsTheme.colors.textSecondary.copy(alpha = ThingsAlpha.SUBTLE))
+                .clickable {
+                    view.performHapticFeedback(android.view.HapticFeedbackConstants.CLOCK_TICK)
+                    onOk()
+                }
+                .padding(horizontal = ThingsSpacing.M, vertical = ThingsSpacing.XS),
+            contentAlignment = Alignment.Center
+        ) {
+            Text(
+                text = stringResource(R.string.ui_ok),
+                style = ThingsTheme.type.bodyMedium.copy(color = ThingsTheme.colors.textPrimary)
+            )
+        }
+    }
+}

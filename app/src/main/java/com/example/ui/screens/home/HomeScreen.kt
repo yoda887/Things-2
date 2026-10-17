@@ -706,6 +706,7 @@ fun ThingsHomeScreen(viewModel: ThingsViewModel = hiltViewModel()) {
                                 is ThingsCategoryListEvent.RequestRepeatMove -> Unit
                                 // Окно «Перемістити» открывает сама панель списка
                                 is ThingsCategoryListEvent.RequestMoveDialog -> Unit
+                                is ThingsCategoryListEvent.DismissInboxMoved -> viewModel.dismissInboxMoved()
                                 is ThingsCategoryListEvent.MoveRepeat -> viewModel.moveRepeat(event.templateId, event.appearOn, event.updateRule)
                                 is ThingsCategoryListEvent.BatchRepeatAction -> event.templateIds.forEach { id ->
                                     when (event.action) {

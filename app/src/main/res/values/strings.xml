@@ -229,6 +229,7 @@
     <plurals name="repeat_unit_week"><item quantity="one">week</item><item quantity="other">weeks</item></plurals>
     <plurals name="repeat_unit_month"><item quantity="one">month</item><item quantity="other">months</item></plurals>
     <plurals name="repeat_unit_year"><item quantity="one">year</item><item quantity="other">years</item></plurals>
+    <plurals name="inbox_moved_out"><item quantity="one">%1$d to-do moved out of the Inbox</item><item quantity="other">%1$d to-dos moved out of the Inbox</item></plurals>
     <plurals name="repeat_days_earlier"><item quantity="one">%d day earlier</item><item quantity="other">%d days earlier</item></plurals>
     <plurals name="repeat_repetitions"><item quantity="one">%d repetition</item><item quantity="other">%d repetitions</item></plurals>
     <plurals name="repeat_ends_after"><item quantity="one">after %d repetition</item><item quantity="other">after %d repetitions</item></plurals>

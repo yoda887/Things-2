@@ -439,6 +439,8 @@ fun TaskItemRow(
                                         screen == ActiveScreen.ANYTIME ||
                                         // На экране тега — звезда, луна или день старта, как на экране проекта
                                         screen == ActiveScreen.TAG_DETAIL ||
+                                        // Во «Входящих» дата бывает только у ушедших оттуда задач под плашкой
+                                        screen == ActiveScreen.INBOX ||
                                         // В поиске открытые задачи стоят под проектом или областью — срок виден в строке
                                         (screen == ActiveScreen.SEARCH && !isSearchLogbookStyle)
                                 )

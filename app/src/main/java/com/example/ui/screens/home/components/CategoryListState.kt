@@ -127,6 +127,12 @@ object TaskListKeys {
     /** Отступ между списком проектов и списком задач на экране сферы */
     const val AREA_PROJECTS_SPACER = "area_projects_spacer"
 
+    /** Плашка «N завдань переміщено з «Вхідних»» */
+    const val INBOX_MOVED_BANNER = "inbox_moved_banner"
+
+    /** Ушедшая из «Входящих» задача под плашкой — ключ строки с id задачи */
+    const val INBOX_GHOST_PREFIX = "inbox_ghost_"
+
     /** Префикс заголовка дня на экране «Предстоящие» */
     const val DAY_HEADER_PREFIX = "hdr_"
 
@@ -166,6 +172,12 @@ object TaskListKeys {
 
 /** Вид заголовка секции в результатах поиска. */
 enum class SearchSectionKind { PROJECT, AREA, LOGBOOK }
+
+/** «Входящие»: плашка «N завдань переміщено з «Вхідних»» с кнопкой «OK» над ушедшими задачами */
+data class InboxMovedBannerItem(val count: Int)
+
+/** «Входящие»: ушедшая оттуда задача — бледной строкой уже в новом виде, до «OK» на плашке */
+data class InboxGhostItem(val task: ItemWithChecklist)
 
 /**
  * Заголовок секции списка: задачи конкретного проекта или области (поиск, «В любое время», «Когда-нибудь»), Logbook поиска.
@@ -212,7 +224,9 @@ fun rememberFlattenedList(
     expandedLaterProjects: Set<String> = emptySet(),
     showLoggedProjects: Boolean = false,
     // «Повторяющиеся»: правила шаблонов — для порядка по ближайшему повтору
-    repeatRules: Map<String, com.example.data.model.RecurrenceRule> = emptyMap()
+    repeatRules: Map<String, com.example.data.model.RecurrenceRule> = emptyMap(),
+    // «Входящие»: ушедшие задачи — под плашкой внизу списка, до «OK»
+    inboxGhosts: List<ItemWithChecklist> = emptyList()
 ): List<Any> {
     val headerLogbook = stringResource(R.string.category_logbook)
     val todayLabel = stringResource(R.string.category_today)
@@ -220,7 +234,7 @@ fun rememberFlattenedList(
     val resources = androidx.compose.ui.platform.LocalContext.current.resources
     val showLoggedLabel = stringResource(R.string.all_projects_show_logged)
     val hideLoggedLabel = stringResource(R.string.all_projects_hide_logged)
-    return remember(repeatRules, expandedLaterProjects, showLoggedProjects, resources, screen, standardToday, eveningToday, headerLogbook, todayLabel, yesterdayLabel, draggedItemKey, upcomingDays, upcomingMonths, projects, area, displayTasks, isLaterItemsHidden, tag, allTasks, areas, savedTags, searchQuery, headings, pinnedPlaces) {
+    return remember(inboxGhosts, repeatRules, expandedLaterProjects, showLoggedProjects, resources, screen, standardToday, eveningToday, headerLogbook, todayLabel, yesterdayLabel, draggedItemKey, upcomingDays, upcomingMonths, projects, area, displayTasks, isLaterItemsHidden, tag, allTasks, areas, savedTags, searchQuery, headings, pinnedPlaces) {
         // Все экраны перечислены явно (без else): новый экран компилятор заставит указать и здесь
         when (screen) {
             ActiveScreen.TODAY -> TodayScreen.rows(standardToday, eveningToday, isDragging = draggedItemKey != null, projects = com.example.domain.lists.TodayList.projects(projects))
@@ -232,8 +246,13 @@ fun rememberFlattenedList(
             ActiveScreen.ANYTIME -> PlaceGroupRows.rows(AnytimeList.groups(displayTasks, projects, areas, pinnedPlaces))
             ActiveScreen.SOMEDAY -> PlaceGroupRows.rows(SomedayList.groups(displayTasks, projects, areas, pinnedPlaces))
             ActiveScreen.SEARCH -> SearchScreen.rows(displayTasks, projects, areas, savedTags, searchQuery, headerLogbook)
-            // «Входящие» — задачи как есть; у главного экрана списка нет
-            ActiveScreen.INBOX, ActiveScreen.HOME -> displayTasks
+            // «Входящие» — задачи как есть, под ними внизу — плашка и ушедшие оттуда задачи; у главного экрана списка нет
+            ActiveScreen.INBOX -> if (inboxGhosts.isEmpty()) displayTasks else {
+                // Под задачами «Входящих» плашка стоит после промежутка, как блок проектов под задачами
+                val gap = if (displayTasks.isEmpty()) emptyList() else listOf(TaskListKeys.AREA_PROJECTS_SPACER)
+                displayTasks + gap + InboxMovedBannerItem(inboxGhosts.size) + inboxGhosts.map { InboxGhostItem(it) }
+            }
+            ActiveScreen.HOME -> displayTasks
             ActiveScreen.ALL_PROJECTS -> AllProjectsScreen.rows(
                 AllProjectsList.content(projects, areas), expandedLaterProjects, showLoggedProjects,
                 { count -> resources.getQuantityString(R.plurals.all_projects_show_later, count, count) },
@@ -334,6 +353,8 @@ sealed interface ThingsCategoryListEvent {
     data class ChangeInlineExpandedTaskId(val taskId: String?) : ThingsCategoryListEvent
     /** Плашка «Без проєкту» под раскрытой задачей: открыть окно «Перемістити» */
     object RequestMoveDialog : ThingsCategoryListEvent
+    /** «OK» на плашке «Входящих»: ушедшие задачи больше там не показываются */
+    object DismissInboxMoved : ThingsCategoryListEvent
     // sourceBounds — круг индикатора оттяжки в координатах корня, из него вырастает Quick Find
     data class ClickSearch(val sourceBounds: Rect? = null) : ThingsCategoryListEvent
     object ClickBack : ThingsCategoryListEvent

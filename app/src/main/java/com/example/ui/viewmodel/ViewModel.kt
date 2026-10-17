@@ -127,6 +127,28 @@ class ThingsViewModel @Inject constructor(
     private val _inlineExpandedTaskId = MutableStateFlow<String?>(null)
     val inlineExpandedTaskId: StateFlow<String?> = _inlineExpandedTaskId.asStateFlow()
 
+    /** Задачи, ушедшие из «Входящих», — видны там под плашкой, пока не нажмут «OK» ([com.example.domain.lists.InboxMoves]) */
+    private val _inboxMovedOut = MutableStateFlow<Set<String>>(emptySet())
+
+    init {
+        viewModelScope.launch {
+            var previousInbox: Set<String>? = null
+            tasks.collect { list ->
+                // Первый список — отсчёт: до него ничего не переезжало
+                previousInbox?.let { previous ->
+                    val moved = com.example.domain.lists.InboxMoves.update(_inboxMovedOut.value, previous, list)
+                    if (moved != _inboxMovedOut.value) _inboxMovedOut.value = moved
+                }
+                if (list.isNotEmpty() || previousInbox != null) previousInbox = com.example.domain.lists.InboxMoves.inboxIds(list)
+            }
+        }
+    }
+
+    /** «OK» на плашке «Входящих»: переехавшие задачи больше там не показываются */
+    fun dismissInboxMoved() {
+        _inboxMovedOut.value = emptySet()
+    }
+
     private val _highlightedTaskId = MutableStateFlow<String?>(null)
     val highlightedTaskId: StateFlow<String?> = _highlightedTaskId.asStateFlow()
 
@@ -201,7 +223,8 @@ class ThingsViewModel @Inject constructor(
             highlighted: String?,
             query: String = "",
             headingList: List<Item> = emptyList(),
-            repeatRules: Map<String, com.example.data.model.RecurrenceRule> = emptyMap()
+            repeatRules: Map<String, com.example.data.model.RecurrenceRule> = emptyMap(),
+            inboxMovedOut: Set<String> = emptySet()
         ): ThingsCategoryListState {
             // Границы дня считаем один раз на весь список, а не в геттерах каждой задачи
             val bounds = DayBounds.now()
@@ -298,7 +321,10 @@ class ThingsViewModel @Inject constructor(
                 searchQuery = query,
                 headings = projectHeadings,
                 allHeadings = headingList.filter { !it.trashed },
-                repeatRules = repeatRules
+                repeatRules = repeatRules,
+                inboxGhosts = if (screen == ActiveScreen.INBOX) {
+                    com.example.domain.lists.InboxMoves.ghosts(inboxMovedOut, taskList, displayTasks)
+                } else emptyList()
             )
         }
     }
@@ -331,7 +357,8 @@ class ThingsViewModel @Inject constructor(
             highlighted = highlightedTaskId.value,
             query = searchQuery.value,
             headingList = headings.value,
-            repeatRules = recurrenceRules.value
+            repeatRules = recurrenceRules.value,
+            inboxMovedOut = _inboxMovedOut.value
         )
     }
 
@@ -366,7 +393,8 @@ class ThingsViewModel @Inject constructor(
                 highlightedTaskId,
                 searchQuery,
                 headings,
-                recurrenceRules
+                recurrenceRules,
+                _inboxMovedOut
             )
         ) { array ->
             val expandedTaskId = array[0] as? String
@@ -407,7 +435,8 @@ class ThingsViewModel @Inject constructor(
                 highlighted = highlighted,
                 query = query,
                 headingList = headingList,
-                repeatRules = @Suppress("UNCHECKED_CAST") (array[12] as Map<String, com.example.data.model.RecurrenceRule>)
+                repeatRules = @Suppress("UNCHECKED_CAST") (array[12] as Map<String, com.example.data.model.RecurrenceRule>),
+                inboxMovedOut = @Suppress("UNCHECKED_CAST") (array[13] as Set<String>)
             )
         }.flowOn(Dispatchers.Default)
     }

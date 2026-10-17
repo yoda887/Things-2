@@ -49,5 +49,7 @@ data class ThingsCategoryListState(
     // Все подзаголовки проектов — для поиска в окне «Переместить»
     val allHeadings: List<Item> = emptyList(),
     /** Правила повтора шаблонов — по id шаблона (строки шаблонов, редактор шаблона и его копий) */
-    val repeatRules: Map<String, com.example.data.model.RecurrenceRule> = emptyMap()
+    val repeatRules: Map<String, com.example.data.model.RecurrenceRule> = emptyMap(),
+    /** «Входящие»: задачи, ушедшие оттуда, — бледными строками под плашкой, пока не нажмут «OK» ([com.example.domain.lists.InboxMoves]) */
+    val inboxGhosts: List<ItemWithChecklist> = emptyList()
 )
