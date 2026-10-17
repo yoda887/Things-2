@@ -382,7 +382,7 @@ fun TaskItemRow(
             // Когда под заголовком есть вторая строка, плашка с датой встаёт слева от обеих строк
             // и центрируется по вертикали, а заголовок с подписью идут после неё
             // У шаблона повтора вместо даты — день следующего повтора или «Пауза»
-            val repeatRule = if (task.isRepeatTemplate && screen == ActiveScreen.REPEATING) {
+            val repeatRule = if (task.isRepeatTemplate && (screen == ActiveScreen.REPEATING || screen == ActiveScreen.TAG_DETAIL)) {
                 com.example.ui.components.LocalRepeatRules.current[task.id]
             } else null
             val repeatBadge = com.example.ui.components.repeatBadge(repeatRule)

@@ -13,9 +13,9 @@ object TagList {
 
     fun hasTag(item: Item, tag: String): Boolean = item.tags.contains(tag)
 
-    /** Задача списка экрана: открытая, не удалённая задача с тегом. */
+    /** Задача списка экрана: открытая, не удалённая задача с тегом — и шаблон повторяющейся задачи (копии — задачи). */
     fun isActiveTask(item: Item, tag: String): Boolean =
-        item.type == Item.TYPE_TASK && !item.trashed && !ListRules.isClosed(item) && hasTag(item, tag)
+        (item.type == Item.TYPE_TASK || RepeatingList.includes(item)) && !item.trashed && !ListRules.isClosed(item) && hasTag(item, tag)
 
     data class Content(
         val projects: List<Item>,
@@ -42,7 +42,10 @@ object TagList {
         pinned: Map<String, PlaceGroups.Place> = emptyMap()
     ): Content {
         val title = tag.orEmpty()
-        val taggedProjects = projects.filter { ListRules.isOpenProject(it) && hasTag(it, title) }
+        // Проекты с тегом — и шаблоны повторяющихся проектов (их нет среди проектов, они среди всех задач)
+        val projectTemplates = allTasks.map { it.item }.filter { RepeatingList.includesProject(it) && hasTag(it, title) }
+        val taggedProjects = projects.filter { ListRules.isOpenProject(it) && hasTag(it, title) } +
+            projectTemplates.filter { template -> projects.none { it.id == template.id } }
         val active = tasks.filter { !it.item.trashed && !ListRules.isClosed(it.item) }
         return Content(
             projects = taggedProjects,

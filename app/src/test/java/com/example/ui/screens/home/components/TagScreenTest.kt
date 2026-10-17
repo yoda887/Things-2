@@ -99,4 +99,23 @@ class TagScreenTest {
         )
         assertEquals(listOf("m"), ids(TagScreen.rows(content)))
     }
+
+    @Test
+    fun repeatingTemplatesAndCopies_onTagScreen() {
+        val template = Item(id = "tpl", type = Item.TYPE_TEMPLATE, title = "tpl", cachedTags = "work")
+        val part = Item(id = "part", type = Item.TYPE_TEMPLATE, title = "part", cachedTags = "work", repeatTemplateId = "ptpl")
+        val copy = Item(id = "copy", title = "copy", cachedTags = "work", repeatTemplateId = "tpl")
+        assertTrue(TagList.isActiveTask(template, "work"))
+        assertTrue(TagList.isActiveTask(copy, "work"))
+        assertFalse(TagList.isActiveTask(part, "work"))
+
+        val projectTemplate = Item(id = "ptpl", type = Item.TYPE_PROJECT_TEMPLATE, title = "ptpl", cachedTags = "work")
+        val content = TagList.content(
+            "work",
+            tasks = listOf(ItemWithChecklist(template), ItemWithChecklist(copy)),
+            allTasks = listOf(ItemWithChecklist(projectTemplate), ItemWithChecklist(template)),
+            projects = emptyList()
+        )
+        assertEquals(listOf("tpl", "copy", TaskListKeys.AREA_PROJECTS_SPACER, "project:ptpl"), ids(TagScreen.rows(content)))
+    }
 }

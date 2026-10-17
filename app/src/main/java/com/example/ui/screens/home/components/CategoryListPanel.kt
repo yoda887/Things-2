@@ -1196,7 +1196,10 @@ fun ThingsCategoryListPanel(
                                         ActiveScreen.AREA_DETAIL -> if (HomeList.showsProject(task)) null else AllProjectsScreen.laterDateBadge(task)
                                             ?.let { com.example.ui.screens.home.subcomponents.startDateBadgeText(task.startDate!!) }
                                         // На экране тега — дата старта запланированного проекта (сегодня — звезда или луна)
-                                        ActiveScreen.TAG_DETAIL -> task.startDate
+                                        // (шаблон повторяющегося проекта — день следующего повтора, «Пауза» или «Чекає»)
+                                        ActiveScreen.TAG_DETAIL -> if (task.type == Item.TYPE_PROJECT_TEMPLATE) {
+                                            com.example.ui.components.repeatBadge(state.repeatRules[task.id])
+                                        } else task.startDate
                                             ?.takeIf { it > com.example.data.model.DayBounds.now().endOfToday }
                                             ?.let { com.example.ui.screens.home.subcomponents.startDateBadgeText(it) }
                                         else -> null
