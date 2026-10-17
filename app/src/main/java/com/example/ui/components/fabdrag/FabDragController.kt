@@ -130,9 +130,16 @@ class FabDragController {
      */
     fun tapToList(): Boolean = !isDragging && !isSettling && dropTarget?.onFabTap() == true
 
+    /**
+     * После приземления от нажатия редактор новой задачи откроется следом — кнопка не возвращается в угол
+     * на эти кадры (у сброса перетаскиванием это решает [endSettle] по открытому редактору)
+     */
+    private var hideAfterTapSettle = false
+
     /** Кнопка летит из покоя в [anchor] и уменьшается до нуля — приземление после нажатия */
     fun settleFromHome(anchor: Offset) {
         hiddenAfterSettle = false
+        hideAfterTapSettle = true
         settleFrom = homeCenter
         settleTo = anchor
         settleProgress = 0f
@@ -142,7 +149,8 @@ class FabDragController {
 
     /** Приземление закончено: кнопка исчезла, подготовка к следующему жесту. */
     fun endSettle(hideUntilEditorCloses: Boolean) {
-        hiddenAfterSettle = hideUntilEditorCloses
+        hiddenAfterSettle = hideUntilEditorCloses || hideAfterTapSettle
+        hideAfterTapSettle = false
         isSettling = false
         pointer = Offset.Unspecified
     }

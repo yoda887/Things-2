@@ -52,6 +52,7 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.combine
+import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.flow.flowOn
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.flow.asStateFlow
@@ -98,8 +99,27 @@ class ThingsViewModel @Inject constructor(
         }
     }
 
-    val tasks: StateFlow<List<ItemWithChecklist>> = queryUseCases.observeAllTasks()
-        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
+    /**
+     * Задачи, созданные на месте промежутка «+» (createTaskAt), — в списке сразу, не дожидаясь базы: новая строка
+     * раскрывается, как только кнопка приземлилась, без паузы на запись. Уходят, когда база вернула задачу.
+     */
+    private val optimisticTasks = MutableStateFlow<Map<String, ItemWithChecklist>>(emptyMap())
+    /** Какая новая задача держит временные копии (сама она и переставленные соседи) — по её id */
+    private val optimisticGroups = HashMap<String, Set<String>>()
+
+    val tasks: StateFlow<List<ItemWithChecklist>> = combine(queryUseCases.observeAllTasks(), optimisticTasks) { db, optimistic ->
+        if (optimistic.isEmpty()) return@combine db
+        val dbIds = db.mapTo(HashSet()) { it.item.id }
+        // База вернула новую задачу (вместе с соседями — они пишутся одним вызовом) — временные копии не нужны
+        var live = optimistic
+        val landed = optimisticGroups.keys.filter { it in dbIds }
+        if (landed.isNotEmpty()) {
+            val drop = landed.flatMapTo(HashSet()) { optimisticGroups.remove(it).orEmpty() }
+            live = optimistic - drop
+            optimisticTasks.update { it - drop }
+        }
+        if (live.isEmpty()) db else db.map { live[it.item.id] ?: it } + live.values.filter { it.item.id !in dbIds }
+    }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
 
     /** Шаблоны повторяющихся проектов: в [projects] их нет, а экран шаблона открывают из «Повторяющихся» */
     val projectTemplates: StateFlow<List<Item>> = tasks
@@ -507,9 +527,13 @@ class ThingsViewModel @Inject constructor(
      */
     fun createTaskAt(id: String, place: NewTaskPlace, spot: DropSpot, insertIndex: Int, listTasks: List<Item>) {
         val insertion = SortOrders.insert(listTasks, insertIndex, NewTasks.atDrop(NewTasks.create(place, id), spot).inRepeatingProject())
+        // В список — сразу, запись в базу догонит (см. optimisticTasks)
+        val shown = (listOf(insertion.created) + insertion.reordered).associate { it.id to ItemWithChecklist(it) }
+        optimisticGroups[id] = shown.keys
+        optimisticTasks.update { it + shown }
         viewModelScope.launch {
-            taskUseCases.updateTask(insertion.created)
-            if (insertion.reordered.isNotEmpty()) taskUseCases.updateTask(insertion.reordered)
+            // Одной записью: база вернёт задачу сразу с новым порядком соседей
+            taskUseCases.updateTask(listOf(insertion.created) + insertion.reordered)
         }
         setInlineExpandedTaskId(id)
     }

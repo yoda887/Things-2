@@ -65,6 +65,7 @@ import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.withStyle
+import androidx.compose.foundation.gestures.animateScrollBy
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.clipToBounds
 import androidx.compose.ui.draw.shadow
@@ -566,24 +567,49 @@ fun ThingsCategoryListPanel(
     fun tapFab(): Boolean {
         if (screen !in FAB_TAP_SCREENS || state.isSelectionMode || inlineExpandedTaskId != null) return false
         spreadScope.launch {
-            lazyListState.animateScrollToItem(0)
             val flat = currentFlattened
             val first = flat.indexOfFirst { FabInsertion.isAnchor(it) }
             val slot = FabInsertion.normalizeSlot(flat, FabSlot(if (first >= 0) first else flat.size, asHeading = false))
-            // Кнопка летит в том же кадре, когда прокрутка закончилась: центр будущего промежутка известен заранее —
-            // верх строки, перед которой он встанет, плюс половина его высоты. Промежуток раскрывается, пока она летит
-            val coords = listCoordinates
-            val rowKey = flat.getOrNull(slot.index)?.let { listItemKey(it) }
-            val rowInfo = rowKey?.let { key -> lazyListState.layoutInfo.visibleItemsInfo.firstOrNull { it.key == key } }
-            val earlyAnchor = if (coords != null && coords.isAttached && rowInfo != null) {
-                val origin = coords.positionInRoot()
-                androidx.compose.ui.geometry.Offset(
-                    origin.x + coords.size.width / 2f,
-                    origin.y + (rowInfo.offset - lazyListState.layoutInfo.viewportStartOffset) + fabDefaultGapPx / 2f
-                )
-            } else null
+            // Промежуток раскрывается сразу, вместе с прокруткой к началу, — кнопка влетает в уже открывающееся место
             fabSlot = slot
+            // Прокрутка к началу заканчивается долгим пружинным «хвостом»: список уже стоит, а анимация ещё идёт.
+            // Кнопку не ждём до её конца — как только начало списка и промежуток в кадре, окончательное положение
+            // промежутка известно (сейчас + оставшийся сдвиг), и кнопка летит в его центр, пока список доезжает
+            val scrollJob = launch { lazyListState.animateScrollToItem(0) }
+            var earlyAnchor: androidx.compose.ui.geometry.Offset? = null
+            // Прокрутка кончилась, а промежутка в кадре нет — ждём не дольше этого числа кадров
+            var framesAfterScroll = 0
+            while (true) {
+                val info = lazyListState.layoutInfo
+                val gapInfo = info.visibleItemsInfo.firstOrNull { it.key == FabGapItem.KEY }
+                val coords = listCoordinates
+                if (lazyListState.firstVisibleItemIndex == 0 && gapInfo != null && coords != null && coords.isAttached) {
+                    val origin = coords.positionInRoot()
+                    val gapTop = gapInfo.offset - info.viewportStartOffset + lazyListState.firstVisibleItemScrollOffset
+                    earlyAnchor = androidx.compose.ui.geometry.Offset(
+                        origin.x + coords.size.width / 2f,
+                        origin.y + gapTop + fabDefaultGapPx / 2f
+                    )
+                    break
+                }
+                if (!scrollJob.isActive && ++framesAfterScroll > FAB_TAP_GAP_WAIT_FRAMES) break
+                withFrameNanos { }
+            }
             earlyAnchor?.let { fabDrag?.settleFromHome(it) }
+            // Пружинный хвост прокрутки не ждём: начало списка в кадре — оставшийся сдвиг доезжает коротко и
+            // параллельно, а задача создаётся сразу
+            if (scrollJob.isActive && lazyListState.firstVisibleItemIndex == 0) {
+                scrollJob.cancel()
+                val rest = lazyListState.firstVisibleItemScrollOffset.toFloat()
+                if (rest > 0f) launch {
+                    lazyListState.animateScrollBy(
+                        -rest,
+                        androidx.compose.animation.core.tween<Float>(ThingsMotion.BASE, easing = androidx.compose.animation.core.FastOutSlowInEasing)
+                    )
+                }
+            } else {
+                scrollJob.join()
+            }
             // Промежуток должен встать в список, прежде чем раздвинуться под новую задачу
             kotlinx.coroutines.withTimeoutOrNull(FAB_TAP_GAP_WAIT_MS) {
                 snapshotFlow { lazyListState.layoutInfo.visibleItemsInfo.any { it.key == FabGapItem.KEY } }.first { it }
@@ -2162,6 +2188,9 @@ private val FAB_TAP_SCREENS = setOf(
 
 /** Нажатие на «+»: сколько ждать, пока промежуток встанет в список, мс */
 private const val FAB_TAP_GAP_WAIT_MS = 500L
+
+/** Нажатие на «+»: сколько кадров после прокрутки ждать промежуток в кадре, прежде чем лететь без него */
+private const val FAB_TAP_GAP_WAIT_FRAMES = 30
 
 private val FAB_DROP_SCREENS = setOf(
     ActiveScreen.INBOX, ActiveScreen.TODAY, ActiveScreen.UPCOMING, ActiveScreen.ANYTIME, ActiveScreen.SOMEDAY,
