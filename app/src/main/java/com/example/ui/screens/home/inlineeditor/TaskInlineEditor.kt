@@ -937,9 +937,9 @@ fun DeadlineDatePickerDialog(
 }
 
 /**
- * Строка повтора в редакторе, как в Things. У шаблона — синяя стрелка, правило и следующий повтор
- * («Щотижня: ср · наступна 21 жовт.»), нажатие — меню действий; у копии — «Это копия повторяющейся
- * задачи ›», ведёт к шаблону. У обычной задачи строки нет.
+ * Строка повтора в редакторе, как в Things. У шаблона — синяя стрелка, «Повтор» и ближайшая дата повтора
+ * серым («22 жовт.…», троеточие — если повторы есть и дальше), иначе просто «Чекає» или «Пауза»; нажатие — меню
+ * действий; у копии — «Це копія повторюваного завдання ›», ведёт к шаблону. У обычной задачи строки нет.
  */
 @Composable
 internal fun RepeatEditorRow(
@@ -954,21 +954,47 @@ internal fun RepeatEditorRow(
     var menu by remember { mutableStateOf(false) }
     val stored = com.example.ui.components.LocalRepeatRules.current[item.id]
     val rule = stored?.let { com.example.domain.repeat.RepeatRule.decode(it.rrule) }
-    val text = when {
-        !isTemplate -> stringResource(if (item.type == Item.TYPE_PROJECT) R.string.repeat_project_copy_link else R.string.repeat_copy_link)
-        rule == null -> stringResource(R.string.special_repeating)
+    val copyText = stringResource(if (item.type == Item.TYPE_PROJECT) R.string.repeat_project_copy_link else R.string.repeat_copy_link)
+    // Шаблон: «Повтор» чёрным и серым — ближайшая дата повтора (троеточие — если повторы есть и дальше);
+    // на паузе — просто «Пауза», ждёт отметки копии («после выполнения») — просто «Чекає»
+    var templateState: String? = null
+    val templateStatus = when {
+        !isTemplate || stored == null || rule == null -> null
+        !stored.isActive -> { templateState = stringResource(R.string.repeat_paused); null }
         else -> {
-            // Правило и ближайший повтор («наступна 22 жовт.») или пауза — вместе со строкой даты выше
-            val summary = com.example.ui.screens.home.inlineeditor.dialogs.repeatRuleSummary(rule)
-            val next = when {
-                !stored.isActive -> stringResource(R.string.repeat_paused)
-                stored.nextGenerationDate > 0 -> stringResource(
-                    R.string.repeat_next_short,
-                    java.text.SimpleDateFormat("d MMM", java.util.Locale.getDefault()).format(java.util.Date(stored.nextGenerationDate))
-                )
-                else -> null
+            val zone = java.time.ZoneId.systemDefault()
+            val state = com.example.domain.repeat.RepeatState(
+                rule = rule,
+                nextOccurrence = stored.nextGenerationDate.takeIf { it > 0 }
+                    ?.let { java.time.Instant.ofEpochMilli(it).atZone(zone).toLocalDate() },
+                generated = stored.generatedCount,
+                active = stored.isActive
+            )
+            val (dates, more) = com.example.domain.repeat.RepeatPlan.upcoming(state, REPEAT_UPCOMING_SHOWN)
+            if (dates.isEmpty()) {
+                templateState = stringResource(R.string.repeat_waiting)
+                null
+            } else {
+                val thisYear = java.time.LocalDate.now(zone).year
+                val sameYear = java.time.format.DateTimeFormatter.ofPattern("d MMM", java.util.Locale.getDefault())
+                val otherYear = java.time.format.DateTimeFormatter.ofPattern("d MMM yyyy", java.util.Locale.getDefault())
+                dates.joinToString(", ") { (if (it.year == thisYear) sameYear else otherYear).format(it) } + if (more) "…" else ""
             }
-            if (next != null) "$summary · $next" else summary
+        }
+    }
+    val repeatLabel = stringResource(R.string.ui_repeat)
+    val secondaryColor = ThingsTheme.colors.textSecondary
+    val text: androidx.compose.ui.text.AnnotatedString = when {
+        !isTemplate -> androidx.compose.ui.text.AnnotatedString(copyText)
+        templateState != null -> androidx.compose.ui.text.AnnotatedString(templateState!!)
+        else -> androidx.compose.ui.text.buildAnnotatedString {
+            append(repeatLabel)
+            if (templateStatus != null) {
+                append("  ")
+                pushStyle(androidx.compose.ui.text.SpanStyle(color = secondaryColor))
+                append(templateStatus)
+                pop()
+            }
         }
     }
     Box {
@@ -989,10 +1015,10 @@ internal fun RepeatEditorRow(
                 Icon(AppIcons.RepeatCopy, contentDescription = null, tint = ThingsTheme.colors.textSecondary, modifier = Modifier.size(ThingsIconSize.S))
             }
             Spacer(modifier = Modifier.width(ThingsSpacing.XS_PLUS))
-            // Чёрным, мельче даты и обычной толщины; переносится, чтобы правило помещалось целиком
+            // Шаблон — «Повтор» обычным размером, как строка даты; копия — мельче. Переносится, если не помещается
             Text(
                 text = text,
-                style = ThingsTheme.type.subhead.copy(color = ThingsTheme.colors.editorText),
+                style = (if (isTemplate) ThingsTheme.type.editorDate else ThingsTheme.type.subhead).copy(color = ThingsTheme.colors.editorText),
                 modifier = Modifier.weight(1f, fill = false)
             )
             if (!isTemplate) {
@@ -1019,3 +1045,6 @@ internal fun RepeatEditorRow(
         }
     }
 }
+
+/** Строка «Повтор» шаблона показывает столько ближайших дат повторов */
+private const val REPEAT_UPCOMING_SHOWN = 1

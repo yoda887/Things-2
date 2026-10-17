@@ -862,7 +862,11 @@ fun AnimatedTaskItem(
                                 text = currentProject?.title ?: currentArea?.title ?: androidx.compose.ui.res.stringResource(com.example.R.string.move_no_project),
                                 style = ThingsTheme.type.editorChecklist.copy(
                                     color = pillContentColor
-                                )
+                                ),
+                                // Длинное название — в одну строку с многоточием, «›» остаётся видна
+                                maxLines = 1,
+                                overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis,
+                                modifier = Modifier.weight(1f, fill = false)
                             )
                             Spacer(modifier = Modifier.width(ThingsSpacing.XXS))
                             Icon(
@@ -912,9 +916,11 @@ fun AnimatedTaskItem(
                                     modifier = Modifier.size(ThingsIconSize.XS)
                                 )
                                 Spacer(modifier = Modifier.width(ThingsSpacing.XS_PLUS))
+                                // Текст переносится и оставляет место «›» справа
                                 Text(
                                     text = androidx.compose.ui.res.stringResource(com.example.R.string.repeat_pill, summary),
-                                    style = ThingsTheme.type.editorChecklist.copy(color = pillContentColor)
+                                    style = ThingsTheme.type.editorChecklist.copy(color = pillContentColor),
+                                    modifier = Modifier.weight(1f, fill = false)
                                 )
                                 Spacer(modifier = Modifier.width(ThingsSpacing.XXS))
                                 Icon(

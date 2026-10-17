@@ -33,6 +33,27 @@ object RepeatPlan {
         nextOccurrence = if (rule.afterCompletion) today else RepeatDates.nextOccurrence(rule, today)
     )
 
+    /**
+     * Ближайшие повторы шаблона — не больше [count] — и есть ли повторы после них (строка «Повтор» в редакторе
+     * шаблона: «22 жовт., 29 жовт.…»). Учитывает окончание правила. «После выполнения» знает только ближайший
+     * повтор: следующие зависят от дня выполнения, поэтому после него «есть ещё», пока правило не кончилось.
+     */
+    fun upcoming(state: RepeatState, count: Int): Pair<List<LocalDate>, Boolean> {
+        val rule = state.rule
+        fun allowed(date: LocalDate, index: Int) = (rule.endDate == null || !date.isAfter(rule.endDate)) &&
+            (rule.endCount == null || state.generated + index < rule.endCount)
+        val first = state.nextOccurrence?.takeIf { allowed(it, 0) } ?: return emptyList<LocalDate>() to false
+        if (rule.afterCompletion) {
+            return listOf(first) to (rule.endCount == null || state.generated + 1 < rule.endCount)
+        }
+        val dates = mutableListOf(first)
+        while (dates.size <= count) {
+            val next = RepeatDates.nextOccurrence(rule, dates.last().plusDays(1))?.takeIf { allowed(it, dates.size) } ?: break
+            dates += next
+        }
+        return dates.take(count) to (dates.size > count)
+    }
+
     /** День, когда копия повтора [occurrence] появляется: раньше на «срок заранее», если он задан. */
     fun appearsOn(rule: RepeatRule, occurrence: LocalDate): LocalDate =
         occurrence.minusDays((rule.deadlineDaysBefore ?: 0).toLong())

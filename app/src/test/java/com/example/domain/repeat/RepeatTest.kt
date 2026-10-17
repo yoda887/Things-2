@@ -489,4 +489,26 @@ class RepeatTest {
         val todayDay = Item(id = "td", repeatTemplateId = "t", startDate = 900L)
         assertEquals(listOf("td", "ye"), listOf(yesterdayEvening, todayDay).sortedWith(rl.comparator(emptyMap(), todayStart = 800L, endOfToday = 999L)).map { it.id })
     }
+
+    @Test
+    fun upcoming_twoDates_ellipsisOnlyWhenMore() {
+        val d1 = LocalDate.of(2026, 10, 20)
+        val daily = RepeatRule(afterCompletion = false, interval = 1, unit = RepeatUnit.DAY, start = d1)
+        assertEquals(listOf(d1, d1.plusDays(1)) to true, RepeatPlan.upcoming(RepeatState(daily, d1), 2))
+
+        // Правило кончается после трёх повторов, два уже созданы — впереди один, троеточия нет
+        val counted = daily.copy(endCount = 3)
+        assertEquals(listOf(d1) to false, RepeatPlan.upcoming(RepeatState(counted, d1, generated = 2), 2))
+
+        // Окончание по дате — ровно два повтора впереди, троеточия нет
+        val until = daily.copy(endDate = d1.plusDays(1))
+        assertEquals(listOf(d1, d1.plusDays(1)) to false, RepeatPlan.upcoming(RepeatState(until, d1), 2))
+
+        // «После выполнения» — известен только ближайший; дальше повторы есть
+        val after = RepeatRule(afterCompletion = true, interval = 1, unit = RepeatUnit.WEEK, start = d1)
+        assertEquals(listOf(d1) to true, RepeatPlan.upcoming(RepeatState(after, d1), 2))
+
+        // Ждёт отметки копии — дат нет
+        assertEquals(emptyList<LocalDate>() to false, RepeatPlan.upcoming(RepeatState(after, null), 2))
+    }
 }
