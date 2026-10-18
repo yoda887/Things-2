@@ -328,7 +328,7 @@ data class ThingsTypography(
     val listTitleStrong: TextStyle,
     /** Название проекта в строке главного экрана (19 sp Regular) */
     val listItem: TextStyle,
-    /** Заголовок карточки настроек на главном экране (14 sp SemiBold) */
+    /** Заголовок карточки на экране настроек (14 sp SemiBold) */
     val settingsTitle: TextStyle,
     /** Текст кнопки действия в карточке настроек (14 sp Bold) */
     val settingsAction: TextStyle,

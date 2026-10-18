@@ -282,4 +282,5 @@
     <string name="backup_reconnect">Reconnect Google Drive</string>
     <string name="backup_error_server">Google Drive is temporarily unavailable. The app will try again later.</string>
     <string name="backup_offer_restore">There is a backup from %1$s on Google Drive. Restore your tasks from it on this phone?</string>
+    <string name="settings_title">Settings</string>
 </resources>

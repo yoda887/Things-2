@@ -99,6 +99,7 @@ private const val SEARCH_RESULT_CROSSFADE_MS = 120
 
 @Serializable object HomeRoute
 @Serializable object SearchRoute
+@Serializable object SettingsRoute
 @Serializable data class ListRoute(val screen: ActiveScreen, val entityId: String? = null)
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -219,6 +220,13 @@ fun ThingsHomeScreen(viewModel: ThingsViewModel = hiltViewModel()) {
         // теги) — один ListRoute. Переход из области в проект заменял область в стеке, и «Назад» из проекта
         // вёл сразу на главный экран, минуя область
         navController.navigate(route)
+    }
+    // Настройки — не список, а свой экран (SettingsRoute): кнопки «+» там нет
+    val isSettingsOpen = navBackStackEntry?.destination?.hasRoute<SettingsRoute>() == true
+    fun openSettings() {
+        if (navController.currentBackStackEntry?.destination?.hasRoute<SettingsRoute>() == true) return
+        crossfadeNavigation = false
+        navController.navigate(SettingsRoute)
     }
     var taskToEdit by remember { mutableStateOf<ItemWithChecklist?>(null) }
     var showAddDialog by remember { mutableStateOf(false) }
@@ -366,7 +374,7 @@ fun ThingsHomeScreen(viewModel: ThingsViewModel = hiltViewModel()) {
             // В «Журнале» кнопки нет вовсе: там только закрытое, новые задачи не создают (как в Things).
             // На особых списках проектов она, как на главном экране, открывает меню: задача, проект, область
             AnimatedVisibility(
-                visible = activeScreen != ActiveScreen.LOGBOOK && (fabDragController.isDragging || fabDragController.isSettling ||
+                visible = activeScreen != ActiveScreen.LOGBOOK && !isSettingsOpen && (fabDragController.isDragging || fabDragController.isSettling ||
                     (inlineExpandedTaskId == null && !showFabMenu && !isListDialogActive && !showAddDialog && !isSelectionMode &&
                         !(activeScreen == ActiveScreen.HOME && isProjectSelectionMode))),
                 enter = slideInVertically(
@@ -501,9 +509,6 @@ fun ThingsHomeScreen(viewModel: ThingsViewModel = hiltViewModel()) {
                             // отложенные и запланированные — в «Когда-нибудь» и «Предстоящих»
                             projects = projects.filter { HomeList.showsProject(it) },
                             searchQuery = searchQuery,
-                            googleToken = googleToken,
-                            syncError = syncError,
-                            isSyncing = isSyncing,
                             textPrimaryColor = textPrimaryColor,
                             textSecondaryColor = textSecondaryColor,
                             cardSurfaceColor = cardSurfaceColor,
@@ -523,10 +528,7 @@ fun ThingsHomeScreen(viewModel: ThingsViewModel = hiltViewModel()) {
                             onAddAreaClick = {},
                             onDeleteArea = { viewModel.deleteArea(it) },
                             onDeleteProject = { viewModel.deleteProject(it) },
-                            onSyncClick = { token ->
-                                viewModel.setAccessToken(token)
-                                viewModel.syncWithGoogle()
-                            },
+                            onSettingsClick = { openSettings() },
                             onSearchClick = { sourceBounds, wasPulled ->
                                 searchMorphSource = sourceBounds
                                 searchWasPulled = wasPulled
@@ -889,6 +891,27 @@ fun ThingsHomeScreen(viewModel: ThingsViewModel = hiltViewModel()) {
                     // Применяем обертку ScreenTransitionWrapper со сплошным фоном и эффектом затемнения
                     ScreenTransitionWrapper(isStartDestination = false, backgroundColor = backgroundColor) {
                         listScreenContent(route.screen, route.entityId)
+                    }
+                }
+
+                composable<SettingsRoute> {
+                    // Настройки: синхронизация с Google Tasks и резервная копия в Google Drive
+                    ScreenTransitionWrapper(isStartDestination = false, backgroundColor = backgroundColor) {
+                        com.example.ui.screens.settings.SettingsScreen(
+                            googleToken = googleToken,
+                            syncError = syncError,
+                            isSyncing = isSyncing,
+                            textPrimaryColor = textPrimaryColor,
+                            textSecondaryColor = textSecondaryColor,
+                            cardSurfaceColor = cardSurfaceColor,
+                            dividerColor = dividerColor,
+                            backgroundColor = backgroundColor,
+                            onSyncClick = { token ->
+                                viewModel.setAccessToken(token)
+                                viewModel.syncWithGoogle()
+                            },
+                            onBackClick = { navController.popBackStack() }
+                        )
                     }
                 }
 

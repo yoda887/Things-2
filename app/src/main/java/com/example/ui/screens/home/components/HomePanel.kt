@@ -85,7 +85,6 @@ import androidx.compose.ui.input.nestedscroll.nestedScroll
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.platform.LocalView
 import android.view.HapticFeedbackConstants
-import com.example.ui.components.hideSoftKeyboardNow
 import com.example.ui.components.hideSoftKeyboardThen
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontWeight
@@ -102,8 +101,11 @@ import com.example.ui.screens.home.subcomponents.SmartListRow
 import com.example.ui.theme.*
 
 // Жест оттяжки главного экрана к Quick Find
-/** Отступ под последним блоком главного экрана: кнопка «+» (56 dp и 16 dp от края) его не закрывает */
-private val HOME_FAB_CLEARANCE = 96.dp
+// Строка «Налаштування» внизу главного экрана стоит на одной высоте с кнопкой «+» (56 dp, 16 dp от края)
+private val HOME_FAB_SIZE = 56.dp
+private val HOME_FAB_EDGE_MARGIN = 16.dp
+private const val HOME_SETTINGS_FILLER_KEY = "settings_filler"
+private const val HOME_SETTINGS_ROW_KEY = "settings_row"
 private val PULL_SEARCH_THRESHOLD = 100.dp
 private val PULL_SEARCH_MAX_OFFSET = 150.dp
 private val PULL_SEARCH_RESISTANCE_MAX = 32.dp
@@ -192,9 +194,6 @@ fun ThingsHomePanel(
     allTasks: List<ItemWithChecklist>,
     projects: List<Item>,
     searchQuery: String,
-    googleToken: String,
-    syncError: String?,
-    isSyncing: Boolean,
     textPrimaryColor: Color,
     textSecondaryColor: Color,
     cardSurfaceColor: Color,
@@ -203,7 +202,7 @@ fun ThingsHomePanel(
     onSmartListClick: (ActiveScreen) -> Unit,
     onProjectClick: (Item) -> Unit,
     onAddProjectClick: () -> Unit,
-    onSyncClick: (String) -> Unit,
+    onSettingsClick: () -> Unit,
     // Two-level Areas management additions
     areas: List<Area> = emptyList(),
     onAddAreaClick: () -> Unit = {},
@@ -235,9 +234,6 @@ fun ThingsHomePanel(
     collapsedAreaIds: Set<String> = emptySet(),
     onAreaExpandedChange: (areaId: String, expanded: Boolean) -> Unit = { _, _ -> }
 ) {
-    var rawTokenInput by remember { mutableStateOf(googleToken) }
-    var isSyncConfigExpanded by remember { mutableStateOf(false) }
-    var isTokenFieldFocused by remember { mutableStateOf(false) }
     val view = LocalView.current
 
     val inboxCount = allTasks.count { InboxList.includes(it.item) }
@@ -308,6 +304,18 @@ fun ThingsHomePanel(
     // [ИЗМЕНЕНИЕ]: Реализация жеста pull-down с порогом 100.dp, лимитом свайпа 150.dp
     // и вызовом поиска только после завершения возвращающей анимации
     val density = androidx.compose.ui.platform.LocalDensity.current
+    // Промежуток над строкой «Налаштування»: пока весь список помещается на экране, он дотягивает строку
+    // до нижнего края; список длиннее экрана — промежутка нет, строка идёт сразу под ним
+    val homeSettingsFillerPx by remember {
+        derivedStateOf {
+            val info = lazyListState.layoutInfo
+            val visible = info.visibleItemsInfo
+            val filler = visible.firstOrNull { it.key == HOME_SETTINGS_FILLER_KEY }
+            val last = visible.lastOrNull()
+            if (filler == null || last == null || visible.first().index != 0 || last.key != HOME_SETTINGS_ROW_KEY) 0
+            else (filler.size + info.viewportEndOffset - (last.offset + last.size)).coerceAtLeast(0)
+        }
+    }
     // Блок над списком под поле Quick Find — нужен и в обработчиках жеста
     val homeSearchBlockHeightDp = MaterialTheme.dimens.homeSearchBlockHeight
     val coroutineScope = rememberCoroutineScope()
@@ -902,105 +910,15 @@ fun ThingsHomePanel(
             }
         }
 
-        // Google Sync Integration card
-        item {
-            Card(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(top = MaterialTheme.dimens.homeSyncCardTopPadding, bottom = ThingsSpacing.XXL),
-                colors = CardDefaults.cardColors(containerColor = cardSurfaceColor),
-                shape = ThingsTheme.shapes.cardShape
-            ) {
-                Column(modifier = Modifier.padding(ThingsSpacing.L)) {
-                    Row(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .clickable {
-                                // Блок с полем токена сворачивается анимацией (~400 мс) — если клавиатура
-                                // открыта для этого поля, прячем её сразу (см. hideSoftKeyboardNow)
-                                if (isSyncConfigExpanded && isTokenFieldFocused) view.hideSoftKeyboardNow()
-                                isSyncConfigExpanded = !isSyncConfigExpanded
-                            },
-                        horizontalArrangement = Arrangement.SpaceBetween,
-                        verticalAlignment = Alignment.CenterVertically
-                    ) {
-                        Row(verticalAlignment = Alignment.CenterVertically) {
-                            Icon(Icons.Default.CloudSync, contentDescription = stringResource(R.string.cd_google_sync), tint = ThingsTheme.colors.inbox, modifier = Modifier.size(ThingsIconSize.L))
-                            Spacer(modifier = Modifier.width(MaterialTheme.dimens.homeSyncInnerGap))
-                            Text(stringResource(R.string.ui_google_tasks_sync_settings), style = ThingsTheme.type.settingsTitle.copy(color = textPrimaryColor))
-                        }
-                        Icon(
-                            imageVector = if (isSyncConfigExpanded) Icons.Default.ExpandLess else Icons.Default.ExpandMore,
-                            contentDescription = stringResource(R.string.cd_toggle_settings),
-                            tint = textSecondaryColor
-                        )
-                    }
-
-                    AnimatedVisibility(visible = isSyncConfigExpanded) {
-                        Column(modifier = Modifier.padding(top = ThingsSpacing.M)) {
-                            Text(
-                                stringResource(R.string.ui_enter_an_oauth_access_token_to),
-                                style = ThingsTheme.type.caption.copy(color = textSecondaryColor)
-                            )
-                            Spacer(modifier = Modifier.height(MaterialTheme.dimens.homeSyncInnerGap))
-
-                            OutlinedTextField(
-                                value = rawTokenInput,
-                                onValueChange = { rawTokenInput = it },
-                                label = { Text(stringResource(R.string.ui_google_access_token), style = ThingsTheme.type.caption) },
-                                singleLine = true,
-                                modifier = Modifier
-                                    .fillMaxWidth()
-                                    .onFocusChanged { isTokenFieldFocused = it.isFocused }
-                                    .testTag("google_token_input"),
-                                shape = ThingsTheme.shapes.rowShape,
-                                textStyle = ThingsTheme.type.caption.copy(color = textPrimaryColor),
-                                colors = OutlinedTextFieldDefaults.colors(
-                                    focusedBorderColor = ThingsTheme.colors.accent,
-                                    unfocusedBorderColor = dividerColor
-                                )
-                            )
-
-                            Spacer(modifier = Modifier.height(ThingsSpacing.M))
-
-                            if (syncError != null) {
-                                Text(
-                                    stringResource(R.string.ui_sync_error, syncError.ifBlank { stringResource(R.string.sync_error_unknown) }),
-                                    color = ThingsTheme.colors.danger,
-                                    style = ThingsTheme.type.caption,
-                                    modifier = Modifier.padding(bottom = ThingsSpacing.S)
-                                )
-                            }
-
-                            Button(
-                                onClick = { onSyncClick(rawTokenInput) },
-                                modifier = Modifier
-                                    .fillMaxWidth()
-                                    .testTag("execute_sync_button"),
-                                colors = ButtonDefaults.buttonColors(containerColor = ThingsTheme.colors.accent),
-                                shape = ThingsTheme.shapes.chipShape,
-                                enabled = !isSyncing
-                            ) {
-                                if (isSyncing) {
-                                    CircularProgressIndicator(modifier = Modifier.size(ThingsIconSize.S), color = ThingsTheme.colors.onAccent)
-                                } else {
-                                    Text(stringResource(R.string.ui_sync_tasks_now), color = ThingsTheme.colors.onAccent, style = ThingsTheme.type.settingsAction)
-                                }
-                            }
-                        }
-                    }
-                }
-            }
+        // Строка «Налаштування»: сразу под списком, а если список короче экрана — у нижнего края,
+        // напротив кнопки «+». Высоту промежутка над ней задаёт homeSettingsFillerPx
+        item(key = HOME_SETTINGS_FILLER_KEY) {
+            Spacer(modifier = Modifier.height(with(density) { homeSettingsFillerPx.toDp() }))
         }
-
-        // Резервная копия в Google Drive
-        item {
-            com.example.ui.backup.DriveBackupCard(
-                textPrimaryColor = textPrimaryColor,
+        item(key = HOME_SETTINGS_ROW_KEY) {
+            HomeSettingsRow(
                 textSecondaryColor = textSecondaryColor,
-                cardSurfaceColor = cardSurfaceColor,
-                // Последний блок главного экрана — с запасом под кнопку «+», чтобы она не закрывала переключатели
-                modifier = Modifier.padding(bottom = HOME_FAB_CLEARANCE)
+                onClick = onSettingsClick
             )
         }
     }
@@ -1419,6 +1337,46 @@ private fun LazyItemScope.ProjectItemRow(
                 SelectionCircle(isSelected = isSelected, isDragSelecting = false, onToggle = { onToggleSelect(project) })
             }
         }
+        }
+    }
+}
+
+/**
+ * «Налаштування» внизу главного экрана: шестерёнка и подпись обычным шрифтом 19 sp, оба серые (text-secondary), по центру экрана,
+ * на одной высоте с кнопкой «+». Открывает экран настроек.
+ */
+@Composable
+private fun HomeSettingsRow(
+    textSecondaryColor: Color,
+    onClick: () -> Unit
+) {
+    val rowHeight = MaterialTheme.dimens.homeRowHeight
+    Box(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(top = ThingsSpacing.L, bottom = HOME_FAB_EDGE_MARGIN + (HOME_FAB_SIZE - rowHeight) / 2),
+        contentAlignment = Alignment.Center
+    ) {
+        Row(
+            modifier = Modifier
+                .height(rowHeight)
+                .clip(ThingsTheme.shapes.chipShape)
+                .clickable(onClick = onClick)
+                .padding(horizontal = ThingsSpacing.M)
+                .testTag("home_settings_row"),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Icon(
+                imageVector = Icons.Outlined.Settings,
+                contentDescription = null,
+                tint = textSecondaryColor,
+                modifier = Modifier.size(ThingsIconSize.S)
+            )
+            Spacer(modifier = Modifier.width(ThingsSpacing.XS_PLUS))
+            Text(
+                text = stringResource(R.string.settings_title),
+                style = ThingsTheme.type.listItem.copy(color = textSecondaryColor)
+            )
         }
     }
 }

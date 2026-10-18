@@ -98,8 +98,7 @@ data class AppDimens(
     /** Поле Quick Find на главном экране и блок над списком под него */
     val homeSearchFieldHeight: Dp = 44.dp,
     val homeSearchBlockHeight: Dp = 68.dp,
-    /** Карточка синхронизации Google Tasks */
-    val homeSyncCardTopPadding: Dp = 18.dp,
+    /** Карточки настроек (Google Tasks, Google Drive): промежуток значок → заголовок */
     val homeSyncInnerGap: Dp = 10.dp,
 
     // Quick Find
