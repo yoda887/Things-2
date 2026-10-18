@@ -45,7 +45,10 @@ class SyncAutoRun @Inject constructor(
         pending?.cancel()
         pending = scope.launch {
             delay(delayMs)
-            val token = DriveAuth.tokenSilently(context) ?: return@launch
+            val token = DriveAuth.tokenSilently(context) ?: run {
+                manager.reportError(SyncManager.Error.ACCESS)
+                return@launch
+            }
             manager.sync(token)
         }
     }

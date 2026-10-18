@@ -27,6 +27,7 @@ object DatabaseModule {
     fun provideDatabase(
         @ApplicationContext context: Context,
         localDataSourceProvider: javax.inject.Provider<LocalTaskDataSource>,
+        databaseProvider: javax.inject.Provider<AppDatabase>,
         @ApplicationScope scope: CoroutineScope
     ): AppDatabase {
         return Room.databaseBuilder(
@@ -52,6 +53,9 @@ object DatabaseModule {
                     try {
                         val localDataSource = localDataSourceProvider.get()
                         DatabaseSeeder.seedDatabase(localDataSource)
+                        // Образцы — «самые старые»: синхронизация не вернёт их на устройства, где их удалили
+                        val database = databaseProvider.get()
+                        database.runInTransaction { com.example.data.local.SyncTriggers.markAllAsSeed(database.openHelper.writableDatabase) }
                     } catch (e: Exception) {
                         e.printStackTrace()
                     }

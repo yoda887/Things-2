@@ -36,17 +36,23 @@ class DriveBackupManager @Inject constructor(
         val busy: Boolean = false,
         /** Когда сделана копия на Drive (мс); null — копии нет или ещё не узнали */
         val remoteBackupAt: Long? = null,
+        /** Аккаунт Google, к чьему Drive подключено приложение */
+        val email: String? = null,
+        /** На этом телефоне только образцы новой базы, а на Drive есть копия — предложить восстановить из неё */
+        val offerRestore: Boolean = false,
         val error: Error? = null
     )
 
-    enum class Error { NETWORK, ACCESS, NO_BACKUP, BAD_BACKUP }
+    /** NETWORK — нет интернета; SERVER — Google временно недоступен; ACCESS — доступ отозван, подключить заново */
+    enum class Error { NETWORK, SERVER, ACCESS, NO_BACKUP, BAD_BACKUP }
 
     private val prefs = context.getSharedPreferences(PREFS, Context.MODE_PRIVATE)
     private val _state = MutableStateFlow(
         State(
             connected = prefs.getBoolean(KEY_CONNECTED, false),
             autoBackup = prefs.getBoolean(KEY_AUTO, true),
-            remoteBackupAt = prefs.getLong(KEY_REMOTE_AT, 0L).takeIf { it > 0 }
+            remoteBackupAt = prefs.getLong(KEY_REMOTE_AT, 0L).takeIf { it > 0 },
+            email = prefs.getString(KEY_EMAIL, null)
         )
     )
     val state: StateFlow<State> = _state.asStateFlow()
@@ -64,8 +70,8 @@ class DriveBackupManager @Inject constructor(
 
     /** Отключить: копия на Drive остаётся, автоматическая копия больше не идёт */
     fun disconnect() {
-        prefs.edit().putBoolean(KEY_CONNECTED, false).apply()
-        _state.update { it.copy(connected = false, error = null) }
+        prefs.edit().putBoolean(KEY_CONNECTED, false).remove(KEY_EMAIL).apply()
+        _state.update { it.copy(connected = false, email = null, offerRestore = false, error = null) }
         schedule(false)
     }
 
@@ -75,10 +81,14 @@ class DriveBackupManager @Inject constructor(
         schedule(enabled && _state.value.connected)
     }
 
-    /** Узнать, есть ли копия на Drive и когда она сделана */
+    /** Узнать аккаунт, есть ли копия на Drive и когда она сделана, — и не новый ли это телефон */
     suspend fun refresh(token: String) = operation {
+        val email = api.accountEmail(token)
+        prefs.edit().putString(KEY_EMAIL, email).apply()
         val remote = api.find(token)
-        remember(DriveFiles.parseTime(remote?.modifiedTime))
+        val remoteAt = DriveFiles.parseTime(remote?.modifiedTime)
+        remember(remoteAt)
+        _state.update { it.copy(email = email, offerRestore = remoteAt != null && database.hasOnlySeedData()) }
     }
 
     /** Записать копию базы на Drive (вместо прежней) */
@@ -88,6 +98,7 @@ class DriveBackupManager @Inject constructor(
             val existing = api.find(token)
             api.upload(token, snapshot, existing?.id)
             remember(DriveFiles.parseTime(api.find(token)?.modifiedTime) ?: System.currentTimeMillis())
+            _state.update { it.copy(offerRestore = false) }
             true
         } finally {
             snapshot.delete()
@@ -143,7 +154,7 @@ class DriveBackupManager @Inject constructor(
         try {
             block()
         } catch (e: DriveHttpException) {
-            _state.update { it.copy(error = if (e.code == 401 || e.code == 403) Error.ACCESS else Error.NETWORK) }
+            _state.update { it.copy(error = if (e.isAccess) Error.ACCESS else Error.SERVER) }
             null
         } catch (e: java.io.IOException) {
             _state.update { it.copy(error = Error.NETWORK) }
@@ -170,6 +181,7 @@ class DriveBackupManager @Inject constructor(
         const val KEY_CONNECTED = "connected"
         const val KEY_AUTO = "auto_backup"
         const val KEY_REMOTE_AT = "remote_backup_at"
+        const val KEY_EMAIL = "account_email"
         const val WORK_NAME = "drive_backup_daily"
     }
 }

@@ -37,13 +37,22 @@ class DriveBackupViewModel @Inject constructor(
     /** Окно Google (выбор аккаунта, согласие на доступ) — показать экраном */
     val consent: SharedFlow<PendingIntent> = _consent.asSharedFlow()
 
-    private enum class Action { CONNECT, BACKUP, RESTORE, SYNC }
+    private enum class Action { CONNECT, BACKUP, RESTORE, SYNC, REFRESH }
     private var pendingAction: Action? = null
 
     fun connect() = request(Action.CONNECT)
     fun backupNow() = request(Action.BACKUP)
     fun restore() = request(Action.RESTORE)
     fun syncNow() = request(Action.SYNC)
+
+    /** Карточка показана: освежить аккаунт и копию — без окон Google (не подключено или доступ отозван — молча) */
+    fun refreshSilently() {
+        if (!manager.state.value.connected) return
+        viewModelScope.launch {
+            val token = DriveAuth.tokenSilently(context) ?: return@launch manager.reportError(DriveBackupManager.Error.ACCESS)
+            manager.refresh(token)
+        }
+    }
 
     /** Включить синхронизацию — и сразу синхронизироваться; выключить — фоновая больше не идёт */
     fun setSyncEnabled(enabled: Boolean) {
@@ -82,8 +91,12 @@ class DriveBackupViewModel @Inject constructor(
 
     private suspend fun perform(action: Action, token: String) {
         if (!manager.state.value.connected) manager.onConnected(token)
+        // Доступ дан заново — прежние ошибки доступа больше не актуальны
+        manager.clearError()
+        sync.clearError()
         when (action) {
             Action.CONNECT -> Unit
+            Action.REFRESH -> manager.refresh(token)
             Action.BACKUP -> manager.backupNow(token)
             Action.RESTORE -> if (manager.restore(token) == true) manager.restartApp()
             Action.SYNC -> sync.sync(token)

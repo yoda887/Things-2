@@ -79,4 +79,28 @@ class SyncMergeTest {
         val pruned = SyncMerge.pruneDeletions(state(deletions = listOf(deletion("old", 0), deletion("new", now - 10))), now)
         assertEquals(setOf("new"), pruned.deletions.keys.map { it.id }.toSet())
     }
+
+    @Test
+    fun newDevice_dropsSeedsMissingFromShared_keepsSharedOnes() {
+        val seedKept = row("seed_kept", SyncMerge.SEED_TIME)
+        val seedDeletedThere = row("seed_deleted", SyncMerge.SEED_TIME)
+        val seedNeverShared = row("seed_never", SyncMerge.SEED_TIME)
+        val local = state(listOf(seedKept, seedDeletedThere, seedNeverShared))
+        val remote = state(listOf(row("seed_kept", 500, "edited"), row("mine_elsewhere", 600)), listOf(deletion("seed_deleted", 400)))
+
+        val result = SyncMerge.merge(local, remote)
+        // Образец, которого в общем файле нет, не уходит туда, а убирается здесь; удалённый там — тоже
+        assertEquals(setOf("seed_never", "seed_deleted"), result.deleteLocally.map { it.id }.toSet())
+        assertFalse(result.merged.rows.containsKey(key("seed_never")))
+        assertEquals("edited", result.merged.rows[key("seed_kept")]?.values?.get("title"))
+        assertFalse(result.remoteChanged)
+    }
+
+    @Test
+    fun firstDevice_uploadsItsSeeds() {
+        // Общего файла ещё нет — образцы первого устройства становятся общими
+        val result = SyncMerge.merge(state(listOf(row("seed", SyncMerge.SEED_TIME))), State.EMPTY)
+        assertTrue(result.merged.rows.containsKey(key("seed")))
+        assertTrue(result.remoteChanged)
+    }
 }

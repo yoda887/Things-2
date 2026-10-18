@@ -65,6 +65,7 @@ fun DriveBackupCard(
     val consentLauncher = rememberLauncherForActivityResult(ActivityResultContracts.StartIntentSenderForResult()) { result ->
         viewModel.onConsentResult(result.data)
     }
+    LaunchedEffect(viewModel) { viewModel.refreshSilently() }
     LaunchedEffect(viewModel) {
         viewModel.consent.collect { pending ->
             consentLauncher.launch(IntentSenderRequest.Builder(pending.intentSender).build())
@@ -81,6 +82,11 @@ fun DriveBackupCard(
                 Icon(Icons.Default.Backup, contentDescription = null, tint = ThingsTheme.colors.inbox, modifier = Modifier.size(ThingsIconSize.L))
                 Spacer(modifier = Modifier.width(MaterialTheme.dimens.homeSyncInnerGap))
                 Text(stringResource(R.string.backup_title), style = ThingsTheme.type.settingsTitle.copy(color = textPrimaryColor))
+            }
+            val email = state.email
+            if (state.connected && email != null) {
+                Spacer(modifier = Modifier.height(ThingsSpacing.XS))
+                Text(stringResource(R.string.backup_account, email), style = ThingsTheme.type.caption.copy(color = textSecondaryColor))
             }
             Spacer(modifier = Modifier.height(ThingsSpacing.M))
 
@@ -100,6 +106,7 @@ fun DriveBackupCard(
                     text = stringResource(
                         when (error) {
                             DriveBackupManager.Error.NETWORK -> R.string.backup_error_network
+                            DriveBackupManager.Error.SERVER -> R.string.backup_error_server
                             DriveBackupManager.Error.ACCESS -> R.string.backup_error_access
                             DriveBackupManager.Error.NO_BACKUP -> R.string.backup_error_none
                             DriveBackupManager.Error.BAD_BACKUP -> R.string.backup_error_bad
@@ -107,6 +114,24 @@ fun DriveBackupCard(
                     ),
                     style = ThingsTheme.type.caption.copy(color = ThingsTheme.colors.danger)
                 )
+            }
+            val accessLost = state.connected &&
+                (state.error == DriveBackupManager.Error.ACCESS || syncState.error == com.example.data.sync.SyncManager.Error.ACCESS)
+            if (accessLost) {
+                TextButton(onClick = viewModel::connect, enabled = !state.busy) {
+                    Text(stringResource(R.string.backup_reconnect), style = ThingsTheme.type.bodyMedium)
+                }
+            }
+            // Новый телефон: своих задач ещё нет, а на Drive есть копия — предложить восстановить
+            if (state.connected && state.offerRestore && remoteAt != null) {
+                Spacer(modifier = Modifier.height(ThingsSpacing.S))
+                Text(
+                    stringResource(R.string.backup_offer_restore, formatBackupTime(remoteAt)),
+                    style = ThingsTheme.type.bodyMedium.copy(color = textPrimaryColor)
+                )
+                TextButton(onClick = { confirmRestore = true }, enabled = !state.busy) {
+                    Text(stringResource(R.string.backup_restore), style = ThingsTheme.type.bodyMedium)
+                }
             }
             Spacer(modifier = Modifier.height(ThingsSpacing.M))
 
@@ -170,6 +195,7 @@ fun DriveBackupCard(
                         text = stringResource(
                             when (error) {
                                 com.example.data.sync.SyncManager.Error.NETWORK -> R.string.backup_error_network
+                                com.example.data.sync.SyncManager.Error.SERVER -> R.string.backup_error_server
                                 com.example.data.sync.SyncManager.Error.ACCESS -> R.string.backup_error_access
                                 com.example.data.sync.SyncManager.Error.BAD_FILE -> R.string.sync_error_bad
                             }

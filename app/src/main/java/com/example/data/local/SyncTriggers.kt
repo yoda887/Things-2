@@ -72,6 +72,20 @@ object SyncTriggers {
         statements().forEach { db.execSQL(it) }
     }
 
+    /**
+     * Новая база только что заполнена образцами: их время изменения — самое раннее ([com.example.data.sync.SyncMerge.SEED_TIME]),
+     * журнал удалений пуст. Так любая правка или удаление на других устройствах их перебивает
+     */
+    fun markAllAsSeed(db: SupportSQLiteDatabase) {
+        beginApplyingRemote(db)
+        try {
+            TABLES.keys.forEach { table -> db.execSQL("UPDATE `$table` SET updatedAt = ${com.example.data.sync.SyncMerge.SEED_TIME}") }
+            db.execSQL("DELETE FROM sync_deletions")
+        } finally {
+            endApplyingRemote(db)
+        }
+    }
+
     /** Синхронизация начинает применять изменения с другого устройства: их время изменения сохраняется */
     fun beginApplyingRemote(db: SupportSQLiteDatabase) = db.execSQL("UPDATE sync_control SET applyingRemote = 1 WHERE id = 1")
 

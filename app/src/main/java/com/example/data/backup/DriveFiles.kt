@@ -36,6 +36,10 @@ object DriveFiles {
         }.sortedByDescending { it.modifiedTime }
     }
 
+    /** Ответ `about.get?fields=user(emailAddress)`: адрес аккаунта Google */
+    fun parseEmail(body: String): String? =
+        ((json.parseToJsonElement(body) as? JsonObject)?.get("user") as? JsonObject)?.get("emailAddress")?.jsonPrimitive?.content
+
     /** Ответ `files.create` / `files.update`: id файла */
     fun parseId(body: String): String? =
         (json.parseToJsonElement(body) as? JsonObject)?.get("id")?.jsonPrimitive?.content

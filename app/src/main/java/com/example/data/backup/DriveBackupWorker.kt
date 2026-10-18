@@ -20,7 +20,11 @@ class DriveBackupWorker @AssistedInject constructor(
 
     override suspend fun doWork(): Result {
         if (!manager.state.value.connected) return Result.success()
-        val token = DriveAuth.tokenSilently(applicationContext) ?: return Result.success()
+        // Без окон маркера нет — доступ отозван: карточка попросит подключить заново
+        val token = DriveAuth.tokenSilently(applicationContext) ?: run {
+            manager.reportError(DriveBackupManager.Error.ACCESS)
+            return Result.success()
+        }
         return if (manager.backupNow(token) == true) Result.success() else Result.retry()
     }
 }

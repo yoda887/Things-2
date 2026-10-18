@@ -278,4 +278,8 @@
     <string name="sync_never">Not synced yet.</string>
     <string name="sync_now">Sync Now</string>
     <string name="sync_error_bad">The shared sync file is from a newer version of the app — update the app on this device.</string>
+    <string name="backup_account">Connected: %1$s</string>
+    <string name="backup_reconnect">Reconnect Google Drive</string>
+    <string name="backup_error_server">Google Drive is temporarily unavailable. The app will try again later.</string>
+    <string name="backup_offer_restore">There is a backup from %1$s on Google Drive. Restore your tasks from it on this phone?</string>
 </resources>

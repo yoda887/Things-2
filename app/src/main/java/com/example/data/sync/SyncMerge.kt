@@ -35,7 +35,22 @@ object SyncMerge {
         val remoteChanged: Boolean
     )
 
+    /**
+     * Время изменения образцов новой базы (DatabaseSeeder): самое раннее — любая правка или удаление их перебивает.
+     * Новое устройство, подключаясь к уже общему файлу, своих образцов, которых в нём нет, не отправляет, а убирает
+     * у себя: оно принимает общее состояние, а не возвращает давно удалённые образцы на все устройства.
+     */
+    const val SEED_TIME = 1L
+
     fun merge(local: State, remote: State): Result {
+        val sharedExists = remote.rows.isNotEmpty() || remote.deletions.isNotEmpty()
+        val seedsToDrop = if (!sharedExists) emptySet() else local.rows.values
+            .filter { it.updatedAt <= SEED_TIME && it.key !in remote.rows && it.key !in remote.deletions }
+            .mapTo(HashSet()) { it.key }
+        if (seedsToDrop.isNotEmpty()) {
+            val adopted = merge(local.copy(rows = local.rows - seedsToDrop), remote)
+            return adopted.copy(deleteLocally = adopted.deleteLocally + seedsToDrop)
+        }
         val keys = local.rows.keys + local.deletions.keys + remote.rows.keys + remote.deletions.keys
         val rows = HashMap<Key, SyncRow>()
         val deletions = HashMap<Key, SyncDeletionMark>()

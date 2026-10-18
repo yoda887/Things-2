@@ -285,4 +285,8 @@
     <string name="sync_never">Ще не синхронізовано.</string>
     <string name="sync_now">Синхронізувати зараз</string>
     <string name="sync_error_bad">Спільний файл синхронізації з новішої версії застосунку — оновіть застосунок на цьому пристрої.</string>
+    <string name="backup_account">Підключено: %1$s</string>
+    <string name="backup_reconnect">Підключити знову</string>
+    <string name="backup_error_server">Google Drive тимчасово недоступний. Застосунок спробує пізніше.</string>
+    <string name="backup_offer_restore">На Google Drive є копія від %1$s. Відновити з неї завдання на цьому телефоні?</string>
 </resources>

@@ -41,7 +41,8 @@ class SyncManager @Inject constructor(
         val error: Error? = null
     )
 
-    enum class Error { NETWORK, ACCESS, BAD_FILE }
+    /** NETWORK — нет интернета; SERVER — Google временно недоступен; ACCESS — доступ отозван; BAD_FILE — файл из новой версии */
+    enum class Error { NETWORK, SERVER, ACCESS, BAD_FILE }
 
     private val prefs = context.getSharedPreferences(PREFS, Context.MODE_PRIVATE)
     private val _state = MutableStateFlow(
@@ -113,7 +114,7 @@ class SyncManager @Inject constructor(
             _state.update { it.copy(lastSyncAt = now) }
             true
         } catch (e: DriveHttpException) {
-            _state.update { it.copy(error = if (e.code == 401 || e.code == 403) Error.ACCESS else Error.NETWORK) }
+            _state.update { it.copy(error = if (e.isAccess) Error.ACCESS else Error.SERVER) }
             false
         } catch (e: java.io.IOException) {
             _state.update { it.copy(error = Error.NETWORK) }

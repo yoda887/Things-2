@@ -67,6 +67,12 @@ class DriveBackupApi @Inject constructor() {
         DriveFiles.parseId(call(request)) ?: existingId ?: throw IOException("Drive did not return file id")
     }
 
+    /** Адрес аккаунта Google, к чьему Drive есть доступ */
+    suspend fun accountEmail(token: String): String? = withContext(Dispatchers.IO) {
+        val url = "https://www.googleapis.com/drive/v3/about?fields=" + java.net.URLEncoder.encode("user(emailAddress)", "UTF-8")
+        DriveFiles.parseEmail(call(Request.Builder().url(url).header(AUTH, bearer(token)).get().build()))
+    }
+
     /** Скачать копию [id] в [to] */
     suspend fun download(token: String, id: String, to: File) = withContext(Dispatchers.IO) {
         val request = Request.Builder().url("$FILES_URL/$id?alt=media").header(AUTH, bearer(token)).get().build()
@@ -96,4 +102,7 @@ class DriveBackupApi @Inject constructor() {
 }
 
 /** Drive ответил ошибкой: 401 — доступ истёк или отозван, 403 — нет разрешения или превышен лимит */
-class DriveHttpException(val code: Int) : IOException("Google Drive HTTP $code")
+class DriveHttpException(val code: Int) : IOException("Google Drive HTTP $code") {
+    /** Доступ нужно дать заново (иначе — временный сбой Google: повторить позже) */
+    val isAccess: Boolean get() = code == 401 || code == 403
+}

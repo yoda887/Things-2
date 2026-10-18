@@ -18,7 +18,10 @@ class SyncWorker @AssistedInject constructor(
 
     override suspend fun doWork(): Result {
         if (!manager.state.value.enabled) return Result.success()
-        val token = DriveAuth.tokenSilently(applicationContext) ?: return Result.success()
+        val token = DriveAuth.tokenSilently(applicationContext) ?: run {
+            manager.reportError(SyncManager.Error.ACCESS)
+            return Result.success()
+        }
         return if (manager.sync(token)) Result.success() else Result.retry()
     }
 }

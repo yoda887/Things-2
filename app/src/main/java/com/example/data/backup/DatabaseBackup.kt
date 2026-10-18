@@ -29,6 +29,13 @@ class DatabaseBackup @Inject constructor(
         target
     }
 
+    /** На телефоне только образцы новой базы (их время изменения — самое раннее), своих записей ещё нет */
+    suspend fun hasOnlySeedData(): Boolean = withContext(Dispatchers.IO) {
+        database.openHelper.readableDatabase
+            .query("SELECT COUNT(*) FROM items WHERE updatedAt > ${com.example.data.sync.SyncMerge.SEED_TIME}")
+            .use { cursor -> cursor.moveToFirst() && cursor.getLong(0) == 0L }
+    }
+
     /**
      * Годится ли [file] для восстановления: открывается как база SQLite, в ней таблицы приложения, а её версия
      * не новее нынешней (старые Room доведёт миграциями при запуске).
