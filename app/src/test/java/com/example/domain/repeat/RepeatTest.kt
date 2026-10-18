@@ -160,6 +160,22 @@ class RepeatTest {
     }
 
     @Test
+    fun copyIds_sameOnEveryDevice_differentPerOccurrence() {
+        // Два устройства создают копию одного повтора независимо — id совпадают, синхронизация сводит их в одну запись
+        val rule = RepeatRule(afterCompletion = false, unit = RepeatUnit.WEEK, start = d(2026, 10, 15))
+        val template = Item(id = "tpl", type = Item.TYPE_TEMPLATE, title = "Bill")
+        val checklist = listOf(ChecklistItem(id = "c", itemId = "tpl", title = "a"))
+        val (onPhone, phoneChecklist) = RepeatPlan.copyOf(template, checklist, rule, d(2026, 10, 15), now = 1L)
+        val (onDesktop, desktopChecklist) = RepeatPlan.copyOf(template, checklist, rule, d(2026, 10, 15), now = 2L)
+        assertEquals(onPhone.id, onDesktop.id)
+        assertEquals(phoneChecklist.single().id, desktopChecklist.single().id)
+        assertTrue(onPhone.id != phoneChecklist.single().id)
+        val (nextWeek, _) = RepeatPlan.copyOf(template, checklist, rule, d(2026, 10, 22), now = 1L)
+        assertTrue(nextWeek.id != onPhone.id)
+        assertTrue(RepeatIds.of("other", d(2026, 10, 15)) != onPhone.id)
+    }
+
+    @Test
     fun setup_taskBecomesTemplate_copiesOnlyFromRegularTasks() {
         val task = Item(id = "t", title = "Water", start = Item.START_TODAY, startDate = 5L, dueDate = 7L, isTonight = true, cachedTags = "home")
         assertTrue(RepeatSetup.canRepeat(task))

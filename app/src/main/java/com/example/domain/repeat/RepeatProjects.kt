@@ -5,7 +5,6 @@ import com.example.data.model.Item
 import com.example.data.model.ItemWithChecklist
 import java.time.LocalDate
 import java.time.ZoneId
-import java.util.UUID
 
 /**
  * Повторяющийся проект, как в Things: проект становится шаблоном ([Item.TYPE_PROJECT_TEMPLATE]), его открытые
@@ -56,12 +55,13 @@ object RepeatProjects {
         occurrence: LocalDate,
         zone: ZoneId = ZoneId.systemDefault(),
         now: Long = System.currentTimeMillis(),
-        newId: () -> String = { UUID.randomUUID().toString() }
+        // Id по тому, что копируется ("" — сам проект); по умолчанию — одинаковые на всех устройствах ([RepeatIds])
+        newId: (part: String) -> String = { part -> RepeatIds.of(template.id, occurrence, part) }
     ): Copy {
         val (taskCopy, _) = RepeatPlan.copyOf(template, emptyList(), rule, occurrence, zone, now, newId)
         val project = taskCopy.copy(type = Item.TYPE_PROJECT)
         val liveHeadings = headings.filter { it.isHeading && it.projectId == template.id && it.status == Item.STATUS_OPEN && !it.trashed }
-        val headingIds = liveHeadings.associate { it.id to newId() }
+        val headingIds = liveHeadings.associate { it.id to newId("heading|${it.id}") }
         val headingCopies = liveHeadings.map { heading ->
             heading.copy(
                 id = headingIds.getValue(heading.id),
@@ -78,7 +78,7 @@ object RepeatProjects {
             .filter { it.item.isTemplatePart && it.item.repeatTemplateId == template.id && !it.item.trashed }
             .sortedWith(compareBy<ItemWithChecklist> { it.item.sortOrder }.thenByDescending { it.item.creationDate })
         val tasks = ordered.mapIndexed { index, part ->
-            val id = newId()
+            val id = newId("task|${part.item.id}")
             val task = part.item.copy(
                 id = id,
                 type = Item.TYPE_TASK,
@@ -96,7 +96,7 @@ object RepeatProjects {
                 creationDate = now - index,
                 modificationDate = now
             )
-            task to part.checklist.map { it.copy(id = newId(), itemId = id, isCompleted = false) }
+            task to part.checklist.map { it.copy(id = newId("task|${part.item.id}|checklist|${it.id}"), itemId = id, isCompleted = false) }
         }
         return Copy(project, headingCopies, tasks)
     }

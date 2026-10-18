@@ -7,6 +7,16 @@ import java.time.ZoneId
 import java.util.UUID
 
 /**
+ * Id копий повтора — одинаковые на всех устройствах: из шаблона, дня повтора и того, что копируется ([part]:
+ * сама копия — "", пункт чек-листа, заголовок или задача проекта — по id оригинала). Два устройства, создавшие
+ * копию одного повтора независимо, после синхронизации получают одну запись, а не две одинаковые задачи.
+ */
+object RepeatIds {
+    fun of(templateId: String, occurrence: LocalDate, part: String = ""): String =
+        UUID.nameUUIDFromBytes("repeat|$templateId|$occurrence|$part".toByteArray(Charsets.UTF_8)).toString()
+}
+
+/**
  * Состояние повтора шаблона: правило, дата следующего повтора ([nextOccurrence]; null — повторов пока нет:
  * «после выполнения» ждёт, когда отметят текущую копию, а у регулярного правила повторы закончились),
  * сколько копий уже создано и не на паузе ли он.
@@ -100,9 +110,10 @@ object RepeatPlan {
         occurrence: LocalDate,
         zone: ZoneId = ZoneId.systemDefault(),
         now: Long = System.currentTimeMillis(),
-        newId: () -> String = { UUID.randomUUID().toString() }
+        // Id по тому, что копируется ("" — сама копия); по умолчанию — одинаковые на всех устройствах ([RepeatIds])
+        newId: (part: String) -> String = { part -> RepeatIds.of(template.id, occurrence, part) }
     ): Pair<Item, List<ChecklistItem>> {
-        val id = newId()
+        val id = newId("")
         val copy = template.copy(
             id = id,
             type = Item.TYPE_TASK,
@@ -119,7 +130,7 @@ object RepeatPlan {
             modificationDate = now,
             repeatTemplateId = template.id
         )
-        val checklist = templateChecklist.map { it.copy(id = newId(), itemId = id, isCompleted = false) }
+        val checklist = templateChecklist.map { it.copy(id = newId("checklist|${it.id}"), itemId = id, isCompleted = false) }
         return copy to checklist
     }
 }
