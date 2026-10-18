@@ -1,5 +1,7 @@
 package com.example.ui.screens.home.inlineeditor.dialogs
 
+import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.layout.onSizeChanged
 import kotlinx.coroutines.flow.drop
 import com.example.ui.theme.ThingsMotion
 import com.example.ui.theme.ThingsAlpha
@@ -350,13 +352,21 @@ fun ThingsWhenDialog(
             // «Назад» при открытом барабане закрывает только его
             androidx.activity.compose.BackHandler(enabled = pickingReminder) { pickingReminder = false }
             androidx.activity.compose.BackHandler(enabled = pickingDate) { pickingDate = false }
+            // Высота главной страницы без блока «Очистить» — календарь выбора даты открывается в окне той же высоты
+            var mainPagePx by remember { mutableIntStateOf(0) }
+            var clearBlockPx by remember { mutableIntStateOf(0) }
+            var clearShown by remember { mutableStateOf(false) }
+            val datePageHeight = with(LocalDensity.current) {
+                (mainPagePx - if (clearShown) clearBlockPx else 0).takeIf { mainPagePx > 0 }?.toDp()
+            }
             Box {
             Column(
                 modifier = Modifier
                     .fillMaxWidth()
                     // Появилась или ушла строка напоминания, кнопка «Очистить» — окно меняет высоту плавно
                     .animateContentSize(tween(ThingsMotion.QUICK, easing = FastOutSlowInEasing))
-                    .padding(horizontal = ThingsSpacing.L, vertical = WHEN_DIALOG_VERTICAL_PADDING),
+                    .padding(horizontal = ThingsSpacing.L, vertical = WHEN_DIALOG_VERTICAL_PADDING)
+                    .onSizeChanged { if (!pickingDate) mainPagePx = it.height },
                 // Промежутки между блоками задаются поштучно: у ячеек календаря и у текстов свои
                 // внутренние поля, поэтому при одинаковом spacedBy расстояния выглядели разными
                 verticalArrangement = Arrangement.spacedBy(ThingsSpacing.NONE)
@@ -365,11 +375,13 @@ fun ThingsWhenDialog(
                     val zone = java.time.ZoneId.systemDefault()
                     val selected = startDate?.takeIf { section == TaskSection.UPCOMING }
                         ?.let { java.time.Instant.ofEpochMilli(it).atZone(zone).toLocalDate() }
+                    Column(modifier = if (datePageHeight != null) Modifier.height(datePageHeight) else Modifier) {
                     SubPage(stringResource(R.string.ui_when), onBack = { pickingDate = false }) {
                         RepeatCalendar(
                             selected = selected,
                             from = java.time.LocalDate.now(zone),
-                            modifier = Modifier.height(WHEN_FULL_CALENDAR_HEIGHT)
+                            // Календарь занимает всё под заголовком: окно той же высоты, что «Когда?» без «Очистить»
+                            modifier = if (datePageHeight != null) Modifier.weight(1f) else Modifier.height(WHEN_FULL_CALENDAR_HEIGHT)
                         ) { date ->
                             val millis = date.atStartOfDay(zone).toInstant().toEpochMilli()
                             onStartDateChange(millis)
@@ -378,6 +390,7 @@ fun ThingsWhenDialog(
                             onShowCalendarHelperChange(true)
                             requestClose()
                         }
+                    }
                     }
                 } else {
                 // Top bar: "When?" and Close "✕" Button
@@ -861,12 +874,13 @@ fun ThingsWhenDialog(
 
                 // Кнопка "Clear" для сброса даты в "Anytime" (форма полной пилюли, малиново-красный цвет)
                 val hasTimeAssignment = startDate != null || section != TaskSection.ANYTIME
+                SideEffect { clearShown = hasTimeAssignment }
                 androidx.compose.animation.AnimatedVisibility(
                     visible = hasTimeAssignment,
                     enter = fadeIn(tween(ThingsMotion.QUICK)),
                     exit = fadeOut(tween(ThingsMotion.QUICK))
                 ) {
-                Column {
+                Column(modifier = Modifier.onSizeChanged { clearBlockPx = it.height }) {
                     // С поставленным напоминанием над его строкой стоит разделитель — на его высоту промежуток
                     // меньше, чтобы «Очистить» осталась на месте, когда «+ Добавить напоминание» сменяется строкой
                     Spacer(
