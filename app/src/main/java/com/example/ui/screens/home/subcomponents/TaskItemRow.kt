@@ -381,8 +381,9 @@ fun TaskItemRow(
             }
             // Когда под заголовком есть вторая строка, плашка с датой встаёт слева от обеих строк
             // и центрируется по вертикали, а заголовок с подписью идут после неё
-            // У шаблона повтора вместо даты — день следующего повтора или «Пауза»
-            val repeatRule = if (task.isRepeatTemplate && (screen == ActiveScreen.REPEATING || screen == ActiveScreen.TAG_DETAIL)) {
+            // У шаблона повтора вместо даты — день следующего повтора или «Пауза», на любом экране: свои дата
+            // и «Сегодня» у шаблона ничего не значат (в раскрытом шаблоне — тоже день следующего повтора)
+            val repeatRule = if (task.isRepeatTemplate) {
                 com.example.ui.components.LocalRepeatRules.current[task.id]
             } else null
             val repeatBadge = com.example.ui.components.repeatBadge(repeatRule)
@@ -432,7 +433,7 @@ fun TaskItemRow(
                             if (dateBadge != null && !badgeBesideBothLines) {
                                 DateBadge(text = dateBadge)
                                 Spacer(modifier = Modifier.width(ThingsSpacing.XS_PLUS))
-                            } else if (dateBadge == null && !indicatorBesideBothLines && dateIndicator != null && (
+                            } else if (dateBadge == null && !indicatorBesideBothLines && dateIndicator != null && !task.isRepeatTemplate && (
                                     screen == ActiveScreen.PROJECT_DETAIL || screen == ActiveScreen.AREA_DETAIL ||
                                         repeatingCopyIndicator ||
                                         // В «В любое время» звезда или луна отмечают задачи «Сегодня»
