@@ -1,5 +1,6 @@
 package com.example.data.model
 
+import androidx.room.ColumnInfo
 import androidx.room.Entity
 import androidx.room.PrimaryKey
 import java.util.UUID
@@ -9,5 +10,7 @@ data class Tag(
     @PrimaryKey val id: String = UUID.randomUUID().toString(),
     val title: String,
     val sortOrder: Int = 0,
-    val parentId: String? = null
+    val parentId: String? = null,
+    /** Когда запись менялась последний раз (мс) — ставит триггер базы (SyncTriggers), для синхронизации устройств */
+    @ColumnInfo(defaultValue = "0") val updatedAt: Long = 0L
 )

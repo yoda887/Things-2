@@ -1,5 +1,6 @@
 package com.example.data.model
 
+import androidx.room.ColumnInfo
 import androidx.room.Entity
 import androidx.room.ForeignKey
 import androidx.room.Ignore
@@ -89,7 +90,9 @@ data class Item(
      */
     val reminderTime: Int? = null,
     /** Копия повторяющейся задачи — id её шаблона (TYPE_TEMPLATE); у обычных задач null */
-    val repeatTemplateId: String? = null
+    val repeatTemplateId: String? = null,
+    /** Когда запись менялась последний раз (мс) — ставит триггер базы (SyncTriggers), для синхронизации устройств */
+    @ColumnInfo(defaultValue = "0") val updatedAt: Long = 0L
 ) {
     @get:Ignore
     val isCompleted: Boolean
@@ -337,5 +340,7 @@ data class ChecklistItem(
     val itemId: String,
     val title: String,
     val isCompleted: Boolean = false,
-    val sortOrder: Int = 0
+    val sortOrder: Int = 0,
+    /** Когда запись менялась последний раз (мс) — ставит триггер базы (SyncTriggers), для синхронизации устройств */
+    @ColumnInfo(defaultValue = "0") val updatedAt: Long = 0L
 )

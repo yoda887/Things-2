@@ -62,8 +62,8 @@ class DatabaseBackup @Inject constructor(
         /** Имя базы Room (DatabaseModule) */
         const val DATABASE_NAME = "things_database"
 
-        /** Версия схемы Room (AppDatabase) */
-        const val CURRENT_VERSION = 9
+        /** Версия схемы Room */
+        const val CURRENT_VERSION = AppDatabase.VERSION
 
         private const val LOCAL_BACKUPS = "backups"
         private const val BEFORE_RESTORE = "before_restore.db"

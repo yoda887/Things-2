@@ -34,5 +34,7 @@ data class RecurrenceRule(
     val rrule: String,
     val nextGenerationDate: Long,
     val isActive: Boolean = true,
-    @ColumnInfo(defaultValue = "0") val generatedCount: Int = 0
+    @ColumnInfo(defaultValue = "0") val generatedCount: Int = 0,
+    /** Когда запись менялась последний раз (мс) — ставит триггер базы (SyncTriggers), для синхронизации устройств */
+    @ColumnInfo(defaultValue = "0") val updatedAt: Long = 0L
 )

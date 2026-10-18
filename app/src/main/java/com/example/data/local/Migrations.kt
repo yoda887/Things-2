@@ -25,3 +25,24 @@ val MIGRATION_8_9 = object : Migration(8, 9) {
         db.execSQL("ALTER TABLE `recurrence_rules` ADD COLUMN `generatedCount` INTEGER NOT NULL DEFAULT 0")
     }
 }
+
+/**
+ * Версия 10: синхронизация устройств — у каждой записи время последнего изменения (`updatedAt`), журнал удалений
+ * (`sync_deletions`) и триггеры, которые их ведут (SyncTriggers). Время уже существующих записей — время миграции
+ * (у задач — их modificationDate): до синхронизации все записи «изменены» одинаково.
+ */
+val MIGRATION_9_10 = object : Migration(9, 10) {
+    override fun migrate(db: SupportSQLiteDatabase) {
+        val now = System.currentTimeMillis()
+        listOf("items", "areas", "tags", "item_tags", "checklist_items", "recurrence_rules").forEach { table ->
+            db.execSQL("ALTER TABLE `$table` ADD COLUMN `updatedAt` INTEGER NOT NULL DEFAULT 0")
+            db.execSQL("UPDATE `$table` SET updatedAt = $now")
+        }
+        db.execSQL("UPDATE `items` SET updatedAt = modificationDate WHERE modificationDate > 0")
+        db.execSQL(
+            "CREATE TABLE IF NOT EXISTS `sync_deletions` (`tableName` TEXT NOT NULL, `recordId` TEXT NOT NULL, " +
+                "`deletedAt` INTEGER NOT NULL, PRIMARY KEY(`tableName`, `recordId`))"
+        )
+        SyncTriggers.create(db)
+    }
+}
