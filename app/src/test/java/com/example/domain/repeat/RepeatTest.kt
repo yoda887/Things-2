@@ -176,6 +176,18 @@ class RepeatTest {
     }
 
     @Test
+    fun copyIds_dayAlreadyHasCopy_randomIdsSoOldCopyIsKept() {
+        // Повтор включили заново или перенесли на день, где копия уже есть, — новая копия её не затирает
+        val day = d(2026, 10, 15)
+        val seeded = RepeatIds.generator("tpl", day, taken = false)
+        assertEquals(RepeatIds.of("tpl", day), seeded(""))
+        val fresh = RepeatIds.generator("tpl", day, taken = true)
+        val first = fresh("")
+        assertTrue(first != RepeatIds.of("tpl", day))
+        assertTrue(first != fresh(""))
+    }
+
+    @Test
     fun setup_taskBecomesTemplate_copiesOnlyFromRegularTasks() {
         val task = Item(id = "t", title = "Water", start = Item.START_TODAY, startDate = 5L, dueDate = 7L, isTonight = true, cachedTags = "home")
         assertTrue(RepeatSetup.canRepeat(task))

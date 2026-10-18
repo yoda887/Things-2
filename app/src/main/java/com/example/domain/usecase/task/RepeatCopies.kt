@@ -2,6 +2,7 @@ package com.example.domain.usecase.task
 
 import com.example.data.model.Item
 import com.example.data.model.ItemWithChecklist
+import com.example.domain.repeat.RepeatIds
 import com.example.domain.repeat.RepeatPlan
 import com.example.domain.repeat.RepeatProjects
 import com.example.domain.repeat.RepeatRule
@@ -28,11 +29,14 @@ object RepeatCopies {
         appearOn: LocalDate? = null,
         completedAt: Long? = null
     ) {
+        // Копия этого дня уже была — новые id, чтобы не затереть её ([RepeatIds.generator])
+        val taken = repository.getTask(RepeatIds.of(template.id, occurrence)) != null
+        val newId = RepeatIds.generator(template.id, occurrence, taken)
         if (template.type == Item.TYPE_PROJECT_TEMPLATE) {
             val inside = repository.getProjectItems(template.id)
             val parts = inside.filter { it.isTemplatePart && it.repeatTemplateId == template.id && !it.trashed }
                 .map { ItemWithChecklist(it, repository.getChecklist(it.id)) }
-            val copy = RepeatProjects.copyOf(template, inside.filter { it.isHeading }, parts, rule, occurrence, zone)
+            val copy = RepeatProjects.copyOf(template, inside.filter { it.isHeading }, parts, rule, occurrence, zone, newId = newId)
             repository.insertProject(copy.project)
             if (copy.project.tags.isNotEmpty()) repository.setItemTagsByTitles(copy.project.id, copy.project.tags)
             if (copy.headings.isNotEmpty()) repository.insertTasks(copy.headings)
@@ -41,7 +45,7 @@ object RepeatCopies {
                 if (task.tags.isNotEmpty()) repository.setItemTagsByTitles(task.id, task.tags)
             }
         } else {
-            val (planned, checklist) = RepeatPlan.copyOf(template, repository.getChecklist(template.id), rule, occurrence, zone)
+            val (planned, checklist) = RepeatPlan.copyOf(template, repository.getChecklist(template.id), rule, occurrence, zone, newId = newId)
             var copy = planned
             if (appearOn != null) copy = copy.copy(
                 startDate = appearOn.atStartOfDay(zone).toInstant().toEpochMilli(),

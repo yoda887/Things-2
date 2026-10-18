@@ -14,6 +14,14 @@ import java.util.UUID
 object RepeatIds {
     fun of(templateId: String, occurrence: LocalDate, part: String = ""): String =
         UUID.nameUUIDFromBytes("repeat|$templateId|$occurrence|$part".toByteArray(Charsets.UTF_8)).toString()
+
+    /**
+     * Id для копии шаблона [templateId] на день [occurrence]. Если запись с id этой копии уже есть ([taken]) —
+     * копию этого дня создают второй раз (повтор включили заново, повтор перенесли на день, где копия уже была):
+     * тогда id случайные, как раньше, чтобы новая копия не затёрла прежнюю.
+     */
+    fun generator(templateId: String, occurrence: LocalDate, taken: Boolean): (part: String) -> String =
+        if (taken) { _ -> UUID.randomUUID().toString() } else { part -> of(templateId, occurrence, part) }
 }
 
 /**
