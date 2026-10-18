@@ -279,4 +279,10 @@
     <string name="backup_error_access">Доступ до Google Drive не надано.</string>
     <string name="backup_error_none">На Google Drive ще немає копії.</string>
     <string name="backup_error_bad">Копія пошкоджена або з новішої версії застосунку — нічого не змінено.</string>
+    <string name="sync_devices">Синхронізація між пристроями</string>
+    <string name="sync_devices_hint">Завдання однакові на всіх телефонах і планшетах із цим акаунтом Google.</string>
+    <string name="sync_last">Остання синхронізація: %1$s</string>
+    <string name="sync_never">Ще не синхронізовано.</string>
+    <string name="sync_now">Синхронізувати зараз</string>
+    <string name="sync_error_bad">Спільний файл синхронізації з новішої версії застосунку — оновіть застосунок на цьому пристрої.</string>
 </resources>

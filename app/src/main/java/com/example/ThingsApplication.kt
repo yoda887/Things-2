@@ -27,8 +27,12 @@ class ThingsApplication : Application(), Configuration.Provider {
     /** Копии повторяющихся задач создаются по их правилам: при запуске, при изменениях и каждую полночь */
     @Inject lateinit var repeatSync: RepeatSync
 
+    /** Синхронизация устройств через Google Drive: при запуске и после правок, пока приложение открыто */
+    @Inject lateinit var syncAutoRun: com.example.data.sync.SyncAutoRun
+
     override fun onCreate() {
         super.onCreate()
+        syncAutoRun.start()
         reminderSync.start()
         repeatSync.start()
     }

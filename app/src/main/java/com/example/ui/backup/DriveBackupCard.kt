@@ -58,6 +58,7 @@ fun DriveBackupCard(
     viewModel: DriveBackupViewModel = hiltViewModel()
 ) {
     val state by viewModel.state.collectAsState()
+    val syncState by viewModel.syncState.collectAsState()
     var confirmRestore by remember { mutableStateOf(false) }
 
     // Окно Google (аккаунт и согласие на доступ к скрытой папке Drive) — его ответ продолжает действие
@@ -136,6 +137,49 @@ fun DriveBackupCard(
                     TextButton(onClick = viewModel::disconnect, enabled = !state.busy) {
                         Text(stringResource(R.string.backup_disconnect), style = ThingsTheme.type.bodyMedium.copy(color = textSecondaryColor))
                     }
+                }
+
+                // Синхронизация между устройствами — через ту же скрытую папку Drive
+                Spacer(modifier = Modifier.height(ThingsSpacing.M))
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Column(modifier = Modifier.weight(1f)) {
+                        Text(stringResource(R.string.sync_devices), style = ThingsTheme.type.bodyMedium.copy(color = textPrimaryColor))
+                        val lastSync = syncState.lastSyncAt
+                        Text(
+                            text = when {
+                                !syncState.enabled -> stringResource(R.string.sync_devices_hint)
+                                lastSync != null -> stringResource(R.string.sync_last, formatBackupTime(lastSync))
+                                else -> stringResource(R.string.sync_never)
+                            },
+                            style = ThingsTheme.type.caption.copy(color = textSecondaryColor)
+                        )
+                    }
+                    Switch(
+                        checked = syncState.enabled,
+                        onCheckedChange = viewModel::setSyncEnabled,
+                        colors = SwitchDefaults.colors(checkedTrackColor = ThingsTheme.colors.accent)
+                    )
+                }
+                syncState.error?.let { error ->
+                    Spacer(modifier = Modifier.height(ThingsSpacing.XS))
+                    Text(
+                        text = stringResource(
+                            when (error) {
+                                com.example.data.sync.SyncManager.Error.NETWORK -> R.string.backup_error_network
+                                com.example.data.sync.SyncManager.Error.ACCESS -> R.string.backup_error_access
+                                com.example.data.sync.SyncManager.Error.BAD_FILE -> R.string.sync_error_bad
+                            }
+                        ),
+                        style = ThingsTheme.type.caption.copy(color = ThingsTheme.colors.danger)
+                    )
+                }
+                if (syncState.enabled) {
+                    Spacer(modifier = Modifier.height(ThingsSpacing.S))
+                    ActionButton(stringResource(R.string.sync_now), busy = syncState.busy, onClick = viewModel::syncNow)
                 }
             }
         }

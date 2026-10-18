@@ -102,6 +102,8 @@ import com.example.ui.screens.home.subcomponents.SmartListRow
 import com.example.ui.theme.*
 
 // Жест оттяжки главного экрана к Quick Find
+/** Отступ под последним блоком главного экрана: кнопка «+» (56 dp и 16 dp от края) его не закрывает */
+private val HOME_FAB_CLEARANCE = 96.dp
 private val PULL_SEARCH_THRESHOLD = 100.dp
 private val PULL_SEARCH_MAX_OFFSET = 150.dp
 private val PULL_SEARCH_RESISTANCE_MAX = 32.dp
@@ -997,7 +999,8 @@ fun ThingsHomePanel(
                 textPrimaryColor = textPrimaryColor,
                 textSecondaryColor = textSecondaryColor,
                 cardSurfaceColor = cardSurfaceColor,
-                modifier = Modifier.padding(bottom = ThingsSpacing.XXL)
+                // Последний блок главного экрана — с запасом под кнопку «+», чтобы она не закрывала переключатели
+                modifier = Modifier.padding(bottom = HOME_FAB_CLEARANCE)
             )
         }
     }

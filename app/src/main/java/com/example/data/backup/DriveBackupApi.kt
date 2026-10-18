@@ -27,17 +27,22 @@ class DriveBackupApi @Inject constructor() {
         .writeTimeout(120, TimeUnit.SECONDS)
         .build()
 
-    /** Копия базы на Drive (самая свежая, если их почему-то несколько); нет — null */
-    suspend fun find(token: String): DriveFile? = withContext(Dispatchers.IO) {
+    /** Файл [name] в скрытой папке (самый свежий, если их почему-то несколько); нет — null */
+    suspend fun find(token: String, name: String = DriveFiles.BACKUP_NAME): DriveFile? = withContext(Dispatchers.IO) {
         val url = "$FILES_URL?spaces=appDataFolder" +
-            "&q=" + java.net.URLEncoder.encode("name='${DriveFiles.BACKUP_NAME}' and trashed=false", "UTF-8") +
-            "&fields=" + java.net.URLEncoder.encode("files(id,modifiedTime,size)", "UTF-8")
+            "&q=" + java.net.URLEncoder.encode("name='$name' and trashed=false", "UTF-8") +
+            "&fields=" + java.net.URLEncoder.encode("files(id,modifiedTime,size,md5Checksum)", "UTF-8")
         val body = call(Request.Builder().url(url).header(AUTH, bearer(token)).get().build())
         DriveFiles.parseList(body).firstOrNull()
     }
 
-    /** Записать [file] копией базы: новый файл в скрытой папке или новое содержимое [existingId] */
-    suspend fun upload(token: String, file: File, existingId: String?): String = withContext(Dispatchers.IO) {
+    /** Записать [file] под именем [name]: новый файл в скрытой папке или новое содержимое [existingId] */
+    suspend fun upload(
+        token: String,
+        file: File,
+        existingId: String?,
+        name: String = DriveFiles.BACKUP_NAME
+    ): String = withContext(Dispatchers.IO) {
         val media = file.asRequestBody(DB_TYPE)
         val request = if (existingId != null) {
             Request.Builder()
@@ -46,7 +51,7 @@ class DriveBackupApi @Inject constructor() {
                 .patch(media)
                 .build()
         } else {
-            val metadata = """{"name":"${DriveFiles.BACKUP_NAME}","parents":["appDataFolder"]}"""
+            val metadata = """{"name":"$name","parents":["appDataFolder"]}"""
                 .toRequestBody(JSON_TYPE)
             val multipart = MultipartBody.Builder()
                 .setType("multipart/related".toMediaType())

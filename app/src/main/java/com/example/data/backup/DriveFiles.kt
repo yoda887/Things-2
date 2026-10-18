@@ -7,13 +7,16 @@ import kotlinx.serialization.json.jsonPrimitive
 import kotlinx.serialization.json.longOrNull
 
 /** Файл резервной копии в скрытой папке приложения на Google Drive */
-data class DriveFile(val id: String, val modifiedTime: String?, val size: Long?)
+data class DriveFile(val id: String, val modifiedTime: String?, val size: Long?, val md5: String? = null)
 
 /** Разбор ответов Drive REST v3 — без сети, закреплено тестами DriveBackupTest. */
 object DriveFiles {
 
     /** Имя копии базы в скрытой папке приложения (appDataFolder) */
     const val BACKUP_NAME = "things_backup.db"
+
+    /** Имя общего состояния синхронизации устройств там же */
+    const val SYNC_NAME = "sync_state.json.gz"
 
     private val json = Json { ignoreUnknownKeys = true }
 
@@ -27,7 +30,8 @@ object DriveFiles {
             DriveFile(
                 id = id,
                 modifiedTime = file["modifiedTime"]?.jsonPrimitive?.content,
-                size = file["size"]?.jsonPrimitive?.longOrNull
+                size = file["size"]?.jsonPrimitive?.longOrNull,
+                md5 = file["md5Checksum"]?.jsonPrimitive?.content
             )
         }.sortedByDescending { it.modifiedTime }
     }

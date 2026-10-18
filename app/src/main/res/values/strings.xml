@@ -272,4 +272,10 @@
     <string name="backup_error_access">Google Drive access was not granted.</string>
     <string name="backup_error_none">There is no backup on Google Drive yet.</string>
     <string name="backup_error_bad">The backup is damaged or from a newer version of the app — nothing was changed.</string>
+    <string name="sync_devices">Sync between devices</string>
+    <string name="sync_devices_hint">Tasks stay the same on every phone and tablet signed in to this Google account.</string>
+    <string name="sync_last">Last sync: %1$s</string>
+    <string name="sync_never">Not synced yet.</string>
+    <string name="sync_now">Sync Now</string>
+    <string name="sync_error_bad">The shared sync file is from a newer version of the app — update the app on this device.</string>
 </resources>
