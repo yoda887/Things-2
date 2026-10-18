@@ -51,7 +51,8 @@ fun isTodayDateOrPast(timestamp: Long?): Boolean {
  * • Завтра -> "Завтра"
  * • На текущей неделе (позже завтра) -> "Чт, 23 июл."
  * • Позже текущей недели (в текущем году) -> "15 авг."
- * • Позже текущего года -> "2027 г."
+ * • Позже текущего года -> "22 апр. 2027 г." — полная дата: в редакторе день и месяц нужны и для следующих лет
+ *   (в списках — свои плашки, там дальние годы по-прежнему кратко)
  */
 @androidx.compose.runtime.Composable
 fun formatStartDateLabel(
@@ -112,7 +113,7 @@ fun formatStartDateLabel(
     return when {
         isThisWeek -> java.text.SimpleDateFormat("EEE, d MMM", locale).format(targetCal.time)
         isCurrentYear -> java.text.SimpleDateFormat("d MMM", locale).format(targetCal.time)
-        else -> java.text.SimpleDateFormat("yyyy", locale).format(targetCal.time)
+        else -> java.text.SimpleDateFormat("d MMM yyyy", locale).format(targetCal.time)
     }
 }
 

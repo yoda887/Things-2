@@ -130,7 +130,8 @@ private const val REPEAT_MAX_DEADLINE_DAYS = 30
 
 /** Ячейка календаря «Следующая» / «Заканчивается» */
 private val REPEAT_CALENDAR_CELL_HEIGHT = 44.dp
-private const val REPEAT_CALENDAR_WEEKS = 106
+/** Календарь листается на 100 лет вперёд — для дальних дат ограничения по сути нет (недели строятся по мере прокрутки) */
+private const val REPEAT_CALENDAR_WEEKS = 52 * 100
 
 /** Порядковых номеров на барабане «В»: 1..31 и «последний»; у дня недели — только 1..4 и «последний» */
 private const val REPEAT_ORDINALS = 32
