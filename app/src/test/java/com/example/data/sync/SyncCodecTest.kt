@@ -5,7 +5,10 @@ import com.example.data.sync.SyncMerge.State
 import com.example.data.sync.SyncMerge.SyncDeletionMark
 import com.example.data.sync.SyncMerge.SyncRow
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertFalse
+import org.junit.Assert.assertNotNull
 import org.junit.Assert.assertNull
+import org.junit.Assert.assertTrue
 import org.junit.Test
 import java.io.ByteArrayOutputStream
 import java.util.zip.GZIPOutputStream
@@ -26,6 +29,26 @@ class SyncCodecTest {
         val decoded = SyncCodec.decode(SyncCodec.encode(state))!!
         assertEquals(state.rows, decoded.rows)
         assertEquals(state.deletions, decoded.deletions)
+    }
+
+    @Test
+    fun newerSchema_notApplied_olderAndMissingSchemaRead() {
+        val state = SyncMerge.State(emptyMap(), emptyMap())
+        // Файл из версии с новой базой — не применяется, приложение просит обновиться
+        val newer = SyncCodec.encode(state, schema = SyncCodec.SCHEMA + 1)
+        assertNull(SyncCodec.decode(newer))
+        assertTrue(SyncCodec.isFromNewerApp(newer))
+        // Из той же и более старой — читается
+        assertNotNull(SyncCodec.decode(SyncCodec.encode(state)))
+        assertNotNull(SyncCodec.decode(SyncCodec.encode(state, schema = 10), schema = 11))
+        assertFalse(SyncCodec.isFromNewerApp(SyncCodec.encode(state)))
+        // Файл без schema (до этой версии) — как база 10
+        val out = java.io.ByteArrayOutputStream()
+        java.util.zip.GZIPOutputStream(out).use { it.write("""{"v":1,"rows":{},"deletions":[]}""".toByteArray()) }
+        assertNotNull(SyncCodec.decode(out.toByteArray(), schema = 10))
+        assertNull(SyncCodec.decode(out.toByteArray(), schema = 9))
+        // Мусор — не «новая версия»
+        assertFalse(SyncCodec.isFromNewerApp("not gzip".toByteArray()))
     }
 
     @Test

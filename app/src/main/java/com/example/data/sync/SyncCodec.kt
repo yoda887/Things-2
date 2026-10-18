@@ -1,5 +1,6 @@
 package com.example.data.sync
 
+import com.example.data.local.AppDatabase
 import com.example.data.sync.SyncMerge.Key
 import com.example.data.sync.SyncMerge.State
 import com.example.data.sync.SyncMerge.SyncDeletionMark
@@ -22,17 +23,30 @@ import java.util.zip.GZIPOutputStream
 /**
  * Общее состояние синхронизации в файле на Drive: JSON, сжатый gzip. Закреплено тестами SyncCodecTest.
  *
- * `{"v":1, "rows":{"items":[{поля}], …}, "deletions":[{"t":"items","id":"…","at":…}]}` — поля записи как в базе:
- * текст — строкой, целые и вещественные — числом, NULL — null.
+ * `{"v":1, "schema":10, "rows":{"items":[{поля}], …}, "deletions":[{"t":"items","id":"…","at":…}]}` — поля записи
+ * как в базе: текст — строкой, целые и вещественные — числом, NULL — null.
+ *
+ * `schema` — версия базы ([AppDatabase.VERSION]) приложения, записавшего файл. Файл из более новой версии
+ * (в записях могут быть столбцы, которых здесь нет) это приложение не применяет и не перезаписывает: просит
+ * обновиться. Файл без `schema` — из версии [FIRST_SCHEMA], с которой синхронизация появилась.
+ * Код одинаковый в Things 2 и Things Desktop.
  */
 object SyncCodec {
 
     private const val VERSION = 1
+
+    /** Версия базы этого приложения */
+    const val SCHEMA = AppDatabase.VERSION
+
+    /** Версия базы, с которой появилась синхронизация: у файлов без `schema` */
+    private const val FIRST_SCHEMA = 10L
+
     private val json = Json { ignoreUnknownKeys = true }
 
-    fun encode(state: State): ByteArray {
+    fun encode(state: State, schema: Int = SCHEMA): ByteArray {
         val root = buildJsonObject {
             put("v", VERSION)
+            put("schema", schema)
             put("rows", buildJsonObject {
                 state.rows.values.groupBy { it.key.table }.forEach { (table, rows) ->
                     put(table, buildJsonArray { rows.forEach { add(rowToJson(it.values)) } })
@@ -53,12 +67,12 @@ object SyncCodec {
         return out.toByteArray()
     }
 
-    /** Разобрать файл; не тот формат или новее известного — null (ничего не трогать) */
-    fun decode(bytes: ByteArray): State? = runCatching {
-        val text = GZIPInputStream(ByteArrayInputStream(bytes)).use { it.readBytes().toString(Charsets.UTF_8) }
-        val root = json.parseToJsonElement(text) as JsonObject
+    /** Разобрать файл; не тот формат, новее известного или из более новой версии базы, чем [schema], — null (ничего не трогать) */
+    fun decode(bytes: ByteArray, schema: Int = SCHEMA): State? = runCatching {
+        val root = root(bytes)
         val version = root["v"]?.jsonPrimitive?.long ?: return null
         if (version > VERSION) return null
+        if (schemaOf(root) > schema) return null
         val rows = HashMap<Key, SyncRow>()
         (root["rows"] as? JsonObject)?.forEach { (table, array) ->
             (array as? JsonArray)?.forEach { element ->
@@ -76,6 +90,19 @@ object SyncCodec {
         }
         State(rows, deletions)
     }.getOrNull()
+
+    /** Файл записан более новой версией приложения (формат или база новее) — обновить приложение на этом устройстве */
+    fun isFromNewerApp(bytes: ByteArray, schema: Int = SCHEMA): Boolean = runCatching {
+        val root = root(bytes)
+        (root["v"]?.jsonPrimitive?.long ?: 0L) > VERSION || schemaOf(root) > schema
+    }.getOrDefault(false)
+
+    private fun root(bytes: ByteArray): JsonObject {
+        val text = GZIPInputStream(ByteArrayInputStream(bytes)).use { it.readBytes().toString(Charsets.UTF_8) }
+        return json.parseToJsonElement(text) as JsonObject
+    }
+
+    private fun schemaOf(root: JsonObject): Long = root["schema"]?.jsonPrimitive?.long ?: FIRST_SCHEMA
 
     private fun rowToJson(values: Map<String, Any?>): JsonObject = JsonObject(
         values.mapValues { (_, value) ->
