@@ -990,6 +990,16 @@ fun ThingsHomePanel(
                 }
             }
         }
+
+        // Резервная копия в Google Drive
+        item {
+            com.example.ui.backup.DriveBackupCard(
+                textPrimaryColor = textPrimaryColor,
+                textSecondaryColor = textSecondaryColor,
+                cardSurfaceColor = cardSurfaceColor,
+                modifier = Modifier.padding(bottom = ThingsSpacing.XXL)
+            )
+        }
     }
 
     // Поле поиска ("Quick Find"), вынесенное на уровень корневого Box для исключения

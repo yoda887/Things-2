@@ -263,4 +263,20 @@
     <string name="repeat_move_update_rule">Оновити правило</string>
     <string name="repeat_waiting">Чекає</string>
     <string name="cd_repeat_copy">Копія повторюваного</string>
+    <string name="backup_title">Резервна копія в Google Drive</string>
+    <string name="backup_hint">Копія всіх завдань зберігається в прихованій папці застосунку на вашому Google Drive — інші файли на Drive залишаються недоступними.</string>
+    <string name="backup_last">Остання копія: %1$s</string>
+    <string name="backup_none">Копії ще немає.</string>
+    <string name="backup_connect">Підключити Google Drive</string>
+    <string name="backup_auto">Автоматично щодня</string>
+    <string name="backup_now">Зберегти зараз</string>
+    <string name="backup_restore">Відновити з копії</string>
+    <string name="backup_disconnect">Відключити</string>
+    <string name="backup_restore_title">Відновити з копії?</string>
+    <string name="backup_restore_message">Усі завдання на цьому телефоні буде замінено копією від %1$s. Копія поточних даних залишиться на телефоні. Застосунок перезапуститься.</string>
+    <string name="backup_restore_confirm">Відновити</string>
+    <string name="backup_error_network">Немає зв’язку з Google Drive. Спробуйте пізніше.</string>
+    <string name="backup_error_access">Доступ до Google Drive не надано.</string>
+    <string name="backup_error_none">На Google Drive ще немає копії.</string>
+    <string name="backup_error_bad">Копія пошкоджена або з новішої версії застосунку — нічого не змінено.</string>
 </resources>

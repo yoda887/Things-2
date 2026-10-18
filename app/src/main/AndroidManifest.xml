@@ -3,6 +3,9 @@
     xmlns:tools="http://schemas.android.com/tools">
 
     <uses-permission android:name="android.permission.READ_CALENDAR" />
+    <!-- Резервная копия в Google Drive -->
+    <uses-permission android:name="android.permission.INTERNET" />
+    <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE" />
     <!-- Напоминания: уведомления, точное время (как у будильника) и восстановление после перезагрузки -->
     <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
     <uses-permission android:name="android.permission.SCHEDULE_EXACT_ALARM" android:maxSdkVersion="32" />
@@ -39,6 +42,17 @@
             android:excludeFromRecents="true"
             android:taskAffinity=""
             android:theme="@style/Theme.MyApplication.Translucent" />
+        <!-- WorkManager настраивается приложением (ThingsApplication) — с фабрикой Hilt, а не сам при запуске -->
+        <provider
+            android:name="androidx.startup.InitializationProvider"
+            android:authorities="${applicationId}.androidx-startup"
+            android:exported="false"
+            tools:node="merge">
+            <meta-data
+                android:name="androidx.work.WorkManagerInitializer"
+                android:value="androidx.startup"
+                tools:node="remove" />
+        </provider>
         <receiver
             android:name="com.example.reminders.ReminderReceiver"
             android:exported="false" />

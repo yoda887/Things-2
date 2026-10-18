@@ -86,6 +86,12 @@ dependencies {
     ksp(libs.hilt.compiler)
     implementation(libs.androidx.hilt.navigation.compose)
 
+    // Резервная копия в Google Drive: вход (Authorization API) и фоновая копия раз в день (WorkManager)
+    implementation(libs.play.services.auth)
+    implementation(libs.androidx.work.runtime.ktx)
+    implementation(libs.androidx.hilt.work)
+    ksp(libs.androidx.hilt.compiler)
+
     // Retrofit & OkHttp
     implementation(libs.retrofit)
     implementation(libs.retrofit.converter.moshi)

@@ -256,4 +256,20 @@
     <string name="repeat_move_update_rule">Update Rule</string>
     <string name="repeat_waiting">Waiting</string>
     <string name="cd_repeat_copy">Copy of a repeating item</string>
+    <string name="backup_title">Backup to Google Drive</string>
+    <string name="backup_hint">A copy of all your tasks is kept in a hidden app folder on your Google Drive — other files on Drive stay private.</string>
+    <string name="backup_last">Last backup: %1$s</string>
+    <string name="backup_none">No backup yet.</string>
+    <string name="backup_connect">Connect Google Drive</string>
+    <string name="backup_auto">Back up automatically every day</string>
+    <string name="backup_now">Back Up Now</string>
+    <string name="backup_restore">Restore from Backup</string>
+    <string name="backup_disconnect">Disconnect</string>
+    <string name="backup_restore_title">Restore from backup?</string>
+    <string name="backup_restore_message">All tasks on this phone will be replaced with the backup from %1$s. A copy of the current data stays on the phone. The app will restart.</string>
+    <string name="backup_restore_confirm">Restore</string>
+    <string name="backup_error_network">No connection to Google Drive. Try again later.</string>
+    <string name="backup_error_access">Google Drive access was not granted.</string>
+    <string name="backup_error_none">There is no backup on Google Drive yet.</string>
+    <string name="backup_error_bad">The backup is damaged or from a newer version of the app — nothing was changed.</string>
 </resources>
