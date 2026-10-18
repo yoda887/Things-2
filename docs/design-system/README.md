@@ -57,10 +57,11 @@
 | [CalendarEvents](components/CalendarEvents.md) | Блок событий календаря на «Сегодня» и в днях «Предстоящих» |
 | [Checkbox](components/Checkbox.md) | Квадратный чекбокс задачи со скруглением 23 % стороны; отметка заливает его `accent` от центра и прорисовывает галочку. |
 | [DarkDialog](components/DarkDialog.md) | Тёмный модальный диалог в обеих темах: выбор проекта (Move), дата (When), теги, меню. Там же — светлый диалог подтверждения `ThingsConfirmDialog`. |
-| [DriveBackupCard](components/DriveBackupCard.md) | Карточка на главном экране: резервная копия задач в Google Drive и синхронизация между устройствами. |
+| [DriveBackupCard](components/DriveBackupCard.md) | Карточка на экране настроек: резервная копия задач в Google Drive и синхронизация между устройствами. |
 | [DropPlaceholder](components/DropPlaceholder.md) | Серая плашка, которая показывает, куда встанет перетаскиваемая задача, подзаголовок или новая задача из «+». |
 | [ProjectHeading](components/ProjectHeading.md) | Подзаголовок внутри проекта: название цветом `project`, кнопка «•••» с меню и тонкая линия под ним. |
 | [QuickFind](components/QuickFind.md) | Плавающая карточка быстрого поиска |
+| [Settings](components/Settings.md) | Строка «Налаштування» внизу главного экрана и экран настроек с синхронизацией Google Tasks и Google Drive. |
 | [SectionHeader](components/SectionHeader.md) | Подзаголовок секции списка — «Сегодня вечером», «Планы», «Когда-нибудь» — с цветным значком и линией под ним. |
 | [TagChip](components/TagChip.md) | Капсула тега в раскрытом редакторе и в окне быстрого добавления. |
 | [TaskEditor](components/TaskEditor.md) | Раскрытый на месте редактор задачи: белая карточка поверх затемнённого списка с названием, заметками и панелью свойств. |
