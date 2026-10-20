@@ -1,5 +1,7 @@
 package com.example.ui.screens.home.subcomponents
 
+import androidx.compose.ui.graphics.graphicsLayer
+import com.example.ui.components.foundHighlight
 import androidx.compose.material3.MaterialTheme
 import com.example.ui.theme.dimens
 import com.example.ui.theme.ThingsStroke
@@ -77,11 +79,19 @@ fun ProjectHeadingRow(
     onTitleCommit: (String) -> Unit,
     onArchive: () -> Unit,
     onDelete: () -> Unit,
-    modifier: Modifier = Modifier
+    modifier: Modifier = Modifier,
+    // Подзаголовок, к которому перешли из поиска: кратко подсвечивается, как найденная задача
+    isFound: Boolean = false
 ) {
     var showMenu by remember { mutableStateOf(false) }
+    val found = com.example.ui.components.rememberFoundHighlight(isFound)
 
-    Column(modifier = modifier.fillMaxWidth()) {
+    Column(
+        modifier = modifier
+            .fillMaxWidth()
+            .graphicsLayer { scaleX = found.scale; scaleY = found.scale }
+            .foundHighlight(found, ThingsTheme.shapes.rowShape)
+    ) {
         Row(
             modifier = Modifier
                 .fillMaxWidth()

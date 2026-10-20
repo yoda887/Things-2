@@ -283,4 +283,9 @@
     <string name="backup_error_server">Google Drive is temporarily unavailable. The app will try again later.</string>
     <string name="backup_offer_restore">There is a backup from %1$s on Google Drive. Restore your tasks from it on this phone?</string>
     <string name="settings_title">Settings</string>
+    <plurals name="tag_show_logged">
+        <item quantity="one">Show %d completed item</item>
+        <item quantity="other">Show %d completed items</item>
+    </plurals>
+    <string name="tag_hide_logged">Hide completed items</string>
 </resources>

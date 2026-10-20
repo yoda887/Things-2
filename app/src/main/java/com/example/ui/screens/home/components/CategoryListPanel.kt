@@ -1,5 +1,6 @@
 package com.example.ui.screens.home.components
 
+import androidx.compose.material.icons.automirrored.filled.ShortText
 import androidx.compose.ui.layout.findRootCoordinates
 import com.example.ui.screens.home.subcomponents.EXPANDED_BOTTOM_GAP
 import com.example.ui.screens.home.subcomponents.EXPANDED_TOP_LIMIT
@@ -439,7 +440,12 @@ fun ThingsCategoryListPanel(
         areas = areasState,
         savedTags = allSavedTagObjects,
         searchQuery = state.searchQuery,
-        headings = if (screen == ActiveScreen.PROJECT_DETAIL) localHeadings else emptyList(),
+        // Проект — его подзаголовки; поиск — все (находит их по названию)
+        headings = when (screen) {
+            ActiveScreen.PROJECT_DETAIL -> localHeadings
+            ActiveScreen.SEARCH -> state.allHeadings
+            else -> emptyList()
+        },
         pinnedPlaces = pinnedPlaces,
         expandedLaterProjects = expandedLaterProjects,
         showLoggedProjects = showLoggedProjects,
@@ -745,6 +751,8 @@ fun ThingsCategoryListPanel(
                         when (item) {
                             is ItemWithChecklist -> item.item.id == highlightedTaskId
                             is Item -> item.id == highlightedTaskId
+                            // Подзаголовок проекта, найденный поиском
+                            is ProjectHeadingItem -> item.heading.id == highlightedTaskId
                             else -> false
                         }
                     }
@@ -1208,6 +1216,7 @@ fun ThingsCategoryListPanel(
                         is SearchSectionHeaderItem -> item.key
                         is SearchAreaItem -> "search_area_${item.area.id}"
                         is SearchTagItem -> "search_tag_${item.tag.id}"
+                        is SearchHeadingItem -> "search_heading_${item.heading.id}"
                         is InboxMovedBannerItem -> TaskListKeys.INBOX_MOVED_BANNER
                         is InboxGhostItem -> "${TaskListKeys.INBOX_GHOST_PREFIX}${item.task.item.id}"
                         is ProjectHeadingItem -> item.key
@@ -1222,7 +1231,7 @@ fun ThingsCategoryListPanel(
                             } else item
                             AnimatedTaskItem(
                                 taskWrapper = liveItem,
-                                dateBadge = if (screen == ActiveScreen.UPCOMING) monthTaskBadges[item.item.id] else null,
+                                dateBadge = if (screen == ActiveScreen.UPCOMING) monthTaskBadges[UpcomingScreen.monthBadgeKey(item.item)] else null,
                                 dragDropState = dragDropState,
                                 inlineExpandedTaskId = inlineExpandedTaskId,
                                 editorOutsideTouch = editorOutsideTouch,
@@ -1311,7 +1320,7 @@ fun ThingsCategoryListPanel(
                                         LogbookList.includesProject(task)
                                     ) LogbookList.closedAt(task) else null,
                                     dateBadge = when (screen) {
-                                        ActiveScreen.UPCOMING -> monthTaskBadges[task.id]
+                                        ActiveScreen.UPCOMING -> monthTaskBadges[UpcomingScreen.monthBadgeKey(task)]
                                         // Шаблон проекта — день следующего повтора или «Пауза»
                                         // Шаблон проекта — день следующего повтора, «Пауза» или «Ждёт»; копия, созданная заранее, — её день
                                         ActiveScreen.REPEATING -> if (task.type == Item.TYPE_PROJECT_TEMPLATE) {
@@ -1536,6 +1545,7 @@ fun ThingsCategoryListPanel(
                                 }
                                 ProjectHeadingRow(
                                     heading = heading,
+                                    isFound = heading.id == highlightedTaskId,
                                     isEditing = editingHeadingId == heading.id,
                                     dividerColor = dividerColor,
                                     onStartEditing = { editingHeadingId = heading.id },
@@ -1598,6 +1608,23 @@ fun ThingsCategoryListPanel(
                                 },
                                 textPrimaryColor = textPrimaryColor,
                                 onClick = { onEvent(ThingsCategoryListEvent.ClickArea(item.area)) },
+                                modifier = Modifier.animateItem(placementSpec = placementSpec)
+                            )
+                        }
+                        is SearchHeadingItem -> {
+                            SearchEntityRow(
+                                title = item.heading.title,
+                                icon = {
+                                    Icon(
+                                        imageVector = Icons.AutoMirrored.Filled.ShortText,
+                                        contentDescription = null,
+                                        tint = ThingsTheme.colors.project,
+                                        modifier = Modifier.requiredSize(SEARCH_ROW_ICON_SIZE)
+                                    )
+                                },
+                                textPrimaryColor = textPrimaryColor,
+                                subtitle = item.projectTitle,
+                                onClick = { onEvent(ThingsCategoryListEvent.OpenHeading(item.heading)) },
                                 modifier = Modifier.animateItem(placementSpec = placementSpec)
                             )
                         }

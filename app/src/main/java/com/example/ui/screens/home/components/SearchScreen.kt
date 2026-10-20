@@ -18,8 +18,10 @@ object SearchScreen {
         areas: List<Area>,
         savedTags: List<Tag>,
         searchQuery: String,
-        headerLogbook: String
-    ): List<Any> = buildList { addSearchResults(matchedTasks, projects, areas, savedTags, searchQuery, headerLogbook) }
+        headerLogbook: String,
+        headings: List<Item> = emptyList(),
+        allTasks: List<ItemWithChecklist> = emptyList()
+    ): List<Any> = buildList { addSearchResults(matchedTasks, projects, areas, savedTags, searchQuery, headerLogbook, headings, allTasks) }
 }
 
 /**
@@ -32,7 +34,9 @@ private fun MutableList<Any>.addSearchResults(
     areas: List<Area>,
     savedTags: List<Tag>,
     searchQuery: String,
-    headerLogbook: String
+    headerLogbook: String,
+    headings: List<Item> = emptyList(),
+    allTasks: List<ItemWithChecklist> = emptyList()
 ) {
     val q = searchQuery.trim()
     if (q.isEmpty()) return
@@ -64,6 +68,10 @@ private fun MutableList<Any>.addSearchResults(
     addAll(matchedAreas.map { SearchAreaItem(it) })
     val matchedTags = savedTags.filter { it.title.isNotBlank() && it.title.contains(q, ignoreCase = true) }
     addAll(matchedTags.map { SearchTagItem(it) })
+    // Подзаголовки проектов (и шаблонов повторяющихся проектов) — после тегов, как в быстром поиске
+    val headingProjects = projects + allTasks.map { it.item }.filter { com.example.domain.lists.RepeatingList.includesProject(it) }
+    val projectTitles = headingProjects.associate { it.id to it.title }
+    addAll(com.example.domain.lists.SearchList.headings(headings, headingProjects, q).map { SearchHeadingItem(it, projectTitles[it.projectId]) })
 
     // 3. Открытые задачи по проектам и областям — в порядке главного экрана: сначала проекты
     // без области, затем каждая область — её задачи без проекта, потом её проекты

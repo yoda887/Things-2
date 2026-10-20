@@ -278,6 +278,8 @@ fun ThingsHomeScreen(viewModel: ThingsViewModel = hiltViewModel()) {
                         existing.area.id == item.area.id
                     existing is SearchResultItem.TagResult && item is SearchResultItem.TagResult -> 
                         existing.tag.id == item.tag.id
+                    existing is SearchResultItem.HeadingResult && item is SearchResultItem.HeadingResult ->
+                        existing.heading.id == item.heading.id
                     existing is SearchResultItem.SmartListResult && item is SearchResultItem.SmartListResult -> 
                         existing.screen == item.screen
                     else -> false
@@ -294,6 +296,18 @@ fun ThingsHomeScreen(viewModel: ThingsViewModel = hiltViewModel()) {
     // Project input fields
     
     val scope = rememberCoroutineScope()
+
+    /** Найденный поиском подзаголовок, как найденная задача: экран его проекта прокручивается к нему, он кратко подсвечивается */
+    fun openFoundHeading(heading: Item) {
+        selectedProject = (projects + projectTemplates).find { it.id == heading.projectId }
+        selectedArea = null
+        navigateTo(ActiveScreen.PROJECT_DETAIL, heading.projectId, crossfade = true)
+        viewModel.setHighlightedTaskId(heading.id)
+        scope.launch {
+            kotlinx.coroutines.delay(com.example.ui.components.FOUND_HIGHLIGHT_DELAY_MS + 1500)
+            if (viewModel.highlightedTaskId.value == heading.id) viewModel.setHighlightedTaskId(null)
+        }
+    }
     val rootView = androidx.compose.ui.platform.LocalView.current
 
     /**
@@ -325,7 +339,7 @@ fun ThingsHomeScreen(viewModel: ThingsViewModel = hiltViewModel()) {
         navigateTo(target, entity)
         viewModel.setHighlightedTaskId(item.id)
         scope.launch {
-            kotlinx.coroutines.delay(com.example.ui.screens.home.subcomponents.FOUND_HIGHLIGHT_DELAY_MS + 1500)
+            kotlinx.coroutines.delay(com.example.ui.components.FOUND_HIGHLIGHT_DELAY_MS + 1500)
             if (viewModel.highlightedTaskId.value == item.id) viewModel.setHighlightedTaskId(null)
         }
     }
@@ -647,6 +661,7 @@ fun ThingsHomeScreen(viewModel: ThingsViewModel = hiltViewModel()) {
                                     selectedArea = event.area
                                     navigateTo(ActiveScreen.AREA_DETAIL, event.area.id)
                                 }
+                                is ThingsCategoryListEvent.OpenHeading -> openFoundHeading(event.heading)
                                 is ThingsCategoryListEvent.ChangeInlineExpandedTaskId -> {
                                     viewModel.setInlineExpandedTaskId(event.taskId)
                                 }
@@ -946,8 +961,14 @@ fun ThingsHomeScreen(viewModel: ThingsViewModel = hiltViewModel()) {
                 ActiveScreen.LOGGED_PROJECTS to stringResource(R.string.special_logged_projects),
                 ActiveScreen.REPEATING to stringResource(R.string.special_repeating)
             )
+            val searchRepeatRules by viewModel.recurrenceRules.collectAsState()
+            val searchHeadings by viewModel.headings.collectAsState()
             if (isSearchOverlayActive) {
                 Box(modifier = Modifier.graphicsLayer { alpha = searchOverlayFade.value }) {
+                // Правила повтора — строкам шаблонов в результатах: день следующего повтора, как в списках
+                androidx.compose.runtime.CompositionLocalProvider(
+                    com.example.ui.components.LocalRepeatRules provides searchRepeatRules
+                ) {
                 ThingsSearchOverlay(
                     morphSource = searchMorphSource,
                     morphFromWideField = searchFromWideField,
@@ -967,6 +988,12 @@ fun ThingsHomeScreen(viewModel: ThingsViewModel = hiltViewModel()) {
                     cardSurfaceColor = cardSurfaceColor,
                     dividerColor = dividerColor,
                     onTaskToggle = { viewModel.toggleTaskCompletion(it) },
+                    headings = searchHeadings,
+                    onHeadingClick = { heading ->
+                        addToRecent(SearchResultItem.HeadingResult(heading))
+                        openFoundHeading(heading)
+                        leaveSearchOverlay()
+                    },
                     onTaskClick = { task ->
                         // [ИЗМЕНЕНИЕ]: Добавление задачи в недавно искавшиеся объекты
                         addToRecent(SearchResultItem.TaskResult(task))
@@ -1004,7 +1031,7 @@ fun ThingsHomeScreen(viewModel: ThingsViewModel = hiltViewModel()) {
                         viewModel.setHighlightedTaskId(task.item.id)
                         scope.launch {
                             // Подсветка начинается после паузы — время считается от её начала
-                            kotlinx.coroutines.delay(com.example.ui.screens.home.subcomponents.FOUND_HIGHLIGHT_DELAY_MS + 1500)
+                            kotlinx.coroutines.delay(com.example.ui.components.FOUND_HIGHLIGHT_DELAY_MS + 1500)
                             // Снимаем подсветку только если за это время не подсветили другую задачу
                             if (viewModel.highlightedTaskId.value == task.item.id) {
                                 viewModel.setHighlightedTaskId(null)
@@ -1058,6 +1085,7 @@ fun ThingsHomeScreen(viewModel: ThingsViewModel = hiltViewModel()) {
                         leaveSearchOverlay(keepQuery = true)
                     }
                 )
+                }
                 }
             }
 

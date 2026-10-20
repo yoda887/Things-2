@@ -26,6 +26,7 @@ class TagScreenTest {
             is ItemWithChecklist -> it.item.id
             is Item -> "project:${it.id}"
             is SearchSectionHeaderItem -> "header:${it.title}"
+            is ListToggleItem -> if (it.key == AllProjectsScreen.LOGGED_KEY) "toggle:logged" else "toggle:later"
             else -> it.toString()
         }
     }
@@ -54,9 +55,38 @@ class TagScreenTest {
             projects = listOf(project("p"), project("done", status = Item.STATUS_COMPLETED), project("home", tags = "home"))
         )
         assertEquals(
-            listOf("open", TaskListKeys.AREA_PROJECTS_SPACER, "project:p", "new", "old"),
+            listOf("open", TaskListKeys.AREA_PROJECTS_SPACER, "project:p", "toggle:logged", "new", "old"),
             ids(TagScreen.rows(content))
         )
+    }
+
+    @Test
+    fun laterAndCompleted_underToggles_hiddenUntilShown() {
+        val bounds = com.example.data.model.DayBounds.now()
+        val tomorrow = bounds.endOfToday + 3_600_000L
+        val now = task("now")
+        val planned = ItemWithChecklist(Item(id = "planned", title = "planned", cachedTags = "work", startDate = tomorrow))
+        val someday = ItemWithChecklist(Item(id = "someday", title = "someday", cachedTags = "work", start = Item.START_SOMEDAY))
+        val done = task("done", status = Item.STATUS_COMPLETED, stop = 5)
+        val laterProject = project("lp").copy(start = Item.START_SOMEDAY)
+        val content = TagList.content(
+            "work", tasks = listOf(now, planned, someday), allTasks = listOf(now, planned, someday, done),
+            projects = listOf(laterProject), bounds = bounds
+        )
+        assertEquals(3, content.laterCount)
+        // По умолчанию скрыты: видны только текущие и плашки
+        assertEquals(listOf("now", "toggle:later", "toggle:logged"), ids(TagScreen.rows(content, showLater = false, showLogged = false)))
+        // Раскрыты — поздние по месту перед своей плашкой, выполненные после своей
+        assertEquals(
+            listOf("now", "planned", "someday", TaskListKeys.AREA_PROJECTS_SPACER, "project:lp", "toggle:later", "toggle:logged", "done"),
+            ids(TagScreen.rows(content, showLater = true, showLogged = true))
+        )
+        // Задача в открытом редакторе не уходит под плашку, даже с поздней датой
+        val pinned = TagList.content(
+            "work", tasks = listOf(planned), allTasks = listOf(planned), projects = emptyList(),
+            pinned = mapOf("planned" to com.example.domain.lists.PlaceGroups.Place(null, null)), bounds = bounds
+        )
+        assertEquals(listOf("planned"), ids(TagScreen.rows(pinned, showLater = false, showLogged = false)))
     }
 
     @Test

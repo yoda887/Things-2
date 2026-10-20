@@ -201,6 +201,9 @@ data class SearchAreaItem(val area: Area)
 /** Найденный по названию тег. */
 data class SearchTagItem(val tag: Tag)
 
+/** Найденный по названию подзаголовок проекта ([projectTitle] — его проект, подписью). */
+data class SearchHeadingItem(val heading: Item, val projectTitle: String?)
+
 /**
  * Создает плоский список элементов для отображения в LazyColumn на основе текущего экрана и данных.
  */
@@ -238,6 +241,9 @@ fun rememberFlattenedList(
     val resources = androidx.compose.ui.platform.LocalContext.current.resources
     val showLoggedLabel = stringResource(R.string.all_projects_show_logged)
     val hideLoggedLabel = stringResource(R.string.all_projects_hide_logged)
+    val tagShowLaterLabel = stringResource(R.string.area_show_later_items)
+    val tagHideLaterLabel = stringResource(R.string.area_hide_later_items)
+    val tagHideLoggedLabel = stringResource(R.string.tag_hide_logged)
     return remember(inboxGhosts, repeatRules, expandedLaterProjects, showLoggedProjects, resources, screen, standardToday, eveningToday, headerLogbook, todayLabel, yesterdayLabel, draggedItemKey, upcomingDays, upcomingMonths, projects, area, displayTasks, isLaterItemsHidden, tag, allTasks, areas, savedTags, searchQuery, headings, pinnedPlaces) {
         // Все экраны перечислены явно (без else): новый экран компилятор заставит указать и здесь
         when (screen) {
@@ -245,11 +251,20 @@ fun rememberFlattenedList(
             ActiveScreen.UPCOMING -> UpcomingScreen.rows(upcomingDays, upcomingMonths)
             ActiveScreen.AREA_DETAIL -> AreaScreen.rows(AreaList.content(area?.id, displayTasks, projects), isLaterItemsHidden)
             ActiveScreen.LOGBOOK -> LogbookScreen.rows(LogbookList.sections(displayTasks, projects), todayLabel, yesterdayLabel)
-            ActiveScreen.TAG_DETAIL -> TagScreen.rows(TagList.content(tag?.title, displayTasks, allTasks, projects, areas, pinnedPlaces))
+            // Поздние и выполненные — под плашками, по умолчанию скрыты (состояние плашек — как у «Всех проектов»)
+            ActiveScreen.TAG_DETAIL -> TagScreen.rows(
+                TagList.content(tag?.title, displayTasks, allTasks, projects, areas, pinnedPlaces),
+                showLater = TagScreen.LATER_KEY in expandedLaterProjects,
+                showLogged = showLoggedProjects,
+                laterLabel = { shown -> if (shown) tagHideLaterLabel else tagShowLaterLabel },
+                loggedLabel = { shown, count ->
+                    if (shown) tagHideLoggedLabel else resources.getQuantityString(R.plurals.tag_show_logged, count, count)
+                }
+            )
             ActiveScreen.PROJECT_DETAIL -> ProjectScreen.rows(displayTasks, headings, draggedItemKey)
             ActiveScreen.ANYTIME -> PlaceGroupRows.rows(AnytimeList.groups(displayTasks, projects, areas, pinnedPlaces))
             ActiveScreen.SOMEDAY -> PlaceGroupRows.rows(SomedayList.groups(displayTasks, projects, areas, pinnedPlaces))
-            ActiveScreen.SEARCH -> SearchScreen.rows(displayTasks, projects, areas, savedTags, searchQuery, headerLogbook)
+            ActiveScreen.SEARCH -> SearchScreen.rows(displayTasks, projects, areas, savedTags, searchQuery, headerLogbook, headings, allTasks)
             // «Входящие» — задачи как есть, под ними внизу — плашка и ушедшие оттуда задачи; у главного экрана списка нет
             ActiveScreen.INBOX -> if (inboxGhosts.isEmpty()) displayTasks else {
                 // Под задачами «Входящих» плашка стоит после промежутка, как блок проектов под задачами
@@ -354,6 +369,8 @@ sealed interface ThingsCategoryListEvent {
     data class ClickTask(val task: ItemWithChecklist) : ThingsCategoryListEvent
     data class ClickProject(val project: Item) : ThingsCategoryListEvent
     data class ClickArea(val area: Area) : ThingsCategoryListEvent
+    /** Найденный поиском подзаголовок: в его проект, к нему — как к найденной задаче */
+    data class OpenHeading(val heading: Item) : ThingsCategoryListEvent
     data class ChangeInlineExpandedTaskId(val taskId: String?) : ThingsCategoryListEvent
     /** Плашка «Без проєкту» под раскрытой задачей: открыть окно «Перемістити» */
     object RequestMoveDialog : ThingsCategoryListEvent

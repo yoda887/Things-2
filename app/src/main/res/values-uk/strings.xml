@@ -290,4 +290,11 @@
     <string name="backup_error_server">Google Drive тимчасово недоступний. Застосунок спробує пізніше.</string>
     <string name="backup_offer_restore">На Google Drive є копія від %1$s. Відновити з неї завдання на цьому телефоні?</string>
     <string name="settings_title">Налаштування</string>
+    <plurals name="tag_show_logged">
+        <item quantity="one">Показати %d виконане</item>
+        <item quantity="few">Показати %d виконані</item>
+        <item quantity="many">Показати %d виконаних</item>
+        <item quantity="other">Показати %d виконаного</item>
+    </plurals>
+    <string name="tag_hide_logged">Сховати виконані</string>
 </resources>

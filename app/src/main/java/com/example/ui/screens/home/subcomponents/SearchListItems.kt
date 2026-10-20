@@ -219,7 +219,8 @@ fun SearchSectionHeader(
 }
 
 /**
- * Строка найденной области или тега — в той же раскладке, что строка проекта в списках.
+ * Строка найденной области, тега или подзаголовка — в той же раскладке, что строка проекта в списках.
+ * [subtitle] — вторая строка (у подзаголовка — его проект).
  */
 @Composable
 fun SearchEntityRow(
@@ -227,7 +228,8 @@ fun SearchEntityRow(
     icon: @Composable () -> Unit,
     textPrimaryColor: Color,
     onClick: () -> Unit,
-    modifier: Modifier = Modifier
+    modifier: Modifier = Modifier,
+    subtitle: String? = null
 ) {
     Row(
         modifier = modifier
@@ -248,15 +250,24 @@ fun SearchEntityRow(
             icon()
         }
         Spacer(modifier = Modifier.width(MaterialTheme.dimens.taskSpacingToTextDefault))
-        Text(
-            text = title,
-            style = ThingsTheme.type.listTitle.copy(
-                color = textPrimaryColor
-            ),
-            maxLines = 1,
-            overflow = TextOverflow.Ellipsis,
-            modifier = Modifier.weight(1f, fill = false)
-        )
+        Column(modifier = Modifier.weight(1f, fill = false)) {
+            Text(
+                text = title,
+                style = ThingsTheme.type.listTitle.copy(
+                    color = textPrimaryColor
+                ),
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis
+            )
+            if (subtitle != null) {
+                Text(
+                    text = subtitle,
+                    style = ThingsTheme.type.taskSubtitle.copy(color = ThingsTheme.colors.textSecondary),
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis
+                )
+            }
+        }
         Spacer(modifier = Modifier.width(CHEVRON_GAP))
         Icon(
             imageVector = Icons.AutoMirrored.Filled.KeyboardArrowRight,

@@ -1,5 +1,6 @@
 package com.example.ui.screens.home.subcomponents
 
+import com.example.ui.components.foundHighlight
 import androidx.compose.material.icons.filled.Notifications
 import com.example.ui.viewmodel.ActiveScreen
 import com.example.R
@@ -55,13 +56,6 @@ private val ROW_CHECKBOX_COLUMN_START = 10.dp
 
 private const val COMPLETION_FILL_MS = 350
 
-// Подсветка найденной задачи — по кадрам эталона Things 3
-private const val FOUND_GLOW_IN_MS = 160
-private const val FOUND_GLOW_HOLD_MS = 80L
-private const val FOUND_GLOW_OUT_MS = 720
-private const val FOUND_SCALE_DELAY_MS = 40L
-private const val FOUND_SCALE_UP_MS = 60
-private const val FOUND_SCALE_DOWN_MS = 650
 // Импульс нажатия чекбокса
 private const val TITLE_PRESS_MS = 70L
 private const val CARD_PRESS_MS = 50L
@@ -73,9 +67,6 @@ private const val ROW_META_ICON_ALPHA = ThingsAlpha.HALF
 private val ROW_REPEAT_ICON_SIZE = 15.dp
 private val DUE_ICON_SIZE = 15.dp
 private const val DUE_TEXT_ALPHA = 0.85f
-
-/** Пауза перед подсветкой найденной задачи: экран успевает открыться и докрутить до неё */
-const val FOUND_HIGHLIGHT_DELAY_MS = 450L
 
 /**
  * TaskItemRow: Renders the complete, highly responsive checklist item with custom 
@@ -174,27 +165,7 @@ fun TaskItemRow(
     // Найденная в Quick Find задача, по кадрам эталона Things 3: после паузы строка за 160 мс
     // заливается светло-жёлтым и почти сразу (60 мс) вырастает до 1.05 вместе со всем содержимым,
     // затем за ~650 мс плавно возвращается к своему размеру, а жёлтый за ~720 мс растворяется
-    val foundGlow = remember { androidx.compose.animation.core.Animatable(0f) }
-    val foundScale = remember { androidx.compose.animation.core.Animatable(1f) }
-    LaunchedEffect(isFound) {
-        if (isFound) {
-            delay(FOUND_HIGHLIGHT_DELAY_MS)
-            launch {
-                foundGlow.animateTo(1f, androidx.compose.animation.core.tween(FOUND_GLOW_IN_MS, easing = androidx.compose.animation.core.LinearEasing))
-                delay(FOUND_GLOW_HOLD_MS)
-                foundGlow.animateTo(0f, androidx.compose.animation.core.tween(FOUND_GLOW_OUT_MS, easing = androidx.compose.animation.core.LinearOutSlowInEasing))
-            }
-            delay(FOUND_SCALE_DELAY_MS)
-            foundScale.animateTo(1.05f, androidx.compose.animation.core.tween(FOUND_SCALE_UP_MS, easing = androidx.compose.animation.core.LinearEasing))
-            foundScale.animateTo(1f, androidx.compose.animation.core.tween(FOUND_SCALE_DOWN_MS, easing = androidx.compose.animation.core.LinearOutSlowInEasing))
-        } else {
-            foundGlow.snapTo(0f)
-            foundScale.snapTo(1f)
-        }
-    }
-
-    val foundGlowColor = ThingsTheme.colors.searchMatchHighlight
-    val rowShapeForGlow = ThingsTheme.shapes.rowShape
+    val found = com.example.ui.components.rememberFoundHighlight(isFound)
     val highlightColor = when {
         // Выделенная строка результатов Quick Find — 30 % акцента
         isHighlighted -> ThingsTheme.colors.accent.copy(alpha = ThingsAlpha.LOW)
@@ -254,16 +225,14 @@ fun TaskItemRow(
             .height(MaterialTheme.dimens.rowHeight)
             .graphicsLayer {
                 translationY = dragOffsetY
-                scaleX = scale * cardScale * foundScale.value
-                scaleY = scale * cardScale * foundScale.value
+                scaleX = scale * cardScale * found.scale
+                scaleY = scale * cardScale * found.scale
             }
             .shadow(elevation, ThingsTheme.shapes.rowShape)
             .background(animatedRowBgColor, ThingsTheme.shapes.rowShape)
             .selectionTint(animatedRowTint, ThingsTheme.shapes.rowShape)
-            // Жёлтый найденной задачи — поверх, по кадрам своей анимации (без сглаживания фона)
-            .drawBehind {
-                if (foundGlow.value > 0f) drawOutline(rowShapeForGlow.createOutline(size, layoutDirection, this), foundGlowColor.copy(alpha = foundGlow.value))
-            }
+            // Жёлтый найденной задачи — поверх всей строки (foreground), как выделение
+            .foundHighlight(found, ThingsTheme.shapes.rowShape)
             .clip(ThingsTheme.shapes.rowShape)
             .drawBehind {
                 if (localCompleted && completionFillProgress > 0f && !isSearchLogbookStyle) {
@@ -383,7 +352,9 @@ fun TaskItemRow(
             // и центрируется по вертикали, а заголовок с подписью идут после неё
             // У шаблона повтора вместо даты — день следующего повтора или «Пауза», на любом экране: свои дата
             // и «Сегодня» у шаблона ничего не значат (в раскрытом шаблоне — тоже день следующего повтора)
-            val repeatRule = if (task.isRepeatTemplate) {
+            // В «Планах» шаблон стоит на днях своих повторов, как обычная задача: в дневных разделах без плашки,
+            // в месячных — плашка дня этого повтора (число и месяц), её даёт экран через dateBadge
+            val repeatRule = if (task.isRepeatTemplate && screen != ActiveScreen.UPCOMING) {
                 com.example.ui.components.LocalRepeatRules.current[task.id]
             } else null
             val repeatBadge = com.example.ui.components.repeatBadge(repeatRule)

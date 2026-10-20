@@ -32,6 +32,9 @@ import androidx.compose.foundation.text.BasicTextField
 import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.ShortText
+import androidx.compose.material.icons.automirrored.filled.ShortText
+import androidx.compose.material.icons.automirrored.filled.ShortText
 import androidx.compose.material.icons.filled.*
 import androidx.compose.material.icons.outlined.*
 import androidx.compose.material3.*
@@ -211,6 +214,9 @@ fun ThingsSearchOverlay(
     modifier: Modifier = Modifier,
     allSavedTagObjects: List<Tag> = emptyList(),
     onTagClick: (Tag) -> Unit = {},
+    // Подзаголовки проектов — их находит поиск, нажатие ведёт к подзаголовку в проекте
+    headings: List<Item> = emptyList(),
+    onHeadingClick: (Item) -> Unit = {},
     // [ИЗМЕНЕНИЕ]: Список недавно искавшихся/выбранных в поиске объектов
     recentSearchItems: List<SearchResultItem> = emptyList(),
     onContinueSearchClick: () -> Unit = {},
@@ -355,7 +361,7 @@ fun ThingsSearchOverlay(
         ActiveScreen.LOGGED_PROJECTS to "Logged Projects",
         ActiveScreen.REPEATING to "Repeating"
     )
-    val searchResults = remember(searchQuery, allTasks, projects, areas, allSavedTagObjects, smartListNames) {
+    val searchResults = remember(searchQuery, allTasks, projects, areas, allSavedTagObjects, smartListNames, headings) {
         if (searchQuery.isBlank()) {
             emptyList<SearchResultItem>()
         } else {
@@ -391,6 +397,10 @@ fun ThingsSearchOverlay(
             }
             results.addAll(matchedTags.map { SearchResultItem.TagResult(it) })
 
+            // Подзаголовки проектов — после проектов, областей и тегов, перед задачами
+            val headingProjects = projects + allTasks.map { it.item }.filter { com.example.domain.lists.RepeatingList.includesProject(it) }
+            results.addAll(com.example.domain.lists.SearchList.headings(headings, headingProjects, query).map { SearchResultItem.HeadingResult(it) })
+
             // 3. Поиск по задачам (только активные по названию, заметкам, чеклистам; исключая удаленные и завершенные/отмененные).
             // Повторяющиеся задачи (шаблоны) находятся тоже — со своим значком, как в «Повторяющихся»; их копии — обычные задачи
             val matchedTasks = allTasks.filter { wrapper ->
@@ -414,6 +424,7 @@ fun ThingsSearchOverlay(
             is SearchResultItem.ProjectResult -> onProjectClick(first.project)
             is SearchResultItem.AreaResult -> onAreaClick(first.area)
             is SearchResultItem.TagResult -> onTagClick(first.tag)
+            is SearchResultItem.HeadingResult -> onHeadingClick(first.heading)
             is SearchResultItem.SmartListResult -> onSmartListClick(first.screen)
             is SearchResultItem.SpecialResult -> onSmartListClick(ActiveScreen.INBOX)
             null -> onContinueSearchClick()
@@ -734,6 +745,9 @@ fun ThingsSearchOverlay(
                                             SearchResultItem.AreaResult(currentArea)
                                         } else null
                                     }
+                                    is SearchResultItem.HeadingResult -> {
+                                        headings.find { it.id == item.heading.id && !it.trashed }?.let { SearchResultItem.HeadingResult(it) }
+                                    }
                                     is SearchResultItem.TagResult -> {
                                         val currentTag = allSavedTagObjects.find { it.id == item.tag.id }
                                         if (currentTag != null) {
@@ -785,6 +799,7 @@ fun ThingsSearchOverlay(
                                         onProjectClick = onProjectClick,
                                         onAreaClick = onAreaClick,
                                         onTagClick = onTagClick,
+                                        onHeadingClick = onHeadingClick,
                                         onSmartListClick = onSmartListClick,
                                         onTaskToggle = onTaskToggle
                                     )
@@ -860,6 +875,7 @@ fun ThingsSearchOverlay(
                                         onProjectClick = onProjectClick,
                                         onAreaClick = onAreaClick,
                                         onTagClick = onTagClick,
+                                        onHeadingClick = onHeadingClick,
                                         onSmartListClick = onSmartListClick,
                                         onTaskToggle = onTaskToggle
                                     )
@@ -981,6 +997,8 @@ sealed class SearchResultItem {
     data class TagResult(val tag: Tag) : SearchResultItem()
     data class ProjectResult(val project: Item) : SearchResultItem()
     data class TaskResult(val taskWrapper: ItemWithChecklist) : SearchResultItem()
+    /** Подзаголовок проекта: нажатие — в проект, к подзаголовку */
+    data class HeadingResult(val heading: Item) : SearchResultItem()
 }
 
 @Composable
@@ -998,11 +1016,53 @@ fun SearchResultRow(
     onProjectClick: (Item) -> Unit,
     onAreaClick: (Area) -> Unit,
     onTagClick: (Tag) -> Unit = {},
+    onHeadingClick: (Item) -> Unit = {},
     onSmartListClick: (ActiveScreen) -> Unit,
     onTaskToggle: (ItemWithChecklist) -> Unit = {}
 ) {
     val accentColor = ThingsTheme.colors.accent
     when (result) {
+        is SearchResultItem.HeadingResult -> {
+            // Подзаголовок — его названием цветом проекта, как в самом проекте; под ним — проект
+            val rowBg = if (isHighlighted) accentColor.copy(alpha = ThingsAlpha.LOW) else Color.Transparent
+            val projectTitle = (projects + allTasks.map { it.item }).firstOrNull { it.id == result.heading.projectId }?.title
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(MaterialTheme.dimens.quickFindRowHeight)
+                    .clip(ThingsTheme.shapes.capsuleShape)
+                    .selectionTint(rowBg)
+                    .clickable { onHeadingClick(result.heading) }
+                    .padding(start = ThingsSpacing.S, end = ThingsSpacing.M),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Box(modifier = Modifier.size(MaterialTheme.dimens.searchLeftColumnWidth), contentAlignment = Alignment.Center) {
+                    Icon(
+                        imageVector = Icons.AutoMirrored.Filled.ShortText,
+                        contentDescription = null,
+                        tint = ThingsTheme.colors.project,
+                        modifier = Modifier.requiredSize(ThingsIconSize.M)
+                    )
+                }
+                Spacer(modifier = Modifier.width(MaterialTheme.dimens.searchSpacingToText))
+                Column(modifier = Modifier.weight(1f)) {
+                    Text(
+                        text = result.heading.title,
+                        style = ThingsTheme.type.listTitleStrong.copy(color = ThingsTheme.colors.project),
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis
+                    )
+                    if (projectTitle != null) {
+                        Text(
+                            text = projectTitle,
+                            style = ThingsTheme.type.taskSubtitle.copy(color = textSecondary),
+                            maxLines = 1,
+                            overflow = TextOverflow.Ellipsis
+                        )
+                    }
+                }
+            }
+        }
         is SearchResultItem.TaskResult -> {
             TaskItemRow(
                 task = result.taskWrapper.item,

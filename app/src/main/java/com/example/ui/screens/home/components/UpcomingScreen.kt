@@ -76,13 +76,18 @@ object UpcomingScreen {
             )
         }
 
-        // Плашки с датой в месячных разделах — у задач и у проектов
+        // Плашки с датой в месячных разделах — у задач и у проектов. Ключ — id и день ([monthBadgeKey]): шаблон
+        // повторяющейся задачи стоит на экране несколько раз (в дни своих повторов) с одним id, и плашка месяца
+        // не должна доставаться его строкам в дневных разделах
         val monthTaskBadges = plan.periods.flatMap { it.tasks }
-            .associate { it.item.id to dayBadgeFormat.format(Date(it.item.startDate ?: 0L)) } +
-            plan.periods.flatMap { it.projects }.associate { it.id to dayBadgeFormat.format(Date(it.startDate ?: 0L)) }
+            .associate { monthBadgeKey(it.item) to dayBadgeFormat.format(Date(it.item.startDate ?: 0L)) } +
+            plan.periods.flatMap { it.projects }.associate { monthBadgeKey(it) to dayBadgeFormat.format(Date(it.startDate ?: 0L)) }
 
         return UpcomingSchedule(days = days, months = months, monthTaskBadges = monthTaskBadges)
     }
+
+    /** Ключ плашки даты месячного раздела: id и день (у шаблона повтора — день его повтора на этом месте) */
+    fun monthBadgeKey(item: Item): String = "${item.id}@${item.startDate}"
 
     /** Строки списка экрана: заголовок дня, события календаря, задачи; затем месяцы так же. */
     fun rows(upcomingDays: List<UpcomingDay>, upcomingMonths: List<UpcomingMonth>): List<Any> = buildList {
