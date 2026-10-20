@@ -1,0 +1,38 @@
+{
+  "desktop": "../Things Desktop",
+  "phone_only": [
+    "data/backup/DriveAuth.kt",
+    "data/backup/DriveBackupManager.kt",
+    "data/backup/DriveBackupWorker.kt",
+    "data/local/SyncTriggers.kt",
+    "data/sync/SyncAutoRun.kt",
+    "data/sync/SyncManager.kt",
+    "data/sync/SyncWorker.kt",
+    "reminders/ReminderSnoozeActivity.kt",
+    "ui/backup/DriveBackupCard.kt",
+    "ui/backup/DriveBackupViewModel.kt",
+    "test/data/backup/DriveBackupTest.kt",
+    "test/data/model/ItemConstantsTest.kt",
+    "test/ui/theme/DesignSystemDocGenerator.kt",
+    "test/ui/theme/DesignSystemDocSyncTest.kt",
+    "test/ui/theme/DesignSystemEnforcementTest.kt",
+    "test/ui/theme/StringsTranslationTest.kt"
+  ],
+  "desktop_owned": [
+    "ThingsApplication.kt",
+    "di/DatabaseModule.kt",
+    "data/local/AppDatabase.kt",
+    "data/local/Migrations.kt",
+    "data/local/DatabaseSeeder.kt",
+    "data/backup/DatabaseBackup.kt",
+    "data/backup/DriveBackupApi.kt",
+    "data/backup/DriveFiles.kt",
+    "data/sync/SyncDatabase.kt",
+    "reminders/ReminderReceiver.kt",
+    "repeat/RepeatSync.kt",
+    "ui/components/SoftKeyboard.kt",
+    "ui/screens/settings/SettingsScreen.kt",
+    "ui/screens/home/HomeScreen.kt",
+    "data/local/DeviceCalendarDataSource.kt"
+  ]
+}
