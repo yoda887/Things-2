@@ -1218,7 +1218,9 @@ fun ThingsCategoryListPanel(
                         is SearchTagItem -> "search_tag_${item.tag.id}"
                         is SearchHeadingItem -> "search_heading_${item.heading.id}"
                         is InboxMovedBannerItem -> TaskListKeys.INBOX_MOVED_BANNER
-                        is InboxGhostItem -> "${TaskListKeys.INBOX_GHOST_PREFIX}${item.task.item.id}"
+                        // Ушедшая из «Входящих» — тот же ключ, что у задачи в списке: строка съезжает под плашку, а не
+                        // исчезает и появляется заново (в списке и под плашкой одна задача не стоит — InboxMoves.ghosts)
+                        is InboxGhostItem -> item.task.item.id
                         is ProjectHeadingItem -> item.key
                         else -> item.toString()
                     }

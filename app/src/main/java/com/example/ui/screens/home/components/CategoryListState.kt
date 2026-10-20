@@ -134,9 +134,6 @@ object TaskListKeys {
     /** Плашка «N завдань переміщено з «Вхідних»» */
     const val INBOX_MOVED_BANNER = "inbox_moved_banner"
 
-    /** Ушедшая из «Входящих» задача под плашкой — ключ строки с id задачи */
-    const val INBOX_GHOST_PREFIX = "inbox_ghost_"
-
     /** Префикс заголовка дня на экране «Предстоящие» */
     const val DAY_HEADER_PREFIX = "hdr_"
 
@@ -266,10 +263,16 @@ fun rememberFlattenedList(
             ActiveScreen.SOMEDAY -> PlaceGroupRows.rows(SomedayList.groups(displayTasks, projects, areas, pinnedPlaces))
             ActiveScreen.SEARCH -> SearchScreen.rows(displayTasks, projects, areas, savedTags, searchQuery, headerLogbook, headings, allTasks)
             // «Входящие» — задачи как есть, под ними внизу — плашка и ушедшие оттуда задачи; у главного экрана списка нет
-            ActiveScreen.INBOX -> if (inboxGhosts.isEmpty()) displayTasks else {
-                // Под задачами «Входящих» плашка стоит после промежутка, как блок проектов под задачами
-                val gap = if (displayTasks.isEmpty()) emptyList() else listOf(TaskListKeys.AREA_PROJECTS_SPACER)
-                displayTasks + gap + InboxMovedBannerItem(inboxGhosts.size) + inboxGhosts.map { InboxGhostItem(it) }
+            ActiveScreen.INBOX -> {
+                // Ушедшая задача, что ещё стоит в списке (раскрыта в редакторе — снимком), под плашкой не дублируется:
+                // у строки под плашкой тот же ключ, она съедет туда, когда редактор закроется
+                val shownIds = displayTasks.mapTo(HashSet()) { it.item.id }
+                val ghosts = inboxGhosts.filter { it.item.id !in shownIds }
+                if (ghosts.isEmpty()) displayTasks else {
+                    // Под задачами «Входящих» плашка стоит после промежутка, как блок проектов под задачами
+                    val gap = if (displayTasks.isEmpty()) emptyList() else listOf(TaskListKeys.AREA_PROJECTS_SPACER)
+                    displayTasks + gap + InboxMovedBannerItem(ghosts.size) + ghosts.map { InboxGhostItem(it) }
+                }
             }
             ActiveScreen.HOME -> displayTasks
             ActiveScreen.ALL_PROJECTS -> AllProjectsScreen.rows(
