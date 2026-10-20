@@ -873,7 +873,9 @@ fun ThingsWhenDialog(
                 }
 
                 // Кнопка "Clear" для сброса даты в "Anytime" (форма полной пилюли, малиново-красный цвет)
-                val hasTimeAssignment = startDate != null || section != TaskSection.ANYTIME
+                // Есть что очищать: дата или раздел, который задаёт это окно (Сегодня, вечер, Планы, Когда-нибудь).
+                // «Входящие» и «В любое время» — без «Очистить»: у новой задачи во «Входящих» срока нет, как в Things
+                val hasTimeAssignment = startDate != null || (section != TaskSection.ANYTIME && section != TaskSection.INBOX)
                 SideEffect { clearShown = hasTimeAssignment }
                 androidx.compose.animation.AnimatedVisibility(
                     visible = hasTimeAssignment,
