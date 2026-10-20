@@ -1,5 +1,7 @@
 package com.example.ui.screens.home.inlineeditor
 
+import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.layout.onSizeChanged
 import kotlinx.coroutines.launch
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Stop
@@ -539,14 +541,20 @@ fun ThingsTaskInlineEditor(
             } else Color.Unspecified
 
             val startRelativePadding = MaterialTheme.dimens.taskEditorStartRelativePadding
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                verticalAlignment = Alignment.Bottom
-            ) {
+            // Иконки справа — в правом нижнем углу блока. Строки слева во всю ширину; только нижняя оставляет им место
+            // и стоит с ними на одном уровне (теги переносятся вокруг иконок, как текст вокруг картинки)
+            var actionIconsSize by remember { mutableStateOf(androidx.compose.ui.unit.IntSize.Zero) }
+            val iconsDensity = LocalDensity.current
+            val iconsReserve = with(iconsDensity) { actionIconsSize.width.toDp() } + ThingsSpacing.L
+            val iconsHeight = with(iconsDensity) { actionIconsSize.height.toDp() }
+            // Строка повтора — под тегами, над датой, дедлайном и иконками, во всю ширину (в одну строку)
+            val hasRepeatRow = task.item.isRepeatTemplate || task.item.isRepeatCopy
+            val tagsAreLast = !hasActiveDate && dueDate == null && !hasRepeatRow
+            Box(modifier = Modifier.fillMaxWidth()) {
                 // Column containing BOTH date and duedate on the left
                 Column(
                     modifier = Modifier
-                        .weight(1f)
+                        .fillMaxWidth()
                         .padding(start = startRelativePadding),
                     verticalArrangement = Arrangement.Center
                 ) {
@@ -567,6 +575,8 @@ fun ThingsTaskInlineEditor(
                             activeTags.forEach { tag ->
                                 Box(
                                     modifier = Modifier
+                                        // Нижний край — по строке: последняя строка стоит ровно с иконками справа
+                                        .align(Alignment.Bottom)
                                         .clip(ThingsTheme.shapes.chipShape)
                                         .background(ThingsTheme.colors.tagChipBackground) // light-teal background
                                         .clickable {
@@ -586,10 +596,24 @@ fun ThingsTaskInlineEditor(
                                     )
                                 }
                             }
+                            // Теги — нижняя строка: место под иконки в конце последней строки (или новая строка, если не помещаются)
+                            if (tagsAreLast) Spacer(modifier = Modifier.width(iconsReserve).height(iconsHeight))
                         }
 
-                        if (hasActiveDate || dueDate != null) {
+                        if (hasActiveDate || dueDate != null || hasRepeatRow) {
                             Spacer(modifier = Modifier.height(MaterialTheme.dimens.taskEditorTagsToDateSpacer))
+                        }
+                    }
+
+                    // Повтор — под тегами, над датой и дедлайном, во всю ширину: у шаблона — правило и меню действий,
+                    // у копии — что это копия, и переход к шаблону (правило — в плашке повтора под карточкой, AnimatedTaskItem)
+                    if (hasRepeatRow) {
+                        RepeatEditorRow(task.item, onRepeatAction, onOpenRepeatTemplate)
+                        if (hasActiveDate || dueDate != null) {
+                            Spacer(modifier = Modifier.height(MaterialTheme.dimens.taskEditorDateToDeadlineSpacer))
+                        } else {
+                            // Ни даты, ни дедлайна — иконки на своей строке под повтором
+                            Spacer(modifier = Modifier.height(iconsHeight))
                         }
                     }
 
@@ -598,6 +622,7 @@ fun ThingsTaskInlineEditor(
                         Row(
                             verticalAlignment = Alignment.CenterVertically,
                             modifier = Modifier
+                                .padding(end = if (dueDate == null) iconsReserve else ThingsSpacing.NONE)
                                 .clickable {
                                     view.performHapticFeedback(HapticFeedbackConstants.CLOCK_TICK)
                                     showWhenDialog = true
@@ -682,6 +707,7 @@ fun ThingsTaskInlineEditor(
                         Row(
                             verticalAlignment = Alignment.CenterVertically,
                             modifier = Modifier
+                                .padding(end = iconsReserve)
                                 .clickable {
                                     view.performHapticFeedback(HapticFeedbackConstants.CLOCK_TICK)
                                     showDatePicker = true
@@ -714,23 +740,16 @@ fun ThingsTaskInlineEditor(
                             )
                         }
                     }
-
-                    // 3. Повтор — под датой и дедлайном: у шаблона — правило и меню действий, у копии — что это
-                    // копия, и переход к шаблону (правило — в плашке повтора под карточкой, AnimatedTaskItem)
-                    if (task.item.isRepeatTemplate || task.item.isRepeatCopy) {
-                        if (hasActiveDate || dueDate != null) {
-                            Spacer(modifier = Modifier.height(MaterialTheme.dimens.taskEditorDateToDeadlineSpacer))
-                        }
-                        RepeatEditorRow(task.item, onRepeatAction, onOpenRepeatTemplate)
-                    }
                 }
 
-                Spacer(modifier = Modifier.width(ThingsSpacing.L))
 
                 // Action Icons Row on the right
                 Row(
                     verticalAlignment = Alignment.CenterVertically,
-                    modifier = Modifier.padding(bottom = ThingsSpacing.XS) // Align slightly with indicator row text/icon padding
+                    modifier = Modifier
+                        .align(Alignment.BottomEnd)
+                        .onSizeChanged { actionIconsSize = it }
+                        .padding(bottom = ThingsSpacing.XS) // Align slightly with indicator row text/icon padding
                 ) {
                     androidx.compose.animation.AnimatedVisibility(
                         // У шаблона повтора «Когда» задаёт правило — кнопки нет
@@ -1015,10 +1034,13 @@ internal fun RepeatEditorRow(
                 Icon(AppIcons.RepeatCopy, contentDescription = null, tint = ThingsTheme.colors.textSecondary, modifier = Modifier.size(ThingsIconSize.S))
             }
             Spacer(modifier = Modifier.width(ThingsSpacing.XS_PLUS))
-            // Шаблон — «Повтор» обычным размером, как строка даты; копия — мельче. Переносится, если не помещается
+            // Шаблон и копия — обычным размером, как строка даты. В одну строку (троеточие — только если не помещается
+            // и во всю ширину: узкий экран, крупный шрифт)
             Text(
                 text = text,
-                style = (if (isTemplate) ThingsTheme.type.editorDate else ThingsTheme.type.subhead).copy(color = ThingsTheme.colors.editorText),
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis,
+                style = ThingsTheme.type.editorDate.copy(color = ThingsTheme.colors.editorText),
                 modifier = Modifier.weight(1f, fill = false)
             )
             if (!isTemplate) {
@@ -1046,5 +1068,5 @@ internal fun RepeatEditorRow(
     }
 }
 
-/** Строка «Повтор» шаблона показывает столько ближайших дат повторов */
-private const val REPEAT_UPCOMING_SHOWN = 1
+/** Строка «Повтор» шаблона показывает столько ближайших дат повторов («22 жовт., 29 жовт.…»; троеточие — если есть ещё) */
+private const val REPEAT_UPCOMING_SHOWN = 2

@@ -1,5 +1,6 @@
 package com.example.ui.screens.home.inlineeditor.dialogs
 
+import androidx.compose.ui.layout.onSizeChanged
 import android.view.HapticFeedbackConstants
 import androidx.compose.material.icons.filled.Notifications
 import com.example.R
@@ -427,14 +428,19 @@ fun QuickAddDialog(
 
                     val startRelativePadding = MaterialTheme.dimens.taskEditorStartRelativePadding
 
-                    Row(
-                        modifier = Modifier.fillMaxWidth(),
-                        verticalAlignment = Alignment.Bottom
-                    ) {
+                    // Иконки справа — в правом нижнем углу блока. Строки слева во всю ширину; только нижняя оставляет им место
+                    // и стоит с ними на одном уровне (теги переносятся вокруг иконок, как текст вокруг картинки)
+                    var actionIconsSize by remember { mutableStateOf(androidx.compose.ui.unit.IntSize.Zero) }
+                    val iconsDensity = LocalDensity.current
+                    val iconsReserve = with(iconsDensity) { actionIconsSize.width.toDp() } + ThingsSpacing.L
+                    val iconsHeight = with(iconsDensity) { actionIconsSize.height.toDp() }
+                    val hasRepeatRow = false
+                    val tagsAreLast = !hasActiveDate && dueDate == null && !hasRepeatRow
+                    Box(modifier = Modifier.fillMaxWidth()) {
                         // Слева: теги, дата и дедлайн
                         Column(
                             modifier = Modifier
-                                .weight(1f)
+                                .fillMaxWidth()
                                 .padding(start = startRelativePadding),
                             verticalArrangement = Arrangement.Center
                         ) {
@@ -456,6 +462,8 @@ fun QuickAddDialog(
                                     activeTags.forEach { tag ->
                                         Box(
                                             modifier = Modifier
+                                                // Нижний край — по строке: последняя строка стоит ровно с иконками справа
+                                                .align(Alignment.Bottom)
                                                 .clip(ThingsTheme.shapes.chipShape)
                                                 .background(ThingsTheme.colors.tagChipBackground) // light-teal background
                                                 .clickable {
@@ -476,6 +484,8 @@ fun QuickAddDialog(
                                             )
                                         }
                                     }
+                                    // Теги — нижняя строка: место под иконки в конце последней строки (или новая строка, если не помещаются)
+                                    if (tagsAreLast) Spacer(modifier = Modifier.width(iconsReserve).height(iconsHeight))
                                 }
                             }
 
@@ -487,6 +497,7 @@ fun QuickAddDialog(
                                 Row(
                                     verticalAlignment = Alignment.CenterVertically,
                                     modifier = Modifier
+                                        .padding(end = if (dueDate == null && !hasRepeatRow) iconsReserve else ThingsSpacing.NONE)
                                         .clickable {
                                             view.performHapticFeedback(HapticFeedbackConstants.CLOCK_TICK)
                                             showWhenDialog = true
@@ -570,6 +581,7 @@ fun QuickAddDialog(
                                 Row(
                                     verticalAlignment = Alignment.CenterVertically,
                                     modifier = Modifier
+                                        .padding(end = if (!hasRepeatRow) iconsReserve else ThingsSpacing.NONE)
                                         .clickable {
                                             view.performHapticFeedback(HapticFeedbackConstants.CLOCK_TICK)
                                             showDatePicker = true
@@ -604,12 +616,14 @@ fun QuickAddDialog(
                             }
                         }
 
-                        Spacer(modifier = Modifier.width(ThingsSpacing.L))
 
                         // Справа: ряд иконок тулбара (Когда, Теги, Чеклист, Дедлайн)
                         Row(
                             verticalAlignment = Alignment.CenterVertically,
-                            modifier = Modifier.padding(end = ThingsSpacing.S_PLUS, bottom = ThingsSpacing.XS)
+                            modifier = Modifier
+                                .align(Alignment.BottomEnd)
+                                .onSizeChanged { actionIconsSize = it }
+                                .padding(end = ThingsSpacing.S_PLUS, bottom = ThingsSpacing.XS)
                         ) {
                             // Иконка Когда (Календарь)
                             AnimatedVisibility(
