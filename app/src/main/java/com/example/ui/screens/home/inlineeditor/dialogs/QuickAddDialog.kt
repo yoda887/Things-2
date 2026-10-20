@@ -1,5 +1,6 @@
 package com.example.ui.screens.home.inlineeditor.dialogs
 
+import android.view.HapticFeedbackConstants
 import androidx.compose.material.icons.filled.Notifications
 import com.example.R
 import androidx.compose.ui.res.stringResource
@@ -68,7 +69,6 @@ private val QUICK_ADD_DISMISS_DROP = 220.dp
 private val QUICK_ADD_CARD_TOP = 26.dp
 private val QUICK_ADD_CARD_BOTTOM = 18.dp
 private val QUICK_ADD_TITLE_END = 40.dp
-private val QUICK_ADD_INDICATORS_START = 24.dp
 private val QUICK_ADD_FOOTER_START = 22.dp
 private val QUICK_ADD_FOOTER_END = 18.dp
 private val QUICK_ADD_FOOTER_BUTTON_HEIGHT = 36.dp
@@ -425,7 +425,7 @@ fun QuickAddDialog(
                         }
                     } else Color.Unspecified
 
-                    val startRelativePadding = QUICK_ADD_INDICATORS_START
+                    val startRelativePadding = MaterialTheme.dimens.taskEditorStartRelativePadding
 
                     Row(
                         modifier = Modifier.fillMaxWidth(),
@@ -448,7 +448,8 @@ fun QuickAddDialog(
                                 FlowRow(
                                     modifier = Modifier
                                         .fillMaxWidth()
-                                        .padding(top = ThingsSpacing.XS, bottom = ThingsSpacing.M),
+                                        // Как в редакторе задачи: строка тегов на одном уровне с иконками справа
+                                        .padding(vertical = MaterialTheme.dimens.taskEditorTagsVerticalPadding),
                                     horizontalArrangement = Arrangement.spacedBy(ThingsSpacing.S),
                                     verticalArrangement = Arrangement.spacedBy(ThingsSpacing.XS_PLUS)
                                 ) {
@@ -457,11 +458,18 @@ fun QuickAddDialog(
                                             modifier = Modifier
                                                 .clip(ThingsTheme.shapes.chipShape)
                                                 .background(ThingsTheme.colors.tagChipBackground) // light-teal background
-                                                .clickable { showTagDialog = true }
+                                                .clickable {
+                                                    view.performHapticFeedback(HapticFeedbackConstants.CLOCK_TICK)
+                                                    showTagDialog = true
+                                                }
                                                 .padding(horizontal = ThingsSpacing.S_PLUS, vertical = ThingsSpacing.XS)
                                         ) {
                                             Text(
                                                 text = tag,
+                                                // Название тега — в одну строку, как в редакторе задачи
+                                                maxLines = 1,
+                                                softWrap = false,
+                                                overflow = TextOverflow.Ellipsis,
                                                 style = ThingsTheme.type.tagChip.copy(
                                                     color = ThingsTheme.colors.tagChipText
                                                 )
@@ -471,13 +479,19 @@ fun QuickAddDialog(
                                 }
                             }
 
+                            if (activeTags.isNotEmpty() && (hasActiveDate || dueDate != null)) {
+                                Spacer(modifier = Modifier.height(MaterialTheme.dimens.taskEditorTagsToDateSpacer))
+                            }
                             // Индикатор установленной даты
                             if (hasActiveDate) {
                                 Row(
                                     verticalAlignment = Alignment.CenterVertically,
                                     modifier = Modifier
-                                        .clickable { showWhenDialog = true }
-                                        .padding(vertical = ThingsSpacing.XS_PLUS)
+                                        .clickable {
+                                            view.performHapticFeedback(HapticFeedbackConstants.CLOCK_TICK)
+                                            showWhenDialog = true
+                                        }
+                                        .padding(vertical = MaterialTheme.dimens.taskEditorIndicatorVerticalPadding)
                                 ) {
                                     Icon(
                                         imageVector = activeDateIcon,
@@ -514,7 +528,7 @@ fun QuickAddDialog(
                             }
 
                             if (hasActiveDate && dueDate != null) {
-                                Spacer(modifier = Modifier.height(ThingsSpacing.M))
+                                Spacer(modifier = Modifier.height(MaterialTheme.dimens.taskEditorDateToDeadlineSpacer))
                             }
 
                             // Индикатор установленного дедлайна (Due Date)
@@ -556,8 +570,11 @@ fun QuickAddDialog(
                                 Row(
                                     verticalAlignment = Alignment.CenterVertically,
                                     modifier = Modifier
-                                        .clickable { showDatePicker = true }
-                                        .padding(vertical = ThingsSpacing.XS_PLUS)
+                                        .clickable {
+                                            view.performHapticFeedback(HapticFeedbackConstants.CLOCK_TICK)
+                                            showDatePicker = true
+                                        }
+                                        .padding(vertical = MaterialTheme.dimens.taskEditorIndicatorVerticalPadding)
                                 ) {
                                     Icon(
                                         imageVector = AppIcons.Deadline,
