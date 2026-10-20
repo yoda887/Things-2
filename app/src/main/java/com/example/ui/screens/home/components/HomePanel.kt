@@ -101,9 +101,6 @@ import com.example.ui.screens.home.subcomponents.SmartListRow
 import com.example.ui.theme.*
 
 // Жест оттяжки главного экрана к Quick Find
-// Строка «Налаштування» внизу главного экрана стоит на одной высоте с кнопкой «+» (56 dp, 16 dp от края)
-private val HOME_FAB_SIZE = 56.dp
-private val HOME_FAB_EDGE_MARGIN = 16.dp
 private const val HOME_SETTINGS_FILLER_KEY = "settings_filler"
 private const val HOME_SETTINGS_ROW_KEY = "settings_row"
 private val PULL_SEARCH_THRESHOLD = 100.dp
@@ -1343,7 +1340,7 @@ private fun LazyItemScope.ProjectItemRow(
 
 /**
  * «Налаштування» внизу главного экрана: шестерёнка и подпись обычным шрифтом 19 sp, оба серые (text-secondary), по центру экрана,
- * на одной высоте с кнопкой «+». Открывает экран настроек.
+ * у нижнего края экрана. Открывает экран настроек.
  */
 @Composable
 private fun HomeSettingsRow(
@@ -1354,7 +1351,8 @@ private fun HomeSettingsRow(
     Box(
         modifier = Modifier
             .fillMaxWidth()
-            .padding(top = ThingsSpacing.L, bottom = HOME_FAB_EDGE_MARGIN + (HOME_FAB_SIZE - rowHeight) / 2),
+            // У самого нижнего края экрана: область нажатия (высота строки) стоит вплотную к низу списка
+            .padding(top = ThingsSpacing.L),
         contentAlignment = Alignment.Center
     ) {
         Row(
