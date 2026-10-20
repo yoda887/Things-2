@@ -1075,7 +1075,9 @@ fun SearchResultRow(
                 projects = projects,
                 areas = areas,
                 leftColumnWidth = MaterialTheme.dimens.searchLeftColumnWidth,
-                spacingToText = MaterialTheme.dimens.searchSpacingToText
+                spacingToText = MaterialTheme.dimens.searchSpacingToText,
+                // Найденная задача — только название, без значков напоминания, заметок, чек-листа, тегов и дедлайна
+                showMetaIcons = false
             )
         }
         is SearchResultItem.ProjectResult -> {

@@ -102,7 +102,9 @@ fun TaskItemRow(
     spacingToText: androidx.compose.ui.unit.Dp = androidx.compose.material3.MaterialTheme.dimens.taskSpacingToTextDefault,
     screen: ActiveScreen = ActiveScreen.INBOX,
     areas: List<com.example.data.model.Area> = emptyList(),
-    dateBadge: String? = null
+    dateBadge: String? = null,
+    // Значки напоминания, заметок, чек-листа, тегов и дедлайн; в быстром поиске их нет — только название
+    showMetaIcons: Boolean = true
 ) {
     val scope = rememberCoroutineScope()
     var localCompleted by remember(task.isCompleted) { mutableStateOf(task.isCompleted) }
@@ -449,8 +451,11 @@ fun TaskItemRow(
 
                         // Inline note/subtask icons representation
                         // Напоминание открытой задачи — колокольчик в ряду с заметками, чек-листом и тегами, без времени
-                        val hasReminder = task.reminderTime != null && !task.isClosed
-                        if (task.isRepeatCopy || hasReminder || task.notes.isNotBlank() || task.checklistItemsCount > 0 || task.cachedTags.isNotBlank()) {
+                        val hasReminder = showMetaIcons && task.reminderTime != null && !task.isClosed
+                        val hasNotes = showMetaIcons && task.notes.isNotBlank()
+                        val hasChecklist = showMetaIcons && task.checklistItemsCount > 0
+                        val hasTags = showMetaIcons && task.cachedTags.isNotBlank()
+                        if (task.isRepeatCopy || hasReminder || hasNotes || hasChecklist || hasTags) {
                             Spacer(modifier = Modifier.width(ThingsSpacing.XS_PLUS))
                             Row(
                                 horizontalArrangement = Arrangement.spacedBy(ThingsSpacing.XS),
@@ -473,7 +478,7 @@ fun TaskItemRow(
                                         modifier = Modifier.size(ROW_META_ICON_SIZE)
                                     )
                                 }
-                                if (task.notes.isNotBlank()) {
+                                if (hasNotes) {
                                     Icon(
                                         imageVector = Icons.Outlined.Description,
                                         contentDescription = stringResource(R.string.cd_has_notes),
@@ -481,7 +486,7 @@ fun TaskItemRow(
                                         modifier = Modifier.size(ROW_META_ICON_SIZE)
                                     )
                                 }
-                                if (task.checklistItemsCount > 0) {
+                                if (hasChecklist) {
                                     Icon(
                                         imageVector = AppIcons.BulletList,
                                         contentDescription = stringResource(R.string.cd_has_checklist),
@@ -489,7 +494,7 @@ fun TaskItemRow(
                                         modifier = Modifier.size(ROW_META_ICON_SIZE)
                                     )
                                 }
-                                if (task.cachedTags.isNotBlank()) {
+                                if (hasTags) {
                                     Icon(
                                         imageVector = AppIcons.Tag,
                                         contentDescription = stringResource(R.string.cd_has_tags),
@@ -501,7 +506,7 @@ fun TaskItemRow(
                         }
                     }
 
-                    if (task.dueDate != null) {
+                    if (showMetaIcons && task.dueDate != null) {
                         val delta = remember(task.dueDate) {
                             val today = java.util.Calendar.getInstance().apply {
                                 set(java.util.Calendar.HOUR_OF_DAY, 0)
