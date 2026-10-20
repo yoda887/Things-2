@@ -12,6 +12,9 @@ import java.time.LocalDate
 import java.time.ZoneId
 
 /** Повторяющиеся задачи: правило, даты повторов, какие копии создать и как они выглядят. */
+/** Часовой пояс тестов: «Europe/Kiev» — тот же пояс, что Europe/Kyiv, но есть и в старых базах поясов (Java десктопа) */
+private const val TEST_ZONE = "Europe/Kiev"
+
 class RepeatTest {
 
     private fun d(y: Int, m: Int, day: Int) = LocalDate.of(y, m, day)
@@ -143,7 +146,7 @@ class RepeatTest {
         assertTrue(RepeatPlan.due(state, d(2026, 10, 9)).first.isEmpty())
         assertEquals(listOf(d(2026, 10, 15)), RepeatPlan.due(state, d(2026, 10, 10)).first)
 
-        val zone = ZoneId.of("Europe/Kyiv")
+        val zone = ZoneId.of(TEST_ZONE)
         val template = Item(id = "tpl", type = Item.TYPE_TEMPLATE, title = "Bill", notes = "n", cachedTags = "home", projectId = "p", reminderTime = 9 * 60)
         val checklist = listOf(ChecklistItem(id = "c", itemId = "tpl", title = "a", isCompleted = true))
         var n = 0
@@ -258,7 +261,7 @@ class RepeatTest {
 
     @Test
     fun upcomingPreview_templateOnDayOfNextCopy() {
-        val zone = ZoneId.of("Europe/Kyiv")
+        val zone = ZoneId.of(TEST_ZONE)
         fun ms(date: LocalDate) = date.atStartOfDay(zone).toInstant().toEpochMilli()
         val rule = RepeatRule(afterCompletion = false, unit = RepeatUnit.WEEK, start = wed, deadlineDaysBefore = 2)
         val template = com.example.data.model.ItemWithChecklist(Item(id = "t", type = Item.TYPE_TEMPLATE))
@@ -307,7 +310,7 @@ class RepeatTest {
             openTask.copy(type = Item.TYPE_TEMPLATE, repeatTemplateId = "p", startDate = null),
             listOf(ChecklistItem(id = "c", itemId = "a", title = "Швабра", isCompleted = true))
         )
-        val zone = ZoneId.of("Europe/Kyiv")
+        val zone = ZoneId.of(TEST_ZONE)
         var n = 0
         val rule = RepeatRule(afterCompletion = false, unit = RepeatUnit.WEEK, start = wed, deadlineDaysBefore = 1)
         val copy = RepeatProjects.copyOf(template, listOf(heading), listOf(part), rule, wed, zone, now = 7L) { "n${n++}" }
@@ -457,7 +460,7 @@ class RepeatTest {
 
     @Test
     fun afterCompletion_deletedCopyStartsNextFromToday() {
-        val zone = ZoneId.of("Europe/Kyiv")
+        val zone = ZoneId.of(TEST_ZONE)
         val rule = RepeatRule(afterCompletion = true, interval = 3, unit = RepeatUnit.DAY, start = wed)
         val waiting = RepeatState(rule, nextOccurrence = null, generated = 1)
         // Копию удалили насовсем — её нет: следующий повтор через 3 дня от сегодня
@@ -489,7 +492,7 @@ class RepeatTest {
 
     @Test
     fun logbookDeletions_doNotTouchActiveRepeats() {
-        val zone = ZoneId.of("Europe/Kyiv")
+        val zone = ZoneId.of(TEST_ZONE)
         val after = RepeatRule(afterCompletion = true, unit = RepeatUnit.WEEK, start = wed)
         // Создано 5 копий, в «Журнале» остались не все (часть удалили), текущая копия открыта — повтор ждёт её дальше
         val open = Item(id = "c5", repeatTemplateId = "t")

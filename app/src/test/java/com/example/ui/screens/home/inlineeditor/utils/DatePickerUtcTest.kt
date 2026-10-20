@@ -8,7 +8,7 @@ import java.util.TimeZone
 /** Перевод местного дня в полночь UTC календаря Material и обратно сохраняет календарный день. */
 class DatePickerUtcTest {
 
-    private val kyiv = TimeZone.getTimeZone("Europe/Kyiv")
+    private val kyiv = TimeZone.getTimeZone("Europe/Kiev") // = Europe/Kyiv; это имя есть и в старых базах поясов (Java десктопа)
     private val newYork = TimeZone.getTimeZone("America/New_York")
     private val utc = TimeZone.getTimeZone("UTC")
 
