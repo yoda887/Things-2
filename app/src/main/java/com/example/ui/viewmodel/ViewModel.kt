@@ -665,15 +665,24 @@ class ThingsViewModel @Inject constructor(
         reminderTime: Int?,
         untitledTitle: String
     ) {
-        val fields = TaskEditorFields(title, notes, section, isTonight, startDate, dueDate, tags, projectId, priority, reminderTime)
         viewModelScope.launch {
-            taskUseCases.updateTask(TaskEdits.apply(task, fields, untitledTitle), checklist)
+            // Место задачи (проект, область, подзаголовок) редактор сам не меняет — это делает «Перемістити» сразу
+            // в базе, пока редактор открыт. Правки редактора кладутся на свежую задачу из базы, а не на снимок,
+            // с которым он открылся: иначе новая задача, перенесённая до первого сохранения, возвращалась на старое место
+            val current = latestItem(task)
+            val fields = TaskEditorFields(title, notes, section, isTonight, startDate, dueDate, tags, current.projectId, priority, reminderTime)
+            taskUseCases.updateTask(TaskEdits.apply(current, fields, untitledTitle), checklist)
         }
     }
 
+    /** Свежая версия задачи из базы (поток задач), иначе — та, что передали */
+    private fun latestItem(task: Item): Item = tasks.value.firstOrNull { it.item.id == task.id }?.item ?: task
+
     /** Отметка задачи прямо из открытого редактора — вместе с её ещё не сохранёнными правками. */
     fun toggleEditedTask(wrapper: ItemWithChecklist, fields: TaskEditorFields, checklist: List<ChecklistItem>, untitledTitle: String) {
-        toggleTaskCompletion(wrapper.copy(item = TaskEdits.apply(wrapper.item, fields, untitledTitle), checklist = checklist))
+        // Как при сохранении: место — из свежей задачи (см. updateTask)
+        val current = latestItem(wrapper.item)
+        toggleTaskCompletion(wrapper.copy(item = TaskEdits.apply(current, fields.copy(projectId = current.projectId), untitledTitle), checklist = checklist))
     }
 
     fun updateTasks(items: List<Item>) {
