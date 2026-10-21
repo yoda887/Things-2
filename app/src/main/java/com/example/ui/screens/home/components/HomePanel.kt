@@ -1342,7 +1342,7 @@ private fun LazyItemScope.ProjectItemRow(
 }
 
 /**
- * «Налаштування» внизу главного экрана: шестерёнка 16 dp и подпись обычным шрифтом 16 sp, оба серые (text-secondary), по центру экрана,
+ * «Налаштування» внизу главного экрана: шестерёнка 18 dp и подпись обычным шрифтом 17 sp, оба серые (text-secondary), по центру экрана,
  * на одной высоте с кнопкой «+». Открывает экран настроек.
  */
 @Composable
@@ -1354,7 +1354,8 @@ private fun HomeSettingsRow(
     Box(
         modifier = Modifier
             .fillMaxWidth()
-            .padding(top = ThingsSpacing.L, bottom = HOME_FAB_EDGE_MARGIN + (HOME_FAB_SIZE - rowHeight) / 2),
+            // Сверху — 64 dp: под длинным списком строка не прилипает к последней области
+            .padding(top = ThingsSpacing.XXL + ThingsSpacing.XXL, bottom = HOME_FAB_EDGE_MARGIN + (HOME_FAB_SIZE - rowHeight) / 2),
         contentAlignment = Alignment.Center
     ) {
         Row(
@@ -1370,12 +1371,12 @@ private fun HomeSettingsRow(
                 imageVector = Icons.Outlined.Settings,
                 contentDescription = null,
                 tint = textSecondaryColor,
-                modifier = Modifier.size(ThingsIconSize.XS)
+                modifier = Modifier.size(ThingsIconSize.S)
             )
             Spacer(modifier = Modifier.width(ThingsSpacing.XS_PLUS))
             Text(
                 text = stringResource(R.string.settings_title),
-                style = ThingsTheme.type.bodyLarge.copy(color = textSecondaryColor)
+                style = ThingsTheme.type.homeSettings.copy(color = textSecondaryColor)
             )
         }
     }
