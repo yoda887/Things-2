@@ -66,6 +66,8 @@ private const val ROW_META_ICON_ALPHA = ThingsAlpha.HALF
 /** Значок повтора перед названием повторяющейся задачи и её копий */
 private val ROW_REPEAT_ICON_SIZE = 15.dp
 private val DUE_ICON_SIZE = 15.dp
+// Новое в «Сегодня» — жёлтая точка слева от названия
+private val TODAY_NEW_DOT_SIZE = 8.dp
 private const val DUE_TEXT_ALPHA = 0.85f
 
 /**
@@ -427,6 +429,16 @@ fun TaskItemRow(
                             // (у копий — серая стрелка в ряду служебных иконок справа)
                             if (task.isRepeatTemplate) {
                                 com.example.ui.components.RepeatTemplateIcon(modifier = Modifier.size(ROW_REPEAT_ICON_SIZE))
+                                Spacer(modifier = Modifier.width(ThingsSpacing.XS_PLUS))
+                            }
+                            // Новое в «Сегодня» (пришло само: настал день, копия повтора) — жёлтая точка, до «OK» на плашке
+                            if (screen == ActiveScreen.TODAY && task.id in com.example.ui.components.LocalTodayNew.current.ids) {
+                                Box(
+                                    modifier = Modifier
+                                        .size(TODAY_NEW_DOT_SIZE)
+                                        .clip(androidx.compose.foundation.shape.CircleShape)
+                                        .background(ThingsTheme.colors.todayNew)
+                                )
                                 Spacer(modifier = Modifier.width(ThingsSpacing.XS_PLUS))
                             }
                             Text(

@@ -134,6 +134,9 @@ object TaskListKeys {
     /** Плашка «N завдань переміщено з «Вхідних»» */
     const val INBOX_MOVED_BANNER = "inbox_moved_banner"
 
+    /** Плашка «У вас N нових завдань» в «Сегодня» */
+    const val TODAY_NEW_BANNER = "today_new_banner"
+
     /** Префикс заголовка дня на экране «Предстоящие» */
     const val DAY_HEADER_PREFIX = "hdr_"
 
@@ -176,6 +179,9 @@ enum class SearchSectionKind { PROJECT, AREA, LOGBOOK }
 
 /** «Входящие»: плашка «N завдань переміщено з «Вхідних»» с кнопкой «OK» над ушедшими задачами */
 data class InboxMovedBannerItem(val count: Int)
+
+/** «Сегодня»: плашка «У вас N нових завдань» с кнопкой «OK» вверху списка ([com.example.domain.lists.TodayNews]) */
+data class TodayNewBannerItem(val count: Int)
 
 /** «Входящие»: ушедшая оттуда задача — бледной строкой уже в новом виде, до «OK» на плашке */
 data class InboxGhostItem(val task: ItemWithChecklist)
@@ -230,7 +236,9 @@ fun rememberFlattenedList(
     // «Повторяющиеся»: правила шаблонов — для порядка по ближайшему повтору
     repeatRules: Map<String, com.example.data.model.RecurrenceRule> = emptyMap(),
     // «Входящие»: ушедшие задачи — под плашкой внизу списка, до «OK»
-    inboxGhosts: List<ItemWithChecklist> = emptyList()
+    inboxGhosts: List<ItemWithChecklist> = emptyList(),
+    // «Сегодня»: сколько нового — плашка вверху списка, до «OK»
+    todayNewCount: Int = 0
 ): List<Any> {
     val headerLogbook = stringResource(R.string.category_logbook)
     val todayLabel = stringResource(R.string.category_today)
@@ -241,10 +249,14 @@ fun rememberFlattenedList(
     val tagShowLaterLabel = stringResource(R.string.area_show_later_items)
     val tagHideLaterLabel = stringResource(R.string.area_hide_later_items)
     val tagHideLoggedLabel = stringResource(R.string.tag_hide_logged)
-    return remember(inboxGhosts, repeatRules, expandedLaterProjects, showLoggedProjects, resources, screen, standardToday, eveningToday, headerLogbook, todayLabel, yesterdayLabel, draggedItemKey, upcomingDays, upcomingMonths, projects, area, displayTasks, isLaterItemsHidden, tag, allTasks, areas, savedTags, searchQuery, headings, pinnedPlaces) {
+    return remember(todayNewCount, inboxGhosts, repeatRules, expandedLaterProjects, showLoggedProjects, resources, screen, standardToday, eveningToday, headerLogbook, todayLabel, yesterdayLabel, draggedItemKey, upcomingDays, upcomingMonths, projects, area, displayTasks, isLaterItemsHidden, tag, allTasks, areas, savedTags, searchQuery, headings, pinnedPlaces) {
         // Все экраны перечислены явно (без else): новый экран компилятор заставит указать и здесь
         when (screen) {
-            ActiveScreen.TODAY -> TodayScreen.rows(standardToday, eveningToday, isDragging = draggedItemKey != null, projects = com.example.domain.lists.TodayList.projects(projects))
+            ActiveScreen.TODAY -> {
+                val rows = TodayScreen.rows(standardToday, eveningToday, isDragging = draggedItemKey != null, projects = com.example.domain.lists.TodayList.projects(projects))
+                // Новое — плашка «У вас N нових завдань» над списком
+                if (todayNewCount > 0) listOf(TodayNewBannerItem(todayNewCount)) + rows else rows
+            }
             ActiveScreen.UPCOMING -> UpcomingScreen.rows(upcomingDays, upcomingMonths)
             ActiveScreen.AREA_DETAIL -> AreaScreen.rows(AreaList.content(area?.id, displayTasks, projects), isLaterItemsHidden)
             ActiveScreen.LOGBOOK -> LogbookScreen.rows(LogbookList.sections(displayTasks, projects), todayLabel, yesterdayLabel)

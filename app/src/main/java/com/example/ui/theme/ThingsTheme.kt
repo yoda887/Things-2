@@ -137,6 +137,12 @@ data class ThingsColors(
     val project: Color,
     /** Фон свайпа вправо (действие «Когда») */
     val swipeWhen: Color,
+    /** Новое в «Сегодня»: точка слева от названия задачи или проекта */
+    val todayNew: Color,
+    /** Плашка «У вас N нових завдань» в «Сегодня» */
+    val todayNewBanner: Color,
+    /** Кнопка «OK» на плашке нового в «Сегодня» */
+    val todayNewButton: Color,
     /** Значок «вечер» в строке задачи */
     val eveningIndicator: Color,
     /** Контур анимированной иконки области на главном экране */
@@ -210,6 +216,9 @@ internal val LightThingsColors = ThingsColors(
     area = ThingsAreaGreenLight,
     project = ThingsDeepBlue,
     swipeWhen = ThingsSwipeWhenYellow,
+    todayNew = ThingsTodayNewDot,
+    todayNewBanner = ThingsTodayNewBannerLight,
+    todayNewButton = ThingsTodayNewButtonLight,
     eveningIndicator = ThingsEveningIndicator,
     areaIconStroke = ThingsAreaIconStroke,
     newHeadingLine = ThingsNewHeadingLine,
@@ -221,6 +230,8 @@ internal val LightThingsColors = ThingsColors(
 
 internal val DarkThingsColors = LightThingsColors.copy(
     isDark = true,
+    todayNewBanner = ThingsTodayNewBannerDark,
+    todayNewButton = ThingsTodayNewButtonDark,
     background = ThingsBackgroundDark,
     surface = ThingsSurfaceDark,
     divider = ThingsDividerDark,
@@ -328,6 +339,8 @@ data class ThingsTypography(
     val listTitleStrong: TextStyle,
     /** Название проекта в строке главного экрана (19 sp Regular) */
     val listItem: TextStyle,
+    /** Подпись «Налаштування» внизу главного экрана (17 sp Regular) */
+    val homeSettings: TextStyle,
     /** Заголовок карточки на экране настроек (14 sp SemiBold) */
     val settingsTitle: TextStyle,
     /** Текст кнопки действия в карточке настроек (14 sp Bold) */
@@ -378,6 +391,7 @@ internal fun thingsTypography(scale: Float = 1f) = ThingsTypography(
     listTitle = TextStyle(fontFamily = FontFamily.Default, fontWeight = FontWeight.Medium, fontSize = (19 * scale).sp),
     listTitleStrong = TextStyle(fontFamily = FontFamily.Default, fontWeight = FontWeight.SemiBold, fontSize = (19 * scale).sp),
     listItem = TextStyle(fontFamily = FontFamily.Default, fontWeight = FontWeight.Normal, fontSize = (19 * scale).sp),
+    homeSettings = TextStyle(fontFamily = FontFamily.Default, fontWeight = FontWeight.Normal, fontSize = (17 * scale).sp),
     settingsTitle = TextStyle(fontFamily = FontFamily.Default, fontWeight = FontWeight.SemiBold, fontSize = (14 * scale).sp),
     settingsAction = TextStyle(fontFamily = FontFamily.Default, fontWeight = FontWeight.Bold, fontSize = (14 * scale).sp),
     heroEmoji = TextStyle(fontFamily = FontFamily.Default, fontWeight = FontWeight.Normal, fontSize = (30 * scale).sp),

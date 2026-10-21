@@ -169,6 +169,42 @@ class ThingsViewModel @Inject constructor(
         _inboxMovedOut.value = emptySet()
     }
 
+    /** Что уже видели в «Сегодня» — помнится между запусками ([com.example.domain.lists.TodayNews]) */
+    private var todayKnown: Set<String>? = homeLayoutPrefs.todaySeenIds()
+    private val _todayNewIds = MutableStateFlow<Set<String>>(emptySet())
+    /** Новое в «Сегодня»: жёлтая точка у задачи или проекта и плашка с «OK» */
+    val todayNewIds: StateFlow<Set<String>> = _todayNewIds.asStateFlow()
+
+    init {
+        viewModelScope.launch {
+            var previousToday: Set<String>? = null
+            tasks.collect { list ->
+                // Первый пустой список — база ещё не прочитана
+                if (list.isEmpty() && previousToday == null) return@collect
+                val bounds = com.example.data.model.DayBounds.now()
+                val today = com.example.domain.lists.TodayNews.todayIds(list, bounds)
+                // Самый первый раз всё, что уже в «Сегодня», — виденное
+                val known = com.example.domain.lists.TodayNews.update(
+                    todayKnown ?: today, previousToday, list, bounds, System.currentTimeMillis()
+                )
+                previousToday = today
+                if (known != todayKnown) {
+                    todayKnown = known
+                    homeLayoutPrefs.setTodaySeenIds(known)
+                }
+                _todayNewIds.value = com.example.domain.lists.TodayNews.newIds(known, today)
+            }
+        }
+    }
+
+    /** «OK» на плашке «Сегодня»: всё, что там сейчас, — виденное, точки и плашка пропадают */
+    fun dismissTodayNew() {
+        val known = (todayKnown ?: emptySet()) + _todayNewIds.value
+        todayKnown = known
+        homeLayoutPrefs.setTodaySeenIds(known)
+        _todayNewIds.value = emptySet()
+    }
+
     private val _highlightedTaskId = MutableStateFlow<String?>(null)
     val highlightedTaskId: StateFlow<String?> = _highlightedTaskId.asStateFlow()
 

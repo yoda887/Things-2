@@ -19,6 +19,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.foundation.background
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.graphicsLayer
@@ -38,6 +39,8 @@ private val CHEVRON_GAP = 3.dp
 private val NOTES_ICON_SIZE = 14.dp
 /** Значок повтора перед названием шаблона повторяющегося проекта — как у шаблона задачи */
 private val ROW_REPEAT_ICON_SIZE = 15.dp
+// Новое в «Сегодня» — жёлтая точка перед названием, как у задачи
+private val TODAY_NEW_DOT_SIZE = 8.dp
 
 /**
  * Строка проекта в списке проектов области.
@@ -61,6 +64,8 @@ fun ProjectItemRow(
     // Проект на сегодня — звезда, на вечер — луна перед названием вместо плашки, как у задач («Повторяющиеся»)
     todayIcon: androidx.compose.ui.graphics.vector.ImageVector? = null,
     todayIconTint: Color = Color.Unspecified,
+    // Новое в «Сегодня» — жёлтая точка перед названием, до «OK» на плашке
+    isNew: Boolean = false,
     modifier: Modifier = Modifier
 ) {
     val progress = projectProgressMap[project.id]
@@ -128,6 +133,15 @@ fun ProjectItemRow(
             // Шаблон повторяющегося проекта — как шаблон задачи: кольцо проекта на месте, синий значок повтора перед названием
             if (project.type == Item.TYPE_PROJECT_TEMPLATE) {
                 com.example.ui.components.RepeatTemplateIcon(modifier = Modifier.size(ROW_REPEAT_ICON_SIZE))
+                Spacer(modifier = Modifier.width(com.example.ui.theme.ThingsSpacing.XS_PLUS))
+            }
+            if (isNew) {
+                androidx.compose.foundation.layout.Box(
+                    modifier = Modifier
+                        .size(TODAY_NEW_DOT_SIZE)
+                        .clip(androidx.compose.foundation.shape.CircleShape)
+                        .background(ThingsTheme.colors.todayNew)
+                )
                 Spacer(modifier = Modifier.width(com.example.ui.theme.ThingsSpacing.XS_PLUS))
             }
             Text(

@@ -228,6 +228,8 @@ fun ThingsCategoryListPanel(
     var frozenEdited by remember { mutableStateOf<ItemWithChecklist?>(null) }
     var frozenRule by remember { mutableStateOf<com.example.data.model.RecurrenceRule?>(null) }
     val currentRepeatRules by rememberUpdatedState(state.repeatRules)
+    // Новое в «Сегодня»: плашка вверху списка, жёлтые точки — в строках задач и проектов
+    val todayNew = com.example.ui.components.LocalTodayNew.current
 
     fun freeze(id: String?) {
         val snapshot = id?.let { editedId -> currentDisplayTasks.firstOrNull { it.item.id == editedId } }
@@ -450,7 +452,8 @@ fun ThingsCategoryListPanel(
         expandedLaterProjects = expandedLaterProjects,
         showLoggedProjects = showLoggedProjects,
         repeatRules = layoutRepeatRules,
-        inboxGhosts = state.inboxGhosts
+        inboxGhosts = state.inboxGhosts,
+        todayNewCount = if (screen == ActiveScreen.TODAY) todayNew.ids.size else 0
     )
 
     // ── Добавление перетаскиванием кнопки «+» (см. FabDragController) ──
@@ -1218,6 +1221,7 @@ fun ThingsCategoryListPanel(
                         is SearchTagItem -> "search_tag_${item.tag.id}"
                         is SearchHeadingItem -> "search_heading_${item.heading.id}"
                         is InboxMovedBannerItem -> TaskListKeys.INBOX_MOVED_BANNER
+                        is TodayNewBannerItem -> TaskListKeys.TODAY_NEW_BANNER
                         // Ушедшая из «Входящих» — тот же ключ, что у задачи в списке: строка съезжает под плашку, а не
                         // исчезает и появляется заново (в списке и под плашкой одна задача не стоит — InboxMoves.ghosts)
                         is InboxGhostItem -> item.task.item.id
@@ -1311,6 +1315,7 @@ fun ThingsCategoryListPanel(
                                 // Извлеченный подкомпонент строки проекта (и шаблона повторяющегося проекта)
                                 ProjectItemRow(
                                     project = task,
+                                    isNew = screen == ActiveScreen.TODAY && task.id in todayNew.ids,
                                     tasks = state.displayTasks,
                                     projectProgressMap = state.projectProgressMap,
                                     textPrimaryColor = textPrimaryColor,
@@ -1366,6 +1371,17 @@ fun ThingsCategoryListPanel(
                             InboxMovedBanner(
                                 count = item.count,
                                 onOk = { onEvent(ThingsCategoryListEvent.DismissInboxMoved) },
+                                modifier = Modifier.animateItem(placementSpec = placementSpec)
+                            )
+                        }
+                        is TodayNewBannerItem -> {
+                            // Новое в «Сегодня» — жёлтая плашка, как в Things
+                            ListBanner(
+                                text = androidx.compose.ui.res.pluralStringResource(R.plurals.today_new_items, item.count, item.count),
+                                number = item.count.toString(),
+                                background = ThingsTheme.colors.todayNewBanner,
+                                buttonBackground = ThingsTheme.colors.todayNewButton,
+                                onOk = todayNew.onDismiss,
                                 modifier = Modifier.animateItem(placementSpec = placementSpec)
                             )
                         }
@@ -2380,15 +2396,33 @@ private fun FabGapRow(asHeading: Boolean, extraPx: () -> Float, modifier: Modifi
  */
 @Composable
 private fun InboxMovedBanner(count: Int, onOk: () -> Unit, modifier: Modifier = Modifier) {
+    ListBanner(
+        text = androidx.compose.ui.res.pluralStringResource(R.plurals.inbox_moved_out, count, count),
+        number = count.toString(),
+        background = ThingsTheme.colors.searchField,
+        buttonBackground = ThingsTheme.colors.textSecondary.copy(alpha = ThingsAlpha.SUBTLE),
+        onOk = onOk,
+        modifier = modifier
+    )
+}
+
+/** Плашка над списком: текст с числом жирным и кнопка «OK» («Вхідні» — переехавшие, «Сьогодні» — новое) */
+@Composable
+private fun ListBanner(
+    text: String,
+    number: String,
+    background: Color,
+    buttonBackground: Color,
+    onOk: () -> Unit,
+    modifier: Modifier = Modifier
+) {
     val view = androidx.compose.ui.platform.LocalView.current
-    val text = androidx.compose.ui.res.pluralStringResource(R.plurals.inbox_moved_out, count, count)
-    val number = count.toString()
     Row(
         modifier = modifier
             .fillMaxWidth()
             .padding(vertical = ThingsSpacing.XS)
             .clip(ThingsTheme.shapes.rowShape)
-            .background(ThingsTheme.colors.searchField)
+            .background(background)
             .padding(start = ThingsSpacing.M, end = ThingsSpacing.S, top = ThingsSpacing.S, bottom = ThingsSpacing.S),
         verticalAlignment = Alignment.CenterVertically
     ) {
@@ -2409,7 +2443,7 @@ private fun InboxMovedBanner(count: Int, onOk: () -> Unit, modifier: Modifier = 
         Box(
             modifier = Modifier
                 .clip(ThingsTheme.shapes.smallShape)
-                .background(ThingsTheme.colors.textSecondary.copy(alpha = ThingsAlpha.SUBTLE))
+                .background(buttonBackground)
                 .clickable {
                     view.performHapticFeedback(android.view.HapticFeedbackConstants.CLOCK_TICK)
                     onOk()

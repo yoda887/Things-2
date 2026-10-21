@@ -64,6 +64,9 @@
 | `area` | `#269c6e` / `#7ad0a7` | `ThingsTheme.colors.area` | Иконка области и её название; в тёмной теме светлее, чтобы читаться на чёрном. |
 | `project` | `#2a62d9` | `ThingsTheme.colors.project` | Иконка-прогресс проекта, подзаголовки проекта и их «•••» (ThingsDeepBlue). |
 | `swipe-when` | `#ffd401` | `ThingsTheme.colors.swipeWhen` | Фон свайпа вправо (действие «Когда»). |
+| `today-new` | `#f5c518` | `ThingsTheme.colors.todayNew` | Новое в «Сегодня»: точка слева от названия задачи или проекта. |
+| `today-new-banner` | `#fbe27c` / `#574612` | `ThingsTheme.colors.todayNewBanner` | Плашка «У вас N нових завдань» в «Сегодня». |
+| `today-new-button` | `#f4cb3a` / `#7a6219` | `ThingsTheme.colors.todayNewButton` | Кнопка «OK» на плашке нового в «Сегодня». |
 | `evening-indicator` | `#2196f3` | `ThingsTheme.colors.eveningIndicator` | Значок «вечер» в строке задачи. |
 | `area-icon-stroke` | `#9c9c9c` | `ThingsTheme.colors.areaIconStroke` | Контур анимированной иконки области на главном экране. |
 | `new-heading-line` | `#c9cbd1` | `ThingsTheme.colors.newHeadingLine` | Пунктир места нового подзаголовка при перетаскивании «+». |
@@ -122,6 +125,7 @@
 | `listTitle` | 19.0 sp | Medium (500) | Название в строке главного экрана: раздел, проект, область. |
 | `listTitleStrong` | 19.0 sp | SemiBold (600) | Выделенная строка: «Продовжити пошук», подзаголовок проекта. |
 | `listItem` | 19.0 sp | Normal (400) | Название проекта в строке главного экрана — обычное начертание. |
+| `homeSettings` | 17.0 sp | Normal (400) | Подпись «Налаштування» внизу главного экрана — обычное начертание. |
 | `settingsTitle` | 14.0 sp | SemiBold (600) | Заголовок карточки на экране настроек (Google Tasks, Google Drive). |
 | `settingsAction` | 14.0 sp | Bold (700) | Текст кнопки действия в карточке настроек. |
 | `heroEmoji` | 30.0 sp | Normal (400) | Эмодзи перед крупным названием проекта или области. |

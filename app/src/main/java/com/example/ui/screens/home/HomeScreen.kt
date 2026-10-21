@@ -630,9 +630,12 @@ fun ThingsHomeScreen(viewModel: ThingsViewModel = hiltViewModel()) {
                         (screen == ActiveScreen.AREA_DETAIL && areas.none { it.id == entityId })
                     val screenState = if (entityGone) keptState[0] ?: liveScreenState else liveScreenState.also { keptState[0] = it }
 
-                    // Правила повтора — строкам шаблонов и редактору шаблона и его копий
+                    // Правила повтора — строкам шаблонов и редактору шаблона и его копий; новое в «Сегодня» — точкам и плашке
+                    val todayNewIds by viewModel.todayNewIds.collectAsState()
+                    val todayNew = remember(todayNewIds) { com.example.ui.components.TodayNew(todayNewIds, viewModel::dismissTodayNew) }
                     androidx.compose.runtime.CompositionLocalProvider(
-                        com.example.ui.components.LocalRepeatRules provides screenState.repeatRules
+                        com.example.ui.components.LocalRepeatRules provides screenState.repeatRules,
+                        com.example.ui.components.LocalTodayNew provides todayNew
                     ) {
                     ThingsCategoryListPanel(
                         state = screenState.copy(

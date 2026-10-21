@@ -14,6 +14,12 @@ val ThingsSomedayGrey = Color(0xFF8F93A3)
 val ThingsAreaGreenLight = Color(0xFF269C6E)
 val ThingsAreaGreenDark = Color(0xFF7AD0A7)
 val ThingsSwipeWhenYellow = Color(0xFFFFD401)
+// Новое в «Сегодня»: жёлтая точка у задачи и плашка «У вас N нових завдань» с кнопкой «OK»
+val ThingsTodayNewDot = Color(0xFFF5C518)
+val ThingsTodayNewBannerLight = Color(0xFFFBE27C)
+val ThingsTodayNewBannerDark = Color(0xFF574612)
+val ThingsTodayNewButtonLight = Color(0xFFF4CB3A)
+val ThingsTodayNewButtonDark = Color(0xFF7A6219)
 
 // Quick Find search match highlight (themes-ios.json)
 val SearchMatchHighlightLight = Color(0xFFFFE692)
