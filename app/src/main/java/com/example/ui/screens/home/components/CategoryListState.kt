@@ -184,7 +184,6 @@ data class InboxMovedBannerItem(val count: Int)
 data class TodayNewBannerItem(val count: Int)
 
 /** «Входящие»: ушедшая оттуда задача — бледной строкой уже в новом виде, до «OK» на плашке */
-data class InboxGhostItem(val task: ItemWithChecklist)
 
 /**
  * Заголовок секции списка: задачи конкретного проекта или области (поиск, «В любое время», «Когда-нибудь»), Logbook поиска.
@@ -238,7 +237,9 @@ fun rememberFlattenedList(
     // «Входящие»: ушедшие задачи — под плашкой внизу списка, до «OK»
     inboxGhosts: List<ItemWithChecklist> = emptyList(),
     // «Сегодня»: сколько нового — плашка вверху списка, до «OK»
-    todayNewCount: Int = 0
+    todayNewCount: Int = 0,
+    // «Сегодня»: дневная часть по проектам и областям (настройка)
+    todayGroupedDay: Boolean = false
 ): List<Any> {
     val headerLogbook = stringResource(R.string.category_logbook)
     val todayLabel = stringResource(R.string.category_today)
@@ -249,16 +250,21 @@ fun rememberFlattenedList(
     val tagShowLaterLabel = stringResource(R.string.area_show_later_items)
     val tagHideLaterLabel = stringResource(R.string.area_hide_later_items)
     val tagHideLoggedLabel = stringResource(R.string.tag_hide_logged)
-    return remember(todayNewCount, inboxGhosts, repeatRules, expandedLaterProjects, showLoggedProjects, resources, screen, standardToday, eveningToday, headerLogbook, todayLabel, yesterdayLabel, draggedItemKey, upcomingDays, upcomingMonths, projects, area, displayTasks, isLaterItemsHidden, tag, allTasks, areas, savedTags, searchQuery, headings, pinnedPlaces) {
+    return remember(todayGroupedDay, todayNewCount, inboxGhosts, repeatRules, expandedLaterProjects, showLoggedProjects, resources, screen, standardToday, eveningToday, headerLogbook, todayLabel, yesterdayLabel, draggedItemKey, upcomingDays, upcomingMonths, projects, area, displayTasks, isLaterItemsHidden, tag, allTasks, areas, savedTags, searchQuery, headings, pinnedPlaces) {
         // Все экраны перечислены явно (без else): новый экран компилятор заставит указать и здесь
         when (screen) {
             ActiveScreen.TODAY -> {
-                val rows = TodayScreen.rows(standardToday, eveningToday, isDragging = draggedItemKey != null, projects = com.example.domain.lists.TodayList.projects(projects))
+                val rows = TodayScreen.rows(
+                    standardToday, eveningToday, isDragging = draggedItemKey != null,
+                    projects = com.example.domain.lists.TodayList.projects(projects),
+                    groupedDay = todayGroupedDay, allProjects = projects, areas = areas
+                )
                 // Новое — плашка «У вас N нових завдань» над списком
                 if (todayNewCount > 0) listOf(TodayNewBannerItem(todayNewCount)) + rows else rows
             }
             ActiveScreen.UPCOMING -> UpcomingScreen.rows(upcomingDays, upcomingMonths)
-            ActiveScreen.AREA_DETAIL -> AreaScreen.rows(AreaList.content(area?.id, displayTasks, projects), isLaterItemsHidden)
+            // Шаблоны повторяющихся проектов — среди всех задач, не среди проектов
+            ActiveScreen.AREA_DETAIL -> AreaScreen.rows(AreaList.content(area?.id, displayTasks, projects, templates = allTasks.map { it.item }), isLaterItemsHidden)
             ActiveScreen.LOGBOOK -> LogbookScreen.rows(LogbookList.sections(displayTasks, projects), todayLabel, yesterdayLabel)
             // Поздние и выполненные — под плашками, по умолчанию скрыты (состояние плашек — как у «Всех проектов»)
             ActiveScreen.TAG_DETAIL -> TagScreen.rows(
@@ -283,12 +289,14 @@ fun rememberFlattenedList(
                 if (ghosts.isEmpty()) displayTasks else {
                     // Под задачами «Входящих» плашка стоит после промежутка, как блок проектов под задачами
                     val gap = if (displayTasks.isEmpty()) emptyList() else listOf(TaskListKeys.AREA_PROJECTS_SPACER)
-                    displayTasks + gap + InboxMovedBannerItem(ghosts.size) + ghosts.map { InboxGhostItem(it) }
+                    // Ушедшие — обычными строками задач: с ними можно всё, что с задачей, пока не нажали «OK»
+                    displayTasks + gap + InboxMovedBannerItem(ghosts.size) + ghosts
                 }
             }
             ActiveScreen.HOME -> displayTasks
             ActiveScreen.ALL_PROJECTS -> AllProjectsScreen.rows(
-                AllProjectsList.content(projects, areas), expandedLaterProjects, showLoggedProjects,
+                // Шаблоны повторяющихся проектов — среди всех задач, не среди проектов
+                AllProjectsList.content(projects, areas, templates = allTasks.map { it.item }), expandedLaterProjects, showLoggedProjects,
                 { count -> resources.getQuantityString(R.plurals.all_projects_show_later, count, count) },
                 { count -> resources.getQuantityString(R.plurals.all_projects_hide_later, count, count) },
                 showLoggedLabel, hideLoggedLabel
@@ -299,13 +307,8 @@ fun rememberFlattenedList(
             ActiveScreen.REPEATING -> PlaceGroupRows.rows(
                 com.example.domain.lists.RepeatingList.groups(displayTasks, repeatRules, projects, areas, allTasks.map { it.item })
             ) { group ->
-                val repeating = com.example.domain.lists.RepeatingList
-                val tasks = repeating.order(group.tasks, repeatRules)
-                val projectRows = repeating.projectRowsOf(group, repeatRules)
-                // Задачи без проекта и области и проекты без области — отдельными блоками, с промежутком между ними
-                val loose = group.project == null && group.area == null
-                if (loose && tasks.isNotEmpty() && projectRows.isNotEmpty()) tasks + TaskListKeys.AREA_PROJECTS_SPACER + projectRows
-                else tasks + projectRows
+                // Задачи и проекты группы — одним списком по дате (RepeatingList.rows)
+                com.example.domain.lists.RepeatingList.rows(group, repeatRules)
             }
         }
     }

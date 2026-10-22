@@ -3,7 +3,8 @@ package com.example.data.local
 import android.content.Context
 
 /**
- * Вид списков на этом устройстве — свёрнутые области главного экрана и что уже видели в «Сегодня». Это не
+ * Вид списков на этом устройстве — свёрнутые области главного экрана, что уже видели в «Сегодня» и группировать
+ * ли дневную часть «Сегодня» по проектам и областям. Это не
  * данные задач и не синхронизируется, поэтому хранится не в базе, а в SharedPreferences.
  */
 class HomeLayoutPrefs(context: Context) {
@@ -26,9 +27,25 @@ class HomeLayoutPrefs(context: Context) {
         prefs.edit().putStringSet(KEY_TODAY_SEEN, ids).apply()
     }
 
+    /** Дневная часть «Сегодня» — по проектам и областям (настройка; по умолчанию — нет, как в Things) */
+    fun todayGroupedByPlace(): Boolean = prefs.getBoolean(KEY_TODAY_GROUPED, false)
+
+    fun setTodayGroupedByPlace(grouped: Boolean) {
+        prefs.edit().putBoolean(KEY_TODAY_GROUPED, grouped).apply()
+    }
+
+    /** Даты в карточках — месяц словом («9 жовт.»), иначе цифрами («9.10.»); по умолчанию словом */
+    fun datesWithMonthName(): Boolean = prefs.getBoolean(KEY_MONTH_NAME, true)
+
+    fun setDatesWithMonthName(monthName: Boolean) {
+        prefs.edit().putBoolean(KEY_MONTH_NAME, monthName).apply()
+    }
+
     private companion object {
         const val PREFS_NAME = "home_layout"
         const val KEY_COLLAPSED_AREAS = "collapsed_areas"
         const val KEY_TODAY_SEEN = "today_seen"
+        const val KEY_TODAY_GROUPED = "today_grouped_by_place"
+        const val KEY_MONTH_NAME = "dates_month_name"
     }
 }

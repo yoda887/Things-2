@@ -633,9 +633,13 @@ fun ThingsHomeScreen(viewModel: ThingsViewModel = hiltViewModel()) {
                     // Правила повтора — строкам шаблонов и редактору шаблона и его копий; новое в «Сегодня» — точкам и плашке
                     val todayNewIds by viewModel.todayNewIds.collectAsState()
                     val todayNew = remember(todayNewIds) { com.example.ui.components.TodayNew(todayNewIds, viewModel::dismissTodayNew) }
+                    val todayGrouped by viewModel.todayGroupedByPlace.collectAsState()
+                    val datesWithMonthName by viewModel.datesWithMonthName.collectAsState()
                     androidx.compose.runtime.CompositionLocalProvider(
                         com.example.ui.components.LocalRepeatRules provides screenState.repeatRules,
-                        com.example.ui.components.LocalTodayNew provides todayNew
+                        com.example.ui.components.LocalTodayNew provides todayNew,
+                        com.example.ui.components.LocalTodayGrouped provides todayGrouped,
+                        com.example.ui.components.LocalDatesWithMonthName provides datesWithMonthName
                     ) {
                     ThingsCategoryListPanel(
                         state = screenState.copy(
@@ -928,7 +932,11 @@ fun ThingsHomeScreen(viewModel: ThingsViewModel = hiltViewModel()) {
                                 viewModel.setAccessToken(token)
                                 viewModel.syncWithGoogle()
                             },
-                            onBackClick = { navController.popBackStack() }
+                            onBackClick = { navController.popBackStack() },
+                            todayGrouped = viewModel.todayGroupedByPlace.collectAsState().value,
+                            onTodayGroupedChange = viewModel::setTodayGroupedByPlace,
+                            datesWithMonthName = viewModel.datesWithMonthName.collectAsState().value,
+                            onDatesWithMonthNameChange = viewModel::setDatesWithMonthName
                         )
                     }
                 }

@@ -91,6 +91,9 @@ import com.example.ui.components.HideTextSelectionHandles
 import com.example.ui.components.hideSoftKeyboardNow
 import com.example.ui.theme.*
 
+// Значок повтора у проекта в результатах быстрого поиска — как у строк проектов в списках
+private val QUICK_FIND_REPEAT_ICON_SIZE = 14.dp
+
 // Окно Quick Find: уход вниз при закрытии и тень карточки
 private val QuickFindDismissSlide = 110.dp
 private val QuickFindCardElevation = 12.dp
@@ -378,9 +381,12 @@ fun ThingsSearchOverlay(
             }
 
             // 2. Проекты, области, теги — в том же порядке, что на экране поиска
-            // Проекты: только открытые, по названию и заметкам
-            val matchedProjects = projects.filter {
-                it.type == Item.TYPE_PROJECT && !it.trashed && !it.isCompleted && it.status != Item.STATUS_CANCELLED && (
+            // Проекты: только открытые, по названию и заметкам — и шаблоны повторяющихся проектов (они среди всех задач)
+            val projectTemplates = allTasks.map { it.item }.filter { t ->
+                com.example.domain.lists.RepeatingList.includesProject(t) && projects.none { it.id == t.id }
+            }
+            val matchedProjects = (projects + projectTemplates).filter {
+                (it.type == Item.TYPE_PROJECT || it.type == Item.TYPE_PROJECT_TEMPLATE) && !it.trashed && !it.isCompleted && it.status != Item.STATUS_CANCELLED && (
                     it.title.contains(query, ignoreCase = true) ||
                     it.notes.contains(query, ignoreCase = true)
                 )
@@ -647,7 +653,7 @@ fun ThingsSearchOverlay(
                                         singleLine = true,
                                         // «Go» открывает подсвеченный первый результат, как нажатие на него;
                                         // без результатов — продолжает поиск
-                                        keyboardOptions = KeyboardOptions(imeAction = ImeAction.Go),
+                                        keyboardOptions = KeyboardOptions(capitalization = androidx.compose.ui.text.input.KeyboardCapitalization.Sentences, imeAction = ImeAction.Go),
                                         keyboardActions = KeyboardActions(onGo = { openHighlightedResult() }),
                                         cursorBrush = SolidColor(if (isMorphClosing || isClosing) Color.Unspecified else ThingsTheme.colors.accent),
                                         modifier = Modifier
@@ -734,7 +740,9 @@ fun ThingsSearchOverlay(
                                         } else null
                                     }
                                     is SearchResultItem.ProjectResult -> {
+                                        // Шаблон повторяющегося проекта — среди всех задач
                                         val currentProject = projects.find { it.id == item.project.id && !it.trashed }
+                                            ?: allTasks.firstOrNull { it.item.id == item.project.id && com.example.domain.lists.RepeatingList.includesProject(it.item) }?.item
                                         if (currentProject != null) {
                                             SearchResultItem.ProjectResult(currentProject)
                                         } else null
@@ -1083,7 +1091,8 @@ fun SearchResultRow(
         is SearchResultItem.ProjectResult -> {
             val totalCount = allTasks.count { it.item.projectId == result.project.id && it.item.type == Item.TYPE_TASK }
             val completedCount = allTasks.count { it.item.projectId == result.project.id && it.item.type == Item.TYPE_TASK && it.item.isClosed }
-            val isSomeday = result.project.isSomeday
+            // Item.isSomeday — только для задач: у проекта «Когда-нибудь» смотрим старт
+            val isSomeday = result.project.start == Item.START_SOMEDAY
             val baseArcColor = if (isSomeday) ThingsTheme.colors.someday else ThingsTheme.colors.project
             val arcColor = if (isHighlighted) androidx.compose.ui.graphics.lerp(baseArcColor, accentColor, 0.45f) else baseArcColor
             val rowBg = if (isHighlighted) accentColor.copy(alpha = ThingsAlpha.LOW) else Color.Transparent
@@ -1103,24 +1112,47 @@ fun SearchResultRow(
                     modifier = Modifier.size(MaterialTheme.dimens.searchLeftColumnWidth),
                     contentAlignment = Alignment.Center
                 ) {
-                    ProjectProgressArc(
+                    // Выполненный проект — синий круг с белой галочкой
+                    com.example.ui.components.ProjectStatusIcon(
+                        project = result.project,
                         completed = completedCount,
                         total = totalCount,
                         color = arcColor,
-                        dashed = result.project.start == com.example.data.model.Item.START_SOMEDAY,
                         modifier = Modifier.requiredSize(ThingsIconSize.M)
                     )
                 }
                 Spacer(modifier = Modifier.width(MaterialTheme.dimens.searchSpacingToText))
+                // Шаблон повторяющегося проекта — плашка дня следующего повтора («Пауза», «Чекає»), как у шаблона задачи
+                if (result.project.type == Item.TYPE_PROJECT_TEMPLATE) {
+                    com.example.ui.components.repeatBadge(com.example.ui.components.LocalRepeatRules.current[result.project.id])?.let { badge ->
+                        com.example.ui.screens.home.subcomponents.DateBadge(badge)
+                        Spacer(modifier = Modifier.width(ThingsSpacing.XS_PLUS))
+                    }
+                    // Синий значок повтора — как у шаблона в списках
+                    com.example.ui.components.RepeatTemplateIcon(modifier = Modifier.size(QUICK_FIND_REPEAT_ICON_SIZE))
+                    Spacer(modifier = Modifier.width(ThingsSpacing.XS_PLUS))
+                }
+                val isRepeatCopy = result.project.type == Item.TYPE_PROJECT && result.project.repeatTemplateId != null
                 Text(
                     text = result.project.title,
                     style = ThingsTheme.type.listTitle.copy(
                         color = textPrimary
                     ),
-                    modifier = Modifier.weight(1f),
+                    modifier = Modifier.weight(1f, fill = !isRepeatCopy),
                     maxLines = 1,
                     overflow = TextOverflow.Ellipsis
                 )
+                // Копия повторяющегося проекта — серая круговая стрелка после названия, как в списках
+                if (isRepeatCopy) {
+                    Spacer(modifier = Modifier.width(ThingsSpacing.XS_PLUS))
+                    Icon(
+                        imageVector = com.example.ui.theme.AppIcons.RepeatCopy,
+                        contentDescription = stringResource(R.string.cd_repeat_copy),
+                        tint = ThingsTheme.colors.textSecondary.copy(alpha = ThingsAlpha.MUTED),
+                        modifier = Modifier.size(QUICK_FIND_REPEAT_ICON_SIZE)
+                    )
+                    Spacer(modifier = Modifier.weight(1f))
+                }
                 if (isChecked) {
                     Icon(
                         imageVector = Icons.Default.Check,

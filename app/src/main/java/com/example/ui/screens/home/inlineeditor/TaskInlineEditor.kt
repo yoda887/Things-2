@@ -404,11 +404,10 @@ fun ThingsTaskInlineEditor(
         val currentArea = remember(task.item.areaId, areas) {
             areas.firstOrNull { it.id == task.item.areaId }
         }
-        val subtitleText = when {
-            currentProject != null && screen != ActiveScreen.PROJECT_DETAIL -> currentProject.name
-            currentProject == null && currentArea != null && screen != ActiveScreen.AREA_DETAIL -> currentArea.title
-            else -> null
-        }
+        // Подпись — по тому же правилу, что у строки списка: при раскрытии она не появляется там, где её нет у строки
+        val subtitleText = com.example.ui.screens.home.subcomponents.taskSubtitle(
+            task.item, currentProject, currentArea, screen, com.example.ui.components.LocalTodayGrouped.current
+        )
 
         Column(
             modifier = Modifier

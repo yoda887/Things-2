@@ -112,6 +112,7 @@ fun SearchQueryField(
                 )
             }
             BasicTextField(
+                keyboardOptions = androidx.compose.foundation.text.KeyboardOptions(capitalization = androidx.compose.ui.text.input.KeyboardCapitalization.Sentences),
                 value = textFieldValue,
                 onValueChange = { newValue ->
                     textFieldValue = newValue
@@ -155,6 +156,8 @@ fun SearchQueryField(
  */
 @Composable
 fun SearchSectionHeader(
+    // Заголовок области — жирнее (listTitleStrong)
+    strong: Boolean = false,
     title: String,
     icon: @Composable () -> Unit,
     dividerColor: Color,
@@ -190,7 +193,8 @@ fun SearchSectionHeader(
             Spacer(modifier = Modifier.width(MaterialTheme.dimens.taskSpacingToTextDefault))
             Text(
                 text = title,
-                style = ThingsTheme.type.sectionHeader.copy(color = textPrimaryColor),
+                // Область — жирнее названий проектов в списке под ней
+                style = (if (strong) ThingsTheme.type.listTitleStrong else ThingsTheme.type.sectionHeader).copy(color = textPrimaryColor),
                 maxLines = 1,
                 overflow = TextOverflow.Ellipsis,
                 modifier = Modifier.weight(1f, fill = false)

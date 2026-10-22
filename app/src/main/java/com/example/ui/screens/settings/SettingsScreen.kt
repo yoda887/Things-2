@@ -33,7 +33,7 @@ private val SETTINGS_BACK_ICON_SIZE = 24.dp
 
 /**
  * Экран «Налаштування»: открывается со строки внизу главного экрана.
- * Здесь синхронизация с Google Tasks и резервная копия / синхронизация через Google Drive.
+ * Здесь вид списка «Сегодня», синхронизация с Google Tasks и резервная копия / синхронизация через Google Drive.
  */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -47,7 +47,13 @@ fun SettingsScreen(
     dividerColor: Color,
     backgroundColor: Color,
     onSyncClick: (String) -> Unit,
-    onBackClick: () -> Unit
+    onBackClick: () -> Unit,
+    // Дневная часть «Сегодня» по проектам и областям
+    todayGrouped: Boolean = false,
+    onTodayGroupedChange: (Boolean) -> Unit = {},
+    // Даты в карточках — месяц словом («9 жовт.») или цифрами («9.10.»)
+    datesWithMonthName: Boolean = true,
+    onDatesWithMonthNameChange: (Boolean) -> Unit = {}
 ) {
     Column(
         modifier = Modifier
@@ -83,6 +89,32 @@ fun SettingsScreen(
                 )
             }
             item {
+                SettingsSwitchCard(
+                    icon = com.example.ui.theme.AppIcons.Today,
+                    iconTint = ThingsTheme.colors.today,
+                    title = stringResource(R.string.settings_today_grouped),
+                    hint = stringResource(R.string.settings_today_grouped_hint),
+                    checked = todayGrouped,
+                    onCheckedChange = onTodayGroupedChange,
+                    textPrimaryColor = textPrimaryColor,
+                    textSecondaryColor = textSecondaryColor,
+                    cardSurfaceColor = cardSurfaceColor
+                )
+            }
+            item {
+                SettingsSwitchCard(
+                    icon = com.example.ui.theme.AppIcons.Upcoming,
+                    iconTint = ThingsTheme.colors.upcoming,
+                    title = stringResource(R.string.settings_dates_month_name),
+                    hint = stringResource(R.string.settings_dates_month_name_hint),
+                    checked = datesWithMonthName,
+                    onCheckedChange = onDatesWithMonthNameChange,
+                    textPrimaryColor = textPrimaryColor,
+                    textSecondaryColor = textSecondaryColor,
+                    cardSurfaceColor = cardSurfaceColor
+                )
+            }
+            item {
                 GoogleTasksSyncCard(
                     googleToken = googleToken,
                     syncError = syncError,
@@ -102,6 +134,60 @@ fun SettingsScreen(
                     modifier = Modifier.padding(bottom = ThingsSpacing.XXL)
                 )
             }
+        }
+    }
+}
+
+/** Карточка-переключатель настройки: значок, название, пояснение и переключатель; нажатие на карточку — тоже. */
+@Composable
+private fun SettingsSwitchCard(
+    icon: androidx.compose.ui.graphics.vector.ImageVector,
+    iconTint: Color,
+    title: String,
+    hint: String,
+    checked: Boolean,
+    onCheckedChange: (Boolean) -> Unit,
+    textPrimaryColor: Color,
+    textSecondaryColor: Color,
+    cardSurfaceColor: Color,
+    modifier: Modifier = Modifier
+) {
+    val view = LocalView.current
+    fun toggle(value: Boolean) {
+        view.performHapticFeedback(android.view.HapticFeedbackConstants.CLOCK_TICK)
+        onCheckedChange(value)
+    }
+    Card(
+        modifier = modifier.fillMaxWidth(),
+        colors = CardDefaults.cardColors(containerColor = cardSurfaceColor),
+        shape = ThingsTheme.shapes.cardShape
+    ) {
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .clickable { toggle(!checked) }
+                .padding(ThingsSpacing.L),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Icon(icon, contentDescription = null, tint = iconTint, modifier = Modifier.size(ThingsIconSize.L))
+            Spacer(modifier = Modifier.width(MaterialTheme.dimens.homeSyncInnerGap))
+            Column(modifier = Modifier.weight(1f)) {
+                Text(title, style = ThingsTheme.type.settingsTitle.copy(color = textPrimaryColor))
+                Text(hint, style = ThingsTheme.type.caption.copy(color = textSecondaryColor))
+            }
+            Spacer(modifier = Modifier.width(ThingsSpacing.M))
+            Switch(
+                checked = checked,
+                onCheckedChange = { toggle(it) },
+                // Выключенный — серые контур и бегунок на фоне карточки: иначе на светлой карточке его почти не видно
+                colors = SwitchDefaults.colors(
+                    checkedThumbColor = ThingsTheme.colors.onAccent,
+                    checkedTrackColor = ThingsTheme.colors.accent,
+                    uncheckedThumbColor = textSecondaryColor,
+                    uncheckedTrackColor = cardSurfaceColor,
+                    uncheckedBorderColor = textSecondaryColor
+                )
+            )
         }
     }
 }

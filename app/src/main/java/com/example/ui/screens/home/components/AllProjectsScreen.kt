@@ -46,13 +46,14 @@ object AllProjectsScreen {
 
     /**
      * Плашка даты у запланированного проекта среди более поздних, как в Things: в ближайшую неделю —
-     * день недели («пн»), дальше — число и месяц цифрами («18.10.»). У отложенных плашки нет.
+     * день недели («пн»), дальше — число и месяц словом («18 жовт.») или цифрами («18.10.», [monthName] — настройка).
+     * У отложенных плашки нет.
      */
-    fun laterDateBadge(project: com.example.data.model.Item, now: Long = System.currentTimeMillis()): String? {
+    fun laterDateBadge(project: com.example.data.model.Item, now: Long = System.currentTimeMillis(), monthName: Boolean = true): String? {
         val start = project.startDate ?: return null
         if (project.start == com.example.data.model.Item.START_SOMEDAY) return null
         val weekAhead = now + 6 * 24 * 3600 * 1000L
-        val pattern = if (start <= weekAhead) "EEE" else "d.M."
+        val pattern = if (start <= weekAhead) "EEE" else if (monthName) "d MMM" else "d.M."
         return java.text.SimpleDateFormat(pattern, java.util.Locale.getDefault()).format(java.util.Date(start))
     }
 }

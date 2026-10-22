@@ -9,9 +9,10 @@ object TagScreen {
     val LATER_KEY: String = TaskListKeys.LIST_TOGGLE_PREFIX + "tag_later"
 
     /**
-     * Текущие задачи и проекты по месту — под заголовком своего проекта или области; задачи без проекта и
-     * области и проекты без области — отдельными блоками, с промежутком между ними. Затем плашка поздних
-     * («Показать более поздние объекты») и они сами, если раскрыты; затем плашка выполненных и они сами.
+     * Задачи и проекты по месту — под заголовком своего проекта или области; задачи без проекта и области и
+     * проекты без области — отдельными блоками, с промежутком между ними. Показанные поздние и выполненные —
+     * в тех же группах, после текущих (TagList.Content.groups): заголовок проекта или области не повторяется.
+     * Внизу — плашки «Показать более поздние объекты» и выполненных.
      */
     fun rows(
         content: TagList.Content,
@@ -20,14 +21,10 @@ object TagScreen {
         laterLabel: (shown: Boolean) -> String = { "" },
         loggedLabel: (shown: Boolean, count: Int) -> String = { _, _ -> "" }
     ): List<Any> = buildList {
-        addAll(groupRows(content.groups))
-        if (content.laterCount > 0) {
-            if (showLater) addAll(groupRows(content.laterGroups))
-            add(ListToggleItem(LATER_KEY, laterLabel(showLater)))
-        }
+        addAll(groupRows(content.groups(showLater = showLater && content.laterCount > 0, showLogged = showLogged)))
+        if (content.laterCount > 0) add(ListToggleItem(LATER_KEY, laterLabel(showLater)))
         if (content.logbook.isNotEmpty()) {
             add(ListToggleItem(AllProjectsScreen.LOGGED_KEY, loggedLabel(showLogged, content.logbook.size)))
-            if (showLogged) addAll(content.logbook)
         }
     }
 

@@ -197,6 +197,24 @@ class ThingsViewModel @Inject constructor(
         }
     }
 
+    private val _todayGroupedByPlace = MutableStateFlow(homeLayoutPrefs.todayGroupedByPlace())
+    /** Дневная часть «Сегодня» — по проектам и областям (настройка) */
+    val todayGroupedByPlace: StateFlow<Boolean> = _todayGroupedByPlace.asStateFlow()
+
+    fun setTodayGroupedByPlace(grouped: Boolean) {
+        homeLayoutPrefs.setTodayGroupedByPlace(grouped)
+        _todayGroupedByPlace.value = grouped
+    }
+
+    private val _datesWithMonthName = MutableStateFlow(homeLayoutPrefs.datesWithMonthName())
+    /** Даты в карточках — месяц словом или цифрами (настройка) */
+    val datesWithMonthName: StateFlow<Boolean> = _datesWithMonthName.asStateFlow()
+
+    fun setDatesWithMonthName(monthName: Boolean) {
+        homeLayoutPrefs.setDatesWithMonthName(monthName)
+        _datesWithMonthName.value = monthName
+    }
+
     /** «OK» на плашке «Сегодня»: всё, что там сейчас, — виденное, точки и плашка пропадают */
     fun dismissTodayNew() {
         val known = (todayKnown ?: emptySet()) + _todayNewIds.value

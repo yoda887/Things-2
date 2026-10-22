@@ -614,8 +614,8 @@ private fun MoveDialogRow(
                 ProjectProgressArc(
                     completed = completed,
                     total = total,
-                    // Голубой акцент темы; на подсвеченной строке — белым
-                    color = if (isHighlighted) ThingsTheme.colors.onAccent else ThingsTheme.colors.accent,
+                    // Голубой акцент темы, «Когда-нибудь» — серым; на подсвеченной строке — белым
+                    color = if (isHighlighted) ThingsTheme.colors.onAccent else if (dashed) ThingsTheme.colors.someday else ThingsTheme.colors.accent,
                     dashed = dashed,
                     modifier = Modifier.size(ThingsIconSize.M)
                 )
@@ -879,7 +879,7 @@ private fun MoveSearchField(
                     onValueChange = onQueryChange,
                     singleLine = true,
                     // «Go» на клавиатуре — подсвеченный результат
-                    keyboardOptions = androidx.compose.foundation.text.KeyboardOptions(imeAction = androidx.compose.ui.text.input.ImeAction.Go),
+                    keyboardOptions = androidx.compose.foundation.text.KeyboardOptions(capitalization = androidx.compose.ui.text.input.KeyboardCapitalization.Sentences, imeAction = androidx.compose.ui.text.input.ImeAction.Go),
                     keyboardActions = androidx.compose.foundation.text.KeyboardActions(onGo = { onGo() }),
                     textStyle = ThingsTheme.type.dialogRow.copy(color = ThingsTheme.colors.overlayContent),
                     cursorBrush = SolidColor(ThingsTheme.colors.accent),

@@ -230,6 +230,8 @@ fun ThingsCategoryListPanel(
     val currentRepeatRules by rememberUpdatedState(state.repeatRules)
     // Новое в «Сегодня»: плашка вверху списка, жёлтые точки — в строках задач и проектов
     val todayNew = com.example.ui.components.LocalTodayNew.current
+    // «Входящие»: ушедшие задачи под плашкой — их id (строки бледные, пока свёрнуты)
+    val inboxGhostIds = remember(state.inboxGhosts) { state.inboxGhosts.mapTo(HashSet()) { it.item.id } }
 
     fun freeze(id: String?) {
         val snapshot = id?.let { editedId -> currentDisplayTasks.firstOrNull { it.item.id == editedId } }
@@ -453,7 +455,8 @@ fun ThingsCategoryListPanel(
         showLoggedProjects = showLoggedProjects,
         repeatRules = layoutRepeatRules,
         inboxGhosts = state.inboxGhosts,
-        todayNewCount = if (screen == ActiveScreen.TODAY) todayNew.ids.size else 0
+        todayNewCount = if (screen == ActiveScreen.TODAY) todayNew.ids.size else 0,
+        todayGroupedDay = screen == ActiveScreen.TODAY && com.example.ui.components.LocalTodayGrouped.current
     )
 
     // ── Добавление перетаскиванием кнопки «+» (см. FabDragController) ──
@@ -1167,7 +1170,7 @@ fun ThingsCategoryListPanel(
             val hasTasks = when (screen) {
                 ActiveScreen.TODAY -> !TodayScreen.isEmpty(standardToday, eveningToday, isDragging = dragDropState.draggedItemKey != null, projects = com.example.domain.lists.TodayList.projects(projects))
                 ActiveScreen.UPCOMING -> !UpcomingScreen.isEmpty(upcomingSchedule)
-                ActiveScreen.AREA_DETAIL -> !AreaList.content(area?.id, displayTasks, projects).isEmpty
+                ActiveScreen.AREA_DETAIL -> !AreaList.content(area?.id, displayTasks, projects, templates = state.allTasks.map { it.item }).isEmpty
                 ActiveScreen.LOGBOOK -> LogbookList.entries(displayTasks, projects).isNotEmpty()
                 ActiveScreen.TAG_DETAIL -> !TagList.content(state.tag?.title, displayTasks, state.allTasks, projects, areasState).isEmpty
                 ActiveScreen.PROJECT_DETAIL -> !ProjectScreen.isEmpty(displayTasks, localHeadings)
@@ -1178,7 +1181,7 @@ fun ThingsCategoryListPanel(
                 // «Входящие» не пусты, пока над ними плашка с ушедшими задачами
                 ActiveScreen.INBOX -> displayTasks.isNotEmpty() || state.inboxGhosts.isNotEmpty()
                 ActiveScreen.SEARCH, ActiveScreen.HOME -> displayTasks.isNotEmpty()
-                ActiveScreen.ALL_PROJECTS -> AllProjectsList.hasContent(AllProjectsList.content(projects, areasState))
+                ActiveScreen.ALL_PROJECTS -> AllProjectsList.hasContent(AllProjectsList.content(projects, areasState, templates = state.allTasks.map { it.item }))
                 ActiveScreen.LOGGED_PROJECTS -> projects.any { LogbookList.includesProject(it) }
                 ActiveScreen.REPEATING -> displayTasks.isNotEmpty()
             }
@@ -1222,9 +1225,6 @@ fun ThingsCategoryListPanel(
                         is SearchHeadingItem -> "search_heading_${item.heading.id}"
                         is InboxMovedBannerItem -> TaskListKeys.INBOX_MOVED_BANNER
                         is TodayNewBannerItem -> TaskListKeys.TODAY_NEW_BANNER
-                        // Ушедшая из «Входящих» — тот же ключ, что у задачи в списке: строка съезжает под плашку, а не
-                        // исчезает и появляется заново (в списке и под плашкой одна задача не стоит — InboxMoves.ghosts)
-                        is InboxGhostItem -> item.task.item.id
                         is ProjectHeadingItem -> item.key
                         else -> item.toString()
                     }
@@ -1235,6 +1235,10 @@ fun ThingsCategoryListPanel(
                             val liveItem = if (item.item.id == frozenEdited?.item?.id) {
                                 state.displayTasks.firstOrNull { it.item.id == item.item.id } ?: item
                             } else item
+                            // Ушедшая из «Входящих» (под плашкой) — та же строка, что у задачи: съезжает под плашку по ключу,
+                            // с ней можно всё; бледная, пока не раскрыта
+                            val isInboxGhost = screen == ActiveScreen.INBOX && item.item.id in inboxGhostIds &&
+                                inlineExpandedTaskId != item.item.id
                             AnimatedTaskItem(
                                 taskWrapper = liveItem,
                                 dateBadge = if (screen == ActiveScreen.UPCOMING) monthTaskBadges[UpcomingScreen.monthBadgeKey(item.item)] else null,
@@ -1296,7 +1300,7 @@ fun ThingsCategoryListPanel(
                                 onToggleSelect = { onEvent(ThingsCategoryListEvent.ToggleTaskSelection(item.item.id)) },
                                 selectedTaskIds = state.selectedTaskIds,
                                 onExitSelectionMode = { onEvent(ThingsCategoryListEvent.ExitSelectionMode) },
-                                modifier = if (dragDropState.draggedItemKey == item.item.id) {
+                                modifier = (if (isInboxGhost) Modifier.graphicsLayer { alpha = ThingsAlpha.HALF } else Modifier).then(if (dragDropState.draggedItemKey == item.item.id) {
                                     Modifier
                                 } else {
                                     Modifier.animateItem(
@@ -1306,7 +1310,7 @@ fun ThingsCategoryListPanel(
                                         fadeOutSpec = androidx.compose.animation.core.tween(ThingsMotion.STANDARD),
                                         placementSpec = placementSpec
                                     )
-                                }
+                                })
                             )
                         }
                         is Item -> {
@@ -1333,13 +1337,23 @@ fun ThingsCategoryListPanel(
                                         ActiveScreen.REPEATING -> if (task.type == Item.TYPE_PROJECT_TEMPLATE) {
                                             com.example.ui.components.repeatBadge(state.repeatRules[task.id])
                                         } else task.startDate?.let { com.example.ui.screens.home.subcomponents.startDateBadgeText(it) }
-                                        ActiveScreen.ALL_PROJECTS -> if (LogbookList.includesProject(task)) null else AllProjectsScreen.laterDateBadge(task)
+                                        // Шаблон повторяющегося проекта — день следующего повтора, «Пауза» или «Чекає»
+                                        ActiveScreen.ALL_PROJECTS -> if (task.type == Item.TYPE_PROJECT_TEMPLATE) {
+                                            com.example.ui.components.repeatBadge(state.repeatRules[task.id])
+                                        } else if (LogbookList.includesProject(task)) null else AllProjectsScreen.laterDateBadge(task)
                                             ?.let { com.example.ui.screens.home.subcomponents.startDateBadgeText(task.startDate!!) }
-                                        // В «Планах» области — дата старта запланированного проекта
-                                        ActiveScreen.AREA_DETAIL -> if (HomeList.showsProject(task)) null else AllProjectsScreen.laterDateBadge(task)
+                                        // В «Планах» области — дата старта запланированного проекта; у шаблона повторяющегося
+                                        // проекта — день следующего повтора, «Пауза» или «Чекає»
+                                        ActiveScreen.AREA_DETAIL -> if (task.type == Item.TYPE_PROJECT_TEMPLATE) {
+                                            com.example.ui.components.repeatBadge(state.repeatRules[task.id])
+                                        } else if (HomeList.showsProject(task)) null else AllProjectsScreen.laterDateBadge(task)
                                             ?.let { com.example.ui.screens.home.subcomponents.startDateBadgeText(task.startDate!!) }
                                         // На экране тега — дата старта запланированного проекта (сегодня — звезда или луна)
                                         // (шаблон повторяющегося проекта — день следующего повтора, «Пауза» или «Чекає»)
+                                        // В поиске — у шаблона повторяющегося проекта день следующего повтора
+                                        ActiveScreen.SEARCH -> if (task.type == Item.TYPE_PROJECT_TEMPLATE) {
+                                            com.example.ui.components.repeatBadge(state.repeatRules[task.id])
+                                        } else null
                                         ActiveScreen.TAG_DETAIL -> if (task.type == Item.TYPE_PROJECT_TEMPLATE) {
                                             com.example.ui.components.repeatBadge(state.repeatRules[task.id])
                                         } else task.startDate
@@ -1383,26 +1397,6 @@ fun ThingsCategoryListPanel(
                                 buttonBackground = ThingsTheme.colors.todayNewButton,
                                 onOk = todayNew.onDismiss,
                                 modifier = Modifier.animateItem(placementSpec = placementSpec)
-                            )
-                        }
-                        is InboxGhostItem -> {
-                            // Ушедшая задача — бледно и без касаний, уже с новой датой, проектом или областью
-                            TaskItemRow(
-                                task = item.task.item,
-                                textPrimaryColor = textPrimaryColor,
-                                textSecondaryColor = textSecondaryColor,
-                                dividerColor = dividerColor,
-                                onToggle = {},
-                                onClick = {},
-                                projects = projects,
-                                areas = areasState,
-                                screen = ActiveScreen.INBOX,
-                                dateBadge = item.task.item.startDate
-                                    ?.takeIf { it > com.example.data.model.DayBounds.now().endOfToday }
-                                    ?.let { com.example.ui.screens.home.subcomponents.startDateBadgeText(it) },
-                                modifier = Modifier
-                                    .animateItem(placementSpec = placementSpec)
-                                    .graphicsLayer { alpha = ThingsAlpha.HALF }
                             )
                         }
                         is UpcomingHeaderItem -> {
@@ -1491,6 +1485,7 @@ fun ThingsCategoryListPanel(
                                     else -> null
                                 },
                                 showChevron = header.project != null || header.area != null,
+                                strong = header.kind == SearchSectionKind.AREA,
                                 modifier = Modifier
                                     .animateItem(placementSpec = placementSpec)
                                     .graphicsLayer { alpha = dimAlpha }
@@ -2243,11 +2238,10 @@ private fun SearchSectionIcon(
         )
         SearchSectionKind.PROJECT -> {
             val progress = header.project?.let { projectProgressMap[it.id] }
-            ProjectProgressArc(
+            com.example.ui.components.ProjectStatusIcon(
+                project = header.project,
                 completed = progress?.completed ?: 0,
                 total = progress?.total ?: 0,
-                color = ThingsTheme.colors.project,
-                dashed = header.project?.start == com.example.data.model.Item.START_SOMEDAY,
                 modifier = iconModifier
             )
         }

@@ -58,9 +58,13 @@ private fun MutableList<Any>.addSearchResults(
     // Сюда же — задачи, чьих проекта или области больше нет: иначе они пропали бы из поиска
     addAll(active.filter { it.projectOrNull() == null && it.areaOrNull() == null })
 
-    // 2. Найденные открытые проекты, области и теги — строками, без заголовка секции
-    val matchedProjects = projects.filter {
-        it.type == Item.TYPE_PROJECT && !it.trashed && !it.isDone() &&
+    // 2. Найденные открытые проекты (и шаблоны повторяющихся проектов — они среди всех задач), области и теги —
+    // строками, без заголовка секции
+    val projectTemplates = allTasks.map { it.item }.filter { t ->
+        com.example.domain.lists.RepeatingList.includesProject(t) && projects.none { it.id == t.id }
+    }
+    val matchedProjects = (projects + projectTemplates).filter {
+        (it.type == Item.TYPE_PROJECT || it.type == Item.TYPE_PROJECT_TEMPLATE) && !it.trashed && !it.isDone() &&
             (it.title.contains(q, ignoreCase = true) || it.notes.contains(q, ignoreCase = true))
     }
     addAll(matchedProjects)

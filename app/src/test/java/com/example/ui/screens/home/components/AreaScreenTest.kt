@@ -115,4 +115,13 @@ class AreaScreenTest {
         assertFalse(onlyLater.isEmpty)
         assertTrue(onlyLater.hasLater)
     }
+
+    @Test
+    fun repeatingProjectTemplatesOfArea_inUpcoming() {
+        val template = Item(id = "tpl", type = Item.TYPE_PROJECT_TEMPLATE, title = "tpl", areaId = "a")
+        val otherTemplate = Item(id = "tplB", type = Item.TYPE_PROJECT_TEMPLATE, title = "tplB", areaId = "b")
+        val content = AreaList.content("a", listOf(current), listOf(project), bounds, templates = listOf(template, otherTemplate))
+        assertEquals(listOf("tpl"), content.upcomingProjects.map { it.id })
+        assertTrue(content.hasLater)
+    }
 }

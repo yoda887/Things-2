@@ -28,9 +28,27 @@ object TagList {
         /** Более поздние — со стартом после сегодня и «Когда-нибудь», тоже по месту */
         val laterGroups: List<PlaceGroups.Group> = emptyList(),
         /** Сколько поздних задач и проектов */
-        val laterCount: Int = 0
+        val laterCount: Int = 0,
+        /** Для [groups]: текущие и поздние задачи и проекты, все проекты и области, закреплённые места */
+        private val currentTasks: List<ItemWithChecklist> = emptyList(),
+        private val laterTasks: List<ItemWithChecklist> = emptyList(),
+        private val currentProjects: List<Item> = emptyList(),
+        private val laterProjects: List<Item> = emptyList(),
+        private val allProjects: List<Item> = emptyList(),
+        private val areas: List<Area> = emptyList(),
+        private val pinned: Map<String, PlaceGroups.Place> = emptyMap()
     ) {
         val isEmpty: Boolean get() = projects.isEmpty() && active.isEmpty() && logbook.isEmpty()
+
+        /**
+         * Группы экрана: текущие, а показанные поздние ([showLater]) и выполненные ([showLogged]) — в тех же группах
+         * своего проекта или области, после текущих (один заголовок на проект или область, не второй такой же).
+         */
+        fun groups(showLater: Boolean, showLogged: Boolean): List<PlaceGroups.Group> {
+            val tasks = currentTasks + (if (showLater) laterTasks else emptyList()) + (if (showLogged) logbook else emptyList())
+            val rows = currentProjects + (if (showLater) laterProjects else emptyList())
+            return PlaceGroups.group(tasks, allProjects, areas, projectRows = rows, areaHeaderOnlyWithOwnItems = true, pinned = pinned)
+        }
     }
 
     /** Поздняя задача или проект: старт после сегодня или «Когда-нибудь». Шаблон повтора — не поздний (у него свой день повтора) */
@@ -68,6 +86,13 @@ object TagList {
             groups = PlaceGroups.group(current, projects, areas, projectRows = currentProjects, areaHeaderOnlyWithOwnItems = true, pinned = pinned),
             laterGroups = PlaceGroups.group(later, projects, areas, projectRows = laterProjects, areaHeaderOnlyWithOwnItems = true),
             laterCount = later.size + laterProjects.size,
+            currentTasks = current,
+            laterTasks = later,
+            currentProjects = currentProjects,
+            laterProjects = laterProjects,
+            allProjects = projects,
+            areas = areas,
+            pinned = pinned,
             logbook = allTasks
                 .filter { !it.item.trashed && ListRules.isClosed(it.item) && hasTag(it.item, title) }
                 .sortedByDescending { it.item.stopDate ?: it.item.modificationDate }

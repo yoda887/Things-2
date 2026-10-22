@@ -92,15 +92,19 @@ object RepeatingList {
     )
 
     /**
-     * Строки группы: сначала задачи, потом проекты — отдельно, как в Things; каждые — в порядке [comparator]
-     * (задачи без проекта и области — вверху списка)
+     * Строки группы: задачи и проекты — одним списком в порядке [comparator] (по дате; задачи без проекта и
+     * области — в группе без заголовка, вверху списка). При равенстве задача — выше проекта.
      */
     fun rows(
         group: PlaceGroups.Group,
         rules: Map<String, RecurrenceRule>,
         todayStart: Long = com.example.data.model.DayBounds.now().todayStart,
         endOfToday: Long = com.example.data.model.DayBounds.now().endOfToday
-    ): List<Any> = order(group.tasks, rules, todayStart, endOfToday) + projectRowsOf(group, rules, todayStart, endOfToday)
+    ): List<Any> {
+        val byItem = comparator(rules, todayStart, endOfToday)
+        val entries: List<Pair<Item, Any>> = group.tasks.map { it.item to (it as Any) } + group.projectRows.map { it to (it as Any) }
+        return entries.sortedWith { a, b -> byItem.compare(a.first, b.first) }.map { it.second }
+    }
 
     /** Проекты группы в порядке [comparator] */
     fun projectRowsOf(

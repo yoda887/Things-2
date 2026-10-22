@@ -433,7 +433,7 @@ class RepeatTest {
     }
 
     @Test
-    fun repeatingList_tasksThenProjects_eachByDate() {
+    fun repeatingList_tasksAndProjects_oneListByDate() {
         val rl = com.example.domain.lists.RepeatingList
         fun r(id: String, next: Long, active: Boolean = true) = com.example.data.model.RecurrenceRule(templateId = id, rrule = "", nextGenerationDate = next, isActive = active)
         val projectTemplate = Item(id = "p", type = Item.TYPE_PROJECT_TEMPLATE)
@@ -442,8 +442,8 @@ class RepeatTest {
         val plain = Item(id = "x", type = Item.TYPE_PROJECT, startDate = 100L)
         val rules = listOf(r("p", 3_000L), r("t", 1_000L)).associateBy { it.templateId }
         val group = rl.groups(listOf(taskTemplate), rules, emptyList(), emptyList(), listOf(projectTemplate, projectCopy, plain)).single()
-        // Задачи и проекты — отдельно: сначала задачи, потом проекты, каждые по дате
-        assertEquals(listOf("t", "pc", "p"), rl.rows(group, rules, todayStart = 0L, endOfToday = 0L).map { if (it is Item) it.id else (it as com.example.data.model.ItemWithChecklist).item.id })
+        // Задачи и проекты — одним списком по дате: копия проекта (500), шаблон задачи (1 000), шаблон проекта (3 000)
+        assertEquals(listOf("pc", "t", "p"), rl.rows(group, rules, todayStart = 0L, endOfToday = 0L).map { if (it is Item) it.id else (it as com.example.data.model.ItemWithChecklist).item.id })
     }
 
     @Test

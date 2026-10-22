@@ -340,18 +340,8 @@ fun TaskItemRow(
             val area = remember(task.areaId, areas) {
                 areas.firstOrNull { it.id == task.areaId }
             }
-            val subtitle = when {
-                // В поиске и «В любое время» задачи стоят под заголовком своего проекта или области — подпись повторяла бы его
-                screen == ActiveScreen.SEARCH && !isSearchLogbookStyle -> null
-                screen == ActiveScreen.ANYTIME || screen == ActiveScreen.SOMEDAY -> null
-                // «Повторяющиеся» сгруппированы под проектом или областью — подпись повторяла бы заголовок
-                screen == ActiveScreen.REPEATING -> null
-                // Тег — тоже по проектам и областям
-                screen == ActiveScreen.TAG_DETAIL -> null
-                project != null && screen != ActiveScreen.PROJECT_DETAIL -> project.name
-                project == null && area != null && screen != ActiveScreen.AREA_DETAIL -> area.title
-                else -> null
-            }
+            // Где задача и так под заголовком своего проекта или области — без подписи (taskSubtitle, общая с редактором)
+            val subtitle = taskSubtitle(task, project, area, screen, com.example.ui.components.LocalTodayGrouped.current)
             // Когда под заголовком есть вторая строка, плашка с датой встаёт слева от обеих строк
             // и центрируется по вертикали, а заголовок с подписью идут после неё
             // У шаблона повтора вместо даты — день следующего повтора или «Пауза», на любом экране: свои дата

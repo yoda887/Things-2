@@ -231,6 +231,10 @@
     <plurals name="repeat_unit_year"><item quantity="one">year</item><item quantity="other">years</item></plurals>
     <plurals name="inbox_moved_out"><item quantity="one">%1$d to-do moved out of the Inbox</item><item quantity="other">%1$d to-dos moved out of the Inbox</item></plurals>
     <plurals name="today_new_items"><item quantity="one">You have %1$d new to-do</item><item quantity="other">You have %1$d new to-dos</item></plurals>
+    <string name="settings_today_grouped">Group Today by projects</string>
+    <string name="settings_today_grouped_hint">The day part of Today — under its projects and areas; This Evening stays as it is</string>
+    <string name="settings_dates_month_name">Month as a word in dates</string>
+    <string name="settings_dates_month_name_hint">Dates on cards in the Logbook and project lists: “9 Oct” instead of “9.10.”</string>
     <plurals name="repeat_days_earlier"><item quantity="one">%d day earlier</item><item quantity="other">%d days earlier</item></plurals>
     <plurals name="repeat_repetitions"><item quantity="one">%d repetition</item><item quantity="other">%d repetitions</item></plurals>
     <plurals name="repeat_ends_after"><item quantity="one">after %d repetition</item><item quantity="other">after %d repetitions</item></plurals>

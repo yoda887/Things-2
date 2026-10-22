@@ -55,7 +55,8 @@ class TagScreenTest {
             projects = listOf(project("p"), project("done", status = Item.STATUS_COMPLETED), project("home", tags = "home"))
         )
         assertEquals(
-            listOf("open", TaskListKeys.AREA_PROJECTS_SPACER, "project:p", "toggle:logged", "new", "old"),
+            // Выполненные — в той же группе, что открытые, после них; плашка — внизу
+            listOf("open", "new", "old", TaskListKeys.AREA_PROJECTS_SPACER, "project:p", "toggle:logged"),
             ids(TagScreen.rows(content))
         )
     }
@@ -78,7 +79,8 @@ class TagScreenTest {
         assertEquals(listOf("now", "toggle:later", "toggle:logged"), ids(TagScreen.rows(content, showLater = false, showLogged = false)))
         // Раскрыты — поздние по месту перед своей плашкой, выполненные после своей
         assertEquals(
-            listOf("now", "planned", "someday", TaskListKeys.AREA_PROJECTS_SPACER, "project:lp", "toggle:later", "toggle:logged", "done"),
+            // Поздние и выполненные — в тех же группах, что текущие (без второго заголовка); плашки — внизу
+            listOf("now", "planned", "someday", "done", TaskListKeys.AREA_PROJECTS_SPACER, "project:lp", "toggle:later", "toggle:logged"),
             ids(TagScreen.rows(content, showLater = true, showLogged = true))
         )
         // Задача в открытом редакторе не уходит под плашку, даже с поздней датой
@@ -147,5 +149,19 @@ class TagScreenTest {
             projects = emptyList()
         )
         assertEquals(listOf("tpl", "copy", TaskListKeys.AREA_PROJECTS_SPACER, "project:ptpl"), ids(TagScreen.rows(content)))
+    }
+
+    @Test
+    fun shownLaterAndCompleted_sameProjectOneHeader() {
+        val p = Item(id = "p", type = Item.TYPE_PROJECT, title = "P")
+        val tomorrow = com.example.data.model.DayBounds.now().endOfToday + 1
+        val now = task("now", projectId = "p")
+        val later = ItemWithChecklist(Item(id = "later", title = "later", cachedTags = "work", projectId = "p", start = Item.START_ANYTIME, startDate = tomorrow))
+        val done = task("done", status = Item.STATUS_COMPLETED, stop = 1L, projectId = "p")
+        val content = TagList.content("work", listOf(now, later), listOf(now, later, done), listOf(p))
+        assertEquals(
+            listOf("header:P", "now", "later", "done", "toggle:later", "toggle:logged"),
+            ids(TagScreen.rows(content, showLater = true, showLogged = true))
+        )
     }
 }

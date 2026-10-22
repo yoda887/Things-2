@@ -238,6 +238,10 @@
     <plurals name="repeat_unit_year"><item quantity="one">год</item><item quantity="few">года</item><item quantity="many">лет</item><item quantity="other">года</item></plurals>
     <plurals name="inbox_moved_out"><item quantity="one">%1$d задача перемещена из «Входящих»</item><item quantity="few">%1$d задачи перемещены из «Входящих»</item><item quantity="many">%1$d задач перемещено из «Входящих»</item><item quantity="other">%1$d задачи перемещено из «Входящих»</item></plurals>
     <plurals name="today_new_items"><item quantity="one">У вас %1$d новая задача</item><item quantity="few">У вас %1$d новые задачи</item><item quantity="many">У вас %1$d новых задач</item><item quantity="other">У вас %1$d новой задачи</item></plurals>
+    <string name="settings_today_grouped">Группировать «Сегодня» по проектам</string>
+    <string name="settings_today_grouped_hint">Дневная часть «Сегодня» — под своими проектами и областями; «Вечер» — как есть</string>
+    <string name="settings_dates_month_name">Месяц словом в датах</string>
+    <string name="settings_dates_month_name_hint">Даты в карточках «Журнала» и списков проектов: «9 окт.» вместо «9.10.»</string>
     <plurals name="repeat_days_earlier"><item quantity="one">за %d день</item><item quantity="few">за %d дня</item><item quantity="many">за %d дней</item><item quantity="other">за %d дня</item></plurals>
     <plurals name="repeat_repetitions"><item quantity="one">%d повтор</item><item quantity="few">%d повтора</item><item quantity="many">%d повторов</item><item quantity="other">%d повтора</item></plurals>
     <plurals name="repeat_ends_after"><item quantity="one">после %d повтора</item><item quantity="few">после %d повторов</item><item quantity="many">после %d повторов</item><item quantity="other">после %d повтора</item></plurals>

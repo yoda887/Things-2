@@ -42,4 +42,16 @@ class AllProjectsListTest {
         val content = AllProjectsList.content(listOf(project("w1", "work")), listOf(home, work), bounds)
         assertEquals(listOf("work"), content.groups.map { it.area?.id })
     }
+
+    @Test
+    fun repeatingProjectTemplates_inLaterOfTheirArea() {
+        val template = Item(id = "tpl", title = "tpl", type = Item.TYPE_PROJECT_TEMPLATE, areaId = "work")
+        val gone = Item(id = "tplGone", title = "tplGone", type = Item.TYPE_PROJECT_TEMPLATE, trashed = true)
+        val content = AllProjectsList.content(
+            listOf(project("w1", "work"), project("wSomeday", "work", start = Item.START_SOMEDAY)),
+            listOf(home, work), bounds, templates = listOf(template, gone, project("w1", "work"))
+        )
+        assertEquals(listOf("w1"), content.groups.single().active.map { it.id })
+        assertEquals(listOf("tpl", "wSomeday"), content.groups.single().later.map { it.id })
+    }
 }

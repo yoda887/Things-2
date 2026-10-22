@@ -108,7 +108,8 @@ fun ProjectItemRow(
                 ProjectProgressArc(
                     completed = completedCount,
                     total = totalCount,
-                    color = ThingsTheme.colors.project,
+                    // «Когда-нибудь» — серым пунктиром
+                    color = if (project.start == Item.START_SOMEDAY) ThingsTheme.colors.someday else ThingsTheme.colors.project,
                     dashed = project.start == Item.START_SOMEDAY,
                     modifier = Modifier.requiredSize(ThingsIconSize.M)
                 )
@@ -163,12 +164,43 @@ fun ProjectItemRow(
                     modifier = Modifier.size(NOTES_ICON_SIZE)
                 )
             }
+            // Свойства проекта, как у задачи: напоминание, заметки, теги, дедлайн — между названием и шевроном
+            val metaTint = ThingsTheme.colors.textSecondary.copy(alpha = ThingsAlpha.MUTED)
+            if (project.reminderTime != null && !isDone) {
+                Spacer(modifier = Modifier.width(NOTES_ICON_GAP))
+                Icon(
+                    imageVector = com.example.ui.theme.AppIcons.Bell,
+                    contentDescription = stringResource(R.string.reminder_title),
+                    tint = metaTint,
+                    modifier = Modifier.size(NOTES_ICON_SIZE)
+                )
+            }
             if (project.notes.isNotBlank()) {
                 Spacer(modifier = Modifier.width(NOTES_ICON_GAP))
                 Icon(
                     imageVector = Icons.Outlined.Description,
                     contentDescription = stringResource(R.string.cd_has_notes),
-                    tint = ThingsTheme.colors.textSecondary.copy(alpha = ThingsAlpha.MUTED),
+                    tint = metaTint,
+                    modifier = Modifier.size(NOTES_ICON_SIZE)
+                )
+            }
+            if (project.cachedTags.isNotBlank()) {
+                Spacer(modifier = Modifier.width(NOTES_ICON_GAP))
+                Icon(
+                    imageVector = com.example.ui.theme.AppIcons.Tag,
+                    contentDescription = stringResource(R.string.cd_has_tags),
+                    tint = metaTint,
+                    modifier = Modifier.size(NOTES_ICON_SIZE)
+                )
+            }
+            if (project.dueDate != null && !isDone) {
+                // Дедлайн сегодня или просрочен — красным, как у задачи
+                val dueSoon = project.dueDate <= com.example.data.model.DayBounds.now().endOfToday
+                Spacer(modifier = Modifier.width(NOTES_ICON_GAP))
+                Icon(
+                    imageVector = com.example.ui.theme.AppIcons.Deadline,
+                    contentDescription = stringResource(R.string.cd_deadline_flag),
+                    tint = if (dueSoon) ThingsTheme.colors.danger else metaTint,
                     modifier = Modifier.size(NOTES_ICON_SIZE)
                 )
             }

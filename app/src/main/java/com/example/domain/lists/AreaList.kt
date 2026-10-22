@@ -45,11 +45,13 @@ object AreaList {
             upcoming.isNotEmpty() || someday.isNotEmpty() || upcomingProjects.isNotEmpty() || somedayProjects.isNotEmpty()
     }
 
+    /** @param templates шаблоны повторяющихся проектов (их нет среди проектов) — в «Планах» области, за запланированными */
     fun content(
         areaId: String?,
         tasks: List<ItemWithChecklist>,
         projects: List<Item>,
-        bounds: DayBounds = DayBounds.now()
+        bounds: DayBounds = DayBounds.now(),
+        templates: List<Item> = emptyList()
     ): Content {
         val own = tasks.filter { isOwnTask(it.item, areaId) }
         val bySection = own.groupBy { sectionOf(it.item, bounds) }
@@ -61,7 +63,9 @@ object AreaList {
             current = bySection[Section.CURRENT].orEmpty(),
             upcoming = bySection[Section.UPCOMING].orEmpty(),
             someday = bySection[Section.SOMEDAY].orEmpty(),
-            upcomingProjects = scheduled.sortedBy { it.startDate },
+            upcomingProjects = scheduled.sortedBy { it.startDate } + templates.filter { t ->
+                areaId != null && t.areaId == areaId && RepeatingList.includesProject(t) && areaProjects.none { it.id == t.id }
+            }.sortedBy { it.sortOrder },
             somedayProjects = someday
         )
     }
