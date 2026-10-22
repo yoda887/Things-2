@@ -1084,8 +1084,10 @@ fun SearchResultRow(
                 areas = areas,
                 leftColumnWidth = MaterialTheme.dimens.searchLeftColumnWidth,
                 spacingToText = MaterialTheme.dimens.searchSpacingToText,
-                // Найденная задача — только название, без значков напоминания, заметок, чек-листа, тегов и дедлайна
-                showMetaIcons = false
+                // Найденная задача — только название, без даты старта и без значков напоминания, заметок, чек-листа,
+                // тегов и дедлайна
+                showMetaIcons = false,
+                showStartDate = false
             )
         }
         is SearchResultItem.ProjectResult -> {
@@ -1123,11 +1125,8 @@ fun SearchResultRow(
                 }
                 Spacer(modifier = Modifier.width(MaterialTheme.dimens.searchSpacingToText))
                 // Шаблон повторяющегося проекта — плашка дня следующего повтора («Пауза», «Чекає»), как у шаблона задачи
+                // Шаблон повторяющегося проекта — синий значок повтора перед названием (даты старта в быстром поиске нет)
                 if (result.project.type == Item.TYPE_PROJECT_TEMPLATE) {
-                    com.example.ui.components.repeatBadge(com.example.ui.components.LocalRepeatRules.current[result.project.id])?.let { badge ->
-                        com.example.ui.screens.home.subcomponents.DateBadge(badge)
-                        Spacer(modifier = Modifier.width(ThingsSpacing.XS_PLUS))
-                    }
                     // Синий значок повтора — как у шаблона в списках
                     com.example.ui.components.RepeatTemplateIcon(modifier = Modifier.size(QUICK_FIND_REPEAT_ICON_SIZE))
                     Spacer(modifier = Modifier.width(ThingsSpacing.XS_PLUS))

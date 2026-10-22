@@ -106,7 +106,9 @@ fun TaskItemRow(
     areas: List<com.example.data.model.Area> = emptyList(),
     dateBadge: String? = null,
     // Значки напоминания, заметок, чек-листа, тегов и дедлайн; в быстром поиске их нет — только название
-    showMetaIcons: Boolean = true
+    showMetaIcons: Boolean = true,
+    // Дата старта (плашка, звезда, луна, день повтора шаблона); в быстром поиске её нет
+    showStartDate: Boolean = true
 ) {
     val scope = rememberCoroutineScope()
     var localCompleted by remember(task.isCompleted) { mutableStateOf(task.isCompleted) }
@@ -353,6 +355,7 @@ fun TaskItemRow(
             } else null
             val repeatBadge = com.example.ui.components.repeatBadge(repeatRule)
             val dateBadge = when {
+                !showStartDate -> null
                 repeatRule != null -> repeatBadge
                 // Копия, созданная заранее, в «Повторяющихся» — под шаблоном, со своим днём
                 // Копия в «Повторяющихся» — как задача на экране проекта: звезда или луна сегодня, иначе день
@@ -398,7 +401,7 @@ fun TaskItemRow(
                             if (dateBadge != null && !badgeBesideBothLines) {
                                 DateBadge(text = dateBadge)
                                 Spacer(modifier = Modifier.width(ThingsSpacing.XS_PLUS))
-                            } else if (dateBadge == null && !indicatorBesideBothLines && dateIndicator != null && !task.isRepeatTemplate && (
+                            } else if (showStartDate && dateBadge == null && !indicatorBesideBothLines && dateIndicator != null && !task.isRepeatTemplate && (
                                     screen == ActiveScreen.PROJECT_DETAIL || screen == ActiveScreen.AREA_DETAIL ||
                                         repeatingCopyIndicator ||
                                         // В «В любое время» звезда или луна отмечают задачи «Сегодня»
