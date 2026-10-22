@@ -429,22 +429,92 @@ fun QuickAddDialog(
 
                     val startRelativePadding = MaterialTheme.dimens.taskEditorStartRelativePadding
 
-                    // Иконки справа — в правом нижнем углу блока. Строки слева во всю ширину; только нижняя оставляет им место
-                    // и стоит с ними на одном уровне (теги переносятся вокруг иконок, как текст вокруг картинки)
-                    var actionIconsSize by remember { mutableStateOf(androidx.compose.ui.unit.IntSize.Zero) }
-                    val iconsDensity = LocalDensity.current
-                    val iconsReserve = with(iconsDensity) { actionIconsSize.width.toDp() } + ThingsSpacing.L
-                    val iconsHeight = with(iconsDensity) { actionIconsSize.height.toDp() }
-                    val hasRepeatRow = false
-                    val tagsAreLast = !hasActiveDate && dueDate == null && !hasRepeatRow
-                    Box(modifier = Modifier.fillMaxWidth()) {
-                        // Слева: теги, дата и дедлайн
-                        Column(
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .padding(start = startRelativePadding),
-                            verticalArrangement = Arrangement.Center
-                        ) {
+                    // Свойства и иконки тулбара: нижнее свойство — на уровне иконок, если целиком помещается до них
+                    // в одну строку; иначе — строкой выше, а иконки — на своей строке (EditorAttributesRow)
+                    com.example.ui.screens.home.inlineeditor.components.EditorAttributesRow(
+                        gap = ThingsSpacing.L,
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(start = startRelativePadding),
+                        icons = {
+                            Row(
+                                verticalAlignment = Alignment.CenterVertically,
+                                modifier = Modifier.padding(end = ThingsSpacing.S_PLUS, bottom = ThingsSpacing.XS)
+                            ) {
+                            // Иконка Когда (Календарь)
+                            AnimatedVisibility(
+                                visible = !hasActiveDate,
+                                enter = fadeIn() + expandHorizontally(expandFrom = Alignment.End),
+                                exit = fadeOut() + shrinkHorizontally(shrinkTowards = Alignment.End)
+                            ) {
+                                Box(modifier = Modifier.padding(start = MaterialTheme.dimens.taskEditorActionIconsSpacing)) {
+                                    Icon(
+                                        imageVector = AppIcons.Upcoming,
+                                        contentDescription = stringResource(R.string.cd_schedule),
+                                        tint = iconInactiveColor,
+                                        modifier = Modifier
+                                            .size(ThingsIconSize.L)
+                                            .clickable { showWhenDialog = true }
+                                    )
+                                }
+                            }
+
+                            // Иконка Тегов
+                            AnimatedVisibility(
+                                visible = tagInput.trim().isEmpty(),
+                                enter = fadeIn() + expandHorizontally(expandFrom = Alignment.End),
+                                exit = fadeOut() + shrinkHorizontally(shrinkTowards = Alignment.End)
+                            ) {
+                                Box(modifier = Modifier.padding(start = MaterialTheme.dimens.taskEditorActionIconsSpacing)) {
+                                    Icon(
+                                        imageVector = AppIcons.Tag,
+                                        contentDescription = stringResource(R.string.tag_dialog_title),
+                                        tint = iconInactiveColor,
+                                        modifier = Modifier
+                                            .size(ThingsIconSize.M)
+                                            .clickable { showTagDialog = true }
+                                    )
+                                }
+                            }
+
+                            // Иконка Чеклиста
+                            AnimatedVisibility(
+                                visible = !showChecklistHelper && checklist.isEmpty(),
+                                enter = fadeIn() + expandHorizontally(expandFrom = Alignment.End),
+                                exit = fadeOut() + shrinkHorizontally(shrinkTowards = Alignment.End)
+                            ) {
+                                Box(modifier = Modifier.padding(start = MaterialTheme.dimens.taskEditorActionIconsSpacing)) {
+                                    Icon(
+                                        imageVector = AppIcons.BulletList,
+                                        contentDescription = stringResource(R.string.cd_checklists),
+                                        tint = iconInactiveColor,
+                                        modifier = Modifier
+                                            .size(ThingsIconSize.L)
+                                            .clickable { showChecklistHelper = true }
+                                    )
+                                }
+                            }
+
+                            // Иконка Дедлайна (Флаг)
+                            AnimatedVisibility(
+                                visible = dueDate == null,
+                                enter = fadeIn() + expandHorizontally(expandFrom = Alignment.End),
+                                exit = fadeOut() + shrinkHorizontally(shrinkTowards = Alignment.End)
+                            ) {
+                                Box(modifier = Modifier.padding(start = MaterialTheme.dimens.taskEditorActionIconsSpacing)) {
+                                    Icon(
+                                        imageVector = AppIcons.Deadline,
+                                        contentDescription = stringResource(R.string.batch_action_set_deadline),
+                                        tint = iconInactiveColor,
+                                        modifier = Modifier
+                                            .size(ThingsIconSize.L)
+                                            .clickable { showDatePicker = true }
+                                    )
+                                }
+                            }
+                        }
+                        }
+                    ) {
                             // Активные чипы тегов
                             val activeTags = remember(tagInput) {
                                 tagInput.split(",")
@@ -485,8 +555,6 @@ fun QuickAddDialog(
                                             )
                                         }
                                     }
-                                    // Теги — нижняя строка: место под иконки в конце последней строки (или новая строка, если не помещаются)
-                                    if (tagsAreLast) Spacer(modifier = Modifier.width(iconsReserve).height(iconsHeight))
                                 }
                             }
 
@@ -498,7 +566,6 @@ fun QuickAddDialog(
                                 Row(
                                     verticalAlignment = Alignment.CenterVertically,
                                     modifier = Modifier
-                                        .padding(end = if (dueDate == null && !hasRepeatRow) iconsReserve else ThingsSpacing.NONE)
                                         .clickable {
                                             view.performHapticFeedback(HapticFeedbackConstants.CLOCK_TICK)
                                             showWhenDialog = true
@@ -582,7 +649,6 @@ fun QuickAddDialog(
                                 Row(
                                     verticalAlignment = Alignment.CenterVertically,
                                     modifier = Modifier
-                                        .padding(end = if (!hasRepeatRow) iconsReserve else ThingsSpacing.NONE)
                                         .clickable {
                                             view.performHapticFeedback(HapticFeedbackConstants.CLOCK_TICK)
                                             showDatePicker = true
@@ -617,88 +683,6 @@ fun QuickAddDialog(
                             }
                         }
 
-
-                        // Справа: ряд иконок тулбара (Когда, Теги, Чеклист, Дедлайн)
-                        Row(
-                            verticalAlignment = Alignment.CenterVertically,
-                            modifier = Modifier
-                                .align(Alignment.BottomEnd)
-                                .onSizeChanged { actionIconsSize = it }
-                                .padding(end = ThingsSpacing.S_PLUS, bottom = ThingsSpacing.XS)
-                        ) {
-                            // Иконка Когда (Календарь)
-                            AnimatedVisibility(
-                                visible = !hasActiveDate,
-                                enter = fadeIn() + expandHorizontally(expandFrom = Alignment.End),
-                                exit = fadeOut() + shrinkHorizontally(shrinkTowards = Alignment.End)
-                            ) {
-                                Box(modifier = Modifier.padding(start = MaterialTheme.dimens.taskEditorActionIconsSpacing)) {
-                                    Icon(
-                                        imageVector = AppIcons.Upcoming,
-                                        contentDescription = stringResource(R.string.cd_schedule),
-                                        tint = iconInactiveColor,
-                                        modifier = Modifier
-                                            .size(ThingsIconSize.L)
-                                            .clickable { showWhenDialog = true }
-                                    )
-                                }
-                            }
-
-                            // Иконка Тегов
-                            AnimatedVisibility(
-                                visible = tagInput.trim().isEmpty(),
-                                enter = fadeIn() + expandHorizontally(expandFrom = Alignment.End),
-                                exit = fadeOut() + shrinkHorizontally(shrinkTowards = Alignment.End)
-                            ) {
-                                Box(modifier = Modifier.padding(start = MaterialTheme.dimens.taskEditorActionIconsSpacing)) {
-                                    Icon(
-                                        imageVector = AppIcons.Tag,
-                                        contentDescription = stringResource(R.string.tag_dialog_title),
-                                        tint = iconInactiveColor,
-                                        modifier = Modifier
-                                            .size(ThingsIconSize.M)
-                                            .clickable { showTagDialog = true }
-                                    )
-                                }
-                            }
-
-                            // Иконка Чеклиста
-                            AnimatedVisibility(
-                                visible = !showChecklistHelper && checklist.isEmpty(),
-                                enter = fadeIn() + expandHorizontally(expandFrom = Alignment.End),
-                                exit = fadeOut() + shrinkHorizontally(shrinkTowards = Alignment.End)
-                            ) {
-                                Box(modifier = Modifier.padding(start = MaterialTheme.dimens.taskEditorActionIconsSpacing)) {
-                                    Icon(
-                                        imageVector = AppIcons.BulletList,
-                                        contentDescription = stringResource(R.string.cd_checklists),
-                                        tint = iconInactiveColor,
-                                        modifier = Modifier
-                                            .size(ThingsIconSize.L)
-                                            .clickable { showChecklistHelper = true }
-                                    )
-                                }
-                            }
-
-                            // Иконка Дедлайна (Флаг)
-                            AnimatedVisibility(
-                                visible = dueDate == null,
-                                enter = fadeIn() + expandHorizontally(expandFrom = Alignment.End),
-                                exit = fadeOut() + shrinkHorizontally(shrinkTowards = Alignment.End)
-                            ) {
-                                Box(modifier = Modifier.padding(start = MaterialTheme.dimens.taskEditorActionIconsSpacing)) {
-                                    Icon(
-                                        imageVector = AppIcons.Deadline,
-                                        contentDescription = stringResource(R.string.batch_action_set_deadline),
-                                        tint = iconInactiveColor,
-                                        modifier = Modifier
-                                            .size(ThingsIconSize.L)
-                                            .clickable { showDatePicker = true }
-                                    )
-                                }
-                            }
-                        }
-                    }
                     }
 
                     // 5. Нижняя панель (Footer): серый фон как в iOS

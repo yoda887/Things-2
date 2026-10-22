@@ -540,216 +540,20 @@ fun ThingsTaskInlineEditor(
             } else Color.Unspecified
 
             val startRelativePadding = MaterialTheme.dimens.taskEditorStartRelativePadding
-            // Иконки справа — в правом нижнем углу блока. Строки слева во всю ширину; только нижняя оставляет им место
-            // и стоит с ними на одном уровне (теги переносятся вокруг иконок, как текст вокруг картинки)
-            var actionIconsSize by remember { mutableStateOf(androidx.compose.ui.unit.IntSize.Zero) }
-            val iconsDensity = LocalDensity.current
-            val iconsReserve = with(iconsDensity) { actionIconsSize.width.toDp() } + ThingsSpacing.L
-            val iconsHeight = with(iconsDensity) { actionIconsSize.height.toDp() }
-            // Строка повтора — под тегами, над датой, дедлайном и иконками, во всю ширину (в одну строку)
+            // Строка повтора — под тегами, над датой и дедлайном
             val hasRepeatRow = task.item.isRepeatTemplate || task.item.isRepeatCopy
-            val tagsAreLast = !hasActiveDate && dueDate == null && !hasRepeatRow
-            Box(modifier = Modifier.fillMaxWidth()) {
-                // Column containing BOTH date and duedate on the left
-                Column(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(start = startRelativePadding),
-                    verticalArrangement = Arrangement.Center
-                ) {
-                    // 0. Active Tags Chips
-                    val activeTags = remember(tagInput) {
-                        tagInput.split(",")
-                            .map { it.trim() }
-                            .filter { it.isNotEmpty() }
-                    }
-                    if (activeTags.isNotEmpty()) {
-                        FlowRow(
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .padding(vertical = MaterialTheme.dimens.taskEditorTagsVerticalPadding),
-                            horizontalArrangement = Arrangement.spacedBy(ThingsSpacing.S),
-                            verticalArrangement = Arrangement.spacedBy(ThingsSpacing.XS_PLUS)
-                        ) {
-                            activeTags.forEach { tag ->
-                                Box(
-                                    modifier = Modifier
-                                        // Нижний край — по строке: последняя строка стоит ровно с иконками справа
-                                        .align(Alignment.Bottom)
-                                        .clip(ThingsTheme.shapes.chipShape)
-                                        .background(ThingsTheme.colors.tagChipBackground) // light-teal background
-                                        .clickable {
-                                            view.performHapticFeedback(HapticFeedbackConstants.CLOCK_TICK)
-                                            showTagDialog = true
-                                        }
-                                        .padding(horizontal = ThingsSpacing.S_PLUS, vertical = ThingsSpacing.XS)
-                                ) {
-                                    Text(
-                                        text = tag,
-                                        maxLines = 1,
-                                        softWrap = false,
-                                        overflow = TextOverflow.Ellipsis,
-                                        style = ThingsTheme.type.tagChip.copy(
-                                            color = ThingsTheme.colors.tagChipText
-                                        )
-                                    )
-                                }
-                            }
-                            // Теги — нижняя строка: место под иконки в конце последней строки (или новая строка, если не помещаются)
-                            if (tagsAreLast) Spacer(modifier = Modifier.width(iconsReserve).height(iconsHeight))
-                        }
-
-                        if (hasActiveDate || dueDate != null || hasRepeatRow) {
-                            Spacer(modifier = Modifier.height(MaterialTheme.dimens.taskEditorTagsToDateSpacer))
-                        }
-                    }
-
-                    // Повтор — под тегами, над датой и дедлайном, во всю ширину: у шаблона — правило и меню действий,
-                    // у копии — что это копия, и переход к шаблону (правило — в плашке повтора под карточкой, AnimatedTaskItem)
-                    if (hasRepeatRow) {
-                        RepeatEditorRow(task.item, onRepeatAction, onOpenRepeatTemplate)
-                        if (hasActiveDate || dueDate != null) {
-                            Spacer(modifier = Modifier.height(MaterialTheme.dimens.taskEditorDateToDeadlineSpacer))
-                        } else {
-                            // Ни даты, ни дедлайна — иконки на своей строке под повтором
-                            Spacer(modifier = Modifier.height(iconsHeight))
-                        }
-                    }
-
-                    // 1. Date Indicator Row
-                    if (hasActiveDate) {
-                        Row(
-                            verticalAlignment = Alignment.CenterVertically,
-                            modifier = Modifier
-                                .padding(end = if (dueDate == null) iconsReserve else ThingsSpacing.NONE)
-                                .clickable {
-                                    view.performHapticFeedback(HapticFeedbackConstants.CLOCK_TICK)
-                                    showWhenDialog = true
-                                }
-                                .padding(vertical = MaterialTheme.dimens.taskEditorIndicatorVerticalPadding)
-                        ) {
-                            Icon(
-                                imageVector = activeDateIcon,
-                                contentDescription = stringResource(R.string.cd_change_date),
-                                tint = activeDateColor,
-                                modifier = Modifier.size(ThingsIconSize.S)
-                            )
-                            Spacer(modifier = Modifier.width(ThingsSpacing.XS_PLUS))
-                            Text(
-                                text = activeDateLabel,
-                                maxLines = 1,
-                                overflow = TextOverflow.Ellipsis,
-                                style = ThingsTheme.type.editorDateStrong.copy(
-                                    color = textPrimaryColor
-                                )
-                            )
-                            // Напоминание — колокольчик и время рядом с днём, как в Things
-                            reminderTime?.let { minutes ->
-                                Spacer(modifier = Modifier.width(ThingsSpacing.S))
-                                Icon(
-                                    imageVector = AppIcons.Bell,
-                                    contentDescription = stringResource(R.string.reminder_title),
-                                    tint = textPrimaryColor,
-                                    modifier = Modifier.size(ThingsIconSize.XS)
-                                )
-                                Spacer(modifier = Modifier.width(ThingsSpacing.XXS))
-                                Text(
-                                    text = com.example.ui.screens.home.inlineeditor.utils.formatReminderTime(view.context, minutes),
-                                    maxLines = 1,
-                                    style = ThingsTheme.type.editorDateStrong.copy(color = textPrimaryColor)
-                                )
-                            }
-                        }
-                    }
-
-                    // Spacer between date indicator and duedate indicator
-                    if (hasActiveDate && dueDate != null) {
-                        Spacer(modifier = Modifier.height(MaterialTheme.dimens.taskEditorDateToDeadlineSpacer))
-                    }
-
-                    // 2. Due Date (Deadline) Indicator Row
-                    if (dueDate != null) {
-                        val delta = remember(dueDate) {
-                            val today = java.util.Calendar.getInstance().apply {
-                                set(java.util.Calendar.HOUR_OF_DAY, 0)
-                                set(java.util.Calendar.MINUTE, 0)
-                                set(java.util.Calendar.SECOND, 0)
-                                set(java.util.Calendar.MILLISECOND, 0)
-                            }
-                            val due = java.util.Calendar.getInstance().apply {
-                                timeInMillis = dueDate!!
-                                set(java.util.Calendar.HOUR_OF_DAY, 0)
-                                set(java.util.Calendar.MINUTE, 0)
-                                set(java.util.Calendar.SECOND, 0)
-                                set(java.util.Calendar.MILLISECOND, 0)
-                            }
-                            val diffMillis = due.timeInMillis - today.timeInMillis
-                            if (diffMillis >= 0) {
-                                (diffMillis / (24 * 60 * 60 * 1000L)).toInt()
-                            } else {
-                                ((diffMillis - (24 * 60 * 60 * 1000L - 1)) / (24 * 60 * 60 * 1000L)).toInt()
-                            }
-                        }
-
-                        val relativeText = com.example.ui.screens.home.inlineeditor.utils.relativeDueText(delta)
-
-                        val locale = remember { java.util.Locale.getDefault() }
-                        val sdf = remember(locale) { java.text.SimpleDateFormat("EEE, d MMMM", locale) }
-                        val dateText = remember(dueDate) {
-                            dueDate?.let { sdf.format(java.util.Date(it)).lowercase() } ?: ""
-                        }
-
-                        val isOverdueOrToday = delta <= 0
-                        val primaryColor = if (isOverdueOrToday) ThingsTheme.colors.danger else ThingsTheme.colors.editorText
-                        val relativeColor = ThingsTheme.colors.textSecondary
-
-                        Row(
-                            verticalAlignment = Alignment.CenterVertically,
-                            modifier = Modifier
-                                .padding(end = iconsReserve)
-                                .clickable {
-                                    view.performHapticFeedback(HapticFeedbackConstants.CLOCK_TICK)
-                                    showDatePicker = true
-                                }
-                                .padding(vertical = MaterialTheme.dimens.taskEditorIndicatorVerticalPadding)
-                        ) {
-                            Icon(
-                                imageVector = AppIcons.Deadline,
-                                contentDescription = stringResource(R.string.cd_deadline_flag),
-                                tint = primaryColor,
-                                modifier = Modifier.size(ThingsIconSize.S)
-                            )
-                            Spacer(modifier = Modifier.width(ThingsSpacing.XS_PLUS))
-                            Text(
-                                text = dateText,
-                                maxLines = 1,
-                                overflow = TextOverflow.Ellipsis,
-                                style = ThingsTheme.type.editorDateStrong.copy(
-                                    color = primaryColor
-                                )
-                            )
-                            Spacer(modifier = Modifier.width(ThingsSpacing.XS))
-                            Text(
-                                text = relativeText,
-                                maxLines = 1,
-                                overflow = TextOverflow.Ellipsis,
-                                style = ThingsTheme.type.editorDate.copy(
-                                    color = relativeColor
-                                )
-                            )
-                        }
-                    }
-                }
-
-
-                // Action Icons Row on the right
-                Row(
-                    verticalAlignment = Alignment.CenterVertically,
-                    modifier = Modifier
-                        .align(Alignment.BottomEnd)
-                        .onSizeChanged { actionIconsSize = it }
-                        .padding(bottom = ThingsSpacing.XS) // Align slightly with indicator row text/icon padding
-                ) {
+            // Свойства и иконки тулбара: нижнее свойство — на уровне иконок, если целиком помещается до них
+            // в одну строку; иначе — строкой выше, а иконки — на своей строке (EditorAttributesRow)
+            com.example.ui.screens.home.inlineeditor.components.EditorAttributesRow(
+                gap = ThingsSpacing.L,
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(start = startRelativePadding),
+                icons = {
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        modifier = Modifier.padding(bottom = ThingsSpacing.XS)
+                    ) {
                     androidx.compose.animation.AnimatedVisibility(
                         // У шаблона повтора «Когда» задаёт правило — кнопки нет
                         visible = !hasActiveDate && !task.item.isTemplatePart,
@@ -834,7 +638,185 @@ fun ThingsTaskInlineEditor(
                         }
                     }
                 }
-            }
+                }
+            ) {
+                    // 0. Active Tags Chips
+                    val activeTags = remember(tagInput) {
+                        tagInput.split(",")
+                            .map { it.trim() }
+                            .filter { it.isNotEmpty() }
+                    }
+                    if (activeTags.isNotEmpty()) {
+                        FlowRow(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(vertical = MaterialTheme.dimens.taskEditorTagsVerticalPadding),
+                            horizontalArrangement = Arrangement.spacedBy(ThingsSpacing.S),
+                            verticalArrangement = Arrangement.spacedBy(ThingsSpacing.XS_PLUS)
+                        ) {
+                            activeTags.forEach { tag ->
+                                Box(
+                                    modifier = Modifier
+                                        // Нижний край — по строке: последняя строка стоит ровно с иконками справа
+                                        .align(Alignment.Bottom)
+                                        .clip(ThingsTheme.shapes.chipShape)
+                                        .background(ThingsTheme.colors.tagChipBackground) // light-teal background
+                                        .clickable {
+                                            view.performHapticFeedback(HapticFeedbackConstants.CLOCK_TICK)
+                                            showTagDialog = true
+                                        }
+                                        .padding(horizontal = ThingsSpacing.S_PLUS, vertical = ThingsSpacing.XS)
+                                ) {
+                                    Text(
+                                        text = tag,
+                                        maxLines = 1,
+                                        softWrap = false,
+                                        overflow = TextOverflow.Ellipsis,
+                                        style = ThingsTheme.type.tagChip.copy(
+                                            color = ThingsTheme.colors.tagChipText
+                                        )
+                                    )
+                                }
+                            }
+                        }
+
+                        if (hasActiveDate || dueDate != null || hasRepeatRow) {
+                            Spacer(modifier = Modifier.height(MaterialTheme.dimens.taskEditorTagsToDateSpacer))
+                        }
+                    }
+
+                    // Повтор — под тегами, над датой и дедлайном, во всю ширину: у шаблона — правило и меню действий,
+                    // у копии — что это копия, и переход к шаблону (правило — в плашке повтора под карточкой, AnimatedTaskItem)
+                    if (hasRepeatRow) {
+                        RepeatEditorRow(task.item, onRepeatAction, onOpenRepeatTemplate)
+                        if (hasActiveDate || dueDate != null) {
+                            Spacer(modifier = Modifier.height(MaterialTheme.dimens.taskEditorDateToDeadlineSpacer))
+                        }
+                    }
+
+                    // 1. Date Indicator Row
+                    if (hasActiveDate) {
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically,
+                            modifier = Modifier
+                                .clickable {
+                                    view.performHapticFeedback(HapticFeedbackConstants.CLOCK_TICK)
+                                    showWhenDialog = true
+                                }
+                                .padding(vertical = MaterialTheme.dimens.taskEditorIndicatorVerticalPadding)
+                        ) {
+                            Icon(
+                                imageVector = activeDateIcon,
+                                contentDescription = stringResource(R.string.cd_change_date),
+                                tint = activeDateColor,
+                                modifier = Modifier.size(ThingsIconSize.S)
+                            )
+                            Spacer(modifier = Modifier.width(ThingsSpacing.XS_PLUS))
+                            Text(
+                                text = activeDateLabel,
+                                maxLines = 1,
+                                overflow = TextOverflow.Ellipsis,
+                                style = ThingsTheme.type.editorDateStrong.copy(
+                                    color = textPrimaryColor
+                                )
+                            )
+                            // Напоминание — колокольчик и время рядом с днём, как в Things
+                            reminderTime?.let { minutes ->
+                                Spacer(modifier = Modifier.width(ThingsSpacing.S))
+                                Icon(
+                                    imageVector = AppIcons.Bell,
+                                    contentDescription = stringResource(R.string.reminder_title),
+                                    tint = textPrimaryColor,
+                                    modifier = Modifier.size(ThingsIconSize.XS)
+                                )
+                                Spacer(modifier = Modifier.width(ThingsSpacing.XXS))
+                                Text(
+                                    text = com.example.ui.screens.home.inlineeditor.utils.formatReminderTime(view.context, minutes),
+                                    maxLines = 1,
+                                    style = ThingsTheme.type.editorDateStrong.copy(color = textPrimaryColor)
+                                )
+                            }
+                        }
+                    }
+
+                    // Spacer between date indicator and duedate indicator
+                    if (hasActiveDate && dueDate != null) {
+                        Spacer(modifier = Modifier.height(MaterialTheme.dimens.taskEditorDateToDeadlineSpacer))
+                    }
+
+                    // 2. Due Date (Deadline) Indicator Row
+                    if (dueDate != null) {
+                        val delta = remember(dueDate) {
+                            val today = java.util.Calendar.getInstance().apply {
+                                set(java.util.Calendar.HOUR_OF_DAY, 0)
+                                set(java.util.Calendar.MINUTE, 0)
+                                set(java.util.Calendar.SECOND, 0)
+                                set(java.util.Calendar.MILLISECOND, 0)
+                            }
+                            val due = java.util.Calendar.getInstance().apply {
+                                timeInMillis = dueDate!!
+                                set(java.util.Calendar.HOUR_OF_DAY, 0)
+                                set(java.util.Calendar.MINUTE, 0)
+                                set(java.util.Calendar.SECOND, 0)
+                                set(java.util.Calendar.MILLISECOND, 0)
+                            }
+                            val diffMillis = due.timeInMillis - today.timeInMillis
+                            if (diffMillis >= 0) {
+                                (diffMillis / (24 * 60 * 60 * 1000L)).toInt()
+                            } else {
+                                ((diffMillis - (24 * 60 * 60 * 1000L - 1)) / (24 * 60 * 60 * 1000L)).toInt()
+                            }
+                        }
+
+                        val relativeText = com.example.ui.screens.home.inlineeditor.utils.relativeDueText(delta)
+
+                        val locale = remember { java.util.Locale.getDefault() }
+                        val sdf = remember(locale) { java.text.SimpleDateFormat("EEE, d MMMM", locale) }
+                        val dateText = remember(dueDate) {
+                            dueDate?.let { sdf.format(java.util.Date(it)).lowercase() } ?: ""
+                        }
+
+                        val isOverdueOrToday = delta <= 0
+                        val primaryColor = if (isOverdueOrToday) ThingsTheme.colors.danger else ThingsTheme.colors.editorText
+                        val relativeColor = ThingsTheme.colors.textSecondary
+
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically,
+                            modifier = Modifier
+                                .clickable {
+                                    view.performHapticFeedback(HapticFeedbackConstants.CLOCK_TICK)
+                                    showDatePicker = true
+                                }
+                                .padding(vertical = MaterialTheme.dimens.taskEditorIndicatorVerticalPadding)
+                        ) {
+                            Icon(
+                                imageVector = AppIcons.Deadline,
+                                contentDescription = stringResource(R.string.cd_deadline_flag),
+                                tint = primaryColor,
+                                modifier = Modifier.size(ThingsIconSize.S)
+                            )
+                            Spacer(modifier = Modifier.width(ThingsSpacing.XS_PLUS))
+                            Text(
+                                text = dateText,
+                                maxLines = 1,
+                                overflow = TextOverflow.Ellipsis,
+                                style = ThingsTheme.type.editorDateStrong.copy(
+                                    color = primaryColor
+                                )
+                            )
+                            Spacer(modifier = Modifier.width(ThingsSpacing.XS))
+                            Text(
+                                text = relativeText,
+                                maxLines = 1,
+                                overflow = TextOverflow.Ellipsis,
+                                style = ThingsTheme.type.editorDate.copy(
+                                    color = relativeColor
+                                )
+                            )
+                        }
+                    }
+                }
+
         }
     }
 }
