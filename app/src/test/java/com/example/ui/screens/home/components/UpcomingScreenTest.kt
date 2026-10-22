@@ -42,6 +42,8 @@ class UpcomingScreenTest {
         // За горизонтом месяцев — раздел года с подписью «2027»
         assertEquals(listOf(listOf("oct20"), listOf("feb"), listOf("march")), months.map { m -> m.tasks.map { it.item.id } })
         assertEquals("2027", months.last().monthLabel)
+        // Месяц следующего года — без года: год только у разделов лет
+        assertFalse(months[1].monthLabel.contains("2027"))
         // Остаток октября начинается сразу после недели — с 17-го
         assertEquals(Calendar.getInstance().apply { clear(); set(2026, Calendar.OCTOBER, 17) }.timeInMillis, months[0].monthMillis)
     }

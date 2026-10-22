@@ -32,11 +32,9 @@ object UpcomingScreen {
         val locale = Locale.getDefault()
         val weekdayFormat = SimpleDateFormat("EEEE", locale)
         val monthFormat = SimpleDateFormat("LLLL", locale)
-        val monthYearFormat = SimpleDateFormat("LLLL yyyy", locale)
         // Плашка задачи в месячных разделах — число и месяц, как на экране проекта
         val dayBadgeFormat = SimpleDateFormat("d MMM", locale)
         val dayNumFormat = SimpleDateFormat("d", locale)
-        val currentYear = now.get(Calendar.YEAR)
         val cal = Calendar.getInstance()
 
         val days = plan.days.mapIndexed { offset, day ->
@@ -59,11 +57,12 @@ object UpcomingScreen {
                 // Остаток месяца: «16 – 31 октября», один день — просто дата
                 cal.clear()
                 cal.set(period.year, period.month, period.lastDay)
-                val pattern = if (period.year == currentYear) "d MMMM" else "d MMMM yyyy"
-                val endFormatted = SimpleDateFormat(pattern, locale).format(cal.time)
+                // Без года — даже не в текущем году (год — только у разделов лет)
+                val endFormatted = SimpleDateFormat("d MMMM", locale).format(cal.time)
                 if (period.firstDay == period.lastDay) endFormatted else "${period.firstDay} – $endFormatted"
             } else {
-                val raw = (if (period.year == currentYear) monthFormat else monthYearFormat).format(Date(period.start))
+                // Только месяц, без года — даже не в текущем году (год — только у разделов лет)
+                val raw = monthFormat.format(Date(period.start))
                 raw.replaceFirstChar { if (it.isLowerCase()) it.titlecase(locale) else it.toString() }
             }
             UpcomingMonth(
