@@ -384,11 +384,11 @@ private fun CategoryTopAppBarTitleContent(
             ActiveScreen.PROJECT_DETAIL -> {
                 val completedCount = tasks.count { it.item.projectId == project?.id && it.item.isClosed }
                 val totalCount = tasks.count { it.item.projectId == project?.id }
-                com.example.ui.components.ProjectProgressArc(
+                // Выполненный проект — синий круг с белой галочкой
+                com.example.ui.components.ProjectStatusIcon(
+                    project = project,
                     completed = completedCount,
                     total = totalCount,
-                    color = ThingsTheme.colors.project,
-                    dashed = project?.start == com.example.data.model.Item.START_SOMEDAY,
                     modifier = Modifier.size(PROJECT_PROGRESS_ARC_SIZE)
                 )
                 Spacer(modifier = Modifier.width(TOP_APP_BAR_SPACING))

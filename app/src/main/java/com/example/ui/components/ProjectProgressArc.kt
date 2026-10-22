@@ -88,6 +88,33 @@ fun ProjectProgressArc(
 }
 
 /**
+ * Значок проекта по его состоянию: открытый — кольцо прогресса ([ProjectProgressArc], [color] — его цвет,
+ * «Когда-нибудь» — пунктиром), выполненный — синий круг с белой галочкой, отменённый — серый с крестиком
+ * ([ClosedProjectIcon]). Для заголовка экрана проекта, его верхней панели, быстрого поиска и разделов поиска.
+ */
+@Composable
+fun ProjectStatusIcon(
+    project: com.example.data.model.Item?,
+    completed: Int,
+    total: Int,
+    modifier: Modifier = Modifier,
+    color: Color = ThingsTheme.colors.project
+) {
+    val cancelled = project?.status == com.example.data.model.Item.STATUS_CANCELLED
+    if (project != null && (project.isCompleted || cancelled)) {
+        ClosedProjectIcon(cancelled = cancelled, modifier = modifier)
+    } else {
+        ProjectProgressArc(
+            completed = completed,
+            total = total,
+            color = color,
+            dashed = project?.start == com.example.data.model.Item.START_SOMEDAY,
+            modifier = modifier
+        )
+    }
+}
+
+/**
  * Закрытый проект — в «Журнале», «Завершённых проектах» и в результатах поиска, как в Logbook Things:
  * залитый круг, внутри белая галочка (завершён) или крестик ([cancelled], круг серый).
  */

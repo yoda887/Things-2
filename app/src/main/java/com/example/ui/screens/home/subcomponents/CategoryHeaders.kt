@@ -21,6 +21,7 @@ import com.example.ui.theme.ThingsTheme
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
+import androidx.compose.ui.draw.clip
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.CircleShape
@@ -250,16 +251,26 @@ fun MainCategoryHeader(
                 val totalCount = tasks.count { it.item.projectId == project?.id }.let { if (projectDone) maxOf(it, 1) else it }
                 val completedCount = if (projectDone) totalCount else tasks.count { it.item.projectId == project?.id && it.item.isClosed }
                 // Иконка проекта (ProgressArc) окрашена в синий цвет и выровнена по верхнему краю заголовка с компенсационным отступом
-                // У шаблона повторяющегося проекта — тоже кольцо: что он повторяется, видно по строке правила под заголовком
-                ProjectProgressArc(
+                // У шаблона повторяющегося проекта — тоже кольцо: что он повторяется, видно по строке правила под заголовком.
+                // Выполненный — синий круг с белой галочкой. Нажатие на кольцо открытого проекта завершает его, как «Завершить
+                // проект» в меню (с открытыми задачами — с подтверждением)
+                val canComplete = project != null && !projectDone && project.type != Item.TYPE_PROJECT_TEMPLATE
+                val headerView = androidx.compose.ui.platform.LocalView.current
+                com.example.ui.components.ProjectStatusIcon(
+                    project = project,
                     completed = completedCount,
                     total = totalCount,
-                    color = ThingsTheme.colors.project,
-                    dashed = project?.start == com.example.data.model.Item.START_SOMEDAY,
                     modifier = Modifier
-                        .size((26 * scaleFactor).dp)
                         .align(Alignment.Top)
                         .padding(top = (4 * scaleFactor).dp)
+                        .size((26 * scaleFactor).dp)
+                        .clip(androidx.compose.foundation.shape.CircleShape)
+                        .then(
+                            if (canComplete) Modifier.clickable {
+                                headerView.performHapticFeedback(android.view.HapticFeedbackConstants.CLOCK_TICK)
+                                onProjectAction(ProjectAction.COMPLETE)
+                            } else Modifier
+                        )
                 )
                 Spacer(modifier = Modifier.width(ThingsSpacing.M))
 
