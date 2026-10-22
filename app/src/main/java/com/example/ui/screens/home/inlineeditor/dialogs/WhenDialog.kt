@@ -128,6 +128,8 @@ private val ROW_VERTICAL_PADDING = 6.dp
 
 private val GAP_AFTER_TITLE = 18.dp
 private val GAP_AFTER_WEEKDAYS = 3.dp
+/** Недель в календаре окна: текущая и три следующие */
+private const val CALENDAR_WEEKS = 4
 private val GAP_AFTER_TODAY = 0.dp
 private val GAP_AFTER_EVENING = 18.dp
 private val GAP_AFTER_CALENDAR = 7.dp
@@ -188,41 +190,8 @@ fun ThingsWhenDialog(
      */
     growFromOffset: Offset? = null
 ) {
-    var calendarWeekOffset by remember { mutableStateOf(0) }
-
-    LaunchedEffect(Unit) {
-        val todayStartMonday = Calendar.getInstance().apply {
-            firstDayOfWeek = Calendar.MONDAY
-            set(Calendar.DAY_OF_WEEK, Calendar.MONDAY)
-            set(Calendar.HOUR_OF_DAY, 0)
-            set(Calendar.MINUTE, 0)
-            set(Calendar.SECOND, 0)
-            set(Calendar.MILLISECOND, 0)
-        }
-        if (startDate != null && section == TaskSection.UPCOMING) {
-            val targetStartMonday = Calendar.getInstance().apply {
-                firstDayOfWeek = Calendar.MONDAY
-                timeInMillis = startDate
-                set(Calendar.DAY_OF_WEEK, Calendar.MONDAY)
-                set(Calendar.HOUR_OF_DAY, 0)
-                set(Calendar.MINUTE, 0)
-                set(Calendar.SECOND, 0)
-                set(Calendar.MILLISECOND, 0)
-            }
-            
-            var diffWeeks = 0
-            val tempCal = todayStartMonday.clone() as Calendar
-            if (tempCal.before(targetStartMonday)) {
-                while (tempCal.before(targetStartMonday)) {
-                    tempCal.add(Calendar.WEEK_OF_YEAR, 1)
-                    diffWeeks++
-                }
-            }
-            calendarWeekOffset = maxOf(0, diffWeeks)
-        } else {
-            calendarWeekOffset = 0
-        }
-    }
+    // Календарь — всегда текущая неделя и три следующие; дата позже — строкой под ним (см. «Дальняя дата»)
+    val calendarWeekOffset = 0
 
     val isTodayActive = (startDate == null || isTodayDateOrPast(startDate)) && section == TaskSection.TODAY && !isTonight
     val isThisEveningActive = (startDate == null || isTodayDateOrPast(startDate)) && section == TaskSection.TODAY && isTonight
@@ -740,6 +709,66 @@ fun ThingsWhenDialog(
             }
 
                 Spacer(modifier = Modifier.height(GAP_AFTER_CALENDAR))
+
+            // Дальняя дата: старт позже четырёх недель календаря — строкой под ним, с галочкой, над «Когда-нибудь»;
+            // нажатие открывает календарь на всё окно
+            val calendarEndMillis = remember {
+                Calendar.getInstance().apply {
+                    firstDayOfWeek = Calendar.MONDAY
+                    set(Calendar.DAY_OF_WEEK, Calendar.MONDAY)
+                    set(Calendar.HOUR_OF_DAY, 0)
+                    set(Calendar.MINUTE, 0)
+                    set(Calendar.SECOND, 0)
+                    set(Calendar.MILLISECOND, 0)
+                    add(Calendar.WEEK_OF_YEAR, CALENDAR_WEEKS)
+                }.timeInMillis
+            }
+            val farDate = startDate?.takeIf { section == TaskSection.UPCOMING && it >= calendarEndMillis }
+            if (farDate != null) {
+                val farLabel = remember(farDate) {
+                    val sameYear = Calendar.getInstance().get(Calendar.YEAR) ==
+                        Calendar.getInstance().apply { timeInMillis = farDate }.get(Calendar.YEAR)
+                    SimpleDateFormat(if (sameYear) "EEE, d MMMM" else "EEE, d MMMM yyyy", Locale.getDefault()).format(Date(farDate))
+                }
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .clip(ThingsTheme.shapes.rowShape)
+                        .clickable {
+                            view.performHapticFeedback(HapticFeedbackConstants.CLOCK_TICK)
+                            pickingDate = true
+                        }
+                        .height(MaterialTheme.dimens.rowHeight),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Box(
+                        modifier = Modifier
+                            .width(ROW_ICON_COLUMN_WIDTH)
+                            .padding(start = ROW_ICON_START_INSET),
+                        contentAlignment = Alignment.CenterStart
+                    ) {
+                        Icon(
+                            imageVector = AppIcons.Upcoming,
+                            contentDescription = stringResource(R.string.cd_change_date),
+                            tint = Color.Unspecified,
+                            modifier = Modifier.size(ThingsIconSize.S)
+                        )
+                    }
+                    Text(
+                        text = farLabel,
+                        style = ThingsTheme.type.dialogRow.copy(color = ThingsTheme.colors.overlayContent),
+                        modifier = Modifier.weight(5f)
+                    )
+                    Box(modifier = Modifier.weight(1f), contentAlignment = Alignment.Center) {
+                        Icon(
+                            imageVector = Icons.Default.Check,
+                            contentDescription = null,
+                            tint = ThingsTheme.colors.accent,
+                            modifier = Modifier.size(ThingsIconSize.S)
+                        )
+                    }
+                }
+            }
 
             // 3. Someday Option
                 Row(
