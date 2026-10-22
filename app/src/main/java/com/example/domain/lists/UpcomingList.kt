@@ -38,7 +38,8 @@ object UpcomingList {
     /**
      * Раздел после недели: месяц [year]/[month] (месяц по Calendar, с 0) — целый или, если неделя
      * закончилась внутри него, остаток с [firstDay] по [lastDay] ([isRemainder]). [start] — начало раздела.
-     * Задачи — по дате старта, события — по времени начала.
+     * Задачи — по дате старта, события — по времени начала. [isYear] — раздел года [year] за горизонтом месяцев:
+     * задачи и проекты по дате старта, без событий календаря; [start] — начало года или конец горизонта.
      */
     data class Period(
         val start: Long,
@@ -49,7 +50,8 @@ object UpcomingList {
         val isRemainder: Boolean,
         val events: List<Item>,
         val tasks: List<ItemWithChecklist>,
-        val projects: List<Item> = emptyList()
+        val projects: List<Item> = emptyList(),
+        val isYear: Boolean = false
     )
 
     data class Schedule(val days: List<Day>, val periods: List<Period>)
@@ -58,7 +60,8 @@ object UpcomingList {
      * Расписание экрана:
      * 1. Неделя подряд, начиная с завтра, — все дни, даже пустые.
      * 2. Остаток месяца, в котором закончилась неделя, и следующие [MONTHS_HORIZON] месяцев — только те,
-     *    где есть задачи или события. Дальше этого горизонта экран ничего не показывает.
+     *    где есть задачи или события.
+     * 3. Дальше — по годам: разделы лет, где есть задачи или проекты (события календаря туда не попадают).
      */
     fun schedule(
         tasks: List<ItemWithChecklist>,
@@ -134,7 +137,30 @@ object UpcomingList {
                 projects = laterProjects[key].orEmpty().sortedBy { it.startDate }
             )
         }
-        return Schedule(days, periods)
+        // За горизонтом месяцев — по годам: задачи и проекты, без событий календаря
+        fun yearOf(millis: Long): Int {
+            cal.timeInMillis = millis
+            return cal.get(Calendar.YEAR)
+        }
+        val yearTasks = tasks.filter { (it.item.startDate ?: Long.MIN_VALUE) >= laterLimit }.groupBy { yearOf(it.item.startDate!!) }
+        val yearProjects = projects.filter { (it.startDate ?: Long.MIN_VALUE) >= laterLimit }.groupBy { yearOf(it.startDate!!) }
+        val years = (yearTasks.keys + yearProjects.keys).sorted().map { year ->
+            cal.clear()
+            cal.set(year, Calendar.JANUARY, 1)
+            Period(
+                start = maxOf(cal.timeInMillis, laterLimit),
+                year = year,
+                month = Calendar.JANUARY,
+                firstDay = 1,
+                lastDay = 31,
+                isRemainder = false,
+                events = emptyList(),
+                tasks = yearTasks[year].orEmpty().sortedBy { it.item.startDate },
+                projects = yearProjects[year].orEmpty().sortedBy { it.startDate },
+                isYear = true
+            )
+        }
+        return Schedule(days, periods + years)
     }
 
     private fun Long?.inRange(from: Long, until: Long): Boolean = this != null && this >= from && this < until

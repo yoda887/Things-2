@@ -45,9 +45,11 @@ class UpcomingListTest {
             listOf(event("nov", at(2026, Calendar.NOVEMBER, 5))),
             now
         )
-        val periods = schedule.periods
-        // Неделя — 10–16 октября; остаток октября с 17-го, ноябрь (только событие), февраль; март — за горизонтом
+        val periods = schedule.periods.filter { !it.isYear }
+        // Неделя — 10–16 октября; остаток октября с 17-го, ноябрь (только событие), февраль; март — за горизонтом месяцев,
+        // в разделе 2027 года
         assertEquals(listOf(Calendar.OCTOBER, Calendar.NOVEMBER, Calendar.FEBRUARY), periods.map { it.month })
+        assertEquals(listOf("march"), schedule.periods.single { it.isYear }.tasks.map { it.item.id })
         val october = periods[0]
         assertTrue(october.isRemainder)
         assertEquals(17, october.firstDay)
@@ -86,5 +88,27 @@ class UpcomingListTest {
         assertFalse(UpcomingList.includesProject(project("none", null), bounds))
         assertFalse(UpcomingList.includesProject(project("s", bounds.endOfToday + day, Item.START_SOMEDAY), bounds))
         assertFalse(UpcomingList.includesProject(project("c", bounds.endOfToday + day).copy(status = Item.STATUS_COMPLETED), bounds))
+    }
+
+    @Test
+    fun beyondMonthHorizon_byYears_withoutEvents() {
+        val schedule = UpcomingList.schedule(
+            listOf(
+                task("y2028", at(2028, Calendar.MAY, 1)),
+                task("march27", at(2027, Calendar.MARCH, 3)),
+                task("dec27", at(2027, Calendar.DECEMBER, 31))
+            ),
+            listOf(event("farEvent", at(2027, Calendar.JUNE, 1))),
+            now,
+            projects = listOf(Item(id = "p28", type = Item.TYPE_PROJECT, title = "p28", start = Item.START_ANYTIME, startDate = at(2028, Calendar.JANUARY, 9)))
+        )
+        val years = schedule.periods.filter { it.isYear }
+        assertEquals(listOf(2027, 2028), years.map { it.year })
+        assertEquals(listOf("march27", "dec27"), years[0].tasks.map { it.item.id })
+        assertTrue(years.all { it.events.isEmpty() })
+        assertEquals(listOf("p28"), years[1].projects.map { it.id })
+        // 2027 начинается с конца горизонта месяцев (1 марта), 2028 — с 1 января
+        assertEquals(at(2027, Calendar.MARCH, 1, 0), years[0].start)
+        assertEquals(at(2028, Calendar.JANUARY, 1, 0), years[1].start)
     }
 }

@@ -37,9 +37,11 @@ class UpcomingScreenTest {
     }
 
     @Test
-    fun months_restOfOctoberThenMonthsWithTasks_upToHorizon() {
+    fun months_restOfOctoberThenMonthsWithTasks_thenYears() {
         val months = schedule().months
-        assertEquals(listOf(listOf("oct20"), listOf("feb")), months.map { m -> m.tasks.map { it.item.id } })
+        // За горизонтом месяцев — раздел года с подписью «2027»
+        assertEquals(listOf(listOf("oct20"), listOf("feb"), listOf("march")), months.map { m -> m.tasks.map { it.item.id } })
+        assertEquals("2027", months.last().monthLabel)
         // Остаток октября начинается сразу после недели — с 17-го
         assertEquals(Calendar.getInstance().apply { clear(); set(2026, Calendar.OCTOBER, 17) }.timeInMillis, months[0].monthMillis)
     }
@@ -49,8 +51,8 @@ class UpcomingScreenTest {
         val rows = UpcomingScreen.rows(schedule().days, schedule().months)
         assertTrue(rows.first() is UpcomingHeaderItem)
         assertEquals(7, rows.count { it is UpcomingHeaderItem })
-        assertEquals(2, rows.count { it is UpcomingMonthHeaderItem })
-        assertEquals(listOf("tomorrow", "week", "oct20", "feb"), rows.filterIsInstance<ItemWithChecklist>().map { it.item.id })
+        assertEquals(3, rows.count { it is UpcomingMonthHeaderItem })
+        assertEquals(listOf("tomorrow", "week", "oct20", "feb", "march"), rows.filterIsInstance<ItemWithChecklist>().map { it.item.id })
         assertFalse(UpcomingScreen.isEmpty(schedule()))
     }
 }

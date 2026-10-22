@@ -52,7 +52,10 @@ object UpcomingScreen {
         }
 
         val months = plan.periods.map { period ->
-            val label = if (period.isRemainder) {
+            val label = if (period.isYear) {
+                // Раздел года за горизонтом месяцев — просто год
+                period.year.toString()
+            } else if (period.isRemainder) {
                 // Остаток месяца: «16 – 31 октября», один день — просто дата
                 cal.clear()
                 cal.set(period.year, period.month, period.lastDay)
