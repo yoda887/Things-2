@@ -720,7 +720,8 @@ fun AnimatedTaskItem(
                                         onEvent(ThingsCategoryListEvent.ReorderTasks(items))
                                     },
                                     selectedTaskIds = selectedTaskIds,
-                                    onExitSelectionMode = onExitSelectionMode
+                                    onExitSelectionMode = onExitSelectionMode,
+                                    todayGroupedDay = com.example.ui.components.LocalTodayGrouped.current
                                 )
                             ),
                         onSwipeLeft = { onEvent(ThingsCategoryListEvent.SwipeTaskLeft(taskWrapper)) },

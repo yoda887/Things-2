@@ -15,6 +15,7 @@ import com.example.ui.viewmodel.ActiveScreen
  * @param upcomingDayStarts начала суток дней-заголовков экрана «Предстоящие», по порядку
  * @param bounds границы сегодняшнего дня для разделов экрана области
  * @param projectHeadingIds подзаголовки экрана проекта по порядку
+ * @param todayGroupedDay дневная часть «Сегодня» сгруппирована по проектам и областям
  * @return новый порядок списка либо null, если перенос принимать не нужно
  */
 fun planTaskDrop(
@@ -26,9 +27,10 @@ fun planTaskDrop(
     upcomingDayStarts: List<Long>,
     bounds: DayBounds = DayBounds.now(),
     projectHeadingIds: List<String> = emptyList(),
+    todayGroupedDay: Boolean = false,
 ): List<ItemWithChecklist>? {
     val target = dropTargetOf(targetId) ?: return null
-    return TaskDrops.plan(list, draggedId, target, dropListOf(screen, upcomingDayStarts, bounds, projectHeadingIds), movingDown)
+    return TaskDrops.plan(list, draggedId, target, dropListOf(screen, upcomingDayStarts, bounds, projectHeadingIds, todayGroupedDay), movingDown)
 }
 
 /** Цель переноса по ключу строки списка; null — ключ заголовка без даты. */
@@ -49,8 +51,9 @@ fun dropListOf(
     upcomingDayStarts: List<Long>,
     bounds: DayBounds,
     projectHeadingIds: List<String>,
+    todayGroupedDay: Boolean = false,
 ): DropList = when (screen) {
-    ActiveScreen.TODAY -> DropList.Today
+    ActiveScreen.TODAY -> DropList.Today(todayGroupedDay)
     ActiveScreen.UPCOMING -> DropList.Upcoming(upcomingDayStarts)
     ActiveScreen.PROJECT_DETAIL -> DropList.Project(projectHeadingIds)
     ActiveScreen.AREA_DETAIL -> DropList.Area(bounds)

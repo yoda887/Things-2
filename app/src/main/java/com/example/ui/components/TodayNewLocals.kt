@@ -11,3 +11,9 @@ import androidx.compose.runtime.compositionLocalOf
 data class TodayNew(val ids: Set<String> = emptySet(), val onDismiss: () -> Unit = {})
 
 val LocalTodayNew = compositionLocalOf { TodayNew() }
+
+/** Дневная часть «Сегодня» сгруппирована по проектам и областям (настройка): строки задач там без подписи проекта */
+val LocalTodayGrouped = compositionLocalOf { false }
+
+/** Даты в карточках («Журнал», «Завершённые проекты», поздние проекты): месяц словом («9 жовт.») или цифрами («9.10.»), настройка */
+val LocalDatesWithMonthName = compositionLocalOf { true }

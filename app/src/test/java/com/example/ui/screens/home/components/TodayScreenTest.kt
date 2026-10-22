@@ -57,4 +57,21 @@ class TodayScreenTest {
         assertEquals(listOf("p1", "p3", "d1", TaskListKeys.EVENING_HEADER, "p2", "e1"), rows.map { if (it is Item) it.id else if (it is ItemWithChecklist) it.item.id else it.toString() })
         assertFalse(TodayScreen.isEmpty(emptyList(), emptyList(), false, projects))
     }
+
+    @Test
+    fun groupedDay_byProjectAndArea_eveningAsIs() {
+        val area = com.example.data.model.Area(id = "a", title = "A")
+        val project = Item(id = "p", title = "P", type = Item.TYPE_PROJECT)
+        val day = listOf(
+            ItemWithChecklist(Item(id = "inP", title = "inP", projectId = "p")),
+            task("loose"),
+            ItemWithChecklist(Item(id = "inA", title = "inA", areaId = "a"))
+        )
+        val evening = listOf(ItemWithChecklist(Item(id = "e1", title = "e1", isTonight = true, projectId = "p")))
+        val rows = TodayScreen.rows(day, evening, false, groupedDay = true, allProjects = listOf(project), areas = listOf(area))
+        assertEquals(
+            listOf("loose", "place_hdr_project_p", "inP", "place_hdr_area_a", "inA", TaskListKeys.EVENING_HEADER, "e1"),
+            rows.map { if (it is SearchSectionHeaderItem) it.key else if (it is ItemWithChecklist) it.item.id else it.toString() }
+        )
+    }
 }

@@ -40,6 +40,8 @@ fun Modifier.taskDragAndDrop(
     onTasksReordered: (List<Item>) -> Unit,
     selectedTaskIds: Set<String> = emptySet(),
     onExitSelectionMode: () -> Unit = {},
+    // Дневная часть «Сегодня» сгруппирована по проектам и областям (настройка)
+    todayGroupedDay: Boolean = false,
 ): Modifier {
     val lazyListState = state.lazyListState
     val taskItem = taskWrapper.item
@@ -92,6 +94,7 @@ fun Modifier.taskDragAndDrop(
                 movingDown = movingDown,
                 upcomingDayStarts = upcomingDays.map { it.dateMillis },
                 projectHeadingIds = projectHeadingIds,
+                todayGroupedDay = todayGroupedDay,
             ) ?: return@universalDragAndDrop false
 
             onLocalTasksListChange(reordered)

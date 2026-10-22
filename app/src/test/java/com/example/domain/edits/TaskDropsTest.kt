@@ -81,7 +81,7 @@ class TaskDropsTest {
     @Test
     fun headingTargets_outsideProject_areRejected() {
         assertNull(drop(tasks, "t1", DropTarget.Heading("A"), down = true, dropList = DropList.Plain))
-        assertNull(drop(tasks, "t1", DropTarget.DayHeader(0L), down = true, dropList = DropList.Today))
+        assertNull(drop(tasks, "t1", DropTarget.DayHeader(0L), down = true, dropList = DropList.Today()))
         assertNull(drop(tasks, "t1", DropTarget.EveningHeader, down = true))
     }
 
@@ -104,5 +104,22 @@ class TaskDropsTest {
         assertEquals("B", elsewhere.headingId)
         assertEquals(1000L, elsewhere.startDate)
         assertFalse(TaskDrops.follower(other, leader.copy(isTonight = false), inProject = false).item.isTonight)
+    }
+
+    @Test
+    fun todayGroupedDay_swapWithOtherGroupRejected_sameGroupAndEveningAllowed() {
+        val a1 = ItemWithChecklist(Item(id = "a1", title = "a1", projectId = "pa"))
+        val a2 = ItemWithChecklist(Item(id = "a2", title = "a2", projectId = "pa"))
+        val b1 = ItemWithChecklist(Item(id = "b1", title = "b1", projectId = "pb"))
+        val e1 = ItemWithChecklist(Item(id = "e1", title = "e1", projectId = "pb", isTonight = true))
+        val list = listOf(a1, a2, b1, e1)
+        val grouped = DropList.Today(groupedDay = true)
+        assertNull(TaskDrops.plan(list, "a1", DropTarget.Task("b1"), grouped, movingDown = true))
+        assertEquals(listOf("a2", "a1", "b1", "e1"), TaskDrops.plan(list, "a1", DropTarget.Task("a2"), grouped, movingDown = true)?.map { it.item.id })
+        // В вечер — можно и в чужой проект: задача становится вечерней
+        val toEvening = TaskDrops.plan(list, "a1", DropTarget.Task("e1"), grouped, movingDown = true)
+        assertEquals(true, toEvening?.first { it.item.id == "a1" }?.item?.isTonight)
+        // Без группировки — обмен как прежде
+        assertEquals(listOf("a2", "b1", "a1", "e1"), TaskDrops.plan(list, "a1", DropTarget.Task("b1"), DropList.Today(), movingDown = true)?.map { it.item.id })
     }
 }

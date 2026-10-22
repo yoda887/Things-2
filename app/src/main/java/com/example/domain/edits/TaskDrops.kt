@@ -28,7 +28,8 @@ sealed interface DropTarget {
 
 /** Список, в котором перетаскивают, — со своими правилами переноса. */
 sealed interface DropList {
-    data object Today : DropList
+    /** «Сегодня»; [groupedDay] — дневная часть сгруппирована по проектам и областям (настройка) */
+    data class Today(val groupedDay: Boolean = false) : DropList
     /** «Предстоящие»; [dayStarts] — начала суток дней-заголовков по порядку */
     data class Upcoming(val dayStarts: List<Long>) : DropList
     /** Проект; [headingIds] — его подзаголовки по порядку */
@@ -339,8 +340,16 @@ object TaskDrops {
             return null
         }
 
+        // Дневная часть «Сегодня» по проектам и областям: внутри дня обмен с чужой группой не меняет группу —
+        // задача перескочила бы туда и тут же вернулась
+        if (dropList is DropList.Today && dropList.groupedDay && !hoveredTask.item.isTonight && !moved.item.isTonight &&
+            placeKey(hoveredTask.item) != placeKey(moved.item)
+        ) {
+            return null
+        }
+
         // Статус «Вечер» меняется только на экране «Сегодня», дата — только на «Предстоящих»
-        if (dropList == DropList.Today && hoveredTask.item.isTonight != moved.item.isTonight) {
+        if (dropList is DropList.Today && hoveredTask.item.isTonight != moved.item.isTonight) {
             moved = moved.copyWithTonight(hoveredTask.item.isTonight)
         }
         if (dropList is DropList.Upcoming && hoveredTask.item.startDate != moved.item.startDate) {
