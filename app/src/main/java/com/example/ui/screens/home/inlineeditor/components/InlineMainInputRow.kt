@@ -160,8 +160,8 @@ private fun InlineMainInputRowContent(
                         color = textPrimaryColor
                     ),
                     cursorBrush = cursorBrush,
-                    keyboardOptions = if (onTitleDone != null) androidx.compose.foundation.text.KeyboardOptions(imeAction = androidx.compose.ui.text.input.ImeAction.Done)
-                    else androidx.compose.foundation.text.KeyboardOptions.Default,
+                    keyboardOptions = if (onTitleDone != null) androidx.compose.foundation.text.KeyboardOptions(capitalization = androidx.compose.ui.text.input.KeyboardCapitalization.Sentences, imeAction = androidx.compose.ui.text.input.ImeAction.Done)
+                    else androidx.compose.foundation.text.KeyboardOptions(capitalization = androidx.compose.ui.text.input.KeyboardCapitalization.Sentences),
                     keyboardActions = androidx.compose.foundation.text.KeyboardActions(onDone = { onTitleDone?.invoke() }),
                     modifier = Modifier
                         .fillMaxWidth()
@@ -230,6 +230,7 @@ private fun InlineMainInputRowContent(
                 )
 
                 BasicTextField(
+                    keyboardOptions = androidx.compose.foundation.text.KeyboardOptions(capitalization = androidx.compose.ui.text.input.KeyboardCapitalization.Sentences),
                     value = notes,
                     onValueChange = onNotesChange,
                     // Две строки заметки без чек-листа задаёт анимированный notesMinHeight, а не minLines:

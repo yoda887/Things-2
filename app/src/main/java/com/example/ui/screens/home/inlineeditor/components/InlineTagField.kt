@@ -66,6 +66,7 @@ fun InlineTagField(
             )
             Spacer(modifier = Modifier.width(ThingsSpacing.S))
             BasicTextField(
+                keyboardOptions = androidx.compose.foundation.text.KeyboardOptions(capitalization = androidx.compose.ui.text.input.KeyboardCapitalization.Sentences),
                 value = tagInput,
                 onValueChange = onTagInputChange,
                 textStyle = ThingsTheme.type.bodyLarge.copy(color = textPrimaryColor),

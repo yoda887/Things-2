@@ -1225,7 +1225,7 @@ private fun TagNameField(
                     onValueChange = onValueChange,
                     textStyle = ThingsTheme.type.dialogRow.copy(color = ThingsTheme.colors.overlayContent),
                     singleLine = true,
-                    keyboardOptions = KeyboardOptions(imeAction = ImeAction.Done),
+                    keyboardOptions = KeyboardOptions(capitalization = androidx.compose.ui.text.input.KeyboardCapitalization.Sentences, imeAction = ImeAction.Done),
                     keyboardActions = KeyboardActions(onDone = { onDone() }),
                     cursorBrush = SolidColor(if (leaving) Color.Transparent else ThingsTheme.colors.accent),
                     modifier = Modifier

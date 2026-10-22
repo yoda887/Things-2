@@ -360,6 +360,7 @@ fun QuickAddDialog(
                                     }
                                     HideTextSelectionHandles(hidden = isClosing) {
                                         BasicTextField(
+                                            keyboardOptions = androidx.compose.foundation.text.KeyboardOptions(capitalization = androidx.compose.ui.text.input.KeyboardCapitalization.Sentences),
                                             value = notes,
                                             onValueChange = { notes = it },
                                             minLines = 4,
