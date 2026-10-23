@@ -255,6 +255,7 @@
     <string name="repeat_next_short">наступна %1$s</string>
     <string name="repeat_pill">Повторюється %1$s</string>
     <string name="repeat_pill_tomorrow">Повторюється завтра</string>
+    <string name="upcoming_repeating_section">Повторювані завдання</string>
     <string name="repeat_pill_today">Повторюється сьогодні</string>
     <string name="repeat_pill_on">Повторюється %1$s</string>
     <string name="repeat_sentence">Повторювати %1$s</string>

@@ -542,4 +542,18 @@ class RepeatTest {
         // Ждёт отметки копии — дат нет
         assertEquals(emptyList<LocalDate>() to false, RepeatPlan.upcoming(RepeatState(after, null), 2))
     }
+
+    @Test
+    fun repeatingList_waitingTemplates_pausedAndWithoutNextOnly() {
+        val rl = com.example.domain.lists.RepeatingList
+        fun r(id: String, next: Long, active: Boolean = true) = com.example.data.model.RecurrenceRule(templateId = id, rrule = "", nextGenerationDate = next, isActive = active)
+        fun t(id: String, type: Int = Item.TYPE_TEMPLATE, order: Int = 0) = com.example.data.model.ItemWithChecklist(Item(id = id, type = type, sortOrder = order))
+        val items = listOf(
+            t("scheduled"), t("waiting", order = 2), t("paused", order = 1), t("projectWaiting", Item.TYPE_PROJECT_TEMPLATE, order = 3),
+            com.example.data.model.ItemWithChecklist(Item(id = "task", type = Item.TYPE_TASK))
+        )
+        val rules = listOf(r("scheduled", 5_000L), r("waiting", 0L), r("paused", 5_000L, active = false), r("projectWaiting", 0L)).associateBy { it.templateId }
+        // Запланированный — на своём дне; ждущие, на паузе и шаблон проекта без повтора — в разделе, по порядку списка
+        assertEquals(listOf("paused", "waiting", "projectWaiting"), rl.waitingTemplates(items, rules).map { it.item.id })
+    }
 }

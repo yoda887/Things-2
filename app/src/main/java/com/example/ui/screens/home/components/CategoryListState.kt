@@ -137,6 +137,9 @@ object TaskListKeys {
     /** Плашка «У вас N нових завдань» в «Сегодня» */
     const val TODAY_NEW_BANNER = "today_new_banner"
 
+    /** Заголовок раздела «Повторювані завдання» в конце «Предстоящих» */
+    const val UPCOMING_REPEATING_HEADER = "upcoming_repeating_header"
+
     /** Префикс заголовка дня на экране «Предстоящие» */
     const val DAY_HEADER_PREFIX = "hdr_"
 
@@ -171,7 +174,7 @@ object TaskListKeys {
      * Заголовки, у которых есть осмысленная обработка сброса ([MAIN_HEADER], [EVENING_HEADER],
      * [DAY_HEADER_PREFIX], [MONTH_HEADER_PREFIX]), сюда не входят.
      */
-    val nonDroppable = setOf(CALENDAR_WIDGET, TAG_FILTER, EMPTY_STATE, PROJECTS_HEADING, TASKS_HEADING, AREA_UPCOMING_HEADING, AREA_SOMEDAY_HEADING, AREA_LATER_TOGGLE, AREA_PROJECTS_SPACER)
+    val nonDroppable = setOf(CALENDAR_WIDGET, TAG_FILTER, EMPTY_STATE, PROJECTS_HEADING, TASKS_HEADING, AREA_UPCOMING_HEADING, AREA_SOMEDAY_HEADING, AREA_LATER_TOGGLE, AREA_PROJECTS_SPACER, UPCOMING_REPEATING_HEADER)
 }
 
 /** Вид заголовка секции в результатах поиска. */
@@ -182,6 +185,9 @@ data class InboxMovedBannerItem(val count: Int)
 
 /** «Сегодня»: плашка «У вас N нових завдань» с кнопкой «OK» вверху списка ([com.example.domain.lists.TodayNews]) */
 data class TodayNewBannerItem(val count: Int)
+
+/** «Предстоящие»: заголовок раздела «Повторювані завдання» (шаблоны без следующего повтора) — на него не переносят */
+data class UpcomingRepeatingHeaderItem(val label: String)
 
 /** «Входящие»: ушедшая оттуда задача — бледной строкой уже в новом виде, до «OK» на плашке */
 
@@ -250,6 +256,7 @@ fun rememberFlattenedList(
     val tagShowLaterLabel = stringResource(R.string.area_show_later_items)
     val tagHideLaterLabel = stringResource(R.string.area_hide_later_items)
     val tagHideLoggedLabel = stringResource(R.string.tag_hide_logged)
+    val upcomingRepeatingLabel = stringResource(R.string.upcoming_repeating_section)
     return remember(todayGroupedDay, todayNewCount, inboxGhosts, repeatRules, expandedLaterProjects, showLoggedProjects, resources, screen, standardToday, eveningToday, headerLogbook, todayLabel, yesterdayLabel, draggedItemKey, upcomingDays, upcomingMonths, projects, area, displayTasks, isLaterItemsHidden, tag, allTasks, areas, savedTags, searchQuery, headings, pinnedPlaces) {
         // Все экраны перечислены явно (без else): новый экран компилятор заставит указать и здесь
         when (screen) {
@@ -262,7 +269,13 @@ fun rememberFlattenedList(
                 // Новое — плашка «У вас N нових завдань» над списком
                 if (todayNewCount > 0) listOf(TodayNewBannerItem(todayNewCount)) + rows else rows
             }
-            ActiveScreen.UPCOMING -> UpcomingScreen.rows(upcomingDays, upcomingMonths)
+            ActiveScreen.UPCOMING -> {
+                // В самом конце — «Повторювані завдання»: шаблоны без следующего повтора (ждут, на паузе), с плашкой
+                val waiting = com.example.domain.lists.RepeatingList.waitingTemplates(allTasks, repeatRules)
+                val rows = UpcomingScreen.rows(upcomingDays, upcomingMonths)
+                if (waiting.isEmpty()) rows else rows + UpcomingRepeatingHeaderItem(upcomingRepeatingLabel) +
+                    waiting.map { if (it.item.type == com.example.data.model.Item.TYPE_PROJECT_TEMPLATE) it.item else it }
+            }
             // Шаблоны повторяющихся проектов — среди всех задач, не среди проектов
             ActiveScreen.AREA_DETAIL -> AreaScreen.rows(AreaList.content(area?.id, displayTasks, projects, templates = allTasks.map { it.item }), isLaterItemsHidden)
             ActiveScreen.LOGBOOK -> LogbookScreen.rows(LogbookList.sections(displayTasks, projects), todayLabel, yesterdayLabel)

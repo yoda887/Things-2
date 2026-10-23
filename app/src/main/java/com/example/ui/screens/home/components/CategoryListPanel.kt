@@ -1225,6 +1225,7 @@ fun ThingsCategoryListPanel(
                         is SearchHeadingItem -> "search_heading_${item.heading.id}"
                         is InboxMovedBannerItem -> TaskListKeys.INBOX_MOVED_BANNER
                         is TodayNewBannerItem -> TaskListKeys.TODAY_NEW_BANNER
+                        is UpcomingRepeatingHeaderItem -> TaskListKeys.UPCOMING_REPEATING_HEADER
                         is ProjectHeadingItem -> item.key
                         else -> item.toString()
                     }
@@ -1241,7 +1242,11 @@ fun ThingsCategoryListPanel(
                                 inlineExpandedTaskId != item.item.id
                             AnimatedTaskItem(
                                 taskWrapper = liveItem,
-                                dateBadge = if (screen == ActiveScreen.UPCOMING) monthTaskBadges[UpcomingScreen.monthBadgeKey(item.item)] else null,
+                                // В «Повторюваних завданнях» в конце «Планов» у шаблона без даты — «Чекає» или «Пауза»
+                                dateBadge = if (screen == ActiveScreen.UPCOMING) monthTaskBadges[UpcomingScreen.monthBadgeKey(item.item)]
+                                    ?: item.item.takeIf { it.isRepeatTemplate && it.startDate == null }
+                                        ?.let { com.example.ui.components.repeatBadge(state.repeatRules[it.id]) }
+                                else null,
                                 dragDropState = dragDropState,
                                 inlineExpandedTaskId = inlineExpandedTaskId,
                                 editorOutsideTouch = editorOutsideTouch,
@@ -1332,6 +1337,8 @@ fun ThingsCategoryListPanel(
                                     ) LogbookList.closedAt(task) else null,
                                     dateBadge = when (screen) {
                                         ActiveScreen.UPCOMING -> monthTaskBadges[UpcomingScreen.monthBadgeKey(task)]
+                                            ?: task.takeIf { it.type == Item.TYPE_PROJECT_TEMPLATE && it.startDate == null }
+                                                ?.let { com.example.ui.components.repeatBadge(state.repeatRules[it.id]) }
                                         // Шаблон проекта — день следующего повтора или «Пауза»
                                         // Шаблон проекта — день следующего повтора, «Пауза» или «Ждёт»; копия, созданная заранее, — её день
                                         ActiveScreen.REPEATING -> if (task.type == Item.TYPE_PROJECT_TEMPLATE) {
@@ -1418,6 +1425,23 @@ fun ThingsCategoryListPanel(
                                     .animateItem(
                                         placementSpec = placementSpec
                                     )
+                                    .graphicsLayer { alpha = dimAlpha }
+                            )
+                        }
+                        is UpcomingRepeatingHeaderItem -> {
+                            val dimAlpha by animateFloatAsState(
+                                targetValue = if (inlineExpandedTaskId != null) 0.3f else 1f,
+                                label = "dimAlpha_upcoming_repeating"
+                            )
+                            // Как заголовок месяца; переносить на него нельзя (TaskListKeys.nonDroppable)
+                            UpcomingMonthHeader(
+                                monthLabel = item.label,
+                                isRemainder = false,
+                                textPrimaryColor = textPrimaryColor,
+                                dividerColor = dividerColor,
+                                modifier = Modifier
+                                    .padding(horizontal = ThingsSpacing.S)
+                                    .animateItem(placementSpec = placementSpec)
                                     .graphicsLayer { alpha = dimAlpha }
                             )
                         }

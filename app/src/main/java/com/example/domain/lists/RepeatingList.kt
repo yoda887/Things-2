@@ -133,6 +133,13 @@ object RepeatingList {
         if (appears <= endOfToday) null else wrapper.copy(item = wrapper.item.copy(startDate = appears))
     }
 
+    /**
+     * Шаблоны для раздела «Повторювані завдання» в конце «Предстоящих», как Repeating To-Dos в Things: задачи и
+     * проекты без следующего повтора — ждут отметки копии («после выполнения»), на паузе, без правила. В порядке списка.
+     */
+    fun waitingTemplates(items: List<ItemWithChecklist>, rules: Map<String, RecurrenceRule>): List<ItemWithChecklist> =
+        items.filter { (includes(it.item) || includesProject(it.item)) && waits(rules[it.item.id]) }.sortedBy { it.item.sortOrder }
+
     /** Шаблон ждёт: на паузе, без правила или без следующего повтора */
-    private fun waits(rule: RecurrenceRule?): Boolean = rule == null || !rule.isActive || rule.nextGenerationDate <= 0L
+    fun waits(rule: RecurrenceRule?): Boolean = rule == null || !rule.isActive || rule.nextGenerationDate <= 0L
 }

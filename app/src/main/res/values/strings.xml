@@ -248,6 +248,7 @@
     <string name="repeat_next_short">next %1$s</string>
     <string name="repeat_pill">Repeats %1$s</string>
     <string name="repeat_pill_tomorrow">Repeats tomorrow</string>
+    <string name="upcoming_repeating_section">Repeating To-Dos</string>
     <string name="repeat_pill_today">Repeats today</string>
     <string name="repeat_pill_on">Repeats on %1$s</string>
     <string name="repeat_sentence">Repeat %1$s</string>
