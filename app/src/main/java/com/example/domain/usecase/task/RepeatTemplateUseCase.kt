@@ -25,12 +25,16 @@ class RepeatTemplateUseCase @Inject constructor(private val repository: ITaskRep
     /** Новое правило и напоминание копий */
     suspend fun updateRule(templateId: String, rule: RepeatRule, reminderTime: Int?) {
         val template = repository.getTask(templateId) ?: return
-        val hasOpenCopy = repository.getRepeatCopies(templateId).any { !it.isClosed && !it.trashed }
+        val openCopies = repository.getRepeatCopies(templateId).filter { !it.isClosed && !it.trashed }
+        val hasOpenCopy = openCopies.isNotEmpty()
+        // День последней открытой копии: её повтор по новому правилу уже есть — второй копии на тот же день не будет
+        val openCopyDay = openCopies.mapNotNull { it.startDate }.maxOrNull()
+            ?.let { Instant.ofEpochMilli(it).atZone(zone).toLocalDate() }
         repository.inTransaction {
             if (template.reminderTime != reminderTime) {
                 repository.insertTask(template.copy(reminderTime = reminderTime, modificationDate = System.currentTimeMillis()))
             }
-            updateState(templateId, encodeRule = rule) { RepeatControl.withRule(it, rule, today, hasOpenCopy) }
+            updateState(templateId, encodeRule = rule) { RepeatControl.withRule(it, rule, today, hasOpenCopy, openCopyDay) }
         }
     }
 

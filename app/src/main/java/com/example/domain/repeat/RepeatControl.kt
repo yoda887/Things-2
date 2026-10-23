@@ -48,13 +48,25 @@ object RepeatControl {
     /**
      * Новое правило: следующий повтор считается заново от сегодня ([RepeatPlan.start]), созданные копии
      * учитываются; «после выполнения» с ещё открытой копией ждёт её выполнения.
+     *
+     * Открытая копия ([openCopyDay] — её день, без даты — сегодня), как в Things, остаётся и считается текущим повтором
+     * нового правила: повтор нового правила в её день или раньше уже покрыт ею — следующий берётся после него, второй
+     * копии на тот же день не появляется. Повтор позже её дня — по правилу, как обычно.
      */
-    fun withRule(state: RepeatState, rule: RepeatRule, today: LocalDate, hasOpenCopy: Boolean): RepeatState {
+    fun withRule(state: RepeatState, rule: RepeatRule, today: LocalDate, hasOpenCopy: Boolean, openCopyDay: LocalDate? = null): RepeatState {
         val started = RepeatPlan.start(rule, today)
-        return state.copy(
-            rule = rule,
-            nextOccurrence = if (rule.afterCompletion && hasOpenCopy) null else started.nextOccurrence
-        )
+        val next = when {
+            rule.afterCompletion && hasOpenCopy -> null
+            rule.afterCompletion -> started.nextOccurrence
+            hasOpenCopy -> {
+                val covered = maxOf(openCopyDay ?: today, today)
+                started.nextOccurrence?.let { first ->
+                    if (first.isAfter(covered)) first else RepeatDates.nextOccurrence(rule, covered.plusDays(1))
+                }
+            }
+            else -> started.nextOccurrence
+        }
+        return state.copy(rule = rule, nextOccurrence = next)
     }
 
     /**

@@ -556,4 +556,19 @@ class RepeatTest {
         // Запланированный — на своём дне; ждущие, на паузе и шаблон проекта без повтора — в разделе, по порядку списка
         assertEquals(listOf("paused", "waiting", "projectWaiting"), rl.waitingTemplates(items, rules).map { it.item.id })
     }
+
+    @Test
+    fun withRule_openCopyCoversItsDay_noSecondCopy() {
+        val fri = LocalDate.of(2026, 10, 23)
+        val old = RepeatState(rule = RepeatRule(afterCompletion = true, interval = 1, unit = RepeatUnit.DAY, start = fri), nextOccurrence = null)
+        val daily = RepeatRule(afterCompletion = false, interval = 1, unit = RepeatUnit.DAY, start = fri)
+        // Копия на сегодня открыта — новое «каждый день» сегодня её не дублирует: следующий повтор — завтра
+        assertEquals(fri.plusDays(1), RepeatControl.withRule(old, daily, fri, hasOpenCopy = true, openCopyDay = fri).nextOccurrence)
+        // Без открытой копии — с сегодня
+        assertEquals(fri, RepeatControl.withRule(old, daily, fri, hasOpenCopy = false).nextOccurrence)
+        // Повтор позже дня копии — по правилу
+        val mondays = RepeatRule(afterCompletion = false, interval = 1, unit = RepeatUnit.WEEK, start = fri,
+            on = listOf(RepeatOn(RepeatDay.Weekday(java.time.DayOfWeek.MONDAY.value))))
+        assertEquals(LocalDate.of(2026, 10, 26), RepeatControl.withRule(old, mondays, fri, hasOpenCopy = true, openCopyDay = fri).nextOccurrence)
+    }
 }
