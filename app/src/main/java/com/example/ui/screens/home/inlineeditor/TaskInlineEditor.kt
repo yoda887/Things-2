@@ -617,9 +617,9 @@ fun ThingsTaskInlineEditor(
                         }
                     }
 
-                    // Flag (Deadline)
+                    // Flag (Deadline). У шаблона повтора флажка нет, как в Things: срок задаётся в окне «Повторювати»
                     androidx.compose.animation.AnimatedVisibility(
-                        visible = dueDate == null,
+                        visible = dueDate == null && !task.item.isRepeatTemplate,
                         enter = fadeIn() + expandHorizontally(expandFrom = Alignment.End),
                         exit = fadeOut() + shrinkHorizontally(shrinkTowards = Alignment.End)
                     ) {
@@ -1042,23 +1042,14 @@ internal fun RepeatEditorRow(
                 Icon(Icons.Default.ChevronRight, contentDescription = null, tint = ThingsTheme.colors.textSecondary, modifier = Modifier.size(ThingsIconSize.S))
             }
         }
-        if (isTemplate) {
-            com.example.ui.components.ThingsDropdownMenu(expanded = menu, onDismissRequest = { menu = false }) {
-                fun pick(action: com.example.ui.screens.home.components.RepeatAction) {
-                    view.performHapticFeedback(HapticFeedbackConstants.CLOCK_TICK)
-                    menu = false
-                    onAction(action)
-                }
-                com.example.ui.components.ThingsMenuItem(stringResource(R.string.repeat_action_edit), AppIcons.Repeat, onClick = { pick(com.example.ui.screens.home.components.RepeatAction.EDIT) })
-                com.example.ui.components.ThingsMenuItem(stringResource(R.string.repeat_action_next_copy), Icons.Default.Add, onClick = { pick(com.example.ui.screens.home.components.RepeatAction.NEXT_COPY) })
-                com.example.ui.components.ThingsMenuItem(stringResource(R.string.repeat_action_previous), Icons.Default.History, onClick = { pick(com.example.ui.screens.home.components.RepeatAction.PREVIOUS_COPY) })
-                if (stored?.isActive == false) {
-                    com.example.ui.components.ThingsMenuItem(stringResource(R.string.repeat_action_resume), Icons.Default.PlayArrow, onClick = { pick(com.example.ui.screens.home.components.RepeatAction.RESUME) })
-                } else {
-                    com.example.ui.components.ThingsMenuItem(stringResource(R.string.repeat_action_pause), Icons.Default.Pause, onClick = { pick(com.example.ui.screens.home.components.RepeatAction.PAUSE) })
-                }
-                com.example.ui.components.ThingsMenuItem(stringResource(R.string.repeat_action_stop), Icons.Default.Stop, onClick = { pick(com.example.ui.screens.home.components.RepeatAction.STOP) }, destructive = true)
-            }
+        // Шаблон — окно в стиле «Коли?», как «When?» в Things: правило, ближайшие даты и действия
+        if (isTemplate && menu && rule != null) {
+            com.example.ui.screens.home.inlineeditor.dialogs.RepeatTemplateDialog(
+                rule = rule,
+                stored = stored,
+                onAction = onAction,
+                onDismiss = { menu = false }
+            )
         }
     }
 }
