@@ -220,6 +220,16 @@
     <string name="repeat_deadline_each">Each copy has a deadline. It will appear in your Today list %1$s.</string>
     <string name="repeat_same_day">on the same day</string>
     <string name="repeat_add_more">Add More</string>
+    <string name="repeat_forever">This to-do repeats forever.</string>
+    <string-array name="repeat_on_weekdays">
+        <item>On Monday</item>
+        <item>On Tuesday</item>
+        <item>On Wednesday</item>
+        <item>On Thursday</item>
+        <item>On Friday</item>
+        <item>On Saturday</item>
+        <item>On Sunday</item>
+    </string-array>
     <string name="repeat_day_word">day</string>
     <string name="repeat_last">last</string>
     <string name="repeat_last_day">last day</string>

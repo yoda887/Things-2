@@ -3,6 +3,18 @@ package com.example.ui.screens.home.inlineeditor.dialogs
 import android.view.HapticFeedbackConstants
 import androidx.activity.compose.BackHandler
 import androidx.compose.animation.AnimatedContent
+import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.core.MutableTransitionState
+import androidx.compose.animation.expandVertically
+import androidx.compose.animation.shrinkVertically
+import androidx.compose.foundation.interaction.collectIsPressedAsState
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.lerp
+import androidx.compose.ui.layout.layout
+import androidx.compose.ui.res.stringArrayResource
+import androidx.compose.ui.unit.Dp
+import androidx.compose.ui.unit.offset
+import kotlinx.coroutines.delay
 import androidx.compose.animation.animateColorAsState
 import androidx.compose.animation.core.FastOutSlowInEasing
 import androidx.compose.animation.core.animateFloatAsState
@@ -36,6 +48,7 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Check
+import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.ChevronLeft
 import androidx.compose.material.icons.filled.ChevronRight
 import androidx.compose.material.icons.filled.Remove
@@ -116,6 +129,13 @@ private const val REPEAT_DIALOG_HEIGHT_FRACTION = 0.72f
 /** Появление окна: вырастает из этого масштаба */
 private const val REPEAT_ENTER_SCALE = 0.9f
 
+/** Строка дня недели на странице «У» — плотнее строки окна, как в Things */
+private val REPEAT_WEEKDAY_ROW_HEIGHT = 40.dp
+/** Строка, с которой вернулись со вложенной страницы, подсвечена и гаснет за это время */
+private const val REPEAT_RETURN_FLASH_MS = ThingsMotion.SLOW
+/** Подсветка погашена: тот же цвет без прозрачности — проявляется и гаснет без потемнения */
+private const val REPEAT_ALPHA_NONE = 0f
+
 /** Колонки барабанов окна */
 private val REPEAT_WHEEL_NUMBER_WIDTH = 72.dp
 private val REPEAT_WHEEL_WORD_WIDTH = 150.dp
@@ -166,6 +186,8 @@ private class RepeatDraft(task: Item, today: LocalDate) {
     var end by mutableStateOf(RepeatEnd.NEVER)
     var endDate by mutableStateOf(firstDay.plusMonths(1))
     var endCount by mutableIntStateOf(5)
+    /** Дату окончания уже выбирали — иначе «Дата» начинается со следующего повтора, как в Things */
+    var endDateSet = false
     var deadlineOn by mutableStateOf(false)
     var deadlineDays by mutableIntStateOf(0)
     var reminderTime by mutableStateOf(task.reminderTime)
@@ -187,7 +209,7 @@ private class RepeatDraft(task: Item, today: LocalDate) {
             entries.clear(); entries.addAll(rule.on.map { if (it.month == null) it.copy(month = rule.start.monthValue) else it })
         }
         when {
-            rule.endDate != null -> { end = RepeatEnd.DATE; endDate = rule.endDate }
+            rule.endDate != null -> { end = RepeatEnd.DATE; endDate = rule.endDate; endDateSet = true }
             rule.endCount != null -> { end = RepeatEnd.COUNT; endCount = rule.endCount }
             else -> end = RepeatEnd.NEVER
         }
@@ -195,8 +217,25 @@ private class RepeatDraft(task: Item, today: LocalDate) {
         deadlineDays = rule.deadlineDaysBefore ?: 0
     }
 
+    /**
+     * Самый поздний срок, дней после появления копии. Ограничен только там, где больший невозможен: у «после
+     * выполнения» следующая копия появится через интервал после выполнения этой — срок не дальше дня перед ней
+     * («через 1 день после выполнения» — только в тот же день). У регулярного копии независимы — как прежде, до
+     * [REPEAT_MAX_DEADLINE_DAYS].
+     */
+    fun maxDeadlineDays(): Int {
+        if (!afterCompletion) return REPEAT_MAX_DEADLINE_DAYS
+        val gap = when (afterUnit) {
+            RepeatUnit.DAY -> afterInterval
+            RepeatUnit.WEEK -> 7 * afterInterval
+            RepeatUnit.MONTH -> 28 * afterInterval
+            RepeatUnit.YEAR -> 365 * afterInterval
+        }
+        return (gap - 1).coerceIn(0, REPEAT_MAX_DEADLINE_DAYS)
+    }
+
     fun rule(today: LocalDate): RepeatRule {
-        val deadline = if (deadlineOn) deadlineDays else null
+        val deadline = if (deadlineOn) deadlineDays.coerceAtMost(maxDeadlineDays()) else null
         if (afterCompletion) {
             return RepeatRule(afterCompletion = true, interval = afterInterval, unit = afterUnit, start = today, deadlineDaysBefore = deadline)
         }
@@ -231,6 +270,15 @@ fun ThingsRepeatDialog(
     val today = remember { LocalDate.now() }
     val draft = remember(task.id) { RepeatDraft(task, today).also { d -> initialRule?.let { d.load(it) } } }
     var page by remember { mutableStateOf(RepeatPage.MAIN) }
+    // Страница, с которой вернулись: её строка на главной подсвечена и гаснет, как в Things
+    var returnedFrom by remember { mutableStateOf<RepeatPage?>(null) }
+    LaunchedEffect(returnedFrom) {
+        if (returnedFrom != null) {
+            // Пока страница въезжает и ещё немного — потом гаснет за REPEAT_RETURN_FLASH_MS
+            delay((ThingsMotion.MEDIUM + ThingsMotion.STANDARD).toLong())
+            returnedFrom = null
+        }
+    }
     var visible by remember { mutableStateOf(false) }
     LaunchedEffect(Unit) { visible = true }
     val appear by animateFloatAsState(
@@ -243,7 +291,12 @@ fun ThingsRepeatDialog(
     Dialog(onDismissRequest = onDismissRequest, properties = DialogProperties(usePlatformDefaultWidth = false)) {
         // Закрытие — штатной анимацией окна, как у окна «Когда»
         (LocalView.current.parent as? DialogWindowProvider)?.window?.setWindowAnimations(R.style.DialogWindowAnimationGrowOpen)
-        BackHandler { if (page != RepeatPage.MAIN) page = RepeatPage.MAIN else onDismissRequest() }
+        BackHandler {
+            if (page != RepeatPage.MAIN) {
+                returnedFrom = page
+                page = RepeatPage.MAIN
+            } else onDismissRequest()
+        }
         val height = LocalConfiguration.current.screenHeightDp.dp * REPEAT_DIALOG_HEIGHT_FRACTION
         Card(
             shape = ThingsTheme.shapes.dialogShape,
@@ -261,19 +314,24 @@ fun ThingsRepeatDialog(
             AnimatedContent(
                 targetState = page,
                 transitionSpec = {
+                    // Как в Things: страницы сдвигаются вместе на всю ширину, без затухания
                     val forward = targetState.depth > initialState.depth
-                    val enter = slideInHorizontally(tween(ThingsMotion.MEDIUM)) { if (forward) it else -it / 3 } + fadeIn(tween(ThingsMotion.MEDIUM))
-                    val exit = slideOutHorizontally(tween(ThingsMotion.MEDIUM)) { if (forward) -it / 3 else it } + fadeOut(tween(ThingsMotion.QUICK))
+                    val enter = slideInHorizontally(tween(ThingsMotion.MEDIUM)) { if (forward) it else -it }
+                    val exit = slideOutHorizontally(tween(ThingsMotion.MEDIUM)) { if (forward) -it else it }
                     enter togetherWith exit
                 },
                 label = "repeatPage"
             ) { p ->
                 Column(modifier = Modifier.fillMaxSize().padding(horizontal = ThingsSpacing.L, vertical = ThingsSpacing.L)) {
-                    val back = { page = RepeatPage.MAIN }
+                    val back = {
+                        returnedFrom = p
+                        page = RepeatPage.MAIN
+                    }
                     when (p) {
                         RepeatPage.MAIN -> MainPage(
                             draft = draft,
                             today = today,
+                            flash = returnedFrom,
                             onOpen = { page = it },
                             onCancel = onDismissRequest,
                             onSave = {
@@ -282,7 +340,13 @@ fun ThingsRepeatDialog(
                                 onDismissRequest()
                             }
                         )
-                        RepeatPage.EVERY -> SubPage(stringResource(R.string.repeat_title), back) { IntervalWheels(draft.interval, draft.unit) { n, u -> draft.interval = n; draft.unit = u } }
+                        RepeatPage.EVERY -> SubPage(stringResource(R.string.repeat_title), back) {
+                            // В карточке барабана, как в Things: «Кожні» белым слева, выбранное («2 тижні») голубым справа
+                            IntervalWheels(
+                                draft.interval, draft.unit,
+                                header = stringResource(R.string.repeat_every) to unitText(draft.unit, draft.interval)
+                            ) { n, u -> draft.interval = n; draft.unit = u }
+                        }
                         RepeatPage.ON -> SubPage(stringResource(R.string.repeat_title), back) { OnPage(draft) }
                         RepeatPage.NEXT -> SubPage(stringResource(R.string.repeat_next), back) {
                             RepeatCalendar(selected = draft.start, from = today) { draft.start = it; back() }
@@ -300,16 +364,28 @@ fun ThingsRepeatDialog(
 // ---------------------------------------------------------------- главная страница
 
 @Composable
-private fun MainPage(draft: RepeatDraft, today: LocalDate, onOpen: (RepeatPage) -> Unit, onCancel: () -> Unit, onSave: () -> Unit) {
+private fun MainPage(
+    draft: RepeatDraft,
+    today: LocalDate,
+    flash: RepeatPage?,
+    onOpen: (RepeatPage) -> Unit,
+    onCancel: () -> Unit,
+    onSave: () -> Unit
+) {
+    // Как в Things: ✕ в сером круге — отменить, ✓ в синем — сохранить
     Row(modifier = Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
-        HeaderText(stringResource(R.string.cancel), Modifier.weight(1f), TextAlign.Start, onCancel)
+        Box(modifier = Modifier.weight(1f), contentAlignment = Alignment.CenterStart) {
+            DialogHeaderCircleButton(Icons.Default.Close, stringResource(R.string.cancel), onCancel)
+        }
         Text(
             text = stringResource(R.string.repeat_title),
             style = ThingsTheme.type.dialogTitle.copy(color = ThingsTheme.colors.overlayContent),
             textAlign = TextAlign.Center,
             modifier = Modifier.weight(1.4f)
         )
-        HeaderText(stringResource(R.string.tag_dialog_save), Modifier.weight(1f), TextAlign.End, onSave, accent = true)
+        Box(modifier = Modifier.weight(1f), contentAlignment = Alignment.CenterEnd) {
+            DialogHeaderCircleButton(Icons.Default.Check, stringResource(R.string.tag_dialog_save), onSave, accent = true)
+        }
     }
     Spacer(Modifier.height(ThingsSpacing.L))
     Segmented(
@@ -332,24 +408,24 @@ private fun MainPage(draft: RepeatDraft, today: LocalDate, onOpen: (RepeatPage) 
                         withStyle(SpanStyle(color = ThingsTheme.colors.accent)) { append(unitText) }
                         append(" "); append(stringResource(R.string.repeat_hint_after_after))
                     },
-                    style = ThingsTheme.type.bodyMedium.copy(color = ThingsTheme.colors.overlayContentSecondary)
+                    style = ThingsTheme.type.bodyLarge.copy(color = ThingsTheme.colors.overlayContent)
                 )
                 Spacer(Modifier.height(ThingsSpacing.S))
                 IntervalWheels(draft.afterInterval, draft.afterUnit) { n, u -> draft.afterInterval = n; draft.afterUnit = u }
             } else {
                 Text(
                     text = stringResource(R.string.repeat_hint_regular),
-                    style = ThingsTheme.type.bodyMedium.copy(color = ThingsTheme.colors.overlayContentSecondary)
+                    style = ThingsTheme.type.bodyLarge.copy(color = ThingsTheme.colors.overlayContent)
                 )
                 Spacer(Modifier.height(ThingsSpacing.M))
-                ValueRow(stringResource(R.string.repeat_every), unitText(draft.unit, draft.interval)) { onOpen(RepeatPage.EVERY) }
+                ValueRow(stringResource(R.string.repeat_every), unitText(draft.unit, draft.interval), flash == RepeatPage.EVERY) { onOpen(RepeatPage.EVERY) }
                 if (draft.unit != RepeatUnit.DAY) {
-                    ValueRow(stringResource(R.string.repeat_on), onText(draft)) { onOpen(RepeatPage.ON) }
+                    ValueRow(stringResource(R.string.repeat_on), onText(draft), flash == RepeatPage.ON) { onOpen(RepeatPage.ON) }
                 }
                 RepeatDivider()
                 val next = RepeatDates.nextOccurrence(draft.rule(today), today)
-                ValueRow(stringResource(R.string.repeat_next), next?.let { dateText(it) } ?: "—") { onOpen(RepeatPage.NEXT) }
-                ValueRow(stringResource(R.string.repeat_ends), endsText(draft)) { onOpen(RepeatPage.ENDS) }
+                ValueRow(stringResource(R.string.repeat_next), next?.let { dateText(it) } ?: "—", flash == RepeatPage.NEXT) { onOpen(RepeatPage.NEXT) }
+                ValueRow(stringResource(R.string.repeat_ends), endsText(draft), flash == RepeatPage.ENDS) { onOpen(RepeatPage.ENDS) }
             }
             RepeatDivider()
             // Поставленные срок и напоминание — фразой акцентом, как в Things: «Кожна копія матиме термін.
@@ -357,26 +433,30 @@ private fun MainPage(draft: RepeatDraft, today: LocalDate, onOpen: (RepeatPage) 
             if (draft.deadlineOn) {
                 SetIconRow(
                     icon = Icons.Outlined.Flag,
-                    text = stringResource(R.string.repeat_deadline_each, deadlineText(draft.deadlineDays))
+                    text = stringResource(R.string.repeat_deadline_each, deadlineText(draft.deadlineDays.coerceAtMost(draft.maxDeadlineDays()))),
+                    flash = flash == RepeatPage.DEADLINE
                 ) { onOpen(RepeatPage.DEADLINE) }
             } else {
                 IconRow(
                     icon = { Icon(Icons.Outlined.Flag, null, tint = ThingsTheme.colors.overlayContentSecondary, modifier = Modifier.size(ThingsIconSize.S)) },
                     label = stringResource(R.string.repeat_add_deadline),
-                    value = null
+                    value = null,
+                    flash = flash == RepeatPage.DEADLINE
                 ) { onOpen(RepeatPage.DEADLINE) }
             }
             val reminder = draft.reminderTime
             if (reminder != null) {
                 SetIconRow(
                     icon = AppIcons.Bell,
-                    text = stringResource(R.string.repeat_reminder_each, formatReminderTime(LocalContext.current, reminder))
+                    text = stringResource(R.string.repeat_reminder_each, formatReminderTime(LocalContext.current, reminder)),
+                    flash = flash == RepeatPage.REMINDER
                 ) { onOpen(RepeatPage.REMINDER) }
             } else {
                 IconRow(
                     icon = { Icon(AppIcons.Bell, null, tint = ThingsTheme.colors.overlayContentSecondary, modifier = Modifier.size(ThingsIconSize.S)) },
                     label = stringResource(R.string.ui_add_reminder),
-                    value = null
+                    value = null,
+                    flash = flash == RepeatPage.REMINDER
                 ) { onOpen(RepeatPage.REMINDER) }
             }
         }
@@ -388,14 +468,9 @@ private fun MainPage(draft: RepeatDraft, today: LocalDate, onOpen: (RepeatPage) 
 @Composable
 internal fun ColumnScope.SubPage(title: String, onBack: () -> Unit, content: @Composable ColumnScope.() -> Unit) {
     Row(modifier = Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
-        Row(
-            modifier = Modifier
-                .weight(1f)
-                .clickable(interactionSource = remember { MutableInteractionSource() }, indication = null) { onBack() },
-            verticalAlignment = Alignment.CenterVertically
-        ) {
-            Icon(Icons.Default.ChevronLeft, null, tint = ThingsTheme.colors.overlayContent, modifier = Modifier.size(ThingsIconSize.M))
-            Text(stringResource(R.string.cd_back), style = ThingsTheme.type.dialogRow.copy(color = ThingsTheme.colors.overlayContent))
+        // «‹» в сером круге — назад, как в Things
+        Box(modifier = Modifier.weight(1f), contentAlignment = Alignment.CenterStart) {
+            DialogHeaderCircleButton(Icons.Default.ChevronLeft, stringResource(R.string.cd_back), onBack)
         }
         Text(
             text = title,
@@ -411,7 +486,12 @@ internal fun ColumnScope.SubPage(title: String, onBack: () -> Unit, content: @Co
 
 /** «Каждые N дней / недель / месяцев / лет»: число и единица; единица склоняется по числу */
 @Composable
-private fun IntervalWheels(interval: Int, unit: RepeatUnit, onChange: (Int, RepeatUnit) -> Unit) {
+private fun IntervalWheels(
+    interval: Int,
+    unit: RepeatUnit,
+    header: Pair<String, String>? = null,
+    onChange: (Int, RepeatUnit) -> Unit
+) {
     val numbers = remember { (1..REPEAT_MAX_INTERVAL).map { it.toString() } }
     val numberState = rememberWheelState(interval - 1, numbers.size, cyclic = false)
     val unitState = rememberWheelState(unit.ordinal, RepeatUnit.entries.size, cyclic = false)
@@ -421,24 +501,26 @@ private fun IntervalWheels(interval: Int, unit: RepeatUnit, onChange: (Int, Repe
         snapshotFlow { numberState.selected to unitState.selected }.drop(1)
             .collect { (ni, ui) -> onChange(ni + 1, RepeatUnit.entries[ui]) }
     }
-    WheelBox(listOf(Triple(numbers, numberState, REPEAT_WHEEL_NUMBER_WIDTH), Triple(units, unitState, REPEAT_WHEEL_WORD_WIDTH)))
+    WheelBox(listOf(Triple(numbers, numberState, REPEAT_WHEEL_NUMBER_WIDTH), Triple(units, unitState, REPEAT_WHEEL_WORD_WIDTH)), header)
 }
 
 /**
- * «В»: у еженедельных — дни недели с галочками; у ежемесячных и ежегодных — дни списком и барабан,
- * «Добавить ещё» — внизу окна, как в Things
+ * «В»: у еженедельных — «У понеділок»… с галочками; у ежемесячных и ежегодных — строки дней, как в Things:
+ * выбранная строка — в карточке вместе со своим барабаном, нажатие на другую переносит карточку к ней;
+ * строки появляются и уходят плавно. «Добавить ещё» — внизу окна.
  */
 @Composable
 private fun ColumnScope.OnPage(draft: RepeatDraft) {
     if (draft.unit == RepeatUnit.WEEK) {
         val view = LocalView.current
+        val names = stringArrayResource(R.array.repeat_on_weekdays)
         DayOfWeek.entries.forEach { dow ->
             val checked = dow.value in draft.weekdays
             Row(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .height(MaterialTheme.dimens.rowHeight)
-                    .clickable {
+                    .height(REPEAT_WEEKDAY_ROW_HEIGHT)
+                    .pressableRow {
                         view.performHapticFeedback(HapticFeedbackConstants.CLOCK_TICK)
                         if (checked) {
                             if (draft.weekdays.size > 1) draft.weekdays.remove(dow.value)
@@ -447,8 +529,8 @@ private fun ColumnScope.OnPage(draft: RepeatDraft) {
                 verticalAlignment = Alignment.CenterVertically
             ) {
                 Text(
-                    text = dow.getDisplayName(TextStyle.FULL_STANDALONE, Locale.getDefault()).replaceFirstChar { it.titlecase() },
-                    style = ThingsTheme.type.dialogRow.copy(color = ThingsTheme.colors.overlayContent),
+                    text = names[dow.value - 1],
+                    style = ThingsTheme.type.dialogRowSelected.copy(color = ThingsTheme.colors.overlayContent),
                     modifier = Modifier.weight(1f)
                 )
                 if (checked) Icon(Icons.Default.Check, null, tint = ThingsTheme.colors.accent, modifier = Modifier.size(ThingsIconSize.S))
@@ -458,24 +540,110 @@ private fun ColumnScope.OnPage(draft: RepeatDraft) {
         return
     }
     val yearly = draft.unit == RepeatUnit.YEAR
-    draft.entries.forEachIndexed { index, entry ->
+    // Ключи строк — для анимации появления и ухода; порядок совпадает с draft.entries
+    val initialCount = remember { draft.entries.size }
+    val keys = remember { mutableStateListOf<Int>().apply { addAll(0 until initialCount) } }
+    var nextKey by remember { mutableIntStateOf(initialCount) }
+    var selectedKey by remember { mutableIntStateOf(draft.selectedEntry.coerceIn(0, initialCount - 1)) }
+    val visibility = remember { mutableMapOf<Int, MutableTransitionState<Boolean>>() }
+    Column(modifier = Modifier.weight(1f).verticalScroll(rememberScrollState())) {
+        keys.forEachIndexed { index, k ->
+            key(k) {
+                // Строки, что были при открытии, стоят сразу; новые — выезжают
+                val state = visibility.getOrPut(k) { MutableTransitionState(k < initialCount).apply { targetState = true } }
+                // Удалённая строка ушла — убрать её из черновика
+                if (state.isIdle && !state.currentState && !state.targetState) {
+                    LaunchedEffect(Unit) {
+                        val i = keys.indexOf(k)
+                        if (i >= 0) {
+                            keys.removeAt(i)
+                            draft.entries.removeAt(i)
+                        }
+                        visibility.remove(k)
+                        draft.selectedEntry = keys.indexOf(selectedKey).coerceAtLeast(0)
+                    }
+                }
+                AnimatedVisibility(
+                    visibleState = state,
+                    enter = expandVertically(tween(ThingsMotion.MEDIUM)) + fadeIn(tween(ThingsMotion.MEDIUM)),
+                    exit = shrinkVertically(tween(ThingsMotion.MEDIUM)) + fadeOut(tween(ThingsMotion.QUICK))
+                ) {
+                    EntryBlock(
+                        draft = draft,
+                        indexOf = { keys.indexOf(k) },
+                        first = index == 0,
+                        selected = k == selectedKey,
+                        yearly = yearly,
+                        onSelect = {
+                            selectedKey = k
+                            draft.selectedEntry = keys.indexOf(k)
+                        },
+                        onRemove = {
+                            if (selectedKey == k) {
+                                val i = keys.indexOf(k)
+                                selectedKey = keys.getOrNull(i - 1) ?: keys.getOrNull(i + 1) ?: k
+                                draft.selectedEntry = keys.indexOf(selectedKey)
+                            }
+                            state.targetState = false
+                        }
+                    )
+                }
+            }
+        }
+    }
+    Spacer(Modifier.height(ThingsSpacing.M))
+    PillButton(stringResource(R.string.repeat_add_more)) {
+        val i = keys.indexOf(selectedKey).coerceAtLeast(0)
+        draft.entries.add(draft.entries[i])
+        keys.add(nextKey)
+        selectedKey = nextKey
+        nextKey++
+        draft.selectedEntry = draft.entries.lastIndex
+    }
+}
+
+/**
+ * Строка дня «У» / «І в»: выбранная — в карточке вместе с барабаном, который правит её; у второй и следующих —
+ * красный «−» слева
+ */
+@Composable
+private fun EntryBlock(
+    draft: RepeatDraft,
+    indexOf: () -> Int,
+    first: Boolean,
+    selected: Boolean,
+    yearly: Boolean,
+    onSelect: () -> Unit,
+    onRemove: () -> Unit
+) {
+    val entry = draft.entries.getOrNull(indexOf()) ?: return
+    val cardColor = ThingsTheme.colors.overlayControl
+    val background by animateColorAsState(
+        if (selected) cardColor else cardColor.copy(alpha = REPEAT_ALPHA_NONE),
+        tween(ThingsMotion.MEDIUM), label = "entryCard"
+    )
+    Column(
+        modifier = Modifier
+            .fillMaxWidth()
+            .bleed(ThingsSpacing.S)
+            .clip(ThingsTheme.shapes.dialogShape)
+            .background(background)
+            .padding(horizontal = ThingsSpacing.S)
+    ) {
         Row(
             modifier = Modifier
                 .fillMaxWidth()
                 .height(MaterialTheme.dimens.rowHeight)
-                .clickable { draft.selectedEntry = index },
+                .clickable(interactionSource = remember { MutableInteractionSource() }, indication = null, onClick = onSelect),
             verticalAlignment = Alignment.CenterVertically
         ) {
-            if (index > 0) {
+            if (!first) {
                 Box(
                     modifier = Modifier
                         .size(ThingsIconSize.M)
                         .clip(CircleShape)
                         .background(ThingsTheme.colors.danger)
-                        .clickable {
-                            draft.entries.removeAt(index)
-                            draft.selectedEntry = draft.selectedEntry.coerceAtMost(draft.entries.lastIndex)
-                        },
+                        .clickable(onClick = onRemove),
                     contentAlignment = Alignment.Center
                 ) {
                     Icon(Icons.Default.Remove, stringResource(R.string.cd_repeat_remove_day), tint = ThingsTheme.colors.overlayContent, modifier = Modifier.size(ThingsIconSize.XS))
@@ -483,58 +651,61 @@ private fun ColumnScope.OnPage(draft: RepeatDraft) {
                 Spacer(Modifier.width(ThingsSpacing.S))
             }
             Text(
-                text = stringResource(if (index == 0) R.string.repeat_on else R.string.repeat_and_on),
-                style = ThingsTheme.type.dialogRow.copy(color = ThingsTheme.colors.overlayContent),
+                text = stringResource(if (first) R.string.repeat_on else R.string.repeat_and_on),
+                style = ThingsTheme.type.dialogRowSelected.copy(color = ThingsTheme.colors.overlayContent),
                 modifier = Modifier.weight(1f)
             )
             Text(
                 text = entryText(entry, yearly),
-                style = ThingsTheme.type.dialogRow.copy(
-                    color = ThingsTheme.colors.accent
-                )
+                style = ThingsTheme.type.dialogRowSelected.copy(color = ThingsTheme.colors.accent)
             )
         }
-    }
-    // Барабан правит выбранную строку: порядковый номер, «день» или день недели, месяц у ежегодных
-    val entry = draft.entries.getOrNull(draft.selectedEntry) ?: return
-    key(draft.selectedEntry) {
-        val (ordinalIndex, kindIndex) = wheelIndices(entry.day)
-        val ordinalState = rememberWheelState(ordinalIndex, REPEAT_ORDINALS, cyclic = false)
-        val kindState = rememberWheelState(kindIndex, 1 + DayOfWeek.entries.size, cyclic = false)
-        val monthState = rememberWheelState((entry.month ?: 1) - 1, Month.entries.size, cyclic = false)
-        val ordinals = (1..REPEAT_ORDINALS - 1).map { ordinalText(it) } + stringResource(R.string.repeat_last)
-        val kinds = listOf(stringResource(R.string.repeat_day_word)) +
-            DayOfWeek.entries.map { it.getDisplayName(TextStyle.FULL_STANDALONE, Locale.getDefault()) }
-        val months = Month.entries.map { it.getDisplayName(TextStyle.SHORT_STANDALONE, Locale.getDefault()) }
-        LaunchedEffect(ordinalState, kindState, monthState) {
-            snapshotFlow { Triple(ordinalState.selected, kindState.selected, monthState.selected) }.drop(1).collect { (o, k, m) ->
-                // У дня недели номер — только 1..4 или «последний»
-                if (k > 0 && o in REPEAT_MAX_WEEKDAY_ORDINAL until REPEAT_LAST_INDEX) {
-                    ordinalState.animateTo(REPEAT_MAX_WEEKDAY_ORDINAL - 1)
-                    return@collect
-                }
-                val day = if (k == 0) {
-                    RepeatDay.OfMonth(if (o == REPEAT_LAST_INDEX) RepeatDay.LAST else o + 1)
-                } else {
-                    RepeatDay.Weekday(k, if (o == REPEAT_LAST_INDEX) RepeatDay.LAST else o + 1)
-                }
-                val i = draft.selectedEntry
-                if (i in draft.entries.indices) draft.entries[i] = RepeatOn(day, if (yearly) m + 1 else entry.month)
+        AnimatedVisibility(
+            visible = selected,
+            enter = expandVertically(tween(ThingsMotion.MEDIUM)) + fadeIn(tween(ThingsMotion.MEDIUM)),
+            exit = shrinkVertically(tween(ThingsMotion.MEDIUM)) + fadeOut(tween(ThingsMotion.QUICK))
+        ) {
+            Column {
+                EntryWheels(draft, indexOf, entry, yearly, cardColor)
+                Spacer(Modifier.height(ThingsSpacing.S))
             }
         }
-        val columns = buildList {
-            add(Triple(ordinals, ordinalState, REPEAT_WHEEL_NUMBER_WIDTH))
-            add(Triple(kinds, kindState, if (yearly) REPEAT_WHEEL_KIND_YEARLY_WIDTH else REPEAT_WHEEL_WORD_WIDTH))
-            if (yearly) add(Triple(months, monthState, REPEAT_WHEEL_MONTH_WIDTH))
+    }
+}
+
+/** Барабан строки дня: порядковый номер, «день» или день недели, месяц у ежегодных */
+@Composable
+private fun EntryWheels(draft: RepeatDraft, indexOf: () -> Int, entry: RepeatOn, yearly: Boolean, cardColor: Color) {
+    val (ordinalIndex, kindIndex) = wheelIndices(entry.day)
+    val ordinalState = rememberWheelState(ordinalIndex, REPEAT_ORDINALS, cyclic = false)
+    val kindState = rememberWheelState(kindIndex, 1 + DayOfWeek.entries.size, cyclic = false)
+    val monthState = rememberWheelState((entry.month ?: 1) - 1, Month.entries.size, cyclic = false)
+    val ordinals = (1..REPEAT_ORDINALS - 1).map { ordinalText(it) } + stringResource(R.string.repeat_last)
+    val kinds = listOf(stringResource(R.string.repeat_day_word)) +
+        DayOfWeek.entries.map { it.getDisplayName(TextStyle.FULL_STANDALONE, Locale.getDefault()) }
+    val months = Month.entries.map { it.getDisplayName(TextStyle.SHORT_STANDALONE, Locale.getDefault()) }
+    LaunchedEffect(ordinalState, kindState, monthState) {
+        snapshotFlow { Triple(ordinalState.selected, kindState.selected, monthState.selected) }.drop(1).collect { (o, k, m) ->
+            // У дня недели номер — только 1..4 или «последний»
+            if (k > 0 && o in REPEAT_MAX_WEEKDAY_ORDINAL until REPEAT_LAST_INDEX) {
+                ordinalState.animateTo(REPEAT_MAX_WEEKDAY_ORDINAL - 1)
+                return@collect
+            }
+            val day = if (k == 0) {
+                RepeatDay.OfMonth(if (o == REPEAT_LAST_INDEX) RepeatDay.LAST else o + 1)
+            } else {
+                RepeatDay.Weekday(k, if (o == REPEAT_LAST_INDEX) RepeatDay.LAST else o + 1)
+            }
+            val i = indexOf()
+            if (i in draft.entries.indices) draft.entries[i] = RepeatOn(day, if (yearly) m + 1 else draft.entries[i].month)
         }
-        WheelBox(columns)
     }
-    Spacer(Modifier.height(ThingsSpacing.M))
-    Spacer(Modifier.weight(1f))
-    PillButton(stringResource(R.string.repeat_add_more)) {
-        draft.entries.add(draft.entries[draft.selectedEntry])
-        draft.selectedEntry = draft.entries.lastIndex
+    val columns = buildList {
+        add(Triple(ordinals, ordinalState, REPEAT_WHEEL_NUMBER_WIDTH))
+        add(Triple(kinds, kindState, if (yearly) REPEAT_WHEEL_KIND_YEARLY_WIDTH else REPEAT_WHEEL_WORD_WIDTH))
+        if (yearly) add(Triple(months, monthState, REPEAT_WHEEL_MONTH_WIDTH))
     }
+    WheelColumns(columns, cardColor)
 }
 
 /** Окончание: «Никогда», «Дата» — календарь, «После» — барабан числа повторов */
@@ -543,12 +714,27 @@ private fun EndsPage(draft: RepeatDraft, today: LocalDate) {
     Segmented(
         options = listOf(stringResource(R.string.repeat_never), stringResource(R.string.repeat_on_date), stringResource(R.string.repeat_after)),
         selected = draft.end.ordinal,
-        onSelect = { draft.end = RepeatEnd.entries[it] }
+        onSelect = {
+            val end = RepeatEnd.entries[it]
+            // «Дата» впервые — со следующего повтора, как в Things
+            if (end == RepeatEnd.DATE && !draft.endDateSet) {
+                RepeatDates.nextOccurrence(draft.rule(today), today)?.let { next -> draft.endDate = next }
+            }
+            draft.end = end
+        }
     )
     Spacer(Modifier.height(ThingsSpacing.M))
     when (draft.end) {
-        RepeatEnd.NEVER -> Unit
-        RepeatEnd.DATE -> RepeatCalendar(selected = draft.endDate, from = maxOf(today, draft.start)) { draft.endDate = it }
+        RepeatEnd.NEVER -> Text(
+            text = stringResource(R.string.repeat_forever),
+            style = ThingsTheme.type.bodyLarge.copy(color = ThingsTheme.colors.overlayContent),
+            textAlign = TextAlign.Center,
+            modifier = Modifier.fillMaxWidth()
+        )
+        RepeatEnd.DATE -> RepeatCalendar(selected = draft.endDate, from = maxOf(today, draft.start)) {
+            draft.endDate = it
+            draft.endDateSet = true
+        }
         RepeatEnd.COUNT -> {
             val counts = (1..REPEAT_MAX_COUNT).map { pluralStringResource(R.plurals.repeat_repetitions, it, it) }
             val state = rememberWheelState(draft.endCount - 1, counts.size, cyclic = false)
@@ -569,14 +755,19 @@ private fun DeadlinePage(draft: RepeatDraft) {
             withStyle(SpanStyle(color = ThingsTheme.colors.accent)) { append(deadlineText(draft.deadlineDays)) }
             append(".")
         },
-        style = ThingsTheme.type.bodyMedium.copy(color = ThingsTheme.colors.overlayContentSecondary)
+        style = ThingsTheme.type.bodyLarge.copy(color = ThingsTheme.colors.overlayContent)
     )
     if (draft.deadlineOn) {
         Spacer(Modifier.height(ThingsSpacing.S))
-        val options = (0..REPEAT_MAX_DEADLINE_DAYS).map { deadlineText(it) }
-        val state = rememberWheelState(draft.deadlineDays, options.size, cyclic = false)
-        LaunchedEffect(state) { snapshotFlow { state.selected }.drop(1).collect { draft.deadlineDays = it } }
-        WheelBox(listOf(Triple(options, state, REPEAT_WHEEL_WORD_WIDTH + REPEAT_WHEEL_NUMBER_WIDTH)))
+        // Срок — не дальше дня перед следующей копией (RepeatDraft.maxDeadlineDays)
+        val max = draft.maxDeadlineDays()
+        if (draft.deadlineDays > max) draft.deadlineDays = max
+        val options = (0..max).map { deadlineText(it) }
+        key(max) {
+            val state = rememberWheelState(draft.deadlineDays, options.size, cyclic = false)
+            LaunchedEffect(state) { snapshotFlow { state.selected }.drop(1).collect { draft.deadlineDays = it } }
+            WheelBox(listOf(Triple(options, state, REPEAT_WHEEL_WORD_WIDTH + REPEAT_WHEEL_NUMBER_WIDTH)))
+        }
     }
 }
 
@@ -625,6 +816,14 @@ internal fun RepeatCalendar(selected: LocalDate?, from: LocalDate, modifier: Mod
     val firstMonday = from.with(TemporalAdjusters.previousOrSame(DayOfWeek.MONDAY))
     val selectedWeek = selected?.let { java.time.temporal.ChronoUnit.WEEKS.between(firstMonday, it.with(TemporalAdjusters.previousOrSame(DayOfWeek.MONDAY))).toInt() } ?: 0
     val lineColor = ThingsTheme.colors.overlayDivider
+    val listState = rememberLazyListState(initialFirstVisibleItemIndex = maxOf(0, selectedWeek - 1))
+    // Пока листают, как в Things: числа бледнеют, поверх месяцев — их названия
+    val scrolling by animateFloatAsState(
+        targetValue = if (listState.isScrollInProgress) 1f else 0f,
+        animationSpec = tween(if (listState.isScrollInProgress) ThingsMotion.QUICK else ThingsMotion.STANDARD),
+        label = "calendarScroll"
+    )
+    val dayColor = lerp(ThingsTheme.colors.overlayContent, ThingsTheme.colors.overlayContentSecondary, scrolling)
     Row(modifier = Modifier.fillMaxWidth()) {
         DayOfWeek.entries.forEach {
             Text(
@@ -635,8 +834,9 @@ internal fun RepeatCalendar(selected: LocalDate?, from: LocalDate, modifier: Mod
             )
         }
     }
-    LazyColumn(modifier = modifier, state = rememberLazyListState(initialFirstVisibleItemIndex = maxOf(0, selectedWeek - 1))) {
+    LazyColumn(modifier = modifier, state = listState) {
         items(REPEAT_CALENDAR_WEEKS) { week ->
+            Box(modifier = Modifier.fillMaxWidth()) {
             Row(modifier = Modifier.fillMaxWidth()) {
                 for (i in 0 until 7) {
                     val date = firstMonday.plusWeeks(week.toLong()).plusDays(i.toLong())
@@ -659,14 +859,21 @@ internal fun RepeatCalendar(selected: LocalDate?, from: LocalDate, modifier: Mod
                                 if (lineStart) drawLine(lineColor, Offset(w / 2, 0f), Offset(w / 2, size.height), w)
                             }
                             .clip(ThingsTheme.shapes.smallShape)
-                            .then(if (isSelected) Modifier.border(ThingsStroke.FOCUS, ThingsTheme.colors.accent, ThingsTheme.shapes.smallShape) else Modifier)
                             .clickable {
                                 view.performHapticFeedback(HapticFeedbackConstants.CLOCK_TICK)
                                 onPick(date)
                             },
                         contentAlignment = Alignment.Center
                     ) {
-                        val color = ThingsTheme.colors.overlayContent
+                        // Выбранный день — в кольце, как в Things
+                        if (isSelected) {
+                            Box(
+                                modifier = Modifier
+                                    .size(REPEAT_CALENDAR_CELL_HEIGHT - ThingsSpacing.XXS)
+                                    .border(ThingsStroke.FOCUS, ThingsTheme.colors.accent, CircleShape)
+                            )
+                        }
+                        val color = dayColor
                         if (date.dayOfMonth == 1 || date == from) {
                             Column(horizontalAlignment = Alignment.CenterHorizontally) {
                                 Text(date.month.getDisplayName(TextStyle.SHORT_STANDALONE, Locale.getDefault()), style = ThingsTheme.type.bodySmall.copy(color = color))
@@ -678,11 +885,67 @@ internal fun RepeatCalendar(selected: LocalDate?, from: LocalDate, modifier: Mod
                     }
                 }
             }
+            // Название месяца — под неделей, где четверг 9–15-го, то есть посередине месяца; год — если не текущий
+            val thursday = firstMonday.plusWeeks(week.toLong()).plusDays(3)
+            if (thursday.dayOfMonth in 9..15 && scrolling > 0f) {
+                val month = thursday.month.getDisplayName(TextStyle.FULL_STANDALONE, Locale.getDefault()).replaceFirstChar { it.titlecase() }
+                Text(
+                    text = if (thursday.year == from.year) month else "$month ${thursday.year}",
+                    style = ThingsTheme.type.headlineStrong.copy(color = ThingsTheme.colors.overlayContent),
+                    modifier = Modifier
+                        .align(Alignment.BottomCenter)
+                        .graphicsLayer {
+                            alpha = scrolling
+                            translationY = size.height / 2
+                        }
+                )
+            }
+            }
         }
     }
 }
 
 // ---------------------------------------------------------------- общие части окна
+
+/**
+ * Кнопка заголовка окна, как в Things: значок в круге — серый ([accent] = false: ✕ отмена, ‹ назад) или синий
+ * (✓ сохранить). Общая для окон повтора.
+ */
+@Composable
+internal fun DialogHeaderCircleButton(
+    icon: androidx.compose.ui.graphics.vector.ImageVector,
+    contentDescription: String,
+    onClick: () -> Unit,
+    accent: Boolean = false
+) {
+    val view = LocalView.current
+    // Нажатая — светлеет, как в Things
+    val source = remember { MutableInteractionSource() }
+    val pressed by source.collectIsPressedAsState()
+    val base = if (accent) ThingsTheme.colors.accent else ThingsTheme.colors.overlayControl
+    val background by animateColorAsState(
+        if (pressed) ThingsTheme.colors.overlayContent.copy(alpha = ThingsAlpha.MUTED).compositeOver(base) else base,
+        tween(ThingsMotion.FAST), label = "headerButton"
+    )
+    Box(
+        modifier = Modifier
+            .size(MaterialTheme.dimens.dialogHeaderButtonSize)
+            .clip(CircleShape)
+            .background(background)
+            .clickable(interactionSource = source, indication = null) {
+                view.performHapticFeedback(HapticFeedbackConstants.CLOCK_TICK)
+                onClick()
+            },
+        contentAlignment = Alignment.Center
+    ) {
+        Icon(
+            imageVector = icon,
+            contentDescription = contentDescription,
+            tint = if (accent) ThingsTheme.colors.onAccent else ThingsTheme.colors.overlayContent,
+            modifier = Modifier.size(ThingsIconSize.S)
+        )
+    }
+}
 
 @Composable
 private fun HeaderText(text: String, modifier: Modifier, align: TextAlign, onClick: () -> Unit, accent: Boolean = false) {
@@ -724,27 +987,55 @@ private fun Segmented(options: List<String>, selected: Int, onSelect: (Int) -> U
                     .padding(vertical = ThingsSpacing.S),
                 contentAlignment = Alignment.Center
             ) {
-                Text(label, style = ThingsTheme.type.bodyMedium.copy(color = ThingsTheme.colors.overlayContent))
+                Text(label, style = ThingsTheme.type.dialogSegment.copy(color = ThingsTheme.colors.overlayContent))
             }
         }
     }
 }
 
+/**
+ * Нажатие на строку окна, как в Things: под строкой — скруглённая подсветка чуть шире текста. [flash] — строка,
+ * с которой вернулись со вложенной страницы: подсвечена и гаснет.
+ */
+@Composable
+private fun Modifier.pressableRow(flash: Boolean = false, onClick: () -> Unit): Modifier {
+    val source = remember { MutableInteractionSource() }
+    val pressed by source.collectIsPressedAsState()
+    val highlight = ThingsTheme.colors.overlayContent.copy(alpha = ThingsAlpha.SUBTLE)
+    val background by animateColorAsState(
+        if (pressed || flash) highlight else highlight.copy(alpha = REPEAT_ALPHA_NONE),
+        tween(if (pressed) ThingsMotion.FAST else REPEAT_RETURN_FLASH_MS), label = "rowPress"
+    )
+    return this
+        .bleed(ThingsSpacing.S)
+        .clip(ThingsTheme.shapes.rowShape)
+        .background(background)
+        .clickable(interactionSource = source, indication = null, onClick = onClick)
+        .padding(horizontal = ThingsSpacing.S)
+}
+
+/** Растянуть элемент на [by] за края родителя с обеих сторон: подсветка шире текста, текст на месте */
+private fun Modifier.bleed(by: Dp): Modifier = layout { measurable, constraints ->
+    val px = by.roundToPx()
+    val placeable = measurable.measure(constraints.offset(horizontal = 2 * px))
+    layout(placeable.width - 2 * px, placeable.height) { placeable.place(-px, 0) }
+}
+
 /** Строка «подпись — значение ›»: значение акцентным цветом, нажатие открывает страницу */
 @Composable
-private fun ValueRow(label: String, value: String, onClick: () -> Unit) {
+private fun ValueRow(label: String, value: String, flash: Boolean = false, onClick: () -> Unit) {
     Row(
         modifier = Modifier
             .fillMaxWidth()
             .height(MaterialTheme.dimens.rowHeight)
-            .clickable { onClick() },
+            .pressableRow(flash, onClick),
         verticalAlignment = Alignment.CenterVertically
     ) {
-        Text(label, style = ThingsTheme.type.dialogRow.copy(color = ThingsTheme.colors.overlayContent))
+        Text(label, style = ThingsTheme.type.dialogRowSelected.copy(color = ThingsTheme.colors.overlayContent))
         Spacer(Modifier.width(ThingsSpacing.M))
         Text(
             text = value,
-            style = ThingsTheme.type.dialogRow.copy(color = ThingsTheme.colors.accent),
+            style = ThingsTheme.type.dialogRowSelected.copy(color = ThingsTheme.colors.accent),
             textAlign = TextAlign.End,
             maxLines = 1,
             overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis,
@@ -754,21 +1045,40 @@ private fun ValueRow(label: String, value: String, onClick: () -> Unit) {
     }
 }
 
+/** Строка в карточке барабана: подпись белым слева, выбранное значение голубым справа (без перехода) */
+@Composable
+private fun WheelHeaderRow(label: String, value: String) {
+    Row(
+        modifier = Modifier.fillMaxWidth(),
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        Text(label, style = ThingsTheme.type.dialogRowSelected.copy(color = ThingsTheme.colors.overlayContent))
+        Spacer(Modifier.width(ThingsSpacing.M))
+        Text(
+            text = value,
+            style = ThingsTheme.type.dialogRowSelected.copy(color = ThingsTheme.colors.accent),
+            textAlign = TextAlign.End,
+            maxLines = 1,
+            modifier = Modifier.weight(1f)
+        )
+    }
+}
+
 /** Строка с иконкой внизу окна: «Добавить срок», «Добавить напоминание» или поставленное значение */
 @Composable
-private fun IconRow(icon: @Composable () -> Unit, label: String, value: String?, onClick: () -> Unit) {
+private fun IconRow(icon: @Composable () -> Unit, label: String, value: String?, flash: Boolean = false, onClick: () -> Unit) {
     Row(
         modifier = Modifier
             .fillMaxWidth()
             .height(MaterialTheme.dimens.rowHeight)
-            .clickable { onClick() },
+            .pressableRow(flash, onClick),
         verticalAlignment = Alignment.CenterVertically
     ) {
         icon()
         Spacer(Modifier.width(ThingsSpacing.S))
         Text(
             text = label,
-            style = ThingsTheme.type.dialogRow.copy(color = if (value != null) ThingsTheme.colors.overlayContent else ThingsTheme.colors.overlayContentSecondary),
+            style = ThingsTheme.type.dialogRowSelected.copy(color = if (value != null) ThingsTheme.colors.overlayContent else ThingsTheme.colors.overlayContentSecondary),
             modifier = Modifier.weight(1f)
         )
         if (value != null) Text(value, style = ThingsTheme.type.dialogRow.copy(color = ThingsTheme.colors.accent))
@@ -785,12 +1095,12 @@ private fun IconRow(icon: @Composable () -> Unit, label: String, value: String?,
  * целиком; значок — по первой строке, «›» — по центру, тоже акцентом
  */
 @Composable
-private fun SetIconRow(icon: androidx.compose.ui.graphics.vector.ImageVector, text: String, onClick: () -> Unit) {
+private fun SetIconRow(icon: androidx.compose.ui.graphics.vector.ImageVector, text: String, flash: Boolean = false, onClick: () -> Unit) {
     Row(
         modifier = Modifier
             .fillMaxWidth()
             .heightIn(min = MaterialTheme.dimens.rowHeight)
-            .clickable { onClick() }
+            .pressableRow(flash, onClick)
             .padding(vertical = ThingsSpacing.S),
         verticalAlignment = Alignment.CenterVertically
     ) {
@@ -805,7 +1115,7 @@ private fun SetIconRow(icon: androidx.compose.ui.graphics.vector.ImageVector, te
         Spacer(Modifier.width(ThingsSpacing.S))
         Text(
             text = text,
-            style = ThingsTheme.type.bodyLarge.copy(color = ThingsTheme.colors.accent),
+            style = ThingsTheme.type.headline.copy(color = ThingsTheme.colors.accent),
             modifier = Modifier.weight(1f)
         )
         Spacer(Modifier.width(ThingsSpacing.S))
@@ -816,7 +1126,7 @@ private fun SetIconRow(icon: androidx.compose.ui.graphics.vector.ImageVector, te
 @Composable
 private fun ToggleRow(label: String, checked: Boolean, onChange: (Boolean) -> Unit) {
     Row(modifier = Modifier.fillMaxWidth().height(MaterialTheme.dimens.rowHeight), verticalAlignment = Alignment.CenterVertically) {
-        Text(label, style = ThingsTheme.type.dialogRow.copy(color = ThingsTheme.colors.overlayContent), modifier = Modifier.weight(1f))
+        Text(label, style = ThingsTheme.type.dialogRowSelected.copy(color = ThingsTheme.colors.overlayContent), modifier = Modifier.weight(1f))
         Switch(
             checked = checked,
             onCheckedChange = onChange,
@@ -838,7 +1148,7 @@ private fun PillButton(text: String, onClick: () -> Unit) {
         modifier = Modifier
             .fillMaxWidth()
             .height(MaterialTheme.dimens.rowHeight)
-            .clip(ThingsTheme.shapes.rowShape)
+            .clip(ThingsTheme.shapes.capsuleShape)
             .background(ThingsTheme.colors.overlayControl)
             .clickable {
                 view.performHapticFeedback(HapticFeedbackConstants.VIRTUAL_KEY)
@@ -846,7 +1156,7 @@ private fun PillButton(text: String, onClick: () -> Unit) {
             },
         contentAlignment = Alignment.Center
     ) {
-        Text(text, style = ThingsTheme.type.dialogButton.copy(color = ThingsTheme.colors.overlayContent))
+        Text(text, style = ThingsTheme.type.button.copy(color = ThingsTheme.colors.overlayContent))
     }
 }
 
@@ -856,23 +1166,31 @@ private fun RepeatDivider() {
 }
 
 /**
- * Барабаны рядом на карточке, как у напоминания в окне «Когда»: те же скругления, поля и полоса выбора —
- * две линии во всю ширину карточки
+ * Барабаны рядом на карточке, как в окне «Repeat» в Things: карточка чуть светлее окна, выбранная строка —
+ * на сплошной полосе; [header] — строка «подпись — значение» вверху карточки («Кожні … тиждень»)
  */
 @Composable
-private fun WheelBox(columns: List<Triple<List<String>, WheelState, androidx.compose.ui.unit.Dp>>) {
-    Box(
+private fun WheelBox(columns: List<Triple<List<String>, WheelState, Dp>>, header: Pair<String, String>? = null) {
+    val cardColor = ThingsTheme.colors.overlayControl
+    Column(
         modifier = Modifier
             .fillMaxWidth()
             .clip(ThingsTheme.shapes.dialogShape)
-            .background(ThingsTheme.colors.overlayPopover)
+            .background(cardColor)
             .padding(ThingsSpacing.M)
-            .height(WHEEL_HEIGHT),
-        contentAlignment = Alignment.Center
     ) {
-        com.example.ui.components.WheelSelectionLines()
+        header?.let { (label, value) -> WheelHeaderRow(label, value) }
+        WheelColumns(columns, cardColor)
+    }
+}
+
+/** Колонки барабанов над полосой выбора; выбранное значение — тем же начертанием, что и остальные */
+@Composable
+private fun WheelColumns(columns: List<Triple<List<String>, WheelState, Dp>>, cardColor: Color) {
+    Box(modifier = Modifier.fillMaxWidth().height(WHEEL_HEIGHT), contentAlignment = Alignment.Center) {
+        com.example.ui.components.WheelSelectionBand(cardColor)
         Row(horizontalArrangement = Arrangement.Center, modifier = Modifier.fillMaxWidth()) {
-            columns.forEach { (items, state, width) -> Wheel(items, state, width) }
+            columns.forEach { (items, state, width) -> Wheel(items, state, width, selectedStyle = ThingsTheme.type.wheel) }
         }
     }
 }
@@ -918,7 +1236,10 @@ private fun entryText(entry: RepeatOn, yearly: Boolean): String {
 
 @Composable
 private fun onText(draft: RepeatDraft): String = when (draft.unit) {
-    RepeatUnit.WEEK -> draft.weekdays.sorted().joinToString(", ") { DayOfWeek.of(it).getDisplayName(TextStyle.SHORT_STANDALONE, Locale.getDefault()) }
+    // Один день — полностью («субота»), несколько — коротко через запятую, как в Things
+    RepeatUnit.WEEK -> draft.weekdays.sorted().joinToString(", ") {
+        DayOfWeek.of(it).getDisplayName(if (draft.weekdays.size == 1) TextStyle.FULL_STANDALONE else TextStyle.SHORT_STANDALONE, Locale.getDefault())
+    }
     else -> draft.entries.map { entryText(it, draft.unit == RepeatUnit.YEAR) }.joinToString("; ")
 }
 
@@ -929,7 +1250,8 @@ private fun dateText(date: LocalDate): String =
 private fun endsText(draft: RepeatDraft): String = when (draft.end) {
     RepeatEnd.NEVER -> stringResource(R.string.repeat_never)
     RepeatEnd.DATE -> dateText(draft.endDate)
-    RepeatEnd.COUNT -> pluralStringResource(R.plurals.repeat_ends_after, draft.endCount, draft.endCount)
+    // С заглавной, как «Never» и «After 8 repetitions» в Things
+    RepeatEnd.COUNT -> pluralStringResource(R.plurals.repeat_ends_after, draft.endCount, draft.endCount).replaceFirstChar { it.titlecase() }
 }
 
 @Composable

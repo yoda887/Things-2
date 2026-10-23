@@ -15,7 +15,7 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Close
+import androidx.compose.material.icons.filled.Check
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Card
@@ -80,7 +80,9 @@ fun RepeatTemplateDialog(
     val datesText = when {
         paused -> stringResource(R.string.repeat_paused)
         dates.isEmpty() -> stringResource(R.string.repeat_waiting)
-        else -> dates.joinToString("\n") { fullDate.format(it).replaceFirstChar { c -> c.titlecase() } } + if (more) "\n…" else ""
+        else -> dates.joinToString("\n") { fullDate.format(it).replaceFirstChar { c -> c.titlecase() } } +
+            // «Після виконання» знает только ближайший повтор — одна дата, без «…»
+            if (more && !rule.afterCompletion) "\n…" else ""
     }
     fun pick(action: RepeatAction) {
         view.performHapticFeedback(HapticFeedbackConstants.CLOCK_TICK)
@@ -99,7 +101,7 @@ fun RepeatTemplateDialog(
                     .fillMaxWidth()
                     .padding(horizontal = ThingsSpacing.L, vertical = TEMPLATE_DIALOG_VERTICAL_PADDING)
             ) {
-                // Заголовок «Коли?» и «✕» — как в окне «Коли?»
+                // Заголовок «Коли?» и ✓ в круге справа — закрыть, как «When?» шаблона в Things
                 Row(modifier = Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
                     Box(modifier = Modifier.weight(1f))
                     Box(modifier = Modifier.weight(5f), contentAlignment = Alignment.Center) {
@@ -109,28 +111,15 @@ fun RepeatTemplateDialog(
                         )
                     }
                     Box(modifier = Modifier.weight(1f), contentAlignment = Alignment.Center) {
-                        Box(
-                            modifier = Modifier
-                                .size(MaterialTheme.dimens.dialogHeaderButtonSize)
-                                .clip(CircleShape)
-                                .background(ThingsTheme.colors.overlayControl)
-                                .clickable { onDismiss() },
-                            contentAlignment = Alignment.Center
-                        ) {
-                            Icon(
-                                imageVector = Icons.Default.Close,
-                                contentDescription = stringResource(R.string.cd_close),
-                                tint = ThingsTheme.colors.overlayContent,
-                                modifier = Modifier.size(ThingsIconSize.S)
-                            )
-                        }
+                        DialogHeaderCircleButton(Icons.Default.Check, stringResource(R.string.cd_close), onDismiss)
                     }
                 }
                 Spacer(modifier = Modifier.height(TEMPLATE_DIALOG_GAP_AFTER_TITLE))
-                // Правило — жирным, под ним серым — ближайшие даты
+                // Правило — начертанием даты, под ним серым — ближайшие даты
                 Text(
                     text = repeatRuleSentence(rule),
-                    style = ThingsTheme.type.dialogRowSelected.copy(color = ThingsTheme.colors.overlayContent)
+                    // Начертанием даты в карточке (Medium), не жирнее
+                    style = ThingsTheme.type.dialogRowAction.copy(color = ThingsTheme.colors.overlayContent)
                 )
                 Spacer(modifier = Modifier.height(ThingsSpacing.M))
                 Text(
@@ -138,6 +127,7 @@ fun RepeatTemplateDialog(
                     style = ThingsTheme.type.dialogBody.copy(color = ThingsTheme.colors.overlayContentSecondary)
                 )
                 Spacer(modifier = Modifier.height(ThingsSpacing.XL))
+                // Кнопки полужирные, как в Things
                 Column(verticalArrangement = Arrangement.spacedBy(ThingsSpacing.S)) {
                     TemplateDialogButton(stringResource(R.string.repeat_action_edit)) { pick(RepeatAction.EDIT) }
                     TemplateDialogButton(stringResource(R.string.repeat_action_next_copy)) { pick(RepeatAction.NEXT_COPY) }
@@ -169,6 +159,6 @@ private fun TemplateDialogButton(text: String, destructive: Boolean = false, onC
             .fillMaxWidth()
             .height(TEMPLATE_DIALOG_BUTTON_HEIGHT)
     ) {
-        Text(text = text, style = ThingsTheme.type.dialogButton)
+        Text(text = text, style = ThingsTheme.type.button)
     }
 }

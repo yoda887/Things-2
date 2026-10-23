@@ -227,6 +227,16 @@
     <string name="repeat_deadline_each">У каждой копии будет срок. Она появится в «Сегодня» %1$s.</string>
     <string name="repeat_same_day">в тот же день</string>
     <string name="repeat_add_more">Добавить ещё</string>
+    <string name="repeat_forever">Эта задача повторяется бесконечно.</string>
+    <string-array name="repeat_on_weekdays">
+        <item>В понедельник</item>
+        <item>Во вторник</item>
+        <item>В среду</item>
+        <item>В четверг</item>
+        <item>В пятницу</item>
+        <item>В субботу</item>
+        <item>В воскресенье</item>
+    </string-array>
     <string name="repeat_day_word">день</string>
     <string name="repeat_last">последний</string>
     <string name="repeat_last_day">последний день</string>
