@@ -902,9 +902,18 @@ fun AnimatedTaskItem(
                             if (repeatRule.afterCompletion) null
                             else com.example.domain.repeat.RepeatPlan.upcoming(state, 1).first.firstOrNull()
                         }
-                        val nextDateText = nextDate?.let {
-                            val pattern = if (it.year == java.time.LocalDate.now().year) "EEE, d MMM" else "EEE, d MMM yyyy"
-                            java.time.format.DateTimeFormatter.ofPattern(pattern, java.util.Locale.getDefault()).format(it)
+                        // Как в Things: «Повторюється завтра», «Повторюється 25 жовт.» (год — если не текущий)
+                        val today = java.time.LocalDate.now()
+                        val nextPillText = when (nextDate) {
+                            null -> null
+                            today -> androidx.compose.ui.res.stringResource(com.example.R.string.repeat_pill_today)
+                            today.plusDays(1) -> androidx.compose.ui.res.stringResource(com.example.R.string.repeat_pill_tomorrow)
+                            else -> androidx.compose.ui.res.stringResource(
+                                com.example.R.string.repeat_pill_on,
+                                java.time.format.DateTimeFormatter.ofPattern(
+                                    if (nextDate.year == today.year) "d MMM" else "d MMM yyyy", java.util.Locale.getDefault()
+                                ).format(nextDate)
+                            )
                         }
                         val summary = com.example.ui.screens.home.inlineeditor.dialogs.repeatRuleSummary(repeatRule)
                             .replaceFirstChar { it.lowercase() }
@@ -949,9 +958,7 @@ fun AnimatedTaskItem(
                                 // «›» — в конце текста, сразу за последним словом (неразрывный пробел не даёт ей уйти
                                 // на строку одной): плашка читается одной ссылкой и при переносе
                                 val chevronSize = with(androidx.compose.ui.platform.LocalDensity.current) { ThingsIconSize.M.toSp() }
-                                val pillText = if (nextDateText != null) {
-                                    androidx.compose.ui.res.stringResource(com.example.R.string.repeat_next_pill, nextDateText)
-                                } else androidx.compose.ui.res.stringResource(com.example.R.string.repeat_pill, summary)
+                                val pillText = nextPillText ?: androidx.compose.ui.res.stringResource(com.example.R.string.repeat_pill, summary)
                                 Text(
                                     text = androidx.compose.ui.text.buildAnnotatedString {
                                         append(pillText)

@@ -254,7 +254,12 @@
     <string name="repeat_every_one_year">Ежегодно</string>
     <string name="repeat_next_short">следующая %1$s</string>
     <string name="repeat_pill">Повторяется %1$s</string>
-    <string name="repeat_next_pill">Следующий повтор: %1$s</string>
+    <string name="repeat_pill_tomorrow">Повторяется завтра</string>
+    <string name="repeat_pill_today">Повторяется сегодня</string>
+    <string name="repeat_pill_on">Повторяется %1$s</string>
+    <string name="repeat_sentence">Повторять %1$s</string>
+    <string name="repeat_sentence_after">Повторять через %1$s после выполнения предыдущего</string>
+    <string name="repeat_list_and">и</string>
     <string name="repeat_copy_link">Это копия повторяющейся задачи</string>
     <string name="repeat_project_copy_link">Это копия повторяющегося проекта</string>
     <string name="repeat_action_edit">Изменить правило…</string>

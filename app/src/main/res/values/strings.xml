@@ -247,7 +247,12 @@
     <string name="repeat_every_one_year">Yearly</string>
     <string name="repeat_next_short">next %1$s</string>
     <string name="repeat_pill">Repeats %1$s</string>
-    <string name="repeat_next_pill">Next repeat: %1$s</string>
+    <string name="repeat_pill_tomorrow">Repeats tomorrow</string>
+    <string name="repeat_pill_today">Repeats today</string>
+    <string name="repeat_pill_on">Repeats on %1$s</string>
+    <string name="repeat_sentence">Repeat %1$s</string>
+    <string name="repeat_sentence_after">Repeat %1$s after the previous to-do has been completed</string>
+    <string name="repeat_list_and">and</string>
     <string name="repeat_copy_link">This is a copy of a repeating to-do</string>
     <string name="repeat_project_copy_link">This is a copy of a repeating project</string>
     <string name="repeat_action_edit">Edit Rule…</string>

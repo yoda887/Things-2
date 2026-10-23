@@ -955,8 +955,8 @@ internal fun RepeatEditorRow(
     val stored = com.example.ui.components.LocalRepeatRules.current[item.id]
     val rule = stored?.let { com.example.domain.repeat.RepeatRule.decode(it.rrule) }
     val copyText = stringResource(if (item.type == Item.TYPE_PROJECT) R.string.repeat_project_copy_link else R.string.repeat_copy_link)
-    // Шаблон: правило жирным чёрным («Щотижня: пт») и серым — ближайшие даты повтора (троеточие — если повторы
-    // есть и дальше); на паузе — «Пауза», ждёт отметки копии («после выполнения») — «Чекає»
+    // Шаблон, как в Things: правило предложением жирным чёрным и серым через «–» — ближайшие даты повтора (завтра —
+    // словом, троеточие — если повторы есть и дальше); на паузе — «Пауза», ждёт отметки копии («после выполнения») — «Чекає»
     var templateState: String? = null
     val templateStatus = when {
         !isTemplate || stored == null || rule == null -> null
@@ -975,16 +975,25 @@ internal fun RepeatEditorRow(
                 templateState = stringResource(R.string.repeat_waiting)
                 null
             } else {
-                val thisYear = java.time.LocalDate.now(zone).year
+                val today = java.time.LocalDate.now(zone)
+                val thisYear = today.year
                 val sameYear = java.time.format.DateTimeFormatter.ofPattern("d MMM", java.util.Locale.getDefault())
                 val otherYear = java.time.format.DateTimeFormatter.ofPattern("d MMM yyyy", java.util.Locale.getDefault())
-                dates.joinToString(", ") { (if (it.year == thisYear) sameYear else otherYear).format(it) } + if (more) "…" else ""
+                val todayWord = stringResource(R.string.category_today)
+                val tomorrowWord = stringResource(R.string.tomorrow)
+                dates.joinToString(", ") {
+                    when (it) {
+                        today -> todayWord
+                        today.plusDays(1) -> tomorrowWord
+                        else -> (if (it.year == thisYear) sameYear else otherYear).format(it)
+                    }
+                } + if (more) ", …" else ""
             }
         }
     }
     val repeatLabel = stringResource(R.string.ui_repeat)
     val secondaryColor = ThingsTheme.colors.textSecondary
-    val ruleText = rule?.let { com.example.ui.screens.home.inlineeditor.dialogs.repeatRuleSummary(it) } ?: repeatLabel
+    val ruleText = rule?.let { com.example.ui.screens.home.inlineeditor.dialogs.repeatRuleSentence(it) } ?: repeatLabel
     val strongWeight = ThingsTheme.type.listTitleStrong.fontWeight
     val text: androidx.compose.ui.text.AnnotatedString = when {
         !isTemplate -> androidx.compose.ui.text.AnnotatedString(copyText)
@@ -995,7 +1004,7 @@ internal fun RepeatEditorRow(
             pop()
             val tail = templateState ?: templateStatus
             if (tail != null) {
-                append("  ")
+                append(" – ")
                 pushStyle(androidx.compose.ui.text.SpanStyle(color = secondaryColor))
                 append(tail)
                 pop()
@@ -1020,11 +1029,11 @@ internal fun RepeatEditorRow(
                 Icon(AppIcons.RepeatCopy, contentDescription = null, tint = ThingsTheme.colors.textSecondary, modifier = Modifier.size(ThingsIconSize.S))
             }
             Spacer(modifier = Modifier.width(ThingsSpacing.XS_PLUS))
-            // Шаблон и копия — обычным размером, как строка даты. В одну строку (троеточие — только если не помещается
-            // и во всю ширину: узкий экран, крупный шрифт)
+            // Шаблон и копия — обычным размером, как строка даты. Правило шаблона с датами переносится, как в Things;
+            // ссылка копии — в одну строку (троеточие — только если не помещается: узкий экран, крупный шрифт)
             Text(
                 text = text,
-                maxLines = 1,
+                maxLines = if (isTemplate) Int.MAX_VALUE else 1,
                 overflow = TextOverflow.Ellipsis,
                 style = ThingsTheme.type.editorDate.copy(color = ThingsTheme.colors.editorText),
                 modifier = Modifier.weight(1f, fill = false)
@@ -1054,5 +1063,5 @@ internal fun RepeatEditorRow(
     }
 }
 
-/** Строка «Повтор» шаблона показывает столько ближайших дат повторов («22 жовт., 29 жовт.…»; троеточие — если есть ещё) */
-private const val REPEAT_UPCOMING_SHOWN = 2
+/** Строка повтора шаблона показывает столько ближайших дат повторов («Завтра, 25 жовт., 26 жовт., …»; троеточие — если есть ещё) */
+private const val REPEAT_UPCOMING_SHOWN = 3
