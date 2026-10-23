@@ -10,7 +10,8 @@ import androidx.compose.ui.unit.Dp
  * Свойства раскрытой задачи (теги, повтор, дата, дедлайн — строками [content], в своём порядке) и иконки нижнего
  * тулбара ([icons]) справа. Нижнее свойство стоит на уровне иконок, если целиком помещается в одну строку в месте
  * до них (с промежутком [gap]); иначе оно — строкой выше, во всю ширину, а иконки — на своей строке под ним.
- * Ничего не обтекает иконки: поднявшееся свойство на их уровень сбоку не заходит. Остальные свойства — строками
+ * Ничего не обтекает иконки: поднявшееся свойство на их уровень сбоку не заходит; между ним и строкой иконок —
+ * [stackGap], тот же промежуток, что между свойствами одно над другим. Остальные свойства — строками
  * выше, во всю ширину. Промежутки между строками задают сами строки [content] (Spacer) — последним ребёнком
  * [content] должна быть строка свойства, не промежуток.
  */
@@ -18,6 +19,7 @@ import androidx.compose.ui.unit.Dp
 fun EditorAttributesRow(
     gap: Dp,
     icons: @Composable () -> Unit,
+    stackGap: Dp = com.example.ui.theme.ThingsSpacing.NONE,
     modifier: Modifier = Modifier,
     content: @Composable () -> Unit
 ) {
@@ -37,7 +39,8 @@ fun EditorAttributesRow(
 
         val upperHeight = upper.sumOf { it.height }
         val bottomLine = if (fitsBeside) maxOf(lastPlaceable!!.height, iconsHeight) else iconsHeight
-        val lastAbove = if (!fitsBeside) lastPlaceable?.height ?: 0 else 0
+        // Свойство поднялось над иконками — между ним и их строкой промежуток, как между свойствами
+        val lastAbove = if (!fitsBeside) (lastPlaceable?.height?.plus(stackGap.roundToPx()) ?: 0) else 0
         val height = (upperHeight + lastAbove + bottomLine).coerceIn(constraints.minHeight, constraints.maxHeight)
 
         layout(width, height) {
@@ -45,7 +48,7 @@ fun EditorAttributesRow(
             upper.forEach { it.place(0, y); y += it.height }
             if (lastPlaceable != null && !fitsBeside) {
                 lastPlaceable.place(0, y)
-                y += lastPlaceable.height
+                y += lastPlaceable.height + stackGap.roundToPx()
             }
             if (lastPlaceable != null && fitsBeside) lastPlaceable.place(0, y + (bottomLine - lastPlaceable.height) / 2)
             iconPlaceables.forEach { it.place(width - it.width, y + (bottomLine - it.height) / 2) }

@@ -1,5 +1,6 @@
 package com.example.ui.screens.home.inlineeditor
 
+import androidx.compose.foundation.text.appendInlineContent
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.layout.onSizeChanged
 import kotlinx.coroutines.launch
@@ -546,6 +547,9 @@ fun ThingsTaskInlineEditor(
             // в одну строку; иначе — строкой выше, а иконки — на своей строке (EditorAttributesRow)
             com.example.ui.screens.home.inlineeditor.components.EditorAttributesRow(
                 gap = ThingsSpacing.L,
+                // Поднявшееся над иконками свойство — с промежутком, как между свойствами: промежуток между строками
+                // и поле строки свойства (у строки иконок своего поля нет)
+                stackGap = MaterialTheme.dimens.taskEditorDateToDeadlineSpacer + MaterialTheme.dimens.taskEditorIndicatorVerticalPadding,
                 modifier = Modifier
                     .fillMaxWidth()
                     .padding(start = startRelativePadding),
@@ -955,7 +959,7 @@ internal fun RepeatEditorRow(
     val stored = com.example.ui.components.LocalRepeatRules.current[item.id]
     val rule = stored?.let { com.example.domain.repeat.RepeatRule.decode(it.rrule) }
     val copyText = stringResource(if (item.type == Item.TYPE_PROJECT) R.string.repeat_project_copy_link else R.string.repeat_copy_link)
-    // Шаблон, как в Things: правило предложением жирным чёрным и серым через «–» — ближайшие даты повтора (завтра —
+    // Шаблон, как в Things: правило предложением чёрным, начертанием даты, и серым через «–» — ближайшие даты повтора (завтра —
     // словом, троеточие — если повторы есть и дальше); на паузе — «Пауза», ждёт отметки копии («после выполнения») — «Чекає»
     var templateState: String? = null
     val templateStatus = when {
@@ -979,27 +983,33 @@ internal fun RepeatEditorRow(
                 val thisYear = today.year
                 val sameYear = java.time.format.DateTimeFormatter.ofPattern("d MMM", java.util.Locale.getDefault())
                 val otherYear = java.time.format.DateTimeFormatter.ofPattern("d MMM yyyy", java.util.Locale.getDefault())
-                val todayWord = stringResource(R.string.category_today)
-                val tomorrowWord = stringResource(R.string.tomorrow)
-                dates.joinToString(", ") {
-                    when (it) {
-                        today -> todayWord
-                        today.plusDays(1) -> tomorrowWord
-                        else -> (if (it.year == thisYear) sameYear else otherYear).format(it)
+                fun numeric(date: java.time.LocalDate) = (if (date.year == thisYear) sameYear else otherYear).format(date)
+                if (rule.afterCompletion) {
+                    // «После выполнения» знает только ближайший повтор — одна дата, без «…»; завтра и сегодня — словом
+                    val next = dates.first()
+                    when (next) {
+                        today -> stringResource(R.string.category_today)
+                        today.plusDays(1) -> stringResource(R.string.tomorrow)
+                        else -> numeric(next)
                     }
-                } + if (more) ", …" else ""
+                } else {
+                    // Регулярный — всегда число и месяц (год — если не текущий), «…» — если повторы есть и дальше
+                    dates.joinToString(", ") { numeric(it) } + if (more) ", …" else ""
+                }
             }
         }
     }
     val repeatLabel = stringResource(R.string.ui_repeat)
     val secondaryColor = ThingsTheme.colors.textSecondary
     val ruleText = rule?.let { com.example.ui.screens.home.inlineeditor.dialogs.repeatRuleSentence(it) } ?: repeatLabel
-    val strongWeight = ThingsTheme.type.listTitleStrong.fontWeight
     val text: androidx.compose.ui.text.AnnotatedString = when {
         !isTemplate -> androidx.compose.ui.text.AnnotatedString(copyText)
         else -> androidx.compose.ui.text.buildAnnotatedString {
-            // Правило — жирным чёрным
-            pushStyle(androidx.compose.ui.text.SpanStyle(fontWeight = strongWeight))
+            // Значок — первым «символом» текста: перенесённые строки начинаются с левого края, под ним
+            appendInlineContent(REPEAT_ROW_ICON_ID, "↻")
+            append(" ")
+            // Правило — начертанием даты в карточке (editorDateStrong), чёрным
+            pushStyle(androidx.compose.ui.text.SpanStyle(fontWeight = ThingsTheme.type.editorDateStrong.fontWeight))
             append(ruleText)
             pop()
             val tail = templateState ?: templateStatus
@@ -1021,21 +1031,32 @@ internal fun RepeatEditorRow(
                 }
                 .padding(vertical = MaterialTheme.dimens.taskEditorIndicatorVerticalPadding)
         ) {
-            if (isTemplate) {
-                // Обычный значок повтора — синяя стрелка в голубом круге, как у строки шаблона в списке
-                com.example.ui.components.RepeatTemplateIcon(modifier = Modifier.size(ThingsIconSize.S))
-            } else {
+            if (!isTemplate) {
                 // Копия — серая круговая стрелка, как в строке списка
                 Icon(AppIcons.RepeatCopy, contentDescription = null, tint = ThingsTheme.colors.textSecondary, modifier = Modifier.size(ThingsIconSize.S))
+                Spacer(modifier = Modifier.width(ThingsSpacing.XS_PLUS))
             }
-            Spacer(modifier = Modifier.width(ThingsSpacing.XS_PLUS))
-            // Шаблон и копия — обычным размером, как строка даты. Правило шаблона с датами переносится, как в Things;
-            // ссылка копии — в одну строку (троеточие — только если не помещается: узкий экран, крупный шрифт)
+            // Шаблон и копия — обычным размером, как строка даты. Правило шаблона с датами переносится, как в Things,
+            // и перенесённые строки начинаются под значком (он внутри текста); ссылка копии — в одну строку
+            // (троеточие — только если не помещается: узкий экран, крупный шрифт)
+            val iconEm = with(LocalDensity.current) { (ThingsIconSize.S + ThingsSpacing.XXS).toSp() }
             Text(
                 text = text,
                 maxLines = if (isTemplate) Int.MAX_VALUE else 1,
                 overflow = TextOverflow.Ellipsis,
                 style = ThingsTheme.type.editorDate.copy(color = ThingsTheme.colors.editorText),
+                inlineContent = if (isTemplate) mapOf(
+                    REPEAT_ROW_ICON_ID to androidx.compose.foundation.text.InlineTextContent(
+                        androidx.compose.ui.text.Placeholder(
+                            width = iconEm,
+                            height = iconEm,
+                            placeholderVerticalAlign = androidx.compose.ui.text.PlaceholderVerticalAlign.TextCenter
+                        )
+                    ) {
+                        // Обычный значок повтора — синяя стрелка в голубом круге, как у строки шаблона в списке
+                        com.example.ui.components.RepeatTemplateIcon(modifier = Modifier.size(ThingsIconSize.S))
+                    }
+                ) else emptyMap(),
                 modifier = Modifier.weight(1f, fill = false)
             )
             if (!isTemplate) {
@@ -1053,6 +1074,9 @@ internal fun RepeatEditorRow(
         }
     }
 }
+
+/** Значок повтора внутри текста строки повтора шаблона */
+private const val REPEAT_ROW_ICON_ID = "repeat_row_icon"
 
 /** Строка повтора шаблона показывает столько ближайших дат повторов («Завтра, 25 жовт., 26 жовт., …»; троеточие — если есть ещё) */
 private const val REPEAT_UPCOMING_SHOWN = 3

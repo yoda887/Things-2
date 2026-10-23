@@ -433,6 +433,9 @@ fun QuickAddDialog(
                     // в одну строку; иначе — строкой выше, а иконки — на своей строке (EditorAttributesRow)
                     com.example.ui.screens.home.inlineeditor.components.EditorAttributesRow(
                         gap = ThingsSpacing.L,
+                        // Поднявшееся над иконками свойство — с промежутком, как между свойствами: промежуток между строками
+                        // и поле строки свойства (у строки иконок своего поля нет)
+                        stackGap = MaterialTheme.dimens.taskEditorDateToDeadlineSpacer + MaterialTheme.dimens.taskEditorIndicatorVerticalPadding,
                         modifier = Modifier
                             .fillMaxWidth()
                             .padding(start = startRelativePadding),
