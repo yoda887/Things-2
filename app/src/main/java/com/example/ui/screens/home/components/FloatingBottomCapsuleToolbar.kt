@@ -75,6 +75,10 @@ fun FloatingBottomCapsuleToolbar(
     onCancelClick: () -> Unit = {},
     // «Повторять»: null — пункта нет (копия повторяющейся задачи повторяться не может, как в Things)
     onRepeatClick: (() -> Unit)? = null,
+    // «Поделиться» — текст задачи в системное окно «Поделиться»
+    onShareClick: () -> Unit = {},
+    // Шаблон повторяющейся задачи: в меню только «Поделиться», как в Things
+    onlyShare: Boolean = false,
     modifier: Modifier = Modifier
 ) {
     var expandedDotsMenu by remember { mutableStateOf(false) }
@@ -168,11 +172,22 @@ fun FloatingBottomCapsuleToolbar(
                         expanded = expandedDotsMenu,
                         onDismissRequest = { expandedDotsMenu = false }
                     ) {
+                        if (!onlyShare) {
+                        // Группы, как в Things: «Повтор», «Дублювати», «Перетворити» | «Скасувати», «Поділитися»
+                        if (onRepeatClick != null) {
+                            ThingsMenuItem(stringResource(R.string.ui_repeat), Icons.Default.Refresh, onClick = {
+                                view.performHapticFeedback(HapticFeedbackConstants.CLOCK_TICK)
+                                expandedDotsMenu = false
+                                onRepeatClick()
+                            })
+                        }
                         ThingsMenuItem(stringResource(R.string.batch_action_duplicate), Icons.Default.ContentCopy, onClick = {
                             view.performHapticFeedback(HapticFeedbackConstants.CLOCK_TICK)
                             onDuplicateClick()
                             expandedDotsMenu = false
                         })
+                        ThingsMenuItem(stringResource(R.string.ui_convert), Icons.Default.Transform, onClick = { expandedDotsMenu = false })
+                        com.example.ui.components.ThingsMenuDivider()
                         ThingsMenuItem(
                             stringResource(if (isCancelled) R.string.task_action_restore else R.string.task_action_cancel),
                             if (isCancelled) Icons.Default.Restore else Icons.Default.Cancel,
@@ -182,15 +197,12 @@ fun FloatingBottomCapsuleToolbar(
                                 expandedDotsMenu = false
                             }
                         )
-                        if (onRepeatClick != null) {
-                            ThingsMenuItem(stringResource(R.string.ui_repeat), Icons.Default.Refresh, onClick = {
-                                view.performHapticFeedback(HapticFeedbackConstants.CLOCK_TICK)
-                                expandedDotsMenu = false
-                                onRepeatClick()
-                            })
                         }
-                        ThingsMenuItem(stringResource(R.string.ui_convert), Icons.Default.Transform, onClick = { expandedDotsMenu = false })
-                        ThingsMenuItem(stringResource(R.string.batch_action_share), Icons.Default.Share, onClick = { expandedDotsMenu = false })
+                        ThingsMenuItem(stringResource(R.string.batch_action_share), Icons.Default.Share, onClick = {
+                            view.performHapticFeedback(HapticFeedbackConstants.CLOCK_TICK)
+                            expandedDotsMenu = false
+                            onShareClick()
+                        })
                     }
                 }
             }

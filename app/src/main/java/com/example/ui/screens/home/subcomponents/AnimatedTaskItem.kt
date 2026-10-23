@@ -772,8 +772,8 @@ fun AnimatedTaskItem(
                 }
             }
 
-        // Плашка проекта или области под карточкой — всегда; у задачи без них — «Без проєкту», нажатие
-        // открывает окно «Перемістити»
+        // Плашка проекта или области под карточкой — у задачи с проектом или областью (нажатие — к ним); у задачи
+        // без них плашки нет, как в Things
         if (showEditor) {
             run {
                 androidx.compose.animation.AnimatedVisibility(
@@ -801,6 +801,9 @@ fun AnimatedTaskItem(
                             }
                         }
                     Column {
+                    // Плашка места — только у задачи с проектом или областью, как в Things; без них переносят кнопкой
+                    // «Перемістити» внизу
+                    if (currentProject != null || currentArea != null) {
                     Row(
                         modifier = Modifier
                             .fillMaxWidth()
@@ -883,6 +886,7 @@ fun AnimatedTaskItem(
                             )
                         }
                     }
+                    }
                     // Копия повторяющейся задачи — под плашкой места плашка с датой следующего повтора; нажатие —
                     // переход к шаблону. У шаблона плашки нет: правило и даты — в его карточке (RepeatEditorRow)
                     val templateId = if (task.isRepeatTemplate) null else task.repeatTemplateId
@@ -898,9 +902,9 @@ fun AnimatedTaskItem(
                                 generated = stored.generatedCount,
                                 active = stored.isActive
                             )
-                            // «После выполнения» следующего дня не знает, пока копию не отметили — тогда правило
-                            if (repeatRule.afterCompletion) null
-                            else com.example.domain.repeat.RepeatPlan.upcoming(state, 1).first.firstOrNull()
+                            // «После выполнения»: пока ни одну копию не отметили, следующего дня нет — плашка с правилом;
+                            // отметили — у шаблона появился день следующего повтора, и у всех его копий плашка — с ним
+                            com.example.domain.repeat.RepeatPlan.upcoming(state, 1).first.firstOrNull()
                         }
                         // Как в Things: «Повторюється завтра», «Повторюється 25 жовт.» (год — если не текущий)
                         val today = java.time.LocalDate.now()
@@ -961,7 +965,10 @@ fun AnimatedTaskItem(
                                 val pillText = nextPillText ?: androidx.compose.ui.res.stringResource(com.example.R.string.repeat_pill, summary)
                                 Text(
                                     text = androidx.compose.ui.text.buildAnnotatedString {
+                                        // Правило или день повтора — начертанием даты в редакторе (editorDateStrong), как в Things
+                                        pushStyle(androidx.compose.ui.text.SpanStyle(fontWeight = ThingsTheme.type.editorDateStrong.fontWeight))
                                         append(pillText)
+                                        pop()
                                         append(' ')
                                         appendInlineContent(REPEAT_PILL_CHEVRON, "›")
                                     },

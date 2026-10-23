@@ -1242,10 +1242,10 @@ fun ThingsCategoryListPanel(
                                 inlineExpandedTaskId != item.item.id
                             AnimatedTaskItem(
                                 taskWrapper = liveItem,
-                                // В «Повторюваних завданнях» в конце «Планов» у шаблона без даты — «Чекає» или «Пауза»
+                                // В «Повторюваних завданнях» в конце «Планов» у шаблона без следующего повтора — «Пауза» (на паузе), иначе «Чекає»
                                 dateBadge = if (screen == ActiveScreen.UPCOMING) monthTaskBadges[UpcomingScreen.monthBadgeKey(item.item)]
-                                    ?: item.item.takeIf { it.isRepeatTemplate && it.startDate == null }
-                                        ?.let { com.example.ui.components.repeatBadge(state.repeatRules[it.id]) }
+                                    ?: item.item.takeIf { it.isRepeatTemplate && com.example.domain.lists.RepeatingList.waits(state.repeatRules[it.id]) }
+                                        ?.let { stringResource(if (state.repeatRules[it.id]?.isActive == false) R.string.repeat_paused else R.string.repeat_waiting) }
                                 else null,
                                 dragDropState = dragDropState,
                                 inlineExpandedTaskId = inlineExpandedTaskId,
@@ -1337,8 +1337,8 @@ fun ThingsCategoryListPanel(
                                     ) LogbookList.closedAt(task) else null,
                                     dateBadge = when (screen) {
                                         ActiveScreen.UPCOMING -> monthTaskBadges[UpcomingScreen.monthBadgeKey(task)]
-                                            ?: task.takeIf { it.type == Item.TYPE_PROJECT_TEMPLATE && it.startDate == null }
-                                                ?.let { com.example.ui.components.repeatBadge(state.repeatRules[it.id]) }
+                                            ?: task.takeIf { it.type == Item.TYPE_PROJECT_TEMPLATE && com.example.domain.lists.RepeatingList.waits(state.repeatRules[it.id]) }
+                                                ?.let { stringResource(if (state.repeatRules[it.id]?.isActive == false) R.string.repeat_paused else R.string.repeat_waiting) }
                                         // Шаблон проекта — день следующего повтора или «Пауза»
                                         // Шаблон проекта — день следующего повтора, «Пауза» или «Ждёт»; копия, созданная заранее, — её день
                                         ActiveScreen.REPEATING -> if (task.type == Item.TYPE_PROJECT_TEMPLATE) {
@@ -1433,10 +1433,12 @@ fun ThingsCategoryListPanel(
                                 targetValue = if (inlineExpandedTaskId != null) 0.3f else 1f,
                                 label = "dimAlpha_upcoming_repeating"
                             )
-                            // Как заголовок месяца; переносить на него нельзя (TaskListKeys.nonDroppable)
+                            // Как заголовок месяца, с вдвое большим отступом сверху; переносить на него нельзя
+                            // (TaskListKeys.nonDroppable)
                             UpcomingMonthHeader(
                                 monthLabel = item.label,
                                 isRemainder = false,
+                                doubleTop = true,
                                 textPrimaryColor = textPrimaryColor,
                                 dividerColor = dividerColor,
                                 modifier = Modifier
@@ -1942,6 +1944,26 @@ fun ThingsCategoryListPanel(
             }
         },
         onRepeatClick = activeTask?.item?.takeIf { com.example.domain.repeat.RepeatSetup.canRepeat(it) }?.let { { showRepeatDialog = true } },
+        // Шаблон повторяющейся задачи — в меню только «Поделиться», как в Things
+        onlyShare = activeTask?.item?.isRepeatTemplate == true,
+        onShareClick = {
+            val shared = activeTask ?: return@FloatingBottomCapsuleToolbar
+            // Название, заметки и пункты чек-листа — простым текстом
+            val text = buildString {
+                append(shared.item.title)
+                if (shared.item.notes.isNotBlank()) append("\n\n").append(shared.item.notes.trim())
+                if (shared.checklist.isNotEmpty()) {
+                    append("\n")
+                    shared.checklist.forEach { append("\n• ").append(it.title) }
+                }
+            }
+            val sendIntent = android.content.Intent().apply {
+                action = android.content.Intent.ACTION_SEND
+                putExtra(android.content.Intent.EXTRA_TEXT, text)
+                type = "text/plain"
+            }
+            context.startActivity(android.content.Intent.createChooser(sendIntent, null))
+        },
         modifier = Modifier.align(Alignment.BottomCenter)
     )
 
