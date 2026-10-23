@@ -247,6 +247,7 @@
     <string name="repeat_every_one_year">Yearly</string>
     <string name="repeat_next_short">next %1$s</string>
     <string name="repeat_pill">Repeats %1$s</string>
+    <string name="repeat_next_pill">Next repeat: %1$s</string>
     <string name="repeat_copy_link">This is a copy of a repeating to-do</string>
     <string name="repeat_project_copy_link">This is a copy of a repeating project</string>
     <string name="repeat_action_edit">Edit Rule…</string>

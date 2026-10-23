@@ -883,16 +883,29 @@ fun AnimatedTaskItem(
                             )
                         }
                     }
-                    // Повторяющаяся задача — под плашкой места такая же плашка с правилом повтора, как в Things:
-                    // у шаблона нажатие открывает окно «Повторювати», у копии — переход к её шаблону
-                    val templateId = when {
-                        task.isRepeatTemplate -> task.id
-                        else -> task.repeatTemplateId
-                    }
-                    val repeatRule = templateId
-                        ?.let { com.example.ui.components.LocalRepeatRules.current[it] }
-                        ?.let { com.example.domain.repeat.RepeatRule.decode(it.rrule) }
+                    // Копия повторяющейся задачи — под плашкой места плашка с датой следующего повтора; нажатие —
+                    // переход к шаблону. У шаблона плашки нет: правило и даты — в его карточке (RepeatEditorRow)
+                    val templateId = if (task.isRepeatTemplate) null else task.repeatTemplateId
+                    val storedRule = templateId?.let { com.example.ui.components.LocalRepeatRules.current[it] }
+                    val repeatRule = storedRule?.let { com.example.domain.repeat.RepeatRule.decode(it.rrule) }
                     if (templateId != null && repeatRule != null) {
+                        val nextDate = storedRule.takeIf { it.isActive }?.let { stored ->
+                            val zone = java.time.ZoneId.systemDefault()
+                            val state = com.example.domain.repeat.RepeatState(
+                                rule = repeatRule,
+                                nextOccurrence = stored.nextGenerationDate.takeIf { it > 0 }
+                                    ?.let { java.time.Instant.ofEpochMilli(it).atZone(zone).toLocalDate() },
+                                generated = stored.generatedCount,
+                                active = stored.isActive
+                            )
+                            // «После выполнения» следующего дня не знает, пока копию не отметили — тогда правило
+                            if (repeatRule.afterCompletion) null
+                            else com.example.domain.repeat.RepeatPlan.upcoming(state, 1).first.firstOrNull()
+                        }
+                        val nextDateText = nextDate?.let {
+                            val pattern = if (it.year == java.time.LocalDate.now().year) "EEE, d MMM" else "EEE, d MMM yyyy"
+                            java.time.format.DateTimeFormatter.ofPattern(pattern, java.util.Locale.getDefault()).format(it)
+                        }
                         val summary = com.example.ui.screens.home.inlineeditor.dialogs.repeatRuleSummary(repeatRule)
                             .replaceFirstChar { it.lowercase() }
                         Row(
@@ -936,7 +949,9 @@ fun AnimatedTaskItem(
                                 // «›» — в конце текста, сразу за последним словом (неразрывный пробел не даёт ей уйти
                                 // на строку одной): плашка читается одной ссылкой и при переносе
                                 val chevronSize = with(androidx.compose.ui.platform.LocalDensity.current) { ThingsIconSize.M.toSp() }
-                                val pillText = androidx.compose.ui.res.stringResource(com.example.R.string.repeat_pill, summary)
+                                val pillText = if (nextDateText != null) {
+                                    androidx.compose.ui.res.stringResource(com.example.R.string.repeat_next_pill, nextDateText)
+                                } else androidx.compose.ui.res.stringResource(com.example.R.string.repeat_pill, summary)
                                 Text(
                                     text = androidx.compose.ui.text.buildAnnotatedString {
                                         append(pillText)

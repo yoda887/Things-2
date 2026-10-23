@@ -955,8 +955,8 @@ internal fun RepeatEditorRow(
     val stored = com.example.ui.components.LocalRepeatRules.current[item.id]
     val rule = stored?.let { com.example.domain.repeat.RepeatRule.decode(it.rrule) }
     val copyText = stringResource(if (item.type == Item.TYPE_PROJECT) R.string.repeat_project_copy_link else R.string.repeat_copy_link)
-    // Шаблон: «Повтор» чёрным и серым — ближайшая дата повтора (троеточие — если повторы есть и дальше);
-    // на паузе — просто «Пауза», ждёт отметки копии («после выполнения») — просто «Чекає»
+    // Шаблон: правило жирным чёрным («Щотижня: пт») и серым — ближайшие даты повтора (троеточие — если повторы
+    // есть и дальше); на паузе — «Пауза», ждёт отметки копии («после выполнения») — «Чекає»
     var templateState: String? = null
     val templateStatus = when {
         !isTemplate || stored == null || rule == null -> null
@@ -984,15 +984,20 @@ internal fun RepeatEditorRow(
     }
     val repeatLabel = stringResource(R.string.ui_repeat)
     val secondaryColor = ThingsTheme.colors.textSecondary
+    val ruleText = rule?.let { com.example.ui.screens.home.inlineeditor.dialogs.repeatRuleSummary(it) } ?: repeatLabel
+    val strongWeight = ThingsTheme.type.listTitleStrong.fontWeight
     val text: androidx.compose.ui.text.AnnotatedString = when {
         !isTemplate -> androidx.compose.ui.text.AnnotatedString(copyText)
-        templateState != null -> androidx.compose.ui.text.AnnotatedString(templateState!!)
         else -> androidx.compose.ui.text.buildAnnotatedString {
-            append(repeatLabel)
-            if (templateStatus != null) {
+            // Правило — жирным чёрным
+            pushStyle(androidx.compose.ui.text.SpanStyle(fontWeight = strongWeight))
+            append(ruleText)
+            pop()
+            val tail = templateState ?: templateStatus
+            if (tail != null) {
                 append("  ")
                 pushStyle(androidx.compose.ui.text.SpanStyle(color = secondaryColor))
-                append(templateStatus)
+                append(tail)
                 pop()
             }
         }

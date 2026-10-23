@@ -135,8 +135,8 @@ fun ProjectDetailsBlock(
         if (project.isRepeatTemplate || project.repeatTemplateId != null) {
             add { com.example.ui.screens.home.inlineeditor.RepeatEditorRow(project, onRepeatAction, onOpenRepeatTemplate) }
         }
-        // Правило повтора — как плашка под задачей: у шаблона нажатие открывает «Повторювати», у копии — шаблон
-        val ruleOwnerId = if (project.isRepeatTemplate) project.id else project.repeatTemplateId
+        // Правило повтора у копии — как плашка под задачей; нажатие — шаблон (у шаблона правило — в строке повтора)
+        val ruleOwnerId = if (project.isRepeatTemplate) null else project.repeatTemplateId
         val rule = ruleOwnerId
             ?.let { com.example.ui.components.LocalRepeatRules.current[it] }
             ?.let { com.example.domain.repeat.RepeatRule.decode(it.rrule) }

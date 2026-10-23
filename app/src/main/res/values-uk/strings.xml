@@ -254,6 +254,7 @@
     <string name="repeat_every_one_year">Щороку</string>
     <string name="repeat_next_short">наступна %1$s</string>
     <string name="repeat_pill">Повторюється %1$s</string>
+    <string name="repeat_next_pill">Наступний повтор: %1$s</string>
     <string name="repeat_copy_link">Це копія повторюваного завдання</string>
     <string name="repeat_project_copy_link">Це копія повторюваного проєкту</string>
     <string name="repeat_action_edit">Змінити правило…</string>
