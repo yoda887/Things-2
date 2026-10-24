@@ -75,43 +75,54 @@ class SyncManager @Inject constructor(
     suspend fun sync(token: String): Boolean = lock.withLock {
         _state.update { it.copy(busy = true, error = null) }
         try {
-            val remoteFile = api.find(token, DriveFiles.SYNC_NAME)
-            val cachedMd5 = prefs.getString(KEY_REMOTE_MD5, null)
-            val remote: SyncMerge.State = when {
-                remoteFile == null -> SyncMerge.State.EMPTY
-                remoteFile.md5 != null && remoteFile.md5 == cachedMd5 && cacheFile.exists() ->
-                    SyncCodec.decode(cacheFile.readBytes()) ?: download(token, remoteFile.id)
-                else -> download(token, remoteFile.id)
-            } ?: run {
-                _state.update { it.copy(error = Error.BAD_FILE) }
-                return@withLock false
-            }
-
-            val now = System.currentTimeMillis()
-            val result = SyncMerge.merge(database.read(), remote)
-            val merged = SyncMerge.pruneDeletions(result.merged, now)
-            if (result.applyLocally.isNotEmpty() || result.deleteLocally.isNotEmpty()) {
-                lastAppliedAt = now
-                database.apply(result.applyLocally, result.deleteLocally, pruneBefore = now - SyncMerge.DELETION_KEEP_MS)
-            }
-
-            val bytes = SyncCodec.encode(merged)
-            if (result.remoteChanged || remoteFile == null) {
-                val upload = File(context.cacheDir, DriveFiles.SYNC_NAME)
-                try {
-                    upload.writeBytes(bytes)
-                    api.upload(token, upload, remoteFile?.id, DriveFiles.SYNC_NAME)
-                } finally {
-                    upload.delete()
+            // Общее состояние прошлого обмена — по нему запись, правленная на обоих устройствах, сливается по полям
+            val base = if (cacheFile.exists()) SyncCodec.decode(cacheFile.readBytes()) else null
+            var attempt = 0
+            var synced = false
+            while (!synced) {
+                attempt++
+                val remoteFile = api.find(token, DriveFiles.SYNC_NAME)
+                val cachedMd5 = prefs.getString(KEY_REMOTE_MD5, null)
+                val remote: SyncMerge.State = when {
+                    remoteFile == null -> SyncMerge.State.EMPTY
+                    remoteFile.md5 != null && remoteFile.md5 == cachedMd5 && cacheFile.exists() ->
+                        SyncCodec.decode(cacheFile.readBytes()) ?: download(token, remoteFile.id)
+                    else -> download(token, remoteFile.id)
+                } ?: run {
+                    _state.update { it.copy(error = Error.BAD_FILE) }
+                    return@withLock false
                 }
+
+                val now = System.currentTimeMillis()
+                val result = SyncMerge.merge(database.read(), remote, base)
+                val merged = SyncMerge.pruneDeletions(result.merged, now)
+                if (result.applyLocally.isNotEmpty() || result.deleteLocally.isNotEmpty()) {
+                    lastAppliedAt = now
+                    database.apply(result.applyLocally, result.deleteLocally, pruneBefore = now - SyncMerge.DELETION_KEEP_MS)
+                }
+
+                val bytes = SyncCodec.encode(merged)
+                if (result.remoteChanged || remoteFile == null) {
+                    // Пока сливали, другое устройство могло записать общий файл — тогда слить заново с его версией:
+                    // иначе эта выгрузка затёрла бы его правки (Drive не умеет «записать, только если не менялся»)
+                    if (attempt < SYNC_ATTEMPTS && api.find(token, DriveFiles.SYNC_NAME)?.md5 != remoteFile?.md5) continue
+                    val upload = File(context.cacheDir, DriveFiles.SYNC_NAME)
+                    try {
+                        upload.writeBytes(bytes)
+                        api.upload(token, upload, remoteFile?.id, DriveFiles.SYNC_NAME)
+                    } finally {
+                        upload.delete()
+                    }
+                }
+                // Запоминаем общее состояние и его отпечаток — в следующий раз без скачивания, если его никто не менял
+                cacheFile.writeBytes(bytes)
+                prefs.edit()
+                    .putString(KEY_REMOTE_MD5, api.find(token, DriveFiles.SYNC_NAME)?.md5)
+                    .putLong(KEY_LAST_SYNC, now)
+                    .apply()
+                _state.update { it.copy(lastSyncAt = now) }
+                synced = true
             }
-            // Запоминаем общее состояние и его отпечаток — в следующий раз без скачивания, если его никто не менял
-            cacheFile.writeBytes(bytes)
-            prefs.edit()
-                .putString(KEY_REMOTE_MD5, api.find(token, DriveFiles.SYNC_NAME)?.md5)
-                .putLong(KEY_LAST_SYNC, now)
-                .apply()
-            _state.update { it.copy(lastSyncAt = now) }
             true
         } catch (e: DriveHttpException) {
             _state.update { it.copy(error = if (e.isAccess) Error.ACCESS else Error.SERVER) }
@@ -154,5 +165,7 @@ class SyncManager @Inject constructor(
         const val KEY_REMOTE_MD5 = "remote_md5"
         const val CACHE_NAME = "sync_state_cache.json.gz"
         const val WORK_NAME = "drive_sync"
+        /** Сколько раз слить заново, если общий файл меняли, пока сливали */
+        const val SYNC_ATTEMPTS = 3
     }
 }
