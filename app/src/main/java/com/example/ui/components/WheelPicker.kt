@@ -23,10 +23,17 @@ import androidx.compose.runtime.snapshotFlow
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.foundation.clickable
+import androidx.compose.foundation.interaction.MutableInteractionSource
+import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.ui.input.pointer.PointerEventPass
+import androidx.compose.ui.input.pointer.PointerEventType
+import androidx.compose.ui.input.pointer.pointerInput
+import kotlinx.coroutines.launch
+import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.compositeOver
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.text.TextStyle
 import androidx.compose.foundation.background
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.LocalView
@@ -60,11 +67,17 @@ private const val WHEEL_EDGE_ALPHA = 0.2f
  */
 internal class WheelState(val list: LazyListState, val size: Int, val cyclic: Boolean) {
     val count: Int get() = if (cyclic) size * WHEEL_REPEATS else size
-    val selected: Int get() {
-        val first = list.firstVisibleItemIndex
+    val selected: Int get() = (centerIndex % size).coerceIn(0, size - 1)
+
+    /** Строка посередине — номер в списке (у цикличного — среди всех повторов) */
+    val centerIndex: Int get() {
         val half = (list.layoutInfo.visibleItemsInfo.firstOrNull()?.size ?: 0) / 2
-        val index = first + if (list.firstVisibleItemScrollOffset > half) 1 else 0
-        return (index % size).coerceIn(0, size - 1)
+        return list.firstVisibleItemIndex + if (list.firstVisibleItemScrollOffset > half) 1 else 0
+    }
+
+    /** Повернуть на [rows] строк (колесо мыши — по строке за щелчок) */
+    suspend fun step(rows: Int) {
+        list.animateScrollToItem((centerIndex + rows).coerceIn(0, count - 1))
     }
 
     /** Плавно повернуть барабан к значению [value] (по кратчайшему пути у цикличного) */
@@ -102,6 +115,7 @@ internal fun Wheel(
     val maxRad = Math.toRadians(WHEEL_MAX_ANGLE_DEG.toDouble()).toFloat()
     val layoutHeight = WHEEL_ROW_HEIGHT * (2 * WHEEL_SIDE_ROWS + 1)
     val view = LocalView.current
+    val scope = rememberCoroutineScope()
     LaunchedEffect(state) {
         snapshotFlow { state.selected }
             .drop(1)
@@ -116,6 +130,20 @@ internal fun Wheel(
             modifier = Modifier
                 .width(width)
                 .requiredHeight(layoutHeight)
+                // Колесо мыши (десктоп) — по строке за щелчок, а не на произвольное расстояние: значение встаёт ровно
+                // посередине. На телефоне таких событий нет
+                .pointerInput(state) {
+                    awaitPointerEventScope {
+                        while (true) {
+                            val event = awaitPointerEvent(PointerEventPass.Initial)
+                            if (event.type != PointerEventType.Scroll) continue
+                            val dy = event.changes.firstOrNull()?.scrollDelta?.y ?: 0f
+                            if (dy == 0f) continue
+                            event.changes.forEach { it.consume() }
+                            scope.launch { state.step(if (dy > 0) 1 else -1) }
+                        }
+                    }
+                }
         ) {
             items(state.count) { index ->
                 val selected = remember { derivedStateOf { state.selected == index % state.size } }
@@ -123,6 +151,10 @@ internal fun Wheel(
                     modifier = Modifier
                         .fillMaxWidth()
                         .height(WHEEL_ROW_HEIGHT)
+                        // Нажатие на строку поворачивает к ней, как у барабана iOS
+                        .clickable(interactionSource = remember { MutableInteractionSource() }, indication = null) {
+                            scope.launch { state.list.animateScrollToItem(index) }
+                        }
                         .graphicsLayer {
                             // Угол строки на цилиндре — по её удалению от середины, в строках
                             val info = state.list.layoutInfo
@@ -164,7 +196,7 @@ internal fun WheelSelectionLines(modifier: Modifier = Modifier) {
 }
 
 /**
- * Полоса выбранной строки барабана, как в окне «Repeat» в Things: сплошная скруглённая подложка светлее
+ * Полоса выбранной строки барабана, как в окне «Repeat» в Things: сплошная подложка-капсула светлее
  * карточки [cardColor], без линий
  */
 @Composable
@@ -173,7 +205,7 @@ internal fun WheelSelectionBand(cardColor: Color, modifier: Modifier = Modifier)
         modifier = modifier
             .fillMaxWidth()
             .height(WHEEL_ROW_HEIGHT)
-            .clip(ThingsTheme.shapes.rowShape)
+            .clip(ThingsTheme.shapes.capsuleShape)
             .background(ThingsTheme.colors.overlayContent.copy(alpha = ThingsAlpha.SUBTLE).compositeOver(cardColor))
     )
 }
