@@ -127,7 +127,6 @@ fun RepeatTemplateDialog(
                     style = ThingsTheme.type.dialogBody.copy(color = ThingsTheme.colors.overlayContentSecondary)
                 )
                 Spacer(modifier = Modifier.height(ThingsSpacing.XL))
-                // Кнопки полужирные, как в Things
                 Column(verticalArrangement = Arrangement.spacedBy(ThingsSpacing.S)) {
                     TemplateDialogButton(stringResource(R.string.repeat_action_edit)) { pick(RepeatAction.EDIT) }
                     TemplateDialogButton(stringResource(R.string.repeat_action_next_copy)) { pick(RepeatAction.NEXT_COPY) }
@@ -159,6 +158,6 @@ private fun TemplateDialogButton(text: String, destructive: Boolean = false, onC
             .fillMaxWidth()
             .height(TEMPLATE_DIALOG_BUTTON_HEIGHT)
     ) {
-        Text(text = text, style = ThingsTheme.type.button)
+        Text(text = text, style = ThingsTheme.type.dialogButton)
     }
 }

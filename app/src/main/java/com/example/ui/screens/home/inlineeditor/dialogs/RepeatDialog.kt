@@ -8,10 +8,11 @@ import androidx.compose.animation.core.MutableTransitionState
 import androidx.compose.animation.expandVertically
 import androidx.compose.animation.shrinkVertically
 import androidx.compose.foundation.interaction.collectIsPressedAsState
+import androidx.compose.foundation.interaction.collectIsHoveredAsState
+import androidx.compose.foundation.hoverable
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.lerp
 import androidx.compose.ui.layout.layout
-import androidx.compose.ui.res.stringArrayResource
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.offset
 import kotlinx.coroutines.delay
@@ -129,8 +130,6 @@ private const val REPEAT_DIALOG_HEIGHT_FRACTION = 0.72f
 /** Появление окна: вырастает из этого масштаба */
 private const val REPEAT_ENTER_SCALE = 0.9f
 
-/** Строка дня недели на странице «У» — плотнее строки окна, как в Things */
-private val REPEAT_WEEKDAY_ROW_HEIGHT = 40.dp
 /** Строка, с которой вернулись со вложенной страницы, подсвечена и гаснет за это время */
 private const val REPEAT_RETURN_FLASH_MS = ThingsMotion.SLOW
 /** Подсветка погашена: тот же цвет без прозрачности — проявляется и гаснет без потемнения */
@@ -408,14 +407,14 @@ private fun MainPage(
                         withStyle(SpanStyle(color = ThingsTheme.colors.accent)) { append(unitText) }
                         append(" "); append(stringResource(R.string.repeat_hint_after_after))
                     },
-                    style = ThingsTheme.type.bodyLarge.copy(color = ThingsTheme.colors.overlayContent)
+                    style = ThingsTheme.type.bodyLarge.copy(color = ThingsTheme.colors.overlayContentSecondary)
                 )
                 Spacer(Modifier.height(ThingsSpacing.S))
                 IntervalWheels(draft.afterInterval, draft.afterUnit) { n, u -> draft.afterInterval = n; draft.afterUnit = u }
             } else {
                 Text(
                     text = stringResource(R.string.repeat_hint_regular),
-                    style = ThingsTheme.type.bodyLarge.copy(color = ThingsTheme.colors.overlayContent)
+                    style = ThingsTheme.type.bodyLarge.copy(color = ThingsTheme.colors.overlayContentSecondary)
                 )
                 Spacer(Modifier.height(ThingsSpacing.M))
                 ValueRow(stringResource(R.string.repeat_every), unitText(draft.unit, draft.interval), flash == RepeatPage.EVERY) { onOpen(RepeatPage.EVERY) }
@@ -513,13 +512,16 @@ private fun IntervalWheels(
 private fun ColumnScope.OnPage(draft: RepeatDraft) {
     if (draft.unit == RepeatUnit.WEEK) {
         val view = LocalView.current
-        val names = stringArrayResource(R.array.repeat_on_weekdays)
+        val names = listOf(
+            R.string.repeat_on_monday, R.string.repeat_on_tuesday, R.string.repeat_on_wednesday, R.string.repeat_on_thursday,
+            R.string.repeat_on_friday, R.string.repeat_on_saturday, R.string.repeat_on_sunday
+        ).map { stringResource(it) }
         DayOfWeek.entries.forEach { dow ->
             val checked = dow.value in draft.weekdays
             Row(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .height(REPEAT_WEEKDAY_ROW_HEIGHT)
+                    .height(MaterialTheme.dimens.rowHeight)
                     .pressableRow {
                         view.performHapticFeedback(HapticFeedbackConstants.CLOCK_TICK)
                         if (checked) {
@@ -530,7 +532,7 @@ private fun ColumnScope.OnPage(draft: RepeatDraft) {
             ) {
                 Text(
                     text = names[dow.value - 1],
-                    style = ThingsTheme.type.dialogRowSelected.copy(color = ThingsTheme.colors.overlayContent),
+                    style = ThingsTheme.type.dialogRow.copy(color = ThingsTheme.colors.overlayContent),
                     modifier = Modifier.weight(1f)
                 )
                 if (checked) Icon(Icons.Default.Check, null, tint = ThingsTheme.colors.accent, modifier = Modifier.size(ThingsIconSize.S))
@@ -652,12 +654,12 @@ private fun EntryBlock(
             }
             Text(
                 text = stringResource(if (first) R.string.repeat_on else R.string.repeat_and_on),
-                style = ThingsTheme.type.dialogRowSelected.copy(color = ThingsTheme.colors.overlayContent),
+                style = ThingsTheme.type.dialogRow.copy(color = ThingsTheme.colors.overlayContent),
                 modifier = Modifier.weight(1f)
             )
             Text(
                 text = entryText(entry, yearly),
-                style = ThingsTheme.type.dialogRowSelected.copy(color = ThingsTheme.colors.accent)
+                style = ThingsTheme.type.dialogRow.copy(color = ThingsTheme.colors.accent)
             )
         }
         AnimatedVisibility(
@@ -727,7 +729,7 @@ private fun EndsPage(draft: RepeatDraft, today: LocalDate) {
     when (draft.end) {
         RepeatEnd.NEVER -> Text(
             text = stringResource(R.string.repeat_forever),
-            style = ThingsTheme.type.bodyLarge.copy(color = ThingsTheme.colors.overlayContent),
+            style = ThingsTheme.type.bodyLarge.copy(color = ThingsTheme.colors.overlayContentSecondary),
             textAlign = TextAlign.Center,
             modifier = Modifier.fillMaxWidth()
         )
@@ -755,7 +757,7 @@ private fun DeadlinePage(draft: RepeatDraft) {
             withStyle(SpanStyle(color = ThingsTheme.colors.accent)) { append(deadlineText(draft.deadlineDays)) }
             append(".")
         },
-        style = ThingsTheme.type.bodyLarge.copy(color = ThingsTheme.colors.overlayContent)
+        style = ThingsTheme.type.bodyLarge.copy(color = ThingsTheme.colors.overlayContentSecondary)
     )
     if (draft.deadlineOn) {
         Spacer(Modifier.height(ThingsSpacing.S))
@@ -858,7 +860,7 @@ internal fun RepeatCalendar(selected: LocalDate?, from: LocalDate, modifier: Mod
                                 if (lineTop) drawLine(lineColor, Offset(0f, w / 2), Offset(size.width, w / 2), w)
                                 if (lineStart) drawLine(lineColor, Offset(w / 2, 0f), Offset(w / 2, size.height), w)
                             }
-                            .clip(ThingsTheme.shapes.smallShape)
+                            .clip(CircleShape)
                             .clickable {
                                 view.performHapticFeedback(HapticFeedbackConstants.CLOCK_TICK)
                                 onPick(date)
@@ -965,7 +967,7 @@ private fun Segmented(options: List<String>, selected: Int, onSelect: (Int) -> U
     Row(
         modifier = Modifier
             .fillMaxWidth()
-            .clip(ThingsTheme.shapes.rowShape)
+            .clip(ThingsTheme.shapes.capsuleShape)
             .background(ThingsTheme.colors.overlayControl)
             .padding(ThingsSpacing.XXS),
         horizontalArrangement = Arrangement.spacedBy(ThingsSpacing.XXS)
@@ -978,7 +980,7 @@ private fun Segmented(options: List<String>, selected: Int, onSelect: (Int) -> U
             Box(
                 modifier = Modifier
                     .weight(1f)
-                    .clip(ThingsTheme.shapes.rowShape)
+                    .clip(ThingsTheme.shapes.capsuleShape)
                     .background(bg)
                     .clickable {
                         if (index != selected) view.performHapticFeedback(HapticFeedbackConstants.CLOCK_TICK)
@@ -987,7 +989,7 @@ private fun Segmented(options: List<String>, selected: Int, onSelect: (Int) -> U
                     .padding(vertical = ThingsSpacing.S),
                 contentAlignment = Alignment.Center
             ) {
-                Text(label, style = ThingsTheme.type.dialogSegment.copy(color = ThingsTheme.colors.overlayContent))
+                Text(label, style = ThingsTheme.type.bodyLarge.copy(color = ThingsTheme.colors.overlayContent))
             }
         }
     }
@@ -1001,15 +1003,18 @@ private fun Segmented(options: List<String>, selected: Int, onSelect: (Int) -> U
 private fun Modifier.pressableRow(flash: Boolean = false, onClick: () -> Unit): Modifier {
     val source = remember { MutableInteractionSource() }
     val pressed by source.collectIsPressedAsState()
+    // Под мышью — тоже (десктоп); на телефоне наведения нет
+    val hovered by source.collectIsHoveredAsState()
     val highlight = ThingsTheme.colors.overlayContent.copy(alpha = ThingsAlpha.SUBTLE)
     val background by animateColorAsState(
-        if (pressed || flash) highlight else highlight.copy(alpha = REPEAT_ALPHA_NONE),
+        if (pressed || hovered || flash) highlight else highlight.copy(alpha = REPEAT_ALPHA_NONE),
         tween(if (pressed) ThingsMotion.FAST else REPEAT_RETURN_FLASH_MS), label = "rowPress"
     )
     return this
         .bleed(ThingsSpacing.S)
-        .clip(ThingsTheme.shapes.rowShape)
+        .clip(ThingsTheme.shapes.capsuleShape)
         .background(background)
+        .hoverable(source)
         .clickable(interactionSource = source, indication = null, onClick = onClick)
         .padding(horizontal = ThingsSpacing.S)
 }
@@ -1031,11 +1036,11 @@ private fun ValueRow(label: String, value: String, flash: Boolean = false, onCli
             .pressableRow(flash, onClick),
         verticalAlignment = Alignment.CenterVertically
     ) {
-        Text(label, style = ThingsTheme.type.dialogRowSelected.copy(color = ThingsTheme.colors.overlayContent))
+        Text(label, style = ThingsTheme.type.dialogRow.copy(color = ThingsTheme.colors.overlayContent))
         Spacer(Modifier.width(ThingsSpacing.M))
         Text(
             text = value,
-            style = ThingsTheme.type.dialogRowSelected.copy(color = ThingsTheme.colors.accent),
+            style = ThingsTheme.type.dialogRow.copy(color = ThingsTheme.colors.accent),
             textAlign = TextAlign.End,
             maxLines = 1,
             overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis,
@@ -1049,14 +1054,16 @@ private fun ValueRow(label: String, value: String, flash: Boolean = false, onCli
 @Composable
 private fun WheelHeaderRow(label: String, value: String) {
     Row(
-        modifier = Modifier.fillMaxWidth(),
+        modifier = Modifier
+            .fillMaxWidth()
+            .height(MaterialTheme.dimens.rowHeight),
         verticalAlignment = Alignment.CenterVertically
     ) {
-        Text(label, style = ThingsTheme.type.dialogRowSelected.copy(color = ThingsTheme.colors.overlayContent))
+        Text(label, style = ThingsTheme.type.dialogRow.copy(color = ThingsTheme.colors.overlayContent))
         Spacer(Modifier.width(ThingsSpacing.M))
         Text(
             text = value,
-            style = ThingsTheme.type.dialogRowSelected.copy(color = ThingsTheme.colors.accent),
+            style = ThingsTheme.type.dialogRow.copy(color = ThingsTheme.colors.accent),
             textAlign = TextAlign.End,
             maxLines = 1,
             modifier = Modifier.weight(1f)
@@ -1078,7 +1085,7 @@ private fun IconRow(icon: @Composable () -> Unit, label: String, value: String?,
         Spacer(Modifier.width(ThingsSpacing.S))
         Text(
             text = label,
-            style = ThingsTheme.type.dialogRowSelected.copy(color = if (value != null) ThingsTheme.colors.overlayContent else ThingsTheme.colors.overlayContentSecondary),
+            style = ThingsTheme.type.dialogRow.copy(color = if (value != null) ThingsTheme.colors.overlayContent else ThingsTheme.colors.overlayContentSecondary),
             modifier = Modifier.weight(1f)
         )
         if (value != null) Text(value, style = ThingsTheme.type.dialogRow.copy(color = ThingsTheme.colors.accent))
@@ -1115,7 +1122,7 @@ private fun SetIconRow(icon: androidx.compose.ui.graphics.vector.ImageVector, te
         Spacer(Modifier.width(ThingsSpacing.S))
         Text(
             text = text,
-            style = ThingsTheme.type.headline.copy(color = ThingsTheme.colors.accent),
+            style = ThingsTheme.type.bodyLarge.copy(color = ThingsTheme.colors.accent),
             modifier = Modifier.weight(1f)
         )
         Spacer(Modifier.width(ThingsSpacing.S))
@@ -1126,7 +1133,7 @@ private fun SetIconRow(icon: androidx.compose.ui.graphics.vector.ImageVector, te
 @Composable
 private fun ToggleRow(label: String, checked: Boolean, onChange: (Boolean) -> Unit) {
     Row(modifier = Modifier.fillMaxWidth().height(MaterialTheme.dimens.rowHeight), verticalAlignment = Alignment.CenterVertically) {
-        Text(label, style = ThingsTheme.type.dialogRowSelected.copy(color = ThingsTheme.colors.overlayContent), modifier = Modifier.weight(1f))
+        Text(label, style = ThingsTheme.type.dialogRow.copy(color = ThingsTheme.colors.overlayContent), modifier = Modifier.weight(1f))
         Switch(
             checked = checked,
             onCheckedChange = onChange,
@@ -1156,7 +1163,7 @@ private fun PillButton(text: String, onClick: () -> Unit) {
             },
         contentAlignment = Alignment.Center
     ) {
-        Text(text, style = ThingsTheme.type.button.copy(color = ThingsTheme.colors.overlayContent))
+        Text(text, style = ThingsTheme.type.dialogButton.copy(color = ThingsTheme.colors.overlayContent))
     }
 }
 

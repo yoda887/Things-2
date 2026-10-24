@@ -281,8 +281,6 @@ data class ThingsTypography(
     val dialogButton: TextStyle,
     /** Подпись «Перемістити» на плавающей панели действий. */
     val dialogButtonStrong: TextStyle,
-    /** Подпись сегмента переключателя в тёмном окне: «Після виконання / Регулярно» (14 sp SemiBold) */
-    val dialogSegment: TextStyle,
     /** Значения на барабане выбора (время напоминания) */
     val wheel: TextStyle,
     /** Выбранное значение на барабане — посередине, крупнее и плотнее */
@@ -363,7 +361,6 @@ internal fun thingsTypography(scale: Float = 1f) = ThingsTypography(
     dialogBody = TextStyle(fontFamily = FontFamily.Default, fontWeight = FontWeight.Normal, fontSize = (15 * scale).sp),
     dialogButton = TextStyle(fontFamily = FontFamily.Default, fontWeight = FontWeight.Normal, fontSize = (18 * scale).sp),
     dialogButtonStrong = TextStyle(fontFamily = FontFamily.Default, fontWeight = FontWeight.Bold, fontSize = (18 * scale).sp),
-    dialogSegment = TextStyle(fontFamily = FontFamily.Default, fontWeight = FontWeight.SemiBold, fontSize = (14 * scale).sp),
     wheel = TextStyle(fontFamily = FontFamily.Default, fontWeight = FontWeight.Normal, fontSize = (23 * scale).sp),
     wheelSelected = TextStyle(fontFamily = FontFamily.Default, fontWeight = FontWeight.SemiBold, fontSize = (25 * scale).sp),
     menuItem = TextStyle(fontFamily = FontFamily.Default, fontWeight = FontWeight.Normal, fontSize = (18 * scale).sp),

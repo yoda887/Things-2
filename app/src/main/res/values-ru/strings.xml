@@ -228,15 +228,13 @@
     <string name="repeat_same_day">в тот же день</string>
     <string name="repeat_add_more">Добавить ещё</string>
     <string name="repeat_forever">Эта задача повторяется бесконечно.</string>
-    <string-array name="repeat_on_weekdays">
-        <item>В понедельник</item>
-        <item>Во вторник</item>
-        <item>В среду</item>
-        <item>В четверг</item>
-        <item>В пятницу</item>
-        <item>В субботу</item>
-        <item>В воскресенье</item>
-    </string-array>
+    <string name="repeat_on_monday">В понедельник</string>
+    <string name="repeat_on_tuesday">Во вторник</string>
+    <string name="repeat_on_wednesday">В среду</string>
+    <string name="repeat_on_thursday">В четверг</string>
+    <string name="repeat_on_friday">В пятницу</string>
+    <string name="repeat_on_saturday">В субботу</string>
+    <string name="repeat_on_sunday">В воскресенье</string>
     <string name="repeat_day_word">день</string>
     <string name="repeat_last">последний</string>
     <string name="repeat_last_day">последний день</string>

@@ -141,7 +141,6 @@ object DesignSystemDocGenerator {
         TypeToken("dialogRowAction", { it.dialogRowAction }, "Строка-действие диалога цветом accent: «Новий тег», «Керування тегами».", "Новий тег"),
         TypeToken("dialogButton", { it.dialogButton }, "Кнопка действия в диалоге: Cancel, Delete, Clear.", "Cancel"),
         TypeToken("dialogButtonStrong", { it.dialogButtonStrong }, "Подпись «Перемістити» на плавающей панели действий.", "Перемістити"),
-        TypeToken("dialogSegment", { it.dialogSegment }, "Подпись сегмента переключателя в тёмном окне.", "Регулярно"),
         TypeToken("wheel", { it.wheel }, "Значения на барабане выбора времени напоминания.", "45"),
         TypeToken("wheelSelected", { it.wheelSelected }, "Выбранное значение посередине барабана — крупнее и плотнее.", "00"),
         TypeToken("menuItem", { it.menuItem }, "Пункт выпадающего меню: «New To-Do», «Delete Project», меню подзаголовка.", "New To-Do"),

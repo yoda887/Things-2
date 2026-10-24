@@ -228,15 +228,13 @@
     <string name="repeat_same_day">того ж дня</string>
     <string name="repeat_add_more">Додати ще</string>
     <string name="repeat_forever">Це завдання повторюється без кінця.</string>
-    <string-array name="repeat_on_weekdays">
-        <item>У понеділок</item>
-        <item>У вівторок</item>
-        <item>У середу</item>
-        <item>У четвер</item>
-        <item>У п’ятницю</item>
-        <item>У суботу</item>
-        <item>У неділю</item>
-    </string-array>
+    <string name="repeat_on_monday">У понеділок</string>
+    <string name="repeat_on_tuesday">У вівторок</string>
+    <string name="repeat_on_wednesday">У середу</string>
+    <string name="repeat_on_thursday">У четвер</string>
+    <string name="repeat_on_friday">У п’ятницю</string>
+    <string name="repeat_on_saturday">У суботу</string>
+    <string name="repeat_on_sunday">У неділю</string>
     <string name="repeat_day_word">день</string>
     <string name="repeat_last">останній</string>
     <string name="repeat_last_day">останній день</string>
