@@ -217,6 +217,7 @@ fun ThingsCategoryListPanel(
     
     var localTasksList by remember { mutableStateOf(state.displayTasks) }
     val currentDisplayTasks by rememberUpdatedState(state.displayTasks)
+    val currentAllTasks by rememberUpdatedState(state.allTasks)
     // Флаг: идёт ли анимация сворачивания редактора (300 мс)
     var isEditorCollapsing by remember { mutableStateOf(false) }
     // Предыдущий ID развёрнутой задачи для обнаружения момента сворачивания
@@ -1947,22 +1948,29 @@ fun ThingsCategoryListPanel(
         // Шаблон повторяющейся задачи — в меню только «Поделиться», как в Things
         onlyShare = activeTask?.item?.isRepeatTemplate == true,
         onShareClick = {
-            val shared = activeTask ?: return@FloatingBottomCapsuleToolbar
-            // Название, заметки и пункты чек-листа — простым текстом
-            val text = buildString {
-                append(shared.item.title)
-                if (shared.item.notes.isNotBlank()) append("\n\n").append(shared.item.notes.trim())
-                if (shared.checklist.isNotEmpty()) {
-                    append("\n")
-                    shared.checklist.forEach { append("\n• ").append(it.title) }
+            val taskId = activeTask?.item?.id ?: return@FloatingBottomCapsuleToolbar
+            // Сначала редактор сворачивается и сохраняет правки — иначе ушло бы название до правки
+            // (у только что созданной задачи — пустое); делится сохранённой задачей
+            onEvent(ThingsCategoryListEvent.ChangeInlineExpandedTaskId(null))
+            coroutineScope.launch {
+                kotlinx.coroutines.delay(com.example.ui.theme.AnimationConstants.TASK_EXPANSION_DURATION_MS)
+                val shared = currentAllTasks.firstOrNull { it.item.id == taskId } ?: return@launch
+                // Название, заметки и пункты чек-листа — простым текстом
+                val text = buildString {
+                    append(shared.item.title)
+                    if (shared.item.notes.isNotBlank()) append("\n\n").append(shared.item.notes.trim())
+                    if (shared.checklist.isNotEmpty()) {
+                        append("\n")
+                        shared.checklist.forEach { append("\n• ").append(it.title) }
+                    }
                 }
+                val sendIntent = android.content.Intent().apply {
+                    action = android.content.Intent.ACTION_SEND
+                    putExtra(android.content.Intent.EXTRA_TEXT, text)
+                    type = "text/plain"
+                }
+                context.startActivity(android.content.Intent.createChooser(sendIntent, null))
             }
-            val sendIntent = android.content.Intent().apply {
-                action = android.content.Intent.ACTION_SEND
-                putExtra(android.content.Intent.EXTRA_TEXT, text)
-                type = "text/plain"
-            }
-            context.startActivity(android.content.Intent.createChooser(sendIntent, null))
         },
         modifier = Modifier.align(Alignment.BottomCenter)
     )
