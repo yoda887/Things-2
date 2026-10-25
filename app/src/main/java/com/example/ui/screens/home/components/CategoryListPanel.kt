@@ -2350,6 +2350,18 @@ private fun SearchSectionIcon(
             tint = Color.Unspecified,
             modifier = iconModifier
         )
+        SearchSectionKind.UPCOMING -> Icon(
+            imageVector = AppIcons.Upcoming,
+            contentDescription = null,
+            tint = Color.Unspecified,
+            modifier = iconModifier
+        )
+        SearchSectionKind.SOMEDAY -> Icon(
+            imageVector = AppIcons.Someday,
+            contentDescription = null,
+            tint = Color.Unspecified,
+            modifier = iconModifier
+        )
     }
 }
 

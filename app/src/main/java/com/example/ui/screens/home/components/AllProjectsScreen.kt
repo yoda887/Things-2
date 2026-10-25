@@ -56,4 +56,26 @@ object AllProjectsScreen {
         val pattern = if (start <= weekAhead) "EEE" else if (monthName) "d MMM" else "d.M."
         return java.text.SimpleDateFormat(pattern, java.util.Locale.getDefault()).format(java.util.Date(start))
     }
+
+    /**
+     * Строки экрана «Пізніші проєкти», как Later Projects в Things: разделы «Плани» (запланированные по дате, затем
+     * шаблоны повторяющихся проектов) и «Колись» (отложенные) — заголовок со значком списка и линией; пустой раздел
+     * не показывается. [later] — более поздние проекты в их порядке (AllProjectsList).
+     */
+    fun laterRows(later: List<com.example.data.model.Item>, upcomingTitle: String, somedayTitle: String): List<Any> {
+        val (upcoming, someday) = later.partition {
+            com.example.domain.lists.RepeatingList.includesProject(it) ||
+                (it.start != com.example.data.model.Item.START_SOMEDAY && it.startDate != null)
+        }
+        return buildList {
+            listOf(
+                Triple(SearchSectionKind.UPCOMING, upcomingTitle, upcoming),
+                Triple(SearchSectionKind.SOMEDAY, somedayTitle, someday)
+            ).forEach { (kind, title, rows) ->
+                if (rows.isEmpty()) return@forEach
+                add(SearchSectionHeaderItem("later_hdr_${kind.name.lowercase()}", title, kind))
+                addAll(rows)
+            }
+        }
+    }
 }

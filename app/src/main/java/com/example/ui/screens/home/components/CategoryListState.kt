@@ -178,7 +178,11 @@ object TaskListKeys {
 }
 
 /** Вид заголовка секции в результатах поиска. */
-enum class SearchSectionKind { PROJECT, AREA, LOGBOOK }
+enum class SearchSectionKind {
+    PROJECT, AREA, LOGBOOK,
+    // Разделы «Пізніших проєктів» (AllProjectsScreen.laterRows) — значки списков «Плани» и «Колись»
+    UPCOMING, SOMEDAY
+}
 
 /** «Входящие»: плашка «N завдань переміщено з «Вхідних»» с кнопкой «OK» над ушедшими задачами */
 data class InboxMovedBannerItem(val count: Int)
@@ -315,8 +319,13 @@ fun rememberFlattenedList(
                 showLoggedLabel, hideLoggedLabel
             )
             // Более поздние проекты без области — как в «Усіх проєктах»: запланированные по дате, повторяющиеся, отложенные
-            ActiveScreen.LATER_PROJECTS -> AllProjectsList.content(projects, areas, templates = allTasks.map { it.item })
-                .groups.firstOrNull { it.area == null }?.later.orEmpty()
+            // — разделами «Плани» (с повторяющимися) и «Колись», как в Things
+            ActiveScreen.LATER_PROJECTS -> AllProjectsScreen.laterRows(
+                AllProjectsList.content(projects, areas, templates = allTasks.map { it.item })
+                    .groups.firstOrNull { it.area == null }?.later.orEmpty(),
+                resources.getString(R.string.category_upcoming),
+                resources.getString(R.string.category_someday)
+            )
             // Завершённые проекты — разделами, как «Журнал»
             ActiveScreen.LOGGED_PROJECTS -> LogbookScreen.rows(LogbookList.sections(emptyList(), projects), todayLabel, yesterdayLabel)
             // Шаблоны повтора: без проекта — вверху, остальные — под проектом или областью
