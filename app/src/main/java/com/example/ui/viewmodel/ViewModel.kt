@@ -993,7 +993,8 @@ class ThingsViewModel @Inject constructor(
             projectUseCases.duplicateProject(
                 project,
                 headings.value.filter { it.projectId == project.id && !it.trashed },
-                tasks.value.filter { it.item.projectId == project.id && !it.item.trashed }
+                tasks.value.filter { it.item.projectId == project.id && !it.item.trashed },
+                orderedProjects = projects.value
             )
         }
     }

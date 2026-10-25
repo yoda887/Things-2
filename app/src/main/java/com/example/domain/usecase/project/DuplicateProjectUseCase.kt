@@ -15,7 +15,14 @@ class DuplicateProjectUseCase @Inject constructor(private val repository: ITaskR
      * Создаёт копию проекта с его заголовками и задачами (с чек-листами и тегами) под новыми UUID.
      * Задачи копии остаются под копиями своих заголовков. Копия встаёт сразу после исходного проекта.
      */
-    suspend operator fun invoke(project: Item, headings: List<Item>, projectTasks: List<ItemWithChecklist>) {
+    suspend operator fun invoke(
+        project: Item,
+        headings: List<Item>,
+        projectTasks: List<ItemWithChecklist>,
+        // Все проекты в порядке списков (место, при равном — более новый раньше): копия встаёт сразу после
+        // исходного, места всех перенумеровываются по порядку
+        orderedProjects: List<Item> = emptyList()
+    ) {
         val now = System.currentTimeMillis()
         fun Item.fresh(id: String) = copy(
             id = id,
@@ -25,12 +32,21 @@ class DuplicateProjectUseCase @Inject constructor(private val repository: ITaskR
             modificationDate = now
         )
         val newProjectId = UUID.randomUUID().toString()
-        val newProject = project.fresh(newProjectId).copy(sortOrder = project.sortOrder + 1)
+        val position = orderedProjects.indexOfFirst { it.id == project.id }
+        val renumbered = if (position < 0) emptyList() else
+            (orderedProjects.subList(0, position + 1) + listOf<Item?>(null) + orderedProjects.subList(position + 1, orderedProjects.size))
+        val copyOrder = renumbered.indexOf(null).takeIf { it >= 0 } ?: (project.sortOrder + 1)
+        val newProject = project.fresh(newProjectId).copy(sortOrder = copyOrder)
         val headingIds = headings.filter { it.projectId == project.id }.associate { it.id to UUID.randomUUID().toString() }
         val newHeadings = headings.filter { it.id in headingIds }.map { heading ->
             heading.fresh(headingIds.getValue(heading.id)).copy(projectId = newProjectId)
         }
         repository.inTransaction {
+            // Места по порядку: иначе копия могла делить место со следующим проектом и вставать после него
+            val changed = renumbered.mapIndexedNotNull { index, item ->
+                item?.takeIf { it.sortOrder != index }?.copy(sortOrder = index, modificationDate = now)
+            }
+            if (changed.isNotEmpty()) repository.insertTasks(changed)
             repository.insertProject(newProject)
             repository.setItemTagsByTitles(newProjectId, newProject.tags)
             if (newHeadings.isNotEmpty()) repository.insertTasks(newHeadings)
