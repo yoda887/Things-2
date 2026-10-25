@@ -1930,8 +1930,13 @@ fun ThingsCategoryListPanel(
         onMoveClick = { showMoveDialog = true },
         onDeleteClick = { showDeleteConfirm = true },
         onDuplicateClick = {
-            if (activeTask != null) {
-                onEvent(ThingsCategoryListEvent.DuplicateTask(activeTask))
+            val taskId = activeTask?.item?.id ?: return@FloatingBottomCapsuleToolbar
+            // Как в Things: редактор сворачивается и сохраняет правки, копия — сохранённой задачи (с только что
+            // набранным названием), встаёт сразу под ней
+            onEvent(ThingsCategoryListEvent.ChangeInlineExpandedTaskId(null))
+            coroutineScope.launch {
+                kotlinx.coroutines.delay(com.example.ui.theme.AnimationConstants.TASK_EXPANSION_DURATION_MS)
+                currentAllTasks.firstOrNull { it.item.id == taskId }?.let { onEvent(ThingsCategoryListEvent.DuplicateTask(it)) }
             }
         },
         isCancelled = activeTask?.item?.status == Item.STATUS_CANCELLED,

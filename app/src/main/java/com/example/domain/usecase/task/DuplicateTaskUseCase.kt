@@ -6,7 +6,8 @@ import java.util.UUID
 import javax.inject.Inject
 
 /**
- * Сценарий использования (Use Case) для дублирования задачи со всеми свойствами, тегами и чек-листом.
+ * Сценарий использования (Use Case) для дублирования задачи со всеми свойствами, тегами и чек-листом;
+ * копия встаёт в списке сразу под оригиналом.
  */
 class DuplicateTaskUseCase @Inject constructor(private val repository: ITaskRepository) {
 
@@ -19,7 +20,9 @@ class DuplicateTaskUseCase @Inject constructor(private val repository: ITaskRepo
             id = newId,
             googleTaskId = null,
             googleTaskListId = null,
-            creationDate = System.currentTimeMillis(),
+            // Копия встаёт сразу под оригиналом, как в Things: место в списке то же, а при равном месте раньше
+            // идёт более новая задача — копия «создана» на миг раньше оригинала
+            creationDate = wrapper.item.creationDate - 1,
             modificationDate = System.currentTimeMillis()
         )
         val newChecklist = wrapper.checklist.map {
