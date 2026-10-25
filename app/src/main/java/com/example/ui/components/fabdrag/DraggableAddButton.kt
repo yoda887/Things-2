@@ -61,6 +61,9 @@ private val FAB_ACTION_SIZE = 44.dp
 private val FAB_ACTION_EDGE = 20.dp
 
 private const val FAB_SETTLE_MS = 180
+/** Нажатие: на сколько кнопка вырастает в полёте (вместе с подъёмом ×1.22 — около 1.5×) и с какой доли полёта гаснет */
+private const val FAB_TAP_GROW = 0.25f
+private const val FAB_TAP_FADE_FROM = 0.75f
 private val FAB_PLUS_ICON_SIZE = 28.dp
 
 
@@ -171,10 +174,19 @@ private fun BoxScope.FabBody(
                     val target = controller.settleFrom + (controller.settleTo - controller.settleFrom) * p
                     translationX = target.x - center.x
                     translationY = target.y - center.y
-                    settleScale = (1f - t).coerceAtLeast(0f)
-                    // Как в Things: кнопка сначала «ложится» — тень уходит в первую треть приземления
-                    shadowFactor = (1f - t / 0.35f).coerceIn(0f, 1f)
-                    alpha = (1f - t * t * t).coerceIn(0f, 1f)
+                    if (controller.isTapSettle) {
+                        // Нажатие, как в Things: кнопка летит к промежутку и растёт (с подъёмом — до ~1.5×), гаснет
+                        // только в самом конце — из этого места раскрывается новая задача
+                        settleScale = 1f + FAB_TAP_GROW * p
+                        shadowFactor = 1f
+                        alpha = if (t < FAB_TAP_FADE_FROM) 1f else (1f - (t - FAB_TAP_FADE_FROM) / (1f - FAB_TAP_FADE_FROM)).coerceIn(0f, 1f)
+                    } else {
+                        // Сброс перетаскиванием — уменьшается до нуля
+                        settleScale = (1f - t).coerceAtLeast(0f)
+                        // Как в Things: кнопка сначала «ложится» — тень уходит в первую треть приземления
+                        shadowFactor = (1f - t / 0.35f).coerceIn(0f, 1f)
+                        alpha = (1f - t * t * t).coerceIn(0f, 1f)
+                    }
                 } else if (controller.hiddenAfterSettle) {
                     alpha = 0f
                 } else if (controller.isDragging && coords != null && controller.pointer != Offset.Unspecified) {

@@ -136,6 +136,9 @@ class FabDragController {
      */
     private var hideAfterTapSettle = false
 
+    /** Приземление — от нажатия (не от сброса перетаскиванием): кнопка в полёте растёт, а не уменьшается */
+    val isTapSettle: Boolean get() = isSettling && hideAfterTapSettle
+
     /** Кнопка летит из покоя в [anchor] и уменьшается до нуля — приземление после нажатия */
     fun settleFromHome(anchor: Offset) {
         hiddenAfterSettle = false
