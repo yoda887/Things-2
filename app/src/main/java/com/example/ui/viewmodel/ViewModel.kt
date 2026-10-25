@@ -322,7 +322,7 @@ class ThingsViewModel @Inject constructor(
                         ActiveScreen.TAG_DETAIL -> tag != null && TagList.isActiveTask(task, tag.title)
                         ActiveScreen.SEARCH -> SearchList.includes(wrapper, query)
                         // У главного экрана и особых списков проектов нет списка задач
-                        ActiveScreen.HOME, ActiveScreen.ALL_PROJECTS, ActiveScreen.LOGGED_PROJECTS -> false
+                        ActiveScreen.HOME, ActiveScreen.ALL_PROJECTS, ActiveScreen.LOGGED_PROJECTS, ActiveScreen.LATER_PROJECTS -> false
                         ActiveScreen.REPEATING -> com.example.domain.lists.RepeatingList.includes(task) ||
                             com.example.domain.lists.RepeatingList.includesCopy(task)
                     }
@@ -355,7 +355,7 @@ class ThingsViewModel @Inject constructor(
                 // Тег — в порядке групп по месту, как видно на экране
                 ActiveScreen.TAG_DETAIL -> com.example.domain.lists.PlaceGroups.order(listTasks, projectList, areaList)
                 ActiveScreen.INBOX, ActiveScreen.TODAY, ActiveScreen.UPCOMING,
-                ActiveScreen.SEARCH, ActiveScreen.HOME, ActiveScreen.ALL_PROJECTS, ActiveScreen.LOGGED_PROJECTS -> listTasks
+                ActiveScreen.SEARCH, ActiveScreen.HOME, ActiveScreen.ALL_PROJECTS, ActiveScreen.LOGGED_PROJECTS, ActiveScreen.LATER_PROJECTS -> listTasks
                 ActiveScreen.REPEATING -> com.example.domain.lists.RepeatingList.order(listTasks, repeatRules)
             }
 

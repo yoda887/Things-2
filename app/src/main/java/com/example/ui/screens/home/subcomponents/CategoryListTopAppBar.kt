@@ -356,15 +356,20 @@ private fun CategoryTopAppBarTitleContent(
                     color = textPrimaryColor
                 )
             }
-            ActiveScreen.ALL_PROJECTS, ActiveScreen.LOGGED_PROJECTS -> {
+            ActiveScreen.ALL_PROJECTS, ActiveScreen.LOGGED_PROJECTS, ActiveScreen.LATER_PROJECTS -> {
                 com.example.ui.components.ProjectStackIcon(
                     logged = screen == ActiveScreen.LOGGED_PROJECTS,
+                    color = if (screen == ActiveScreen.LATER_PROJECTS) ThingsTheme.colors.textSecondary else ThingsTheme.colors.project,
                     modifier = Modifier.height(TOP_APP_BAR_ICON_SIZE * 0.8f)
                 )
                 Spacer(modifier = Modifier.width(TOP_APP_BAR_SPACING))
                 Text(
                     text = stringResource(
-                        if (screen == ActiveScreen.ALL_PROJECTS) R.string.special_all_projects else R.string.special_logged_projects
+                        when (screen) {
+                            ActiveScreen.ALL_PROJECTS -> R.string.special_all_projects
+                            ActiveScreen.LATER_PROJECTS -> R.string.special_later_projects
+                            else -> R.string.special_logged_projects
+                        }
                     ),
                     style = ThingsTheme.type.topAppBarTitle,
                     color = textPrimaryColor

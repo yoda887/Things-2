@@ -221,16 +221,21 @@ fun MainCategoryHeader(
                 )
             }
             // Особые списки проектов: значок проекта — как у строк, которые в них стоят
-            ActiveScreen.ALL_PROJECTS, ActiveScreen.LOGGED_PROJECTS -> {
+            ActiveScreen.ALL_PROJECTS, ActiveScreen.LOGGED_PROJECTS, ActiveScreen.LATER_PROJECTS -> {
                 com.example.ui.components.ProjectStackIcon(
                     logged = screen == ActiveScreen.LOGGED_PROJECTS,
+                    // «Пізніші проєкти» — значок «Усі проєкти» серым, как строка на главном экране
+                    color = if (screen == ActiveScreen.LATER_PROJECTS) ThingsTheme.colors.textSecondary else ThingsTheme.colors.project,
                     modifier = Modifier.height((26 * scaleFactor).dp)
                 )
                 Spacer(modifier = Modifier.width((10 * scaleFactor).dp))
                 Text(
                     text = androidx.compose.ui.res.stringResource(
-                        if (screen == ActiveScreen.ALL_PROJECTS) com.example.R.string.special_all_projects
-                        else com.example.R.string.special_logged_projects
+                        when (screen) {
+                            ActiveScreen.ALL_PROJECTS -> com.example.R.string.special_all_projects
+                            ActiveScreen.LATER_PROJECTS -> com.example.R.string.special_later_projects
+                            else -> com.example.R.string.special_logged_projects
+                        }
                     ),
                     style = ThingsTheme.type.largeTitle.copy(color = textPrimaryColor)
                 )

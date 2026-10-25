@@ -12,6 +12,8 @@ enum class ActiveScreen {
     HOME, INBOX, TODAY, UPCOMING, ANYTIME, SOMEDAY, LOGBOOK, PROJECT_DETAIL, AREA_DETAIL, SEARCH, TAG_DETAIL,
     // Особые списки — открываются из «Швидкого пошуку» по названию, как в Things
     ALL_PROJECTS, LOGGED_PROJECTS,
+    // «Пізніші проєкти» — запланированные, повторяющиеся и отложенные проекты без области (строка внизу главного экрана)
+    LATER_PROJECTS,
     // «Повторяющиеся» — шаблоны повторяющихся задач
     REPEATING
 }

@@ -406,7 +406,7 @@ fun ThingsHomeScreen(viewModel: ThingsViewModel = hiltViewModel()) {
                 val view = androidx.compose.ui.platform.LocalView.current
                 val onFabClick: () -> Unit = {
                                                 if (activeScreen == ActiveScreen.HOME || activeScreen == ActiveScreen.ALL_PROJECTS ||
-                            activeScreen == ActiveScreen.LOGGED_PROJECTS
+                            activeScreen == ActiveScreen.LOGGED_PROJECTS || activeScreen == ActiveScreen.LATER_PROJECTS
                         ) {
                             showFabMenu = true
                         } else if (activeScreen == ActiveScreen.SEARCH) {
@@ -522,12 +522,13 @@ fun ThingsHomeScreen(viewModel: ThingsViewModel = hiltViewModel()) {
                             // Только проекты, с которыми можно работать сейчас (HomeList): закрытые — в Logbook,
                             // отложенные и запланированные — в «Когда-нибудь» и «Предстоящих»
                             projects = projects.filter { HomeList.showsProject(it) },
-                            // Под каждой группой — «N пізніших проєктів» (запланированные, повторяющиеся, отложенные), как в Things
-                            laterProjectCounts = remember(projects, areas, allTasksRaw) {
+                            // Под проектами без области — «N пізніших проєктів» (запланированные, повторяющиеся, отложенные), как
+                            // в Things; более поздние проекты областей на главном экране не видны — они на экране области
+                            laterProjectCount = remember(projects, areas, allTasksRaw) {
                                 com.example.domain.lists.AllProjectsList.content(projects, areas, templates = allTasksRaw.map { it.item })
-                                    .groups.associate { it.area?.id to it.later.size }
+                                    .groups.firstOrNull { it.area == null }?.later?.size ?: 0
                             },
-                            onLaterProjectsClick = { navigateTo(ActiveScreen.ALL_PROJECTS) },
+                            onLaterProjectsClick = { navigateTo(ActiveScreen.LATER_PROJECTS) },
                             searchQuery = searchQuery,
                             textPrimaryColor = textPrimaryColor,
                             textSecondaryColor = textSecondaryColor,
@@ -982,6 +983,7 @@ fun ThingsHomeScreen(viewModel: ThingsViewModel = hiltViewModel()) {
                 ActiveScreen.LOGBOOK to stringResource(R.string.category_logbook),
                 ActiveScreen.ALL_PROJECTS to stringResource(R.string.special_all_projects),
                 ActiveScreen.LOGGED_PROJECTS to stringResource(R.string.special_logged_projects),
+                ActiveScreen.LATER_PROJECTS to stringResource(R.string.special_later_projects),
                 ActiveScreen.REPEATING to stringResource(R.string.special_repeating)
             )
             val searchRepeatRules by viewModel.recurrenceRules.collectAsState()

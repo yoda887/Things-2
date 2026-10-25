@@ -24,6 +24,7 @@
     <string name="delete_task_confirm_delete">Delete</string>
     <string name="special_all_projects">All Projects</string>
     <string name="special_logged_projects">Logged Projects</string>
+    <string name="special_later_projects">Later Projects</string>
     <plurals name="all_projects_show_later"><item quantity="one">Show %1$d later project</item><item quantity="other">Show %1$d later projects</item></plurals>
     <plurals name="all_projects_hide_later"><item quantity="one">Hide %1$d later project</item><item quantity="other">Hide %1$d later projects</item></plurals>
     <plurals name="home_later_projects"><item quantity="one">%1$d later project</item><item quantity="other">%1$d later projects</item></plurals>

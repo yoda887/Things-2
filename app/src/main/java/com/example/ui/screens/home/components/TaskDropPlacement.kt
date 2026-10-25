@@ -61,7 +61,7 @@ fun dropListOf(
     ActiveScreen.LOGBOOK -> DropList.Logbook
     ActiveScreen.HOME, ActiveScreen.INBOX, ActiveScreen.SEARCH, ActiveScreen.TAG_DETAIL -> DropList.Plain
     // В особых списках проектов задач нет — переставлять нечего
-    ActiveScreen.ALL_PROJECTS, ActiveScreen.LOGGED_PROJECTS -> DropList.Logbook
+    ActiveScreen.ALL_PROJECTS, ActiveScreen.LOGGED_PROJECTS, ActiveScreen.LATER_PROJECTS -> DropList.Logbook
     // Шаблоны повтора стоят по ближайшему повтору — переставлять нечего
     ActiveScreen.REPEATING -> DropList.Logbook
 }

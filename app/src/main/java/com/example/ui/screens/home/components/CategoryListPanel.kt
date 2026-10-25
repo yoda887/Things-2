@@ -1186,6 +1186,8 @@ fun ThingsCategoryListPanel(
                 ActiveScreen.SEARCH, ActiveScreen.HOME -> displayTasks.isNotEmpty()
                 ActiveScreen.ALL_PROJECTS -> AllProjectsList.hasContent(AllProjectsList.content(projects, areasState, templates = state.allTasks.map { it.item }))
                 ActiveScreen.LOGGED_PROJECTS -> projects.any { LogbookList.includesProject(it) }
+                ActiveScreen.LATER_PROJECTS -> AllProjectsList.content(projects, areasState, templates = state.allTasks.map { it.item })
+                    .groups.any { it.area == null && it.later.isNotEmpty() }
                 ActiveScreen.REPEATING -> displayTasks.isNotEmpty()
             }
 
@@ -1349,7 +1351,7 @@ fun ThingsCategoryListPanel(
                                             com.example.ui.components.repeatBadge(state.repeatRules[task.id])
                                         } else task.startDate?.let { com.example.ui.screens.home.subcomponents.startDateBadgeText(it) }
                                         // Шаблон повторяющегося проекта — день следующего повтора, «Пауза» или «Чекає»
-                                        ActiveScreen.ALL_PROJECTS -> if (task.type == Item.TYPE_PROJECT_TEMPLATE) {
+                                        ActiveScreen.ALL_PROJECTS, ActiveScreen.LATER_PROJECTS -> if (task.type == Item.TYPE_PROJECT_TEMPLATE) {
                                             com.example.ui.components.repeatBadge(state.repeatRules[task.id])
                                         } else if (LogbookList.includesProject(task)) null else AllProjectsScreen.laterDateBadge(task)
                                             ?.let { com.example.ui.screens.home.subcomponents.startDateBadgeText(task.startDate!!) }

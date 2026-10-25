@@ -142,8 +142,8 @@ private sealed interface HomeTreeItem {
     }
 
     /**
-     * «N пізніших проєктів» под проектами группы, как в Things: сколько у области (или без неё — [areaId] null)
-     * запланированных, отложенных и повторяющихся проектов, которых нет на главном экране
+     * «N пізніших проєктів» под проектами без области, как в Things: сколько запланированных, отложенных и
+     * повторяющихся проектов без области нет на главном экране ([areaId] — всегда null)
      */
     data class LaterProjects(val areaId: String?, val count: Int) : HomeTreeItem {
         override val key: String get() = "later_" + (areaId ?: "none")
@@ -215,8 +215,8 @@ fun ThingsHomePanel(
     onSettingsClick: () -> Unit,
     // Two-level Areas management additions
     areas: List<Area> = emptyList(),
-    // Более поздние проекты по областям (ключ null — без области): строка «N пізніших проєктів» под группой
-    laterProjectCounts: Map<String?, Int> = emptyMap(),
+    // Более поздние проекты без области: строка «N пізніших проєктів» под проектами без области
+    laterProjectCount: Int = 0,
     onLaterProjectsClick: () -> Unit = {},
     onAddAreaClick: () -> Unit = {},
     onDeleteArea: (Area) -> Unit = {},
@@ -411,13 +411,13 @@ fun ThingsHomePanel(
     Box(modifier = Modifier.fillMaxSize().background(bkgColor).clipToBounds()) {
 
         // Two-level Areas & Projects tree (flattened to maintain gesture detector lifecycle across areas)
-        val flattenedTree = remember(localProjects, localAreas, expandedStates.toMap(), dragDropState.draggedItemKey, laterProjectCounts) {
+        val flattenedTree = remember(localProjects, localAreas, expandedStates.toMap(), dragDropState.draggedItemKey, laterProjectCount) {
             val result = mutableListOf<HomeTreeItem>()
             val noAreaProjects = localProjects.filter { it.areaId == null }
             noAreaProjects.forEach { project ->
                 result.add(HomeTreeItem.ProjectItem(project, null))
             }
-            laterProjectCounts[null]?.takeIf { it > 0 }?.let { result.add(HomeTreeItem.LaterProjects(null, it)) }
+            if (laterProjectCount > 0) result.add(HomeTreeItem.LaterProjects(null, laterProjectCount))
             localAreas.forEachIndexed { index, area ->
                 val areaProjects = localProjects.filter { it.areaId == area.id }
                 val hasProjects = areaProjects.isNotEmpty()
@@ -436,7 +436,6 @@ fun ThingsHomePanel(
                     areaProjects.forEach { project ->
                         result.add(HomeTreeItem.ProjectItem(project, area.id))
                     }
-                    laterProjectCounts[area.id]?.takeIf { it > 0 }?.let { result.add(HomeTreeItem.LaterProjects(area.id, it)) }
                 } else if (hasProjects) {
                     // Если область свёрнута, но один из её проектов сейчас удерживается/перетаскивается пользователем — сохраняем его в дереве списка
                     val draggedKey = dragDropState.draggedItemKey
@@ -683,7 +682,7 @@ fun ThingsHomePanel(
                     )
                 }
                 is HomeTreeItem.LaterProjects -> {
-                    // Как в Things: бледный пунктирный круг и «N пізніших проєктів»; нажатие — «Усі проєкти»
+                    // «N пізніших проєктів» — значок «Усі проєкти» (стопка проектов) серым; нажатие — «Пізніші проєкти»
                     Row(
                         modifier = Modifier
                             .animateItem()
@@ -694,13 +693,16 @@ fun ThingsHomePanel(
                             .padding(horizontal = MaterialTheme.dimens.homeRowInset),
                         verticalAlignment = Alignment.CenterVertically
                     ) {
+                        // Значок шире круга проекта (кольца стопки справа) — во всю ширину места значка, текст на месте
                         Box(
-                            modifier = Modifier
-                                .size(MaterialTheme.dimens.homeRowIconSize)
-                                .graphicsLayer { alpha = ThingsAlpha.HALF },
+                            modifier = Modifier.size(MaterialTheme.dimens.homeRowIconSize),
                             contentAlignment = Alignment.Center
                         ) {
-                            ProjectProgressArc(completed = 0, total = 0, dashed = true, modifier = Modifier.size(MaterialTheme.dimens.homeRowIconSize))
+                            com.example.ui.components.ProjectStackIcon(
+                                logged = false,
+                                color = textSecondaryColor,
+                                modifier = Modifier.width(MaterialTheme.dimens.homeRowIconSize)
+                            )
                         }
                         Spacer(modifier = Modifier.width(MaterialTheme.dimens.homeRowIconTextGap))
                         Text(

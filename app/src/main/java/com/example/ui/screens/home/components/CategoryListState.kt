@@ -314,6 +314,9 @@ fun rememberFlattenedList(
                 { count -> resources.getQuantityString(R.plurals.all_projects_hide_later, count, count) },
                 showLoggedLabel, hideLoggedLabel
             )
+            // Более поздние проекты без области — как в «Усіх проєктах»: запланированные по дате, повторяющиеся, отложенные
+            ActiveScreen.LATER_PROJECTS -> AllProjectsList.content(projects, areas, templates = allTasks.map { it.item })
+                .groups.firstOrNull { it.area == null }?.later.orEmpty()
             // Завершённые проекты — разделами, как «Журнал»
             ActiveScreen.LOGGED_PROJECTS -> LogbookScreen.rows(LogbookList.sections(emptyList(), projects), todayLabel, yesterdayLabel)
             // Шаблоны повтора: без проекта — вверху, остальные — под проектом или областью
@@ -557,7 +560,7 @@ fun newTaskPlace(screen: ActiveScreen, projectId: String?, areaId: String?, tagT
     ActiveScreen.AREA_DETAIL -> areaId?.let { NewTaskPlace.Area(it) } ?: NewTaskPlace.Anytime
     ActiveScreen.TAG_DETAIL -> NewTaskPlace.Tag(tagTitle.orEmpty())
     ActiveScreen.INBOX, ActiveScreen.LOGBOOK, ActiveScreen.SEARCH, ActiveScreen.HOME,
-    ActiveScreen.ALL_PROJECTS, ActiveScreen.LOGGED_PROJECTS, ActiveScreen.REPEATING -> NewTaskPlace.Inbox
+    ActiveScreen.ALL_PROJECTS, ActiveScreen.LOGGED_PROJECTS, ActiveScreen.LATER_PROJECTS, ActiveScreen.REPEATING -> NewTaskPlace.Inbox
 }
 
 /** Действия с шаблоном повтора, как в Things */
