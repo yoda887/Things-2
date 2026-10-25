@@ -214,6 +214,8 @@ fun ThingsCategoryListPanel(
     val dragDropState = rememberGenericDragDropState(lazyListState)
     // Касания вне раскрытого редактора: маркеры курсора прячутся ещё до отпускания пальца
     val editorOutsideTouch = remember { EditorOutsideTouch() }
+    // Несохранённые дата и напоминание открытого редактора — окну «Повторять» поверх него
+    val editorLiveFields = remember { com.example.ui.screens.home.inlineeditor.utils.EditorLiveFields() }
     
     var localTasksList by remember { mutableStateOf(state.displayTasks) }
     val currentDisplayTasks by rememberUpdatedState(state.displayTasks)
@@ -1251,6 +1253,7 @@ fun ThingsCategoryListPanel(
                                 dragDropState = dragDropState,
                                 inlineExpandedTaskId = inlineExpandedTaskId,
                                 editorOutsideTouch = editorOutsideTouch,
+                                editorLiveFields = editorLiveFields,
                                 textPrimaryColor = textPrimaryColor,
                                 textSecondaryColor = textSecondaryColor,
                                 dividerColor = dividerColor,
@@ -1980,7 +1983,8 @@ fun ThingsCategoryListPanel(
         val isTemplate = repeatTask.item.type == Item.TYPE_TEMPLATE
         val currentRule = state.repeatRules[repeatTask.item.id]?.let { com.example.domain.repeat.RepeatRule.decode(it.rrule) }
         com.example.ui.screens.home.inlineeditor.dialogs.ThingsRepeatDialog(
-            task = repeatTask.item,
+            // С днём и напоминанием, выбранными в редакторе, но ещё не сохранёнными
+            task = editorLiveFields.applyTo(repeatTask.item),
             initialRule = currentRule,
             onDismissRequest = { showRepeatDialog = false },
             onSave = { rule, reminderTime ->

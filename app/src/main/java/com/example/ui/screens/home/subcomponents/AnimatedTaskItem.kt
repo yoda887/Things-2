@@ -147,6 +147,7 @@ fun AnimatedTaskItem(
     onExitSelectionMode: () -> Unit = {},
     dateBadge: String? = null,
     editorOutsideTouch: EditorOutsideTouch? = null,
+    editorLiveFields: com.example.ui.screens.home.inlineeditor.utils.EditorLiveFields? = null,
     modifier: Modifier = Modifier
 ) {
     val task = taskWrapper.item
@@ -579,6 +580,7 @@ fun AnimatedTaskItem(
                         isExpanded = isExpanded,
                         autoFocusTitle = focusTitleOnOpen || focusTitleFromTap,
                         outsideTouch = editorOutsideTouch,
+                        liveFields = editorLiveFields,
                         expansionProgress = expansionProgress,
                         onFullHeightMeasured = { cardGeometry.editorFullHeight = it },
                         screen = screen,

@@ -42,6 +42,11 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.material.icons.outlined.Flag
+import androidx.compose.material.icons.filled.Close
+import androidx.compose.material.icons.outlined.PauseCircle
+import androidx.compose.material.icons.outlined.PlayCircle
+import androidx.compose.material.icons.outlined.Search
+import androidx.compose.material.icons.outlined.AddBox
 import com.example.data.model.ChecklistItem
 import com.example.data.model.Item
 import com.example.data.model.ItemWithChecklist
@@ -132,6 +137,8 @@ fun ThingsTaskInlineEditor(
     autoFocusTitle: Boolean = false,
     // Касания списка вне редактора: по ним маркеры курсора прячутся ещё до начала сворачивания
     outsideTouch: EditorOutsideTouch? = null,
+    // Сюда редактор отдаёт несохранённые дату и напоминание — окну «Повторять» поверх него
+    liveFields: com.example.ui.screens.home.inlineeditor.utils.EditorLiveFields? = null,
     // Прогресс раскрытия (0..1) — функцией, а не числом: его читают только лямбды раскладки
     // и graphicsLayer, поэтому анимация не пересобирает редактор на каждом кадре.
     expansionProgress: () -> Float = { 1f },
@@ -275,6 +282,9 @@ fun ThingsTaskInlineEditor(
     }
 
     val currentTask by rememberUpdatedState(task)
+    LaunchedEffect(liveFields, task.item.id, startDate, reminderTime) {
+        liveFields?.update(task.item.id, startDate, reminderTime)
+    }
     val currentOnDone by rememberUpdatedState(onDone)
     val currentOnSaveDraft by rememberUpdatedState(onSaveDraft)
 
@@ -1063,14 +1073,26 @@ internal fun RepeatEditorRow(
                 Icon(Icons.Default.ChevronRight, contentDescription = null, tint = ThingsTheme.colors.textSecondary, modifier = Modifier.size(ThingsIconSize.S))
             }
         }
-        // Шаблон — окно в стиле «Коли?», как «When?» в Things: правило, ближайшие даты и действия
-        if (isTemplate && menu && rule != null) {
-            com.example.ui.screens.home.inlineeditor.dialogs.RepeatTemplateDialog(
-                rule = rule,
-                stored = stored,
-                onAction = onAction,
-                onDismiss = { menu = false }
-            )
+        // Шаблон — меню действий, как в Things: «Изменить правило» | следующая и предыдущая копия | пауза | остановить
+        if (isTemplate) {
+            com.example.ui.components.ThingsDropdownMenu(expanded = menu, onDismissRequest = { menu = false }) {
+                fun pick(action: com.example.ui.screens.home.components.RepeatAction) {
+                    view.performHapticFeedback(HapticFeedbackConstants.CLOCK_TICK)
+                    menu = false
+                    onAction(action)
+                }
+                com.example.ui.components.ThingsMenuItem(stringResource(R.string.repeat_action_edit), AppIcons.Repeat, onClick = { pick(com.example.ui.screens.home.components.RepeatAction.EDIT) })
+                com.example.ui.components.ThingsMenuDivider()
+                com.example.ui.components.ThingsMenuItem(stringResource(R.string.repeat_action_next_copy), Icons.Outlined.AddBox, onClick = { pick(com.example.ui.screens.home.components.RepeatAction.NEXT_COPY) })
+                com.example.ui.components.ThingsMenuItem(stringResource(R.string.repeat_action_previous), Icons.Outlined.Search, onClick = { pick(com.example.ui.screens.home.components.RepeatAction.PREVIOUS_COPY) })
+                com.example.ui.components.ThingsMenuDivider()
+                if (stored?.isActive == false) {
+                    com.example.ui.components.ThingsMenuItem(stringResource(R.string.repeat_action_resume), Icons.Outlined.PlayCircle, onClick = { pick(com.example.ui.screens.home.components.RepeatAction.RESUME) })
+                } else {
+                    com.example.ui.components.ThingsMenuItem(stringResource(R.string.repeat_action_pause), Icons.Outlined.PauseCircle, onClick = { pick(com.example.ui.screens.home.components.RepeatAction.PAUSE) })
+                }
+                com.example.ui.components.ThingsMenuItem(stringResource(R.string.repeat_action_stop), Icons.Default.Close, onClick = { pick(com.example.ui.screens.home.components.RepeatAction.STOP) })
+            }
         }
     }
 }
