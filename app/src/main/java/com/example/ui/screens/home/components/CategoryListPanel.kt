@@ -628,12 +628,10 @@ fun ThingsCategoryListPanel(
             val slot = FabInsertion.normalizeSlot(flat, FabSlot(if (first >= 0) first else flat.size, asHeading = false))
             // Промежуток раскрывается сразу — кнопка влетает в уже открывающееся место
             fabSlot = slot
-            // Список не прокручивается к началу, а перескакивает туда — на место будущей задачи: на миг гаснет,
-            // перескакивает и проявляется уже с промежутком, пока кнопка летит в его центр. Список уже у начала —
-            // без затухания
+            // Список прокручивается к началу — к месту будущей задачи, пока кнопка летит в центр промежутка
             val atTop = lazyListState.firstVisibleItemIndex == 0 && lazyListState.firstVisibleItemScrollOffset == 0
-            // Перескок и полёт кнопки — одновременно: кнопка сразу летит туда, где будет промежуток (верх первой
-            // строки у начала списка — запомнен), а когда список перескочил, цель уточняется на лету
+            // Прокрутка и полёт кнопки — одновременно: кнопка сразу летит туда, где будет промежуток (верх первой
+            // строки у начала списка — запомнен), а когда список докрутился, цель уточняется на лету
             val coordsNow = listCoordinates
             val predicted = if (!atTop && coordsNow != null && coordsNow.isAttached) {
                 val origin = coordsNow.positionInRoot()
@@ -643,20 +641,8 @@ fun ThingsCategoryListPanel(
             predicted?.let { fabDrag?.settleFromHome(it) }
             val scrollJob = launch {
                 if (!atTop) {
-                    fabJumpAlpha.animateTo(0f, androidx.compose.animation.core.tween(ThingsMotion.FAST, easing = androidx.compose.animation.core.LinearEasing))
-                    // Перескок — туда, где большой заголовок только что ушёл под маленький в верхней панели; дальше
-                    // список докручивается до самого начала, и большой заголовок въезжает, пока список проявляется
-                    val header = mainHeaderHeightPx ?: 0
-                    lazyListState.scrollToItem(0, header)
-                    launch {
-                        fabJumpAlpha.animateTo(1f, androidx.compose.animation.core.tween(ThingsMotion.QUICK, easing = androidx.compose.animation.core.LinearOutSlowInEasing))
-                    }
-                    if (header > 0) {
-                        lazyListState.animateScrollBy(
-                            -header.toFloat(),
-                            androidx.compose.animation.core.tween<Float>(ThingsMotion.MEDIUM, easing = androidx.compose.animation.core.FastOutSlowInEasing)
-                        )
-                    }
+                    // Длинный список — прокручивается к началу, а не перескакивает: видно, куда встаёт задача
+                    lazyListState.animateScrollToItem(0)
                 } else {
                     lazyListState.scrollToItem(0)
                 }
