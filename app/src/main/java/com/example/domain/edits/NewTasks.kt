@@ -48,6 +48,14 @@ object NewTasks {
         }
     }
 
+    /**
+     * Место новой задачи в общем порядке ([Item.sortOrder]) — выше всех задач, как в Things: новая задача из «+» и
+     * окна быстрого добавления встаёт в своём списке первой. Раньше у неё было место 0, а у задач, вставленных
+     * вверх нажатием или сбросом «+» и перестановкой, места бывают меньше нуля — новая вставала ниже них.
+     */
+    fun topSortOrder(items: List<Item>): Int =
+        (items.filter { it.type == Item.TYPE_TASK || it.type == Item.TYPE_TEMPLATE }.minOfOrNull { it.sortOrder } ?: 1) - 1
+
     /** Задача, брошенная «+» в место [spot] списка. */
     fun atDrop(task: Item, spot: DropSpot, now: Long = System.currentTimeMillis()): Item {
         val placed = task.copy(

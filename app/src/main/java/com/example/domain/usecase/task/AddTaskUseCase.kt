@@ -29,7 +29,9 @@ class AddTaskUseCase @Inject constructor(private val repository: ITaskRepository
         tags: List<String> = emptyList(),
         projectId: String? = null,
         checklist: List<ChecklistItem> = emptyList(),
-        priority: Int = 0
+        priority: Int = 0,
+        // Место в общем порядке задач (NewTasks.topSortOrder — первой в списке)
+        sortOrder: Int = 0
     ) {
         val itemId = UUID.randomUUID().toString()
         val cleanTags = tags.map { it.trim() }.filter { it.isNotEmpty() }
@@ -51,6 +53,7 @@ class AddTaskUseCase @Inject constructor(private val repository: ITaskRepository
             dueDate = dueDate,
             projectId = projectId,
             priority = priority,
+            sortOrder = sortOrder,
             reminderTime = reminderTime?.takeIf { Reminders.hasDay(computedStartDate, startValue) }
         )
         repository.inTransaction {

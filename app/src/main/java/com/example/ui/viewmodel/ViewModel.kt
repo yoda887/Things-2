@@ -571,7 +571,9 @@ class ThingsViewModel @Inject constructor(
         } else {
             place
         }
-        updateTask(NewTasks.create(resolved, id).inRepeatingProject())
+        // Первой в своём списке (NewTasks.topSortOrder)
+        val top = NewTasks.topSortOrder(tasks.value.map { it.item })
+        updateTask(NewTasks.create(resolved, id).copy(sortOrder = top).inRepeatingProject())
         setInlineExpandedTaskId(id)
     }
 
@@ -659,8 +661,11 @@ class ThingsViewModel @Inject constructor(
         checklist: List<ChecklistItem> = emptyList(),
         priority: Int = 0
     ) {
+        // Первой в своём списке (NewTasks.topSortOrder): окно быстрого добавления — «+» на главном экране, поиск
+        val top = NewTasks.topSortOrder(tasks.value.map { it.item })
         viewModelScope.launch {
             taskUseCases.addTask(
+                sortOrder = top,
                 title = title,
                 notes = notes,
                 section = section,
