@@ -96,6 +96,7 @@ import com.example.data.model.Item
 import com.example.data.model.ItemWithChecklist
 import com.example.data.model.TaskSection
 import com.example.ui.components.ProjectProgressArc
+import com.example.ui.theme.ThingsAlpha
 import com.example.ui.components.AreaIconAnimated
 import com.example.ui.screens.home.subcomponents.SmartListRow
 import com.example.ui.theme.*
@@ -138,6 +139,15 @@ private sealed interface HomeTreeItem {
     ) : HomeTreeItem {
         override val key: String get() = HomeListKeys.project(project.id)
         override val contentType: String get() = "project"
+    }
+
+    /**
+     * «N пізніших проєктів» под проектами группы, как в Things: сколько у области (или без неё — [areaId] null)
+     * запланированных, отложенных и повторяющихся проектов, которых нет на главном экране
+     */
+    data class LaterProjects(val areaId: String?, val count: Int) : HomeTreeItem {
+        override val key: String get() = "later_" + (areaId ?: "none")
+        override val contentType: String get() = "later_projects"
     }
 
     /** Промежуток на месте пальца, пока тянут кнопку «+» (новый проект) */
@@ -205,6 +215,9 @@ fun ThingsHomePanel(
     onSettingsClick: () -> Unit,
     // Two-level Areas management additions
     areas: List<Area> = emptyList(),
+    // Более поздние проекты по областям (ключ null — без области): строка «N пізніших проєктів» под группой
+    laterProjectCounts: Map<String?, Int> = emptyMap(),
+    onLaterProjectsClick: () -> Unit = {},
     onAddAreaClick: () -> Unit = {},
     onDeleteArea: (Area) -> Unit = {},
     onDeleteProject: (Item) -> Unit = {},
@@ -398,12 +411,13 @@ fun ThingsHomePanel(
     Box(modifier = Modifier.fillMaxSize().background(bkgColor).clipToBounds()) {
 
         // Two-level Areas & Projects tree (flattened to maintain gesture detector lifecycle across areas)
-        val flattenedTree = remember(localProjects, localAreas, expandedStates.toMap(), dragDropState.draggedItemKey) {
+        val flattenedTree = remember(localProjects, localAreas, expandedStates.toMap(), dragDropState.draggedItemKey, laterProjectCounts) {
             val result = mutableListOf<HomeTreeItem>()
             val noAreaProjects = localProjects.filter { it.areaId == null }
             noAreaProjects.forEach { project ->
                 result.add(HomeTreeItem.ProjectItem(project, null))
             }
+            laterProjectCounts[null]?.takeIf { it > 0 }?.let { result.add(HomeTreeItem.LaterProjects(null, it)) }
             localAreas.forEachIndexed { index, area ->
                 val areaProjects = localProjects.filter { it.areaId == area.id }
                 val hasProjects = areaProjects.isNotEmpty()
@@ -418,11 +432,12 @@ fun ThingsHomePanel(
                         showTopDivider = showTopDivider
                     )
                 )
-                if (isExpanded && hasProjects) {
+                if (isExpanded) {
                     areaProjects.forEach { project ->
                         result.add(HomeTreeItem.ProjectItem(project, area.id))
                     }
-                } else if (!isExpanded && hasProjects) {
+                    laterProjectCounts[area.id]?.takeIf { it > 0 }?.let { result.add(HomeTreeItem.LaterProjects(area.id, it)) }
+                } else if (hasProjects) {
                     // Если область свёрнута, но один из её проектов сейчас удерживается/перетаскивается пользователем — сохраняем его в дереве списка
                     val draggedKey = dragDropState.draggedItemKey
                     areaProjects.filter { HomeListKeys.project(it.id) == draggedKey }.forEach { project ->
@@ -666,6 +681,33 @@ fun ThingsHomePanel(
                             .padding(vertical = ThingsSpacing.XS)
                             .background(ThingsTheme.colors.homeDropPlaceholder, ThingsTheme.shapes.chipShape)
                     )
+                }
+                is HomeTreeItem.LaterProjects -> {
+                    // Как в Things: бледный пунктирный круг и «N пізніших проєктів»; нажатие — «Усі проєкти»
+                    Row(
+                        modifier = Modifier
+                            .animateItem()
+                            .fillMaxWidth()
+                            .height(MaterialTheme.dimens.homeRowHeight)
+                            .clip(ThingsTheme.shapes.chipShape)
+                            .clickable { onLaterProjectsClick() }
+                            .padding(horizontal = MaterialTheme.dimens.homeRowInset),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Box(
+                            modifier = Modifier
+                                .size(MaterialTheme.dimens.homeRowIconSize)
+                                .graphicsLayer { alpha = ThingsAlpha.HALF },
+                            contentAlignment = Alignment.Center
+                        ) {
+                            ProjectProgressArc(completed = 0, total = 0, dashed = true, modifier = Modifier.size(MaterialTheme.dimens.homeRowIconSize))
+                        }
+                        Spacer(modifier = Modifier.width(MaterialTheme.dimens.homeRowIconTextGap))
+                        Text(
+                            text = pluralStringResource(R.plurals.home_later_projects, treeItem.count, treeItem.count),
+                            style = ThingsTheme.type.listItem.copy(color = textSecondaryColor)
+                        )
+                    }
                 }
                 is HomeTreeItem.ProjectItem -> {
                     ProjectItemRow(

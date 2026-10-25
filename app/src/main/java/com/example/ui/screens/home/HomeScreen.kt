@@ -522,6 +522,12 @@ fun ThingsHomeScreen(viewModel: ThingsViewModel = hiltViewModel()) {
                             // Только проекты, с которыми можно работать сейчас (HomeList): закрытые — в Logbook,
                             // отложенные и запланированные — в «Когда-нибудь» и «Предстоящих»
                             projects = projects.filter { HomeList.showsProject(it) },
+                            // Под каждой группой — «N пізніших проєктів» (запланированные, повторяющиеся, отложенные), как в Things
+                            laterProjectCounts = remember(projects, areas, allTasksRaw) {
+                                com.example.domain.lists.AllProjectsList.content(projects, areas, templates = allTasksRaw.map { it.item })
+                                    .groups.associate { it.area?.id to it.later.size }
+                            },
+                            onLaterProjectsClick = { navigateTo(ActiveScreen.ALL_PROJECTS) },
                             searchQuery = searchQuery,
                             textPrimaryColor = textPrimaryColor,
                             textSecondaryColor = textSecondaryColor,

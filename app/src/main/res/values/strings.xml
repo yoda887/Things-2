@@ -26,6 +26,7 @@
     <string name="special_logged_projects">Logged Projects</string>
     <plurals name="all_projects_show_later"><item quantity="one">Show %1$d later project</item><item quantity="other">Show %1$d later projects</item></plurals>
     <plurals name="all_projects_hide_later"><item quantity="one">Hide %1$d later project</item><item quantity="other">Hide %1$d later projects</item></plurals>
+    <plurals name="home_later_projects"><item quantity="one">%1$d later project</item><item quantity="other">%1$d later projects</item></plurals>
     <string name="all_projects_show_logged">Show logged projects</string>
     <string name="all_projects_hide_logged">Hide logged projects</string>
     <string name="batch_delete_projects_title">Delete Projects</string>

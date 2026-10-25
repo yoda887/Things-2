@@ -4,6 +4,7 @@
     <string name="special_logged_projects">Завершені проєкти</string>
     <plurals name="all_projects_show_later"><item quantity="one">Показати %1$d пізніший проєкт</item><item quantity="few">Показати %1$d пізніші проєкти</item><item quantity="many">Показати %1$d пізніших проєктів</item><item quantity="other">Показати %1$d пізнішого проєкту</item></plurals>
     <plurals name="all_projects_hide_later"><item quantity="one">Сховати %1$d пізніший проєкт</item><item quantity="few">Сховати %1$d пізніші проєкти</item><item quantity="many">Сховати %1$d пізніших проєктів</item><item quantity="other">Сховати %1$d пізнішого проєкту</item></plurals>
+    <plurals name="home_later_projects"><item quantity="one">%1$d пізніший проєкт</item><item quantity="few">%1$d пізніші проєкти</item><item quantity="many">%1$d пізніших проєктів</item><item quantity="other">%1$d пізнішого проєкту</item></plurals>
     <string name="all_projects_show_logged">Показати завершені проєкти</string>
     <string name="all_projects_hide_logged">Сховати завершені проєкти</string>
     <string name="batch_delete_projects_title">Видалити проєкти</string>
