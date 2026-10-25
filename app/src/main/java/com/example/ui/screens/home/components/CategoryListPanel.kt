@@ -1300,9 +1300,14 @@ fun ThingsCategoryListPanel(
                                         // сам шаблон дат не хранит и так не сохраняется
                                         val (templates, others) = event.items.partition { it.isRepeatTemplate }
                                         if (others.isNotEmpty()) onEvent(ThingsCategoryListEvent.ReorderTasks(others))
+                                        // Перенесён только тот шаблон, чей день не совпадает ни с одним днём, где он стоял: шаблон
+                                        // стоит в «Планах» на каждом дне своих повторов (один id), а в сохраняемые попадают и
+                                        // соседи, у которых сменились лишь место или порядок дня — для них предупреждения нет
+                                        val zone = java.time.ZoneId.systemDefault()
+                                        fun dayOf(millis: Long) = java.time.Instant.ofEpochMilli(millis).atZone(zone).toLocalDate()
                                         templates.firstOrNull { moved ->
-                                            val day = moved.startDate
-                                            day != null && day != state.displayTasks.firstOrNull { it.item.id == moved.id }?.item?.startDate
+                                            val day = moved.startDate ?: return@firstOrNull false
+                                            state.displayTasks.none { it.item.id == moved.id && it.item.startDate?.let { d -> dayOf(d) } == dayOf(day) }
                                         }?.let { moved ->
                                             val day = moved.startDate ?: return@let
                                             if (!requestRepeatMove(moved.id, day)) localTasksList = state.displayTasks
