@@ -262,6 +262,7 @@
     <string name="repeat_every_one_year">Щороку</string>
     <string name="repeat_next_short">наступна %1$s</string>
     <string name="repeat_pill">Повторюється %1$s</string>
+    <string name="repeat_pill_paused">Повтори призупинено</string>
     <string name="repeat_pill_tomorrow">Повторюється завтра</string>
     <string name="upcoming_repeating_section">Повторювані завдання</string>
     <string name="repeat_pill_today">Повторюється сьогодні</string>

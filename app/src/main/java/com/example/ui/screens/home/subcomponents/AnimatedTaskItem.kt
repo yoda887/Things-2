@@ -910,10 +910,12 @@ fun AnimatedTaskItem(
                         }
                         // Как в Things: «Повторюється завтра», «Повторюється 25 жовт.» (год — если не текущий)
                         val today = java.time.LocalDate.now()
-                        val nextPillText = when (nextDate) {
-                            null -> null
-                            today -> androidx.compose.ui.res.stringResource(com.example.R.string.repeat_pill_today)
-                            today.plusDays(1) -> androidx.compose.ui.res.stringResource(com.example.R.string.repeat_pill_tomorrow)
+                        val nextPillText = when {
+                            // Шаблон на паузе — как в Things: «Повторы приостановлены»
+                            !storedRule.isActive -> androidx.compose.ui.res.stringResource(com.example.R.string.repeat_pill_paused)
+                            nextDate == null -> null
+                            nextDate == today -> androidx.compose.ui.res.stringResource(com.example.R.string.repeat_pill_today)
+                            nextDate == today.plusDays(1) -> androidx.compose.ui.res.stringResource(com.example.R.string.repeat_pill_tomorrow)
                             else -> androidx.compose.ui.res.stringResource(
                                 com.example.R.string.repeat_pill_on,
                                 java.time.format.DateTimeFormatter.ofPattern(

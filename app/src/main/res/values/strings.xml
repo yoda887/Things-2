@@ -255,6 +255,7 @@
     <string name="repeat_every_one_year">Yearly</string>
     <string name="repeat_next_short">next %1$s</string>
     <string name="repeat_pill">Repeats %1$s</string>
+    <string name="repeat_pill_paused">Repetitions paused</string>
     <string name="repeat_pill_tomorrow">Repeats tomorrow</string>
     <string name="upcoming_repeating_section">Repeating To-Dos</string>
     <string name="repeat_pill_today">Repeats today</string>
