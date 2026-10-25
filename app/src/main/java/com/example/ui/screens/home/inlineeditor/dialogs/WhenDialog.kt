@@ -99,12 +99,6 @@ sealed class CalendarCell {
  * квадратной ячейке с большим запасом снизу, у строк с текстом запас меньше.
  */
 /**
- * Высота ячейки календаря. Квадратная ячейка давала эталонный шаг рядов, но числа у нас мельче
- * эталонных, поэтому шаг уменьшен в той же пропорции — иначе ряды выглядят разреженными.
- */
-private val CALENDAR_CELL_HEIGHT = 45.dp
-
-/**
  * Рябь при нажатии внутри диалога: стандартная на тёмной карточке почти не видна —
  * поднимаем её заметность.
  */
@@ -126,7 +120,6 @@ private object DialogRippleTheme : RippleTheme {
 /** Отступ внутри строк: попадает в область нажатия, поэтому по пальцу строки стали крупнее */
 private val ROW_VERTICAL_PADDING = 6.dp
 
-private val GAP_AFTER_TITLE = 18.dp
 private val GAP_AFTER_WEEKDAYS = 3.dp
 /** Недель в календаре окна: текущая и три следующие */
 private const val CALENDAR_WEEKS = 4
@@ -399,13 +392,13 @@ fun ThingsWhenDialog(
                     }
                 }
 
-                Spacer(modifier = Modifier.height(GAP_AFTER_TITLE))
+                Spacer(modifier = Modifier.height(MaterialTheme.dimens.dialogTitleGap))
 
                 // 1. Today Option
                 Row(
                     modifier = Modifier
                         .fillMaxWidth()
-                        .clip(ThingsTheme.shapes.rowShape)
+                        .clip(ThingsTheme.shapes.capsuleShape)
                         .clickable {
                             view.performHapticFeedback(HapticFeedbackConstants.CLOCK_TICK)
                             onStartDateChange(System.currentTimeMillis())
@@ -453,7 +446,7 @@ fun ThingsWhenDialog(
                 Row(
                     modifier = Modifier
                         .fillMaxWidth()
-                        .clip(ThingsTheme.shapes.rowShape)
+                        .clip(ThingsTheme.shapes.capsuleShape)
                         .clickable {
                             view.performHapticFeedback(HapticFeedbackConstants.CLOCK_TICK)
                             onStartDateChange(System.currentTimeMillis())
@@ -599,7 +592,7 @@ fun ThingsWhenDialog(
                             Box(
                                 modifier = Modifier
                                     .weight(1f)
-                                    .height(CALENDAR_CELL_HEIGHT),
+                                    .height(MaterialTheme.dimens.calendarCellHeight),
                                 contentAlignment = Alignment.Center
                             ) {
                                 when (cell) {
@@ -637,14 +630,7 @@ fun ThingsWhenDialog(
                                         Box(
                                             modifier = Modifier
                                                 .fillMaxSize()
-                                                .clip(ThingsTheme.shapes.smallShape)
-                                                .then(
-                                                    if (isSelected) {
-                                                        Modifier.border(ThingsStroke.FOCUS, ThingsTheme.colors.accent, ThingsTheme.shapes.smallShape)
-                                                    } else {
-                                                        Modifier
-                                                    }
-                                                )
+                                                .clip(CircleShape)
                                                 .clickable {
                                                     view.performHapticFeedback(HapticFeedbackConstants.CLOCK_TICK)
                                                     onStartDateChange(cell.timestamp)
@@ -655,6 +641,14 @@ fun ThingsWhenDialog(
                                                 },
                                             contentAlignment = Alignment.Center
                                         ) {
+                                            // Выбранный день — в кольце, как в окнах повтора
+                                            if (isSelected) {
+                                                Box(
+                                                    modifier = Modifier
+                                                        .size(MaterialTheme.dimens.calendarCellHeight - ThingsSpacing.XXS)
+                                                        .border(ThingsStroke.FOCUS, ThingsTheme.colors.accent, CircleShape)
+                                                )
+                                            }
                                             if (isSelected) {
                                                 Column(
                                                     horizontalAlignment = Alignment.CenterHorizontally,
@@ -733,7 +727,7 @@ fun ThingsWhenDialog(
                 Row(
                     modifier = Modifier
                         .fillMaxWidth()
-                        .clip(ThingsTheme.shapes.rowShape)
+                        .clip(ThingsTheme.shapes.capsuleShape)
                         .clickable {
                             view.performHapticFeedback(HapticFeedbackConstants.CLOCK_TICK)
                             pickingDate = true
@@ -774,7 +768,7 @@ fun ThingsWhenDialog(
                 Row(
                     modifier = Modifier
                         .fillMaxWidth()
-                        .clip(ThingsTheme.shapes.rowShape)
+                        .clip(ThingsTheme.shapes.capsuleShape)
                         .clickable {
                             view.performHapticFeedback(HapticFeedbackConstants.CLOCK_TICK)
                             onStartDateChange(null)
@@ -842,7 +836,7 @@ fun ThingsWhenDialog(
                     Row(
                         modifier = Modifier
                             .fillMaxWidth()
-                            .clip(ThingsTheme.shapes.rowShape)
+                            .clip(ThingsTheme.shapes.capsuleShape)
                             .clickable {
                                 view.performHapticFeedback(HapticFeedbackConstants.CLOCK_TICK)
                                 if (reminderSet) {
@@ -1055,7 +1049,7 @@ private fun ReminderWheelCard(
             contentAlignment = Alignment.Center
         ) {
             // Полоса выбранной строки — во всю ширину карточки
-            com.example.ui.components.WheelSelectionLines()
+            com.example.ui.components.WheelSelectionBand(cardColor)
             Row(horizontalArrangement = Arrangement.Center, modifier = Modifier.fillMaxWidth()) {
                 Wheel(hours, hourState, cardWidth * WHEEL_COLUMN_FRACTION)
                 Wheel(minutes, minuteState, cardWidth * WHEEL_COLUMN_FRACTION)
@@ -1074,7 +1068,7 @@ private fun ReminderWheelCard(
                     modifier = Modifier
                         .weight(1f)
                         .height(CLEAR_BUTTON_HEIGHT)
-                        .clip(ThingsTheme.shapes.rowShape)
+                        .clip(ThingsTheme.shapes.capsuleShape)
                         .background(buttonColor)
                         .clickable {
                             view.performHapticFeedback(HapticFeedbackConstants.VIRTUAL_KEY)

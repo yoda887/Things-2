@@ -300,7 +300,7 @@ fun ThingsMoveDialog(
                             .padding(
                                 start = MaterialTheme.dimens.dialogInnerContentPadding,
                                 end = MaterialTheme.dimens.dialogInnerContentPadding,
-                                bottom = ThingsSpacing.L // до поля поиска — как между строками списка
+                                bottom = MaterialTheme.dimens.dialogTitleGap // до поля поиска — как во всех окнах
                             ),
                         horizontalArrangement = Arrangement.SpaceBetween,
                         verticalAlignment = Alignment.CenterVertically
@@ -593,7 +593,7 @@ private fun MoveDialogRow(
         modifier = Modifier
             .fillMaxWidth()
             .padding(start = indentation)
-            .clip(ThingsTheme.shapes.rowShape)
+            .clip(ThingsTheme.shapes.capsuleShape)
             .background(if (isHighlighted) ThingsTheme.colors.accent else Color.Transparent)
             // Текущее место отмечено только галочкой, как в эталоне; нажатие подсвечивает строку
             .clickable(
@@ -731,7 +731,7 @@ private fun androidx.compose.foundation.lazy.LazyListScope.laterToggleItem(
                     if (isExpanded) R.plurals.all_projects_hide_later else R.plurals.all_projects_show_later,
                     later.size, later.size
                 ),
-                style = ThingsTheme.type.bodyMedium.copy(color = ThingsTheme.colors.overlayContentSecondary),
+                style = ThingsTheme.type.dialogBody.copy(color = ThingsTheme.colors.overlayContentSecondary),
                 modifier = Modifier
                     .fillMaxWidth()
                     .clickable(

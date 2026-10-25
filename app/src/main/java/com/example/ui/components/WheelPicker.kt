@@ -5,7 +5,6 @@ import androidx.compose.foundation.gestures.snapping.rememberSnapFlingBehavior
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Spacer
-import androidx.compose.material3.HorizontalDivider
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
@@ -30,7 +29,6 @@ import androidx.compose.ui.input.pointer.PointerEventPass
 import androidx.compose.ui.input.pointer.PointerEventType
 import androidx.compose.ui.input.pointer.pointerInput
 import kotlinx.coroutines.launch
-import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.compositeOver
 import androidx.compose.ui.draw.clip
@@ -97,17 +95,11 @@ internal fun rememberWheelState(initial: Int, size: Int, cyclic: Boolean): Wheel
 
 /**
  * Колонка барабана — цилиндр, как в Things: строки встают по местам, к краям сжимаются, бледнеют и
- * сходятся к середине; выбранная — [selectedStyle]; тик на каждом значении, проходящем через середину.
+ * сходятся к середине; выбранная — крупнее и жирнее (wheelSelected); тик на каждом значении, проходящем через середину.
  * Раскладка шире видимой части, чтобы сжатые крайние строки тоже были на месте.
  */
 @Composable
-internal fun Wheel(
-    items: List<String>,
-    state: WheelState,
-    width: Dp,
-    // Выбранное значение: у напоминания — крупнее и жирнее, у окна «Повторювати» — как остальные, как в Things
-    selectedStyle: TextStyle = ThingsTheme.type.wheelSelected
-) {
+internal fun Wheel(items: List<String>, state: WheelState, width: Dp) {
     val density = LocalDensity.current
     val rowPx = with(density) { WHEEL_ROW_HEIGHT.toPx() }
     val stepRad = Math.toRadians(WHEEL_ROW_ANGLE_DEG.toDouble()).toFloat()
@@ -176,7 +168,7 @@ internal fun Wheel(
                 ) {
                     Text(
                         text = items.getOrElse(index % state.size) { "" },
-                        style = (if (selected.value) selectedStyle else ThingsTheme.type.wheel)
+                        style = (if (selected.value) ThingsTheme.type.wheelSelected else ThingsTheme.type.wheel)
                             .copy(color = ThingsTheme.colors.overlayContent)
                     )
                 }
@@ -185,18 +177,8 @@ internal fun Wheel(
     }
 }
 
-/** Полоса выбранной строки барабана, как у напоминания в Things: две тонкие линии во всю ширину карточки */
-@Composable
-internal fun WheelSelectionLines(modifier: Modifier = Modifier) {
-    Column(modifier = modifier.fillMaxWidth()) {
-        HorizontalDivider(color = ThingsTheme.colors.overlayContentSecondary.copy(alpha = ThingsAlpha.MUTED), thickness = ThingsStroke.THIN)
-        Spacer(modifier = Modifier.height(WHEEL_ROW_HEIGHT))
-        HorizontalDivider(color = ThingsTheme.colors.overlayContentSecondary.copy(alpha = ThingsAlpha.MUTED), thickness = ThingsStroke.THIN)
-    }
-}
-
 /**
- * Полоса выбранной строки барабана, как в окне «Repeat» в Things: сплошная подложка-капсула светлее
+ * Полоса выбранной строки барабана — во всех барабанах (напоминание, повтор): сплошная подложка-капсула светлее
  * карточки [cardColor], без линий
  */
 @Composable

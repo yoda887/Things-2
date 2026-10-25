@@ -147,8 +147,6 @@ private const val REPEAT_MAX_INTERVAL = 30
 private const val REPEAT_MAX_COUNT = 100
 private const val REPEAT_MAX_DEADLINE_DAYS = 30
 
-/** Ячейка календаря «Следующая» / «Заканчивается» */
-private val REPEAT_CALENDAR_CELL_HEIGHT = 44.dp
 /** Календарь листается на 100 лет вперёд — для дальних дат ограничения по сути нет (недели строятся по мере прокрутки) */
 private const val REPEAT_CALENDAR_WEEKS = 52 * 100
 
@@ -386,7 +384,7 @@ private fun MainPage(
             DialogHeaderCircleButton(Icons.Default.Check, stringResource(R.string.tag_dialog_save), onSave, accent = true)
         }
     }
-    Spacer(Modifier.height(ThingsSpacing.L))
+    Spacer(Modifier.height(MaterialTheme.dimens.dialogTitleGap))
     Segmented(
         options = listOf(stringResource(R.string.repeat_mode_after), stringResource(R.string.repeat_mode_regular)),
         selected = if (draft.afterCompletion) 0 else 1,
@@ -407,14 +405,14 @@ private fun MainPage(
                         withStyle(SpanStyle(color = ThingsTheme.colors.accent)) { append(unitText) }
                         append(" "); append(stringResource(R.string.repeat_hint_after_after))
                     },
-                    style = ThingsTheme.type.bodyLarge.copy(color = ThingsTheme.colors.overlayContentSecondary)
+                    style = ThingsTheme.type.dialogBody.copy(color = ThingsTheme.colors.overlayContentSecondary)
                 )
                 Spacer(Modifier.height(ThingsSpacing.S))
                 IntervalWheels(draft.afterInterval, draft.afterUnit) { n, u -> draft.afterInterval = n; draft.afterUnit = u }
             } else {
                 Text(
                     text = stringResource(R.string.repeat_hint_regular),
-                    style = ThingsTheme.type.bodyLarge.copy(color = ThingsTheme.colors.overlayContentSecondary)
+                    style = ThingsTheme.type.dialogBody.copy(color = ThingsTheme.colors.overlayContentSecondary)
                 )
                 Spacer(Modifier.height(ThingsSpacing.M))
                 ValueRow(stringResource(R.string.repeat_every), unitText(draft.unit, draft.interval), flash == RepeatPage.EVERY) { onOpen(RepeatPage.EVERY) }
@@ -479,7 +477,7 @@ internal fun ColumnScope.SubPage(title: String, onBack: () -> Unit, content: @Co
         )
         Spacer(Modifier.weight(1f))
     }
-    Spacer(Modifier.height(ThingsSpacing.L))
+    Spacer(Modifier.height(MaterialTheme.dimens.dialogTitleGap))
     content()
 }
 
@@ -729,7 +727,7 @@ private fun EndsPage(draft: RepeatDraft, today: LocalDate) {
     when (draft.end) {
         RepeatEnd.NEVER -> Text(
             text = stringResource(R.string.repeat_forever),
-            style = ThingsTheme.type.bodyLarge.copy(color = ThingsTheme.colors.overlayContentSecondary),
+            style = ThingsTheme.type.dialogBody.copy(color = ThingsTheme.colors.overlayContentSecondary),
             textAlign = TextAlign.Center,
             modifier = Modifier.fillMaxWidth()
         )
@@ -757,7 +755,7 @@ private fun DeadlinePage(draft: RepeatDraft) {
             withStyle(SpanStyle(color = ThingsTheme.colors.accent)) { append(deadlineText(draft.deadlineDays)) }
             append(".")
         },
-        style = ThingsTheme.type.bodyLarge.copy(color = ThingsTheme.colors.overlayContentSecondary)
+        style = ThingsTheme.type.dialogBody.copy(color = ThingsTheme.colors.overlayContentSecondary)
     )
     if (draft.deadlineOn) {
         Spacer(Modifier.height(ThingsSpacing.S))
@@ -843,7 +841,7 @@ internal fun RepeatCalendar(selected: LocalDate?, from: LocalDate, modifier: Mod
                 for (i in 0 until 7) {
                     val date = firstMonday.plusWeeks(week.toLong()).plusDays(i.toLong())
                     if (date.isBefore(from)) {
-                        Spacer(Modifier.weight(1f).height(REPEAT_CALENDAR_CELL_HEIGHT))
+                        Spacer(Modifier.weight(1f).height(MaterialTheme.dimens.calendarCellHeight))
                         continue
                     }
                     val isSelected = date == selected
@@ -854,7 +852,7 @@ internal fun RepeatCalendar(selected: LocalDate?, from: LocalDate, modifier: Mod
                     Box(
                         modifier = Modifier
                             .weight(1f)
-                            .height(REPEAT_CALENDAR_CELL_HEIGHT)
+                            .height(MaterialTheme.dimens.calendarCellHeight)
                             .drawBehind {
                                 val w = ThingsStroke.THIN.toPx()
                                 if (lineTop) drawLine(lineColor, Offset(0f, w / 2), Offset(size.width, w / 2), w)
@@ -871,7 +869,7 @@ internal fun RepeatCalendar(selected: LocalDate?, from: LocalDate, modifier: Mod
                         if (isSelected) {
                             Box(
                                 modifier = Modifier
-                                    .size(REPEAT_CALENDAR_CELL_HEIGHT - ThingsSpacing.XXS)
+                                    .size(MaterialTheme.dimens.calendarCellHeight - ThingsSpacing.XXS)
                                     .border(ThingsStroke.FOCUS, ThingsTheme.colors.accent, CircleShape)
                             )
                         }
@@ -989,7 +987,7 @@ private fun Segmented(options: List<String>, selected: Int, onSelect: (Int) -> U
                     .padding(vertical = ThingsSpacing.S),
                 contentAlignment = Alignment.Center
             ) {
-                Text(label, style = ThingsTheme.type.bodyLarge.copy(color = ThingsTheme.colors.overlayContent))
+                Text(label, style = ThingsTheme.type.dialogSegment.copy(color = ThingsTheme.colors.overlayContent))
             }
         }
     }
@@ -1122,7 +1120,7 @@ private fun SetIconRow(icon: androidx.compose.ui.graphics.vector.ImageVector, te
         Spacer(Modifier.width(ThingsSpacing.S))
         Text(
             text = text,
-            style = ThingsTheme.type.bodyLarge.copy(color = ThingsTheme.colors.accent),
+            style = ThingsTheme.type.dialogRowNote.copy(color = ThingsTheme.colors.accent),
             modifier = Modifier.weight(1f)
         )
         Spacer(Modifier.width(ThingsSpacing.S))
@@ -1191,13 +1189,13 @@ private fun WheelBox(columns: List<Triple<List<String>, WheelState, Dp>>, header
     }
 }
 
-/** Колонки барабанов над полосой выбора; выбранное значение — тем же начертанием, что и остальные */
+/** Колонки барабанов над полосой выбора */
 @Composable
 private fun WheelColumns(columns: List<Triple<List<String>, WheelState, Dp>>, cardColor: Color) {
     Box(modifier = Modifier.fillMaxWidth().height(WHEEL_HEIGHT), contentAlignment = Alignment.Center) {
         com.example.ui.components.WheelSelectionBand(cardColor)
         Row(horizontalArrangement = Arrangement.Center, modifier = Modifier.fillMaxWidth()) {
-            columns.forEach { (items, state, width) -> Wheel(items, state, width, selectedStyle = ThingsTheme.type.wheel) }
+            columns.forEach { (items, state, width) -> Wheel(items, state, width) }
         }
     }
 }

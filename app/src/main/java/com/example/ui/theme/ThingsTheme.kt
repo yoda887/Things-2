@@ -275,8 +275,12 @@ data class ThingsTypography(
     val dialogRowSelected: TextStyle,
     /** Строка-действие диалога цветом accent: «New Tag», «Manage Tags» (19 sp Medium) */
     val dialogRowAction: TextStyle,
-    /** Пояснительный текст диалога */
+    /** Пояснительный текст диалога (16 sp) */
     val dialogBody: TextStyle,
+    /** Подпись сегмента переключателя вариантов в окне: «Після виконання / Регулярно» (16 sp) */
+    val dialogSegment: TextStyle,
+    /** Фраза-значение строки окна цветом accent: поставленные срок и напоминание повтора (17 sp) */
+    val dialogRowNote: TextStyle,
     /** Кнопка действия в диалоге: Cancel, Delete, Clear */
     val dialogButton: TextStyle,
     /** Подпись «Перемістити» на плавающей панели действий. */
@@ -358,7 +362,9 @@ internal fun thingsTypography(scale: Float = 1f) = ThingsTypography(
     dialogRow = TextStyle(fontFamily = FontFamily.Default, fontWeight = FontWeight.Normal, fontSize = (19 * scale).sp),
     dialogRowSelected = TextStyle(fontFamily = FontFamily.Default, fontWeight = FontWeight.SemiBold, fontSize = (19 * scale).sp),
     dialogRowAction = TextStyle(fontFamily = FontFamily.Default, fontWeight = FontWeight.Medium, fontSize = (19 * scale).sp),
-    dialogBody = TextStyle(fontFamily = FontFamily.Default, fontWeight = FontWeight.Normal, fontSize = (15 * scale).sp),
+    dialogBody = TextStyle(fontFamily = FontFamily.Default, fontWeight = FontWeight.Normal, fontSize = (16 * scale).sp),
+    dialogSegment = TextStyle(fontFamily = FontFamily.Default, fontWeight = FontWeight.Normal, fontSize = (16 * scale).sp),
+    dialogRowNote = TextStyle(fontFamily = FontFamily.Default, fontWeight = FontWeight.Normal, fontSize = (17 * scale).sp),
     dialogButton = TextStyle(fontFamily = FontFamily.Default, fontWeight = FontWeight.Normal, fontSize = (18 * scale).sp),
     dialogButtonStrong = TextStyle(fontFamily = FontFamily.Default, fontWeight = FontWeight.Bold, fontSize = (18 * scale).sp),
     wheel = TextStyle(fontFamily = FontFamily.Default, fontWeight = FontWeight.Normal, fontSize = (23 * scale).sp),

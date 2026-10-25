@@ -16,6 +16,8 @@ import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
+import com.example.ui.theme.dimens
+import androidx.compose.material3.MaterialTheme
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.style.TextAlign
@@ -63,7 +65,7 @@ fun ThingsConfirmDialog(
                     style = ThingsTheme.type.dialogTitle,
                     textAlign = TextAlign.Center
                 )
-                Spacer(modifier = Modifier.height(ThingsSpacing.M))
+                Spacer(modifier = Modifier.height(MaterialTheme.dimens.dialogTitleGap))
                 Text(
                     text = message,
                     color = ThingsTheme.colors.textSecondary,
@@ -132,7 +134,7 @@ fun ThingsChoiceDialog(
                     style = ThingsTheme.type.dialogTitle,
                     textAlign = TextAlign.Center
                 )
-                Spacer(modifier = Modifier.height(ThingsSpacing.M))
+                Spacer(modifier = Modifier.height(MaterialTheme.dimens.dialogTitleGap))
                 Text(
                     text = message,
                     color = ThingsTheme.colors.textSecondary,

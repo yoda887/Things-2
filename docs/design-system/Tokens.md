@@ -109,10 +109,12 @@
 | `button` | 17.0 sp | SemiBold (600) | Основные кнопки действий и подтверждения. |
 | `bodyLarge` | 16.0 sp | Normal (400) | Поля ввода, основной текст экранов и листов. |
 | `headline` | 16.0 sp | SemiBold (600) | Акцентный подзаголовок, выделенный пункт. |
-| `headlineStrong` | 16.0 sp | Bold (700) | Название дня и месяца в «Планах». |
+| `headlineStrong` | 16.0 sp | Bold (700) | Название дня и месяца в «Планах»; название месяца поверх календаря, пока его листают (окна повтора). |
 | `taskSubtitle` | 15.0 sp | Normal (400) | Подпись под задачей (проект, дата), вторичные пояснения. |
 | `taskSubtitleStrong` | 15.0 sp | SemiBold (600) | Выделенная подпись под задачей: срок. |
-| `dialogBody` | 15.0 sp | Normal (400) | Пояснительный текст модальных окон и диалогов. |
+| `dialogBody` | 16.0 sp | Normal (400) | Пояснительный текст модальных окон и диалогов: подтверждение, пояснения окна «Повторювати», подсказка «Перемістити». |
+| `dialogSegment` | 16.0 sp | Normal (400) | Подпись сегмента переключателя вариантов в окне: «Після виконання / Регулярно», «Ніколи / Дата / Після». |
+| `dialogRowNote` | 17.0 sp | Normal (400) | Фраза-значение строки окна цветом accent: поставленные срок и напоминание повтора. |
 | `subhead` | 15.0 sp | Normal (400) | Вспомогательный подзаголовок. |
 | `subheadMedium` | 15.0 sp | Medium (500) | Вспомогательный подзаголовок средней жирности. |
 | `bodyMedium` | 14.0 sp | Normal (400) | Вспомогательный текст, описание проекта, теги. |
@@ -141,13 +143,13 @@
 | `radius-tiny` | `2.0 dp` | `ThingsTheme.shapes.tinyShape` | Ручка перетаскивания модальной шторки (drag handle). |
 | `radius-badge` | `4.0 dp` | `ThingsTheme.shapes.badgeShape` | Бейдж даты, метки дедлайна. |
 | `radius-small` | `6.0 dp` | `ThingsTheme.shapes.smallShape` | Мелкий чип, иконка действия. |
-| `radius-task` | `8.0 dp` | `ThingsTheme.shapes.rowShape` | Строка списка, строка в диалоге, раскрытый редактор задачи. |
+| `radius-task` | `8.0 dp` | `ThingsTheme.shapes.rowShape` | Строка списка, раскрытый редактор задачи. |
 | `radius-chip` | `10.0 dp` | `ThingsTheme.shapes.chipShape` | Чип, плашка места вставки при drag-and-drop, подложка подзаголовка. |
 | `radius-tag-filter` | `12.0 dp` | `ThingsTheme.shapes.tagFilterShape` | Фильтр тегов вверху экрана, карточка деталей. |
 | `radius-card` | `14.0 dp` | `ThingsTheme.shapes.cardShape` | Карточка настроек, карточка деталей проекта. |
 | `radius-menu` | `16.0 dp` | `ThingsTheme.shapes.menuShape` | Всплывающее меню-карточка: меню «+» на главном экране. |
-| `radius-button` | `18.0 dp` | `ThingsTheme.shapes.buttonShape` | Кнопки действий (Save в шторке задачи). |
-| `radius-capsule` | `22.0 dp` | `ThingsTheme.shapes.capsuleShape` | Капсула поиска (Quick Find), пилюля ввода, плавающее поле. |
+| `radius-button` | `18.0 dp` | `ThingsTheme.shapes.buttonShape` | Кнопки действий на экранах (Save в шторке задачи); кнопки в окнах-диалогах — капсула (radius-capsule). |
+| `radius-capsule` | `22.0 dp` | `ThingsTheme.shapes.capsuleShape` | Капсула поиска (Quick Find), пилюля ввода, плавающее поле; в окнах-диалогах — подсветка строки (нажатие, возврат со вложенной страницы, мышь), кнопки, поля, переключатель вариантов и его сегменты, полоса выбора барабана. |
 | `radius-toolbar` | `25.0 dp` | `ThingsTheme.shapes.toolbarShape` | Плавающая панель действий внизу экрана — капсула высотой 50 dp. |
 | `radius-floating-card` | `30.0 dp` | `ThingsTheme.shapes.floatingCardShape` | Плавающие карточки: Quick Add, карточка быстрого поиска. |
 | `radius-dialog` | `32.0 dp` | `ThingsTheme.shapes.dialogShape` | Модальные диалоги: When, Move, диалог тегов, подтверждение удаления. |
@@ -183,6 +185,7 @@
 | `space-fab-edge` | `16 dp` | От кнопки «+» до правого и нижнего края (слот Scaffold, Material 3). |
 | `space-toolbar-bottom` | `24 dp` | От плавающей панели действий до низа экрана. |
 | `space-dialog-inner` | `16 dp` | Внутренние поля диалогов. |
+| `space-dialog-title` | `18 dp` | От заголовка окна-диалога до содержимого — во всех окнах (dialogTitleGap). |
 | `space-list-bottom` | `72 dp` | Распорка в конце списка, чтобы последняя задача не пряталась под «+». |
 
 ## Размеры элементов (dp)
@@ -199,7 +202,11 @@
 | `size-search-field` | `44 dp` | Высота поля поиска. |
 | `size-project-arc` | `20 dp` | Иконка-прогресс проекта в строке; в шапке экрана проекта — 26 dp. |
 | `size-swipe-icon` | `22 dp` | Иконка на фоне свайпа. |
-| `size-dialog-width` | `320 dp` | Ширина диалога. |
+| `size-dialog-width` | `336 dp` | Ширина окна-диалога: «Когда», «Повторювати». |
+| `size-dialog-header-button` | `36 dp` | Круглые кнопки ✕ ✓ ‹ в шапке окна (dialogHeaderButtonSize); нажатые и под мышью светлеют. |
+| `size-wheel-row` | `40 dp` | Строка барабана; выбранная — на сплошной полосе-капсуле светлее карточки, значение — `wheelSelected`. |
+| `size-wheel-height` | `220 dp` | Видимая высота барабана. Строка «подпись — значение» («Кожні … тиждень», `dialogRow` 19 sp) — вверху его карточки. |
+| `size-calendar-cell` | `45 dp` | Ячейка календаря окон «Когда», «Следующая», «Заканчивается» (calendarCellHeight): числа — `dialogRow` 19 sp, подпись месяца у первого числа — `bodySmall` 13 sp, дни недели — `subhead` 15 sp; выбранный день — в кольце accent. |
 
 ## Тени (shadowElevation)
 

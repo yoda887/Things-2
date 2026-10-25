@@ -152,10 +152,12 @@ object DesignSystemDocGenerator {
         TypeToken("button", { it.button }, "Основные кнопки действий и подтверждения.", "Done"),
         TypeToken("bodyLarge", { it.bodyLarge }, "Поля ввода, основной текст экранов и листов.", "Quick Add"),
         TypeToken("headline", { it.headline }, "Акцентный подзаголовок, выделенный пункт.", "Headline"),
-        TypeToken("headlineStrong", { it.headlineStrong }, "Название дня и месяца в «Планах».", "п’ятниця"),
+        TypeToken("headlineStrong", { it.headlineStrong }, "Название дня и месяца в «Планах»; название месяца поверх календаря, пока его листают (окна повтора).", "п’ятниця"),
         TypeToken("taskSubtitle", { it.taskSubtitle }, "Подпись под задачей (проект, дата), вторичные пояснения.", "Things 2"),
         TypeToken("taskSubtitleStrong", { it.taskSubtitleStrong }, "Выделенная подпись под задачей: срок.", "через 2 дні"),
-        TypeToken("dialogBody", { it.dialogBody }, "Пояснительный текст модальных окон и диалогов.", "Are you sure?"),
+        TypeToken("dialogBody", { it.dialogBody }, "Пояснительный текст модальных окон и диалогов: подтверждение, пояснения окна «Повторювати», подсказка «Перемістити».", "Are you sure?"),
+        TypeToken("dialogSegment", { it.dialogSegment }, "Подпись сегмента переключателя вариантов в окне: «Після виконання / Регулярно», «Ніколи / Дата / Після».", "Регулярно"),
+        TypeToken("dialogRowNote", { it.dialogRowNote }, "Фраза-значение строки окна цветом accent: поставленные срок и напоминание повтора.", "Кожна копія матиме термін"),
         TypeToken("subhead", { it.subhead }, "Вспомогательный подзаголовок.", "Subhead"),
         TypeToken("subheadMedium", { it.subheadMedium }, "Вспомогательный подзаголовок средней жирности.", "Subhead Medium"),
         TypeToken("bodyMedium", { it.bodyMedium }, "Вспомогательный текст, описание проекта, теги.", "Description text"),
@@ -180,13 +182,13 @@ object DesignSystemDocGenerator {
         ShapeToken("radius-tiny", "tiny", { it.tiny }, "tinyShape", "Ручка перетаскивания модальной шторки (drag handle)."),
         ShapeToken("radius-badge", "badge", { it.badge }, "badgeShape", "Бейдж даты, метки дедлайна."),
         ShapeToken("radius-small", "small", { it.small }, "smallShape", "Мелкий чип, иконка действия."),
-        ShapeToken("radius-task", "row", { it.row }, "rowShape", "Строка списка, строка в диалоге, раскрытый редактор задачи."),
+        ShapeToken("radius-task", "row", { it.row }, "rowShape", "Строка списка, раскрытый редактор задачи."),
         ShapeToken("radius-chip", "chip", { it.chip }, "chipShape", "Чип, плашка места вставки при drag-and-drop, подложка подзаголовка."),
         ShapeToken("radius-tag-filter", "tagFilter", { it.tagFilter }, "tagFilterShape", "Фильтр тегов вверху экрана, карточка деталей."),
         ShapeToken("radius-card", "card", { it.card }, "cardShape", "Карточка настроек, карточка деталей проекта."),
         ShapeToken("radius-menu", "menu", { it.menu }, "menuShape", "Всплывающее меню-карточка: меню «+» на главном экране."),
-        ShapeToken("radius-button", "button", { it.button }, "buttonShape", "Кнопки действий (Save в шторке задачи)."),
-        ShapeToken("radius-capsule", "capsule", { it.capsule }, "capsuleShape", "Капсула поиска (Quick Find), пилюля ввода, плавающее поле."),
+        ShapeToken("radius-button", "button", { it.button }, "buttonShape", "Кнопки действий на экранах (Save в шторке задачи); кнопки в окнах-диалогах — капсула (radius-capsule)."),
+        ShapeToken("radius-capsule", "capsule", { it.capsule }, "capsuleShape", "Капсула поиска (Quick Find), пилюля ввода, плавающее поле; в окнах-диалогах — подсветка строки (нажатие, возврат со вложенной страницы, мышь), кнопки, поля, переключатель вариантов и его сегменты, полоса выбора барабана."),
         ShapeToken("radius-toolbar", "toolbar", { it.toolbar }, "toolbarShape", "Плавающая панель действий внизу экрана — капсула высотой 50 dp."),
         ShapeToken("radius-floating-card", "floatingCard", { it.floatingCard }, "floatingCardShape", "Плавающие карточки: Quick Add, карточка быстрого поиска."),
         ShapeToken("radius-dialog", "dialog", { it.dialog }, "dialogShape", "Модальные диалоги: When, Move, диалог тегов, подтверждение удаления.")
@@ -485,6 +487,7 @@ object DesignSystemDocGenerator {
       { "name": "space-fab-edge", "value": "16px", "usage": "От кнопки «+» до правого и нижнего края (слот Scaffold, Material 3)." },
       { "name": "space-toolbar-bottom", "value": "24px", "usage": "От плавающей панели действий до низа экрана." },
       { "name": "space-dialog-inner", "value": "16px", "usage": "Внутренние поля диалогов." },
+      { "name": "space-dialog-title", "value": "18px", "usage": "От заголовка окна-диалога до содержимого — во всех окнах (dialogTitleGap)." },
       { "name": "space-list-bottom", "value": "72px", "usage": "Распорка в конце списка, чтобы последняя задача не пряталась под «+»." }
     ]
   },
@@ -501,7 +504,11 @@ object DesignSystemDocGenerator {
       { "name": "size-search-field", "value": "44px", "usage": "Высота поля поиска." },
       { "name": "size-project-arc", "value": "20px", "usage": "Иконка-прогресс проекта в строке." },
       { "name": "size-swipe-icon", "value": "22px", "usage": "Иконка на фоне свайпа." },
-      { "name": "size-dialog-width", "value": "320px", "usage": "Ширина диалога." }
+      { "name": "size-dialog-width", "value": "336px", "usage": "Ширина окна-диалога: «Когда», «Повторювати»." },
+      { "name": "size-dialog-header-button", "value": "36px", "usage": "Круглые кнопки ✕ ✓ ‹ в шапке окна (dialogHeaderButtonSize); нажатые и под мышью светлеют." },
+      { "name": "size-wheel-row", "value": "40px", "usage": "Строка барабана; выбранная — на сплошной полосе-капсуле светлее карточки, значение — wheelSelected." },
+      { "name": "size-wheel-height", "value": "220px", "usage": "Видимая высота барабана. Строка «подпись — значение» («Кожні … тиждень», dialogRow 19 sp) — вверху его карточки." },
+      { "name": "size-calendar-cell", "value": "45px", "usage": "Ячейка календаря окон «Когда», «Следующая», «Заканчивается» (calendarCellHeight): числа — dialogRow 19 sp, подпись месяца у первого числа — bodySmall 13 sp, дни недели — subhead 15 sp; выбранный день — в кольце accent." }
     ]
   },
   "elevation": {
@@ -548,6 +555,7 @@ object DesignSystemDocGenerator {
 | `space-fab-edge` | `16 dp` | От кнопки «+» до правого и нижнего края (слот Scaffold, Material 3). |
 | `space-toolbar-bottom` | `24 dp` | От плавающей панели действий до низа экрана. |
 | `space-dialog-inner` | `16 dp` | Внутренние поля диалогов. |
+| `space-dialog-title` | `18 dp` | От заголовка окна-диалога до содержимого — во всех окнах (dialogTitleGap). |
 | `space-list-bottom` | `72 dp` | Распорка в конце списка, чтобы последняя задача не пряталась под «+». |
 
 ## Размеры элементов (dp)
@@ -564,7 +572,11 @@ object DesignSystemDocGenerator {
 | `size-search-field` | `44 dp` | Высота поля поиска. |
 | `size-project-arc` | `20 dp` | Иконка-прогресс проекта в строке; в шапке экрана проекта — 26 dp. |
 | `size-swipe-icon` | `22 dp` | Иконка на фоне свайпа. |
-| `size-dialog-width` | `320 dp` | Ширина диалога. |
+| `size-dialog-width` | `336 dp` | Ширина окна-диалога: «Когда», «Повторювати». |
+| `size-dialog-header-button` | `36 dp` | Круглые кнопки ✕ ✓ ‹ в шапке окна (dialogHeaderButtonSize); нажатые и под мышью светлеют. |
+| `size-wheel-row` | `40 dp` | Строка барабана; выбранная — на сплошной полосе-капсуле светлее карточки, значение — `wheelSelected`. |
+| `size-wheel-height` | `220 dp` | Видимая высота барабана. Строка «подпись — значение» («Кожні … тиждень», `dialogRow` 19 sp) — вверху его карточки. |
+| `size-calendar-cell` | `45 dp` | Ячейка календаря окон «Когда», «Следующая», «Заканчивается» (calendarCellHeight): числа — `dialogRow` 19 sp, подпись месяца у первого числа — `bodySmall` 13 sp, дни недели — `subhead` 15 sp; выбранный день — в кольце accent. |
 
 ## Тени (shadowElevation)
 

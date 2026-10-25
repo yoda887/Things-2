@@ -503,7 +503,8 @@ fun ThingsTagDialog(
                         // Header
                         val hasChanges = selectedTags != activeTags.toSet()
                         Row(
-                            modifier = Modifier.fillMaxWidth(),
+                            // До содержимого — dialogTitleGap, как во всех окнах (колонка сама даёт L)
+                            modifier = Modifier.fillMaxWidth().padding(bottom = MaterialTheme.dimens.dialogTitleGap - ThingsSpacing.L),
                             horizontalArrangement = Arrangement.SpaceBetween,
                             verticalAlignment = Alignment.CenterVertically
                         ) {
@@ -553,7 +554,7 @@ fun ThingsTagDialog(
                                     modifier = Modifier
                                         .fillMaxWidth()
                                         .animateItem()
-                                        .clip(ThingsTheme.shapes.rowShape)
+                                        .clip(ThingsTheme.shapes.capsuleShape)
                                         .clickable {
                                             selectedTags = if (isSelected) {
                                                 selectedTags - tag.title
@@ -609,7 +610,7 @@ fun ThingsTagDialog(
                                     containerColor = DarkButtonBgColor,
                                     contentColor = ThingsTheme.colors.overlayContent
                                 ),
-                                shape = ThingsTheme.shapes.rowShape,
+                                shape = ThingsTheme.shapes.capsuleShape,
                                 modifier = Modifier.weight(1f),
                                 contentPadding = PaddingValues(vertical = TagDialogButtonVerticalPadding)
                             ) {
@@ -630,7 +631,7 @@ fun ThingsTagDialog(
                                     containerColor = DarkButtonBgColor,
                                     contentColor = ThingsTheme.colors.overlayContent
                                 ),
-                                shape = ThingsTheme.shapes.rowShape,
+                                shape = ThingsTheme.shapes.capsuleShape,
                                 modifier = Modifier.weight(1f),
                                 contentPadding = PaddingValues(vertical = TagDialogButtonVerticalPadding)
                             ) {
@@ -673,7 +674,8 @@ fun ThingsTagDialog(
                         // Header
                         val isSaveEnabled = newTagName.trim().isNotEmpty()
                         Row(
-                            modifier = Modifier.fillMaxWidth(),
+                            // До содержимого — dialogTitleGap, как во всех окнах (колонка сама даёт L)
+                            modifier = Modifier.fillMaxWidth().padding(bottom = MaterialTheme.dimens.dialogTitleGap - ThingsSpacing.L),
                             horizontalArrangement = Arrangement.SpaceBetween,
                             verticalAlignment = Alignment.CenterVertically
                         ) {
@@ -728,7 +730,7 @@ fun ThingsTagDialog(
                         Row(
                             modifier = Modifier
                                 .fillMaxWidth()
-                                .clip(ThingsTheme.shapes.rowShape)
+                                .clip(ThingsTheme.shapes.capsuleShape)
                                 .clickable {
                                     dialogView.hideSoftKeyboardNow()
                                     groupSelectionTargetScreen = DialogScreen.CREATE
@@ -786,7 +788,8 @@ fun ThingsTagDialog(
                     ) {
                         // Header
                         Row(
-                            modifier = Modifier.fillMaxWidth(),
+                            // До содержимого — dialogTitleGap, как во всех окнах (колонка сама даёт L)
+                            modifier = Modifier.fillMaxWidth().padding(bottom = MaterialTheme.dimens.dialogTitleGap - ThingsSpacing.L),
                             horizontalArrangement = Arrangement.SpaceBetween,
                             verticalAlignment = Alignment.CenterVertically
                         ) {
@@ -835,7 +838,7 @@ fun ThingsTagDialog(
                                 Row(
                                     modifier = Modifier
                                         .fillMaxWidth()
-                                        .clip(ThingsTheme.shapes.rowShape)
+                                        .clip(ThingsTheme.shapes.capsuleShape)
                                         .clickable {
                                             selectedGroup = if (option.id == "No Tag") null else option
                                             currentScreen = groupSelectionTargetScreen
@@ -888,7 +891,8 @@ fun ThingsTagDialog(
                     ) {
                         // Header
                         Row(
-                            modifier = Modifier.fillMaxWidth(),
+                            // До содержимого — dialogTitleGap, как во всех окнах (колонка сама даёт L)
+                            modifier = Modifier.fillMaxWidth().padding(bottom = MaterialTheme.dimens.dialogTitleGap - ThingsSpacing.L),
                             horizontalArrangement = Arrangement.SpaceBetween,
                             verticalAlignment = Alignment.CenterVertically
                         ) {
@@ -946,7 +950,7 @@ fun ThingsTagDialog(
                                     val isLifted = isDragged || lift > 0f
                                     // Фон непрозрачный: поднятая строка проходит над соседними, и они не должны просвечивать
                                     val rowBg = if (isLifted) DarkButtonBgColor else Color.Transparent
-                                    val liftShape = ThingsTheme.shapes.rowShape
+                                    val liftShape = ThingsTheme.shapes.capsuleShape
 
                                     Row(
                                         modifier = Modifier
@@ -970,7 +974,7 @@ fun ThingsTagDialog(
                                                 onRowsChange = { localManageTags = it },
                                                 onDragEnd = { saveManageOrder() }
                                             )
-                                            .background(rowBg, ThingsTheme.shapes.rowShape)
+                                            .background(rowBg, ThingsTheme.shapes.capsuleShape)
                                             .padding(
                                                 start = if (isChild) RowPaddingStartChild else RowPaddingStartNormal,
                                                 end = RowPaddingEnd,
@@ -1055,7 +1059,7 @@ fun ThingsTagDialog(
                                 containerColor = DarkButtonBgColor,
                                 contentColor = ThingsTheme.colors.overlayContent
                             ),
-                            shape = ThingsTheme.shapes.rowShape,
+                            shape = ThingsTheme.shapes.capsuleShape,
                             modifier = Modifier.fillMaxWidth(),
                             contentPadding = PaddingValues(vertical = TagDialogButtonVerticalPadding)
                         ) {
@@ -1094,7 +1098,8 @@ fun ThingsTagDialog(
                         // Header
                         val isSaveEnabled = editTagName.trim().isNotEmpty()
                         Row(
-                            modifier = Modifier.fillMaxWidth(),
+                            // До содержимого — dialogTitleGap, как во всех окнах (колонка сама даёт L)
+                            modifier = Modifier.fillMaxWidth().padding(bottom = MaterialTheme.dimens.dialogTitleGap - ThingsSpacing.L),
                             horizontalArrangement = Arrangement.SpaceBetween,
                             verticalAlignment = Alignment.CenterVertically
                         ) {
@@ -1149,7 +1154,7 @@ fun ThingsTagDialog(
                         Row(
                             modifier = Modifier
                                 .fillMaxWidth()
-                                .clip(ThingsTheme.shapes.rowShape)
+                                .clip(ThingsTheme.shapes.capsuleShape)
                                 .clickable {
                                     dialogView.hideSoftKeyboardNow()
                                     groupSelectionTargetScreen = DialogScreen.EDIT
@@ -1208,7 +1213,7 @@ private fun TagNameField(
         modifier = Modifier
             .fillMaxWidth()
             .height(MaterialTheme.dimens.dialogFieldHeight)
-            .clip(ThingsTheme.shapes.rowShape)
+            .clip(ThingsTheme.shapes.capsuleShape)
             .background(DarkButtonBgColor)
             .padding(horizontal = ThingsSpacing.M)
     ) {
