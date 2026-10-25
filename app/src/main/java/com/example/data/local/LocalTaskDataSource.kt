@@ -66,7 +66,8 @@ class LocalTaskDataSource(private val taskDao: TaskDao) {
      * @param item Объект для вставки/обновления
      */
     suspend fun insertItem(item: Item) {
-        taskDao.insertItem(item)
+        // Перенесённое на другой день встаёт в нём первым (порядок «Планов», UpcomingOrder)
+        taskDao.insertItem(com.example.domain.lists.UpcomingOrder.rescheduled(taskDao.getItemById(item.id), item))
     }
 
     /**
@@ -74,7 +75,10 @@ class LocalTaskDataSource(private val taskDao: TaskDao) {
      * @param items Список объектов для вставки
      */
     suspend fun insertItems(items: List<Item>) {
-        taskDao.insertItems(items)
+        if (items.isEmpty()) return
+        // Перенесённые на другой день встают в нём первыми (порядок «Планов», UpcomingOrder)
+        val old = items.map { it.id }.chunked(SQL_IDS_CHUNK).flatMap { taskDao.getItemsByIds(it) }.associateBy { it.id }
+        taskDao.insertItems(items.map { com.example.domain.lists.UpcomingOrder.rescheduled(old[it.id], it) })
     }
 
     /**
@@ -284,3 +288,6 @@ class LocalTaskDataSource(private val taskDao: TaskDao) {
         return taskDao.getItemByGoogleTaskId(googleTaskId)
     }
 }
+
+/** Сколько id за раз в «WHERE id IN (…)» — у SQLite ограничено число параметров запроса */
+private const val SQL_IDS_CHUNK = 500

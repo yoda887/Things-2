@@ -42,6 +42,8 @@ fun Modifier.taskDragAndDrop(
     onExitSelectionMode: () -> Unit = {},
     // Дневная часть «Сегодня» сгруппирована по проектам и областям (настройка)
     todayGroupedDay: Boolean = false,
+    // «Планы»: перенос в днях — общий порядок задач и проектов дня (UpcomingDragController)
+    upcomingDrag: UpcomingDragController? = null,
 ): Modifier {
     val lazyListState = state.lazyListState
     val taskItem = taskWrapper.item
@@ -85,6 +87,11 @@ fun Modifier.taskDragAndDrop(
             val targetItemInfo = visibleItems.firstOrNull { it.key == targetId }
                 ?: return@universalDragAndDrop false
             val movingDown = targetItemInfo.index > draggedItemInfo.index
+
+            // «Планы»: в днях — между любыми задачами и проектами дня (одна задача; группа — по прежним правилам)
+            if (upcomingDrag != null && !state.hasStackedItems && upcomingDrag.move(draggedId, targetId, movingDown)) {
+                return@universalDragAndDrop true
+            }
 
             val reordered = planTaskDrop(
                 list = localTasksList,
@@ -140,8 +147,37 @@ fun Modifier.taskDragAndDrop(
                 localTasksList
             }
 
+            // «Планы»: переносы в днях — только порядок дня и день перенесённой строки, общий порядок задач не трогаем
+            if (upcomingDrag != null && upcomingDrag.hasMoves && !isBatch) {
+                val saved = upcomingDrag.end()
+                // Ушла в раздел месяца (там свои правила) — её новый день тоже сохранить
+                val dragged = localTasksList.firstOrNull { it.item.id == taskItem.id }?.item
+                val original = filteredTasks.firstOrNull { it.item.id == taskItem.id }?.item
+                val extra = if (dragged != null && saved.none { it.id == dragged.id } && dragged.startDate != original?.startDate) {
+                    listOf(dragged.copy(modificationDate = System.currentTimeMillis()))
+                } else emptyList()
+                if (saved.isNotEmpty() || extra.isNotEmpty()) onTasksReordered(saved + extra)
+                return@universalDragAndDrop
+            }
+
             // Новые sortOrder и задачи, которые надо сохранить, — по правилу домена
             val reordered = SortOrders.afterReorder(listWithBatchOrdered, filteredTasks)
+            if (screen == ActiveScreen.UPCOMING && reordered.changed.isNotEmpty()) {
+                // «Планы»: задачи и проекты дня — общий порядок дня (UpcomingOrder), дни с переносом нумеруются заново
+                val renumbered = com.example.domain.lists.UpcomingOrder.afterDrag(
+                    reordered.updated, reordered.changed,
+                    upcomingDays.map { com.example.domain.lists.UpcomingOrder.DayRows(it.dateMillis, it.projects) }
+                ).associateBy { it.id }
+                val updated = reordered.updated.map { w -> renumbered[w.item.id]?.let { w.copy(item = w.item.copy(dayOrder = it.dayOrder)) } ?: w }
+                val changedIds = reordered.changed.mapTo(HashSet()) { it.id }
+                val now = System.currentTimeMillis()
+                val toSave = updated.filter { it.item.id in changedIds || it.item.id in renumbered }
+                    .map { w -> if (w.item.id in changedIds) w.item else w.item.copy(modificationDate = now) } +
+                    renumbered.values.filter { r -> updated.none { it.item.id == r.id } }.map { it.copy(modificationDate = now) }
+                onLocalTasksListChange(updated)
+                onTasksReordered(toSave)
+                return@universalDragAndDrop
+            }
             onLocalTasksListChange(reordered.updated)
             if (reordered.changed.isNotEmpty()) onTasksReordered(reordered.changed)
         }

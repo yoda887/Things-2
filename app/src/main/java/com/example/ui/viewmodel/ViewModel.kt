@@ -354,7 +354,9 @@ class ThingsViewModel @Inject constructor(
                 // Порядок экрана — общий порядок задач (sortOrder)
                 // Тег — в порядке групп по месту, как видно на экране
                 ActiveScreen.TAG_DETAIL -> com.example.domain.lists.PlaceGroups.order(listTasks, projectList, areaList)
-                ActiveScreen.INBOX, ActiveScreen.TODAY, ActiveScreen.UPCOMING,
+                // «Планы» — по порядку внутри дня (UpcomingOrder): перенесённое на день — первым
+                ActiveScreen.UPCOMING -> com.example.domain.lists.UpcomingOrder.orderTasks(listTasks)
+                ActiveScreen.INBOX, ActiveScreen.TODAY,
                 ActiveScreen.SEARCH, ActiveScreen.HOME, ActiveScreen.ALL_PROJECTS, ActiveScreen.LOGGED_PROJECTS, ActiveScreen.LATER_PROJECTS -> listTasks
                 ActiveScreen.REPEATING -> com.example.domain.lists.RepeatingList.order(listTasks, repeatRules)
             }

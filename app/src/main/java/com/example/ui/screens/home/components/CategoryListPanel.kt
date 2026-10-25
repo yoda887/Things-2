@@ -104,6 +104,8 @@ import com.example.data.model.Area
 import com.example.data.model.Tag
 import com.example.ui.components.ProjectProgressArc
 import com.example.ui.components.dragdrop.rememberGenericDragDropState
+import com.example.ui.theme.ThingsElevation
+import com.example.ui.components.dragdrop.universalDragAndDrop
 import com.example.ui.screens.home.subcomponents.TaskItemRow
 import com.example.ui.screens.home.subcomponents.ProjectHeadingRow
 import com.example.ui.screens.home.inlineeditor.ThingsTaskInlineEditor
@@ -407,7 +409,13 @@ fun ThingsCategoryListPanel(
     val todayCalendarEvents = remember(calendarEvents) { TodayList.events(calendarEvents) }
 
     // Извлечение состояния предстоящих дней (UpcomingDays) и месяцев
-    val upcomingSchedule = rememberUpcomingSchedule(localTasksList, calendarEvents, projects)
+    // Проекты, которые тянут в «Планах» (UpcomingDragController), — с новым днём и порядком, пока база их не вернёт
+    val upcomingProjectOverrides = remember { androidx.compose.runtime.mutableStateMapOf<String, Item>() }
+    val overridesNow = upcomingProjectOverrides.toMap()
+    val upcomingProjects = remember(projects, overridesNow) {
+        if (overridesNow.isEmpty()) projects else projects.map { overridesNow[it.id] ?: it }
+    }
+    val upcomingSchedule = rememberUpcomingSchedule(localTasksList, calendarEvents, upcomingProjects)
     val upcomingDays = upcomingSchedule.days
     val upcomingMonths = upcomingSchedule.months
     val monthTaskBadges = upcomingSchedule.monthTaskBadges
@@ -481,6 +489,19 @@ fun ThingsCategoryListPanel(
     var mainHeaderHeightPx by remember(screen, project?.id, area?.id) { mutableStateOf<Int?>(null) }
     val spreadScope = rememberCoroutineScope()
     val currentFlattened by rememberUpdatedState(flattened)
+    val currentUpcomingProjects by rememberUpdatedState(upcomingProjects)
+    // Перетаскивание задач и проектов в днях «Планов» — общий порядок дня, перенос в другой день
+    val upcomingDrag = remember(screen) {
+        if (screen != ActiveScreen.UPCOMING) null else UpcomingDragController(
+            rows = { currentFlattened },
+            keyOf = { listItemKey(it) },
+            tasks = { localTasksList },
+            setTasks = { localTasksList = it },
+            projects = { currentUpcomingProjects },
+            projectOverrides = upcomingProjectOverrides
+        )
+    }
+    LaunchedEffect(projects) { upcomingDrag?.onProjectsLoaded(projects) }
     // Промежуток перешёл на другое место — лёгкий отклик, как при обмене задач в обычном перетаскивании
     val fabHapticView = androidx.compose.ui.platform.LocalView.current
     var lastFabSlot by remember { mutableStateOf<FabSlot?>(null) }
@@ -1302,6 +1323,7 @@ fun ThingsCategoryListPanel(
                                 allTasks = state.allTasks,
                                 projectProgressMap = state.projectProgressMap,
                                 onLocalTasksListChange = { localTasksList = it },
+                                upcomingDrag = upcomingDrag,
                                 lazyListState = lazyListState,
                                 onWhenDialogVisibilityChange = { isWhenDialogOpen = it },
                                 onTagDialogVisibilityChange = { isTagDialogOpen = it },
@@ -1388,8 +1410,29 @@ fun ThingsCategoryListPanel(
                                         ((screen == ActiveScreen.LOGBOOK || screen == ActiveScreen.LOGGED_PROJECTS || screen == ActiveScreen.ALL_PROJECTS) &&
                                             LogbookList.includesProject(task)) || screen == ActiveScreen.UPCOMING
                                     ) areasState.firstOrNull { it.id == task.areaId && !it.trashed }?.title else null,
-                                    modifier = Modifier.animateItem(
-                                        placementSpec = placementSpec
+                                    modifier = if (dragDropState.draggedItemKey == task.id) {
+                                        // Проект тянут в «Планах» — карточкой над строками, как задачу
+                                        val dragShape = ThingsTheme.shapes.rowShape
+                                        Modifier
+                                            .zIndex(UPCOMING_DRAG_Z)
+                                            .graphicsLayer {
+                                                translationY = dragDropState.visualDragOffsetY(task.id)
+                                                translationX = dragDropState.dragAccumulatedX
+                                                scaleX = UPCOMING_DRAG_SCALE
+                                                scaleY = UPCOMING_DRAG_SCALE
+                                                shadowElevation = ThingsElevation.CARD.toPx()
+                                                shape = dragShape
+                                                clip = true
+                                            }
+                                            .background(ThingsTheme.colors.background)
+                                    } else {
+                                        Modifier.animateItem(placementSpec = placementSpec)
+                                    }.then(
+                                        if (upcomingDrag != null && task.type == Item.TYPE_PROJECT) {
+                                            Modifier.upcomingProjectDrag(dragDropState, task.id, upcomingDrag) { saved ->
+                                                if (saved.isNotEmpty()) onEvent(ThingsCategoryListEvent.ReorderTasks(saved))
+                                            }
+                                        } else Modifier
                                     )
                                 )
                             }
@@ -2517,3 +2560,32 @@ private fun ListBanner(
         }
     }
 }
+
+/** Перетаскиваемый проект в «Планах» — над строками и чуть крупнее, как задача */
+private const val UPCOMING_DRAG_Z = 100f
+private const val UPCOMING_DRAG_SCALE = 1.04f
+
+/**
+ * Проект в днях «Планов» можно перетаскивать, как задачу: между любыми задачами и проектами дня или в другой день
+ * ([UpcomingDragController]); по отпусканию — [onSave] с тем, что сохранить
+ */
+private fun Modifier.upcomingProjectDrag(
+    state: com.example.ui.components.dragdrop.GenericDragDropState,
+    projectId: String,
+    controller: UpcomingDragController,
+    onSave: (List<Item>) -> Unit
+): Modifier = universalDragAndDrop(
+        state = state,
+        key = projectId,
+        canDropOver = { targetKey ->
+            val key = targetKey as? String
+            key != null && !key.startsWith(TaskListKeys.CALENDAR_EVENT_PREFIX) && key !in TaskListKeys.nonDroppable
+        },
+        onMoveIfNecessary = { draggedKey, targetKey ->
+            val visible = state.lazyListState.layoutInfo.visibleItemsInfo
+            val from = visible.firstOrNull { it.key == draggedKey } ?: return@universalDragAndDrop false
+            val to = visible.firstOrNull { it.key == targetKey } ?: return@universalDragAndDrop false
+            controller.move(draggedKey as String, targetKey, movingDown = to.index > from.index)
+        },
+        onDragEnd = { onSave(controller.end()) }
+    )

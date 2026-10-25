@@ -91,6 +91,11 @@ data class Item(
     val reminderTime: Int? = null,
     /** Копия повторяющейся задачи — id её шаблона (TYPE_TEMPLATE); у обычных задач null */
     val repeatTemplateId: String? = null,
+    /**
+     * Порядок внутри дня в «Планах» — общий у задач и проектов (их sortOrder — порядок других списков): меньше —
+     * выше; null — ещё не задан (после null-ов). Правила — [com.example.domain.lists.UpcomingOrder].
+     */
+    val dayOrder: Long? = null,
     /** Когда запись менялась последний раз (мс) — ставит триггер базы (SyncTriggers), для синхронизации устройств */
     @ColumnInfo(defaultValue = "0") val updatedAt: Long = 0L
 ) {

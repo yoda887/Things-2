@@ -37,7 +37,7 @@ object DatabaseModule {
         )
         // Без fallbackToDestructiveMigration: смена версии без миграции не стирает базу, а падает при запуске —
         // база остаётся на устройстве, нужна миграция (схемы версий — app/schemas)
-        .addMigrations(com.example.data.local.MIGRATION_7_8, com.example.data.local.MIGRATION_8_9, com.example.data.local.MIGRATION_9_10)
+        .addMigrations(com.example.data.local.MIGRATION_7_8, com.example.data.local.MIGRATION_8_9, com.example.data.local.MIGRATION_9_10, com.example.data.local.MIGRATION_10_11)
         .addCallback(object : RoomDatabase.Callback() {
             // Триггеры синхронизации — всегда нынешней версии (пересоздаются при каждом открытии)
             override fun onOpen(db: SupportSQLiteDatabase) {

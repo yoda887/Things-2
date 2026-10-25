@@ -27,6 +27,16 @@ val MIGRATION_8_9 = object : Migration(8, 9) {
 }
 
 /**
+ * 10 → 11: порядок внутри дня в «Планах», общий у задач и проектов (items.dayOrder, может быть пустым). Только
+ * добавляется столбец: у существующих записей порядок не задан — дни выглядят как прежде.
+ */
+val MIGRATION_10_11 = object : Migration(10, 11) {
+    override fun migrate(db: SupportSQLiteDatabase) {
+        db.execSQL("ALTER TABLE `items` ADD COLUMN `dayOrder` INTEGER")
+    }
+}
+
+/**
  * Версия 10: синхронизация устройств — у каждой записи время последнего изменения (`updatedAt`), журнал удалений
  * (`sync_deletions`) и триггеры, которые их ведут (SyncTriggers). Время уже существующих записей — время миграции
  * (у задач — их modificationDate): до синхронизации все записи «изменены» одинаково.

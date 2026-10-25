@@ -148,6 +148,8 @@ fun AnimatedTaskItem(
     dateBadge: String? = null,
     editorOutsideTouch: EditorOutsideTouch? = null,
     editorLiveFields: com.example.ui.screens.home.inlineeditor.utils.EditorLiveFields? = null,
+    // Перетаскивание в днях «Планов» — общий порядок задач и проектов дня
+    upcomingDrag: com.example.ui.screens.home.components.UpcomingDragController? = null,
     modifier: Modifier = Modifier
 ) {
     val task = taskWrapper.item
@@ -723,7 +725,8 @@ fun AnimatedTaskItem(
                                     },
                                     selectedTaskIds = selectedTaskIds,
                                     onExitSelectionMode = onExitSelectionMode,
-                                    todayGroupedDay = com.example.ui.components.LocalTodayGrouped.current
+                                    todayGroupedDay = com.example.ui.components.LocalTodayGrouped.current,
+                                    upcomingDrag = upcomingDrag
                                 )
                             ),
                         onSwipeLeft = { onEvent(ThingsCategoryListEvent.SwipeTaskLeft(taskWrapper)) },

@@ -1,6 +1,7 @@
 package com.example.ui.screens.home.components
 
 import com.example.domain.lists.UpcomingList
+import com.example.domain.lists.UpcomingOrder
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.remember
 import androidx.compose.ui.res.stringResource
@@ -103,11 +104,8 @@ object UpcomingScreen {
                 val isLast = index == day.calendarEvents.lastIndex
                 add(UpcomingEventItem(event.item, day.dateMillis, isLastBeforeTasks = isLast))
             }
-            // Проекты дня — после событий, перед задачами
-            addAll(day.projects)
-            day.tasks.forEach { task ->
-                add(task)
-            }
+            // Проекты и задачи дня — после событий, одним списком по порядку дня (UpcomingOrder), как в Things
+            addAll(UpcomingOrder.merge(day.projects, day.tasks))
         }
         upcomingMonths.forEach { month ->
             add(UpcomingMonthHeaderItem(month.monthMillis, month.monthLabel, month.isRemainder))
@@ -118,11 +116,8 @@ object UpcomingScreen {
                 val isLast = index == month.calendarEvents.lastIndex
                 add(event.copy(isLastBeforeTasks = isLast))
             }
-            addAll(month.projects)
-            // Задачи месяца выводятся строго после событий календаря
-            month.tasks.forEach { task ->
-                add(task)
-            }
+            // Проекты и задачи — строго после событий календаря, по дню, внутри дня — по порядку дня
+            addAll(UpcomingOrder.mergeByDay(month.projects, month.tasks))
         }
     }
 

@@ -64,6 +64,9 @@ interface TaskDao {
     @Query("DELETE FROM items WHERE id = :id")
     suspend fun deleteItemById(id: String)
 
+    @Query("SELECT * FROM items WHERE id IN (:ids)")
+    suspend fun getItemsByIds(ids: List<String>): List<Item>
+
     @Query("DELETE FROM items WHERE id IN (:ids)")
     suspend fun deleteItemsByIds(ids: List<String>)
 
