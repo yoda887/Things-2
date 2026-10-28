@@ -61,8 +61,18 @@ private val FAB_ACTION_SIZE = 44.dp
 private val FAB_ACTION_EDGE = 20.dp
 
 private const val FAB_SETTLE_MS = 180
-/** Нажатие: на сколько кнопка вырастает в полёте (вместе с подъёмом ×1.22 — около 1.5×) и с какой доли полёта гаснет */
-private const val FAB_TAP_GROW = 0.25f
+/** Нажатие: полёт к месту новой задачи, мс — как в Things, заметно медленнее посадки после перетаскивания */
+private const val FAB_TAP_SETTLE_MS = 270
+/**
+ * Нажатие: путь — дуга, выгнутая вправо, как в Things: сначала почти вверх, потом к цели. Контрольная точка кривой
+ * Безье — эта доля пути по горизонтали и эта по вертикали
+ */
+private const val FAB_TAP_ARC_X = 0.2f
+private const val FAB_TAP_ARC_Y = 0.6f
+/** Нажатие: к посадке кнопка становится настолько меньше (вместе с подъёмом — около прежнего размера) */
+private const val FAB_TAP_LAND_SHRINK = 0.2f
+/** Нажатие: на сколько кнопка вырастает в полёте (вместе с подъёмом ×1.22 и уменьшением к посадке — около 1.55×) и с какой доли полёта гаснет */
+private const val FAB_TAP_GROW = 0.4f
 private const val FAB_TAP_FADE_FROM = 0.75f
 private val FAB_PLUS_ICON_SIZE = 28.dp
 
@@ -107,7 +117,8 @@ fun DraggableAddButton(
     // Приземление: кнопка летит в центр промежутка и уменьшается до нуля
     LaunchedEffect(controller.settleToken) {
         if (controller.settleToken == 0) return@LaunchedEffect
-        animate(0f, 1f, animationSpec = tween(durationMillis = FAB_SETTLE_MS, easing = LinearEasing)) { value, _ ->
+        val duration = if (controller.isTapSettle) FAB_TAP_SETTLE_MS else FAB_SETTLE_MS
+        animate(0f, 1f, animationSpec = tween(durationMillis = duration, easing = LinearEasing)) { value, _ ->
             controller.settleProgress = value
         }
         // Снимается, когда редактор закрывается (HomeScreen) или кнопка уходит из композиции
@@ -169,18 +180,32 @@ private fun BoxScope.FabBody(
                     val t = controller.settleProgress
                     // Полёт — быстрый старт и мягкая посадка; уменьшение ровное по времени, чтобы
                     // кнопка успевала долететь заметной, а не исчезала в первые кадры
-                    val p = FastOutSlowInEasing.transform((t * 1.4f).coerceAtMost(1f))
                     val center = coords.boundsInRoot().center
-                    val target = controller.settleFrom + (controller.settleTo - controller.settleFrom) * p
-                    translationX = target.x - center.x
-                    translationY = target.y - center.y
+                    val from = controller.settleFrom
+                    val to = controller.settleTo
                     if (controller.isTapSettle) {
-                        // Нажатие, как в Things: кнопка летит к промежутку и растёт (с подъёмом — до ~1.5×), гаснет
-                        // только в самом конце — из этого места раскрывается новая задача
-                        settleScale = 1f + FAB_TAP_GROW * p
+                        // Нажатие, как в Things (замер по кадрам эталона): быстрый старт и плавная посадка, путь — дуга
+                        // Безье, выгнутая вправо: сначала почти вверх, потом к цели
+                        val s = 1f - (1f - t) * (1f - t) * (1f - t)
+                        val control = Offset(
+                            from.x + (to.x - from.x) * FAB_TAP_ARC_X,
+                            from.y + (to.y - from.y) * FAB_TAP_ARC_Y
+                        )
+                        val a = (1f - s) * (1f - s)
+                        val b = 2f * s * (1f - s)
+                        val c = s * s
+                        translationX = a * from.x + b * control.x + c * to.x - center.x
+                        translationY = a * from.y + b * control.y + c * to.y - center.y
+                        // К середине пути вырастает (с подъёмом — до ~1.5×), к посадке — около прежнего размера; гаснет
+                        // в самом конце — поверх неё проявляется новая задача
+                        settleScale = 1f + FAB_TAP_GROW * kotlin.math.sin(Math.PI.toFloat() * s) - FAB_TAP_LAND_SHRINK * s
                         shadowFactor = 1f
                         alpha = if (t < FAB_TAP_FADE_FROM) 1f else (1f - (t - FAB_TAP_FADE_FROM) / (1f - FAB_TAP_FADE_FROM)).coerceIn(0f, 1f)
                     } else {
+                        val p = FastOutSlowInEasing.transform((t * 1.4f).coerceAtMost(1f))
+                        val target = from + (to - from) * p
+                        translationX = target.x - center.x
+                        translationY = target.y - center.y
                         // Сброс перетаскиванием — уменьшается до нуля
                         settleScale = (1f - t).coerceAtLeast(0f)
                         // Как в Things: кнопка сначала «ложится» — тень уходит в первую треть приземления

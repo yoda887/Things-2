@@ -77,6 +77,12 @@ class FabDragController {
     /** Задача, только что созданная тапом по кнопке: у неё сразу фокус в названии и клавиатура. */
     var focusTaskId by mutableStateOf<String?>(null)
 
+    /**
+     * Нажатие на «+» выполняется, а кнопка ещё не полетела (список докручивается, раскрывается промежуток): она
+     * остаётся на месте, хотя редактор новой задачи уже открыт
+     */
+    var tapPending by mutableStateOf(false)
+
     /** Растёт на каждое приземление — по нему анимация запускается заново */
     var settleToken by mutableIntStateOf(0)
         private set

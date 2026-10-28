@@ -103,6 +103,11 @@ private val EDITOR_EXTRA_PADDING = 10.dp
 // Раскрытие новой задачи из кнопки «+»
 private const val FAB_REVEAL_MS = 160
 
+// Новая задача по нажатию на «+», как в Things: карточка вырастает из точки посадки кнопки — с этой доли размера,
+// проявляясь, пока кнопка гаснет поверх неё
+private const val FAB_TAP_REVEAL_MS = 140
+private const val FAB_TAP_REVEAL_START_SCALE = 0.65f
+
 private const val DELETE_ANIMATION_DELAY_MS = 300L
 
 /**
@@ -183,6 +188,8 @@ fun AnimatedTaskItem(
     var focusTitleOnOpen by remember(task.id) { mutableStateOf(isFreshFromFab) }
     // Новая задача по тапу на «+»: раскрывается как обычно, но курсор сразу в названии
     var focusTitleFromTap by remember(task.id) { mutableStateOf(fabController?.focusTaskId == task.id) }
+    // Раскрывается из нажатия на «+» (а не из сброса перетаскиванием) — решается один раз, при появлении строки
+    val revealFromTap = remember(task.id) { fabController?.focusTaskId == task.id }
     LaunchedEffect(Unit) {
         if (focusTitleFromTap) fabController?.focusTaskId = null
     }
@@ -215,7 +222,7 @@ fun AnimatedTaskItem(
             reveal.animateTo(
                 1f,
                 androidx.compose.animation.core.tween(
-                    durationMillis = FAB_REVEAL_MS,
+                    durationMillis = if (revealFromTap) FAB_TAP_REVEAL_MS else FAB_REVEAL_MS,
                     easing = androidx.compose.animation.core.FastOutSlowInEasing
                 )
             )
@@ -510,9 +517,17 @@ fun AnimatedTaskItem(
                     translationX = if (isDragTask) dragDropState.dragAccumulatedX else 0f
                     translationY = if (isDragTask) dragDropState.visualDragOffsetY(task.id) else 0f
                     val r = reveal.value
-                    scaleX = dragScale * (0.3f + 0.7f * r)
-                    scaleY = dragScale * r
-                    alpha = dimAlpha * (r * 3f).coerceAtMost(1f)
+                    if (revealFromTap) {
+                        // Целиком, из центра — как из кнопки
+                        val revealScale = FAB_TAP_REVEAL_START_SCALE + (1f - FAB_TAP_REVEAL_START_SCALE) * r
+                        scaleX = dragScale * revealScale
+                        scaleY = dragScale * revealScale
+                        alpha = dimAlpha * (r * 2f).coerceAtMost(1f)
+                    } else {
+                        scaleX = dragScale * (0.3f + 0.7f * r)
+                        scaleY = dragScale * r
+                        alpha = dimAlpha * (r * 3f).coerceAtMost(1f)
+                    }
                 }
                 .progressPadding(
                     progress = expansionProgress,

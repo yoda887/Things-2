@@ -389,6 +389,7 @@ fun ThingsHomeScreen(viewModel: ThingsViewModel = hiltViewModel()) {
             // На особых списках проектов она, как на главном экране, открывает меню: задача, проект, область
             AnimatedVisibility(
                 visible = activeScreen != ActiveScreen.LOGBOOK && !isSettingsOpen && (fabDragController.isDragging || fabDragController.isSettling ||
+                    fabDragController.tapPending ||
                     (inlineExpandedTaskId == null && !showFabMenu && !isListDialogActive && !showAddDialog && !isSelectionMode &&
                         !(activeScreen == ActiveScreen.HOME && isProjectSelectionMode))),
                 enter = slideInVertically(
@@ -676,6 +677,7 @@ fun ThingsHomeScreen(viewModel: ThingsViewModel = hiltViewModel()) {
                                     navigateTo(ActiveScreen.AREA_DETAIL, event.area.id)
                                 }
                                 is ThingsCategoryListEvent.OpenHeading -> openFoundHeading(event.heading)
+                                is ThingsCategoryListEvent.OpenLoggedProjects -> navigateTo(ActiveScreen.LOGGED_PROJECTS)
                                 is ThingsCategoryListEvent.ChangeInlineExpandedTaskId -> {
                                     viewModel.setInlineExpandedTaskId(event.taskId)
                                 }
@@ -1406,4 +1408,3 @@ private fun AnimatedVisibilityScope.ScreenTransitionWrapper(
     }
 }
 
-                                is ThingsCategoryListEvent.OpenLoggedProjects -> navigateTo(ActiveScreen.LOGGED_PROJECTS)

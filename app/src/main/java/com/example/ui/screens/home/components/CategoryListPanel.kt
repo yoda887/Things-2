@@ -480,13 +480,21 @@ fun ThingsCategoryListPanel(
     // Раздвигание после сброса: промежуток вырастает до высоты раскрытой задачи, и только потом создаётся задача
     val gapExtra = remember { androidx.compose.animation.core.Animatable(0f) }
     var pendingFabTaskId by remember { mutableStateOf<String?>(null) }
-    // Нажатие на «+»: список на миг гаснет, перескакивает к началу и проявляется уже с промежутком
-    val fabJumpAlpha = remember { androidx.compose.animation.core.Animatable(1f) }
-    // Где верх первой строки, когда список у начала (px от верха списка), — запоминается, пока список там стоит:
-    // по нему кнопка летит к месту новой задачи сразу, ещё до перескока списка
-    var topSlotRowTopPx by remember(screen, project?.id, area?.id) { mutableStateOf<Float?>(null) }
-    // Высота большого заголовка экрана — до неё список перескакивает, а остаток докручивается, и заголовок въезжает
-    var mainHeaderHeightPx by remember(screen, project?.id, area?.id) { mutableStateOf<Int?>(null) }
+    // Нажатие на «+» уже выполняется (список докручивается к началу) — повторное не начинает второе
+    var fabTapRunning by remember { mutableStateOf(false) }
+    // Промежуток от нажатия на «+»: растёт от нуля, продолжая движение прокрутки (см. tapFab), строки под ним
+    // идут за его высотой без своей анимации
+    var fabTapGap by remember { mutableStateOf(false) }
+    // Клавиатура для новой задачи от «+» выезжает сразу, вместе с промежутком, как в Things: фокус сначала в
+    // невидимом поле, потом переходит в название раскрывшейся задачи — клавиатура при этом не прячется.
+    // Поле — обычный EditText: в отличие от поля Compose, он сразу сообщает клавиатуре заглавную в начале
+    var imePrimerView by remember { mutableStateOf<android.widget.EditText?>(null) }
+    fun showImePrimer() {
+        val view = imePrimerView ?: return
+        view.requestFocus()
+        val imm = view.context.getSystemService(android.content.Context.INPUT_METHOD_SERVICE) as android.view.inputmethod.InputMethodManager
+        imm.showSoftInput(view, android.view.inputmethod.InputMethodManager.SHOW_IMPLICIT)
+    }
     val spreadScope = rememberCoroutineScope()
     val currentFlattened by rememberUpdatedState(flattened)
     val currentUpcomingProjects by rememberUpdatedState(upcomingProjects)
@@ -519,7 +527,12 @@ fun ThingsCategoryListPanel(
     val currentLocalTasks by rememberUpdatedState(localTasksList)
 
     /** Сброс кнопки «+» на промежуток: задача на его месте, у левого края проекта — заголовок */
-    fun dropFab(focusTitle: Boolean = false): Boolean {
+    fun dropFab(
+        focusTitle: Boolean = false,
+        tapGrowMs: Int? = null,
+        presetTaskId: String? = null,
+        tapGrowEasing: androidx.compose.animation.core.Easing = FAB_TAP_GROW_EASING
+    ): Boolean {
         val slot = fabSlot ?: return false
         // Центр промежутка после раздвигания — туда приземлится кнопка; считаем, пока промежуток ещё на месте.
         // Задача раскрывается на высоту [FabDragController.expandedRowHeightPx], поэтому центр — на её половине
@@ -551,7 +564,7 @@ fun ThingsCategoryListPanel(
         } else {
             val tasks = currentLocalTasks
             val placement = FabInsertion.taskPlacement(flat, slot.index, tasks)
-            val newTaskId = java.util.UUID.randomUUID().toString()
+            val newTaskId = presetTaskId ?: java.util.UUID.randomUUID().toString()
             // Где оказалась задача — поля по этому месту назначит домен (NewTasks.atDrop)
             val spot = DropSpot(
                 headingId = placement.headingId,
@@ -576,8 +589,19 @@ fun ThingsCategoryListPanel(
                 gapExtra.snapTo(0f)
                 gapExtra.animateTo(
                     (finalGapHeight - gapHeightNow).coerceAtLeast(0f),
-                    androidx.compose.animation.core.tween(FAB_SPREAD_MS, easing = androidx.compose.animation.core.FastOutSlowInEasing)
+                    // Нажатие на «+» — промежуток подхватывает скорость прокрутки и плавно останавливается
+                    if (tapGrowMs != null) androidx.compose.animation.core.tween(tapGrowMs, easing = tapGrowEasing)
+                    else androidx.compose.animation.core.tween(FAB_SPREAD_MS, easing = androidx.compose.animation.core.FastOutSlowInEasing)
                 )
+                // Нажатие на «+»: задача появляется под конец полёта кнопки — вырастает из неё, пока она гаснет сверху
+                if (tapGrowMs != null) {
+                    kotlinx.coroutines.withTimeoutOrNull(FAB_TAP_LANDING_WAIT_MS) {
+                        snapshotFlow {
+                            val fab = fabDrag
+                            fab == null || (!fab.tapPending && (!fab.isSettling || fab.settleProgress >= FAB_TAP_CARD_AT_FLIGHT))
+                        }.first { it }
+                    }
+                }
                 fabDrag?.freshTaskId = newTaskId
                 // Новая задача от нажатия на «+» — сразу с курсором в названии и клавиатурой
                 if (focusTitle) fabDrag?.focusTaskId = newTaskId
@@ -588,6 +612,7 @@ fun ThingsCategoryListPanel(
                 }
                 withFrameNanos { }
                 fabSlot = null
+                fabTapGap = false
                 pendingFabTaskId = null
                 gapExtra.snapTo(0f)
             }
@@ -604,82 +629,71 @@ fun ThingsCategoryListPanel(
     }
 
     /**
-     * Нажатие на «+», как в Things: список сразу перескакивает к началу, на месте первой строки раскрывается
-     * промежуток, кнопка влетает в его центр из угла, и оттуда раскрывается новая задача с курсором в названии
+     * Нажатие на «+», как в Things: длинный список сначала плавно докручивается к началу — к месту будущей задачи;
+     * как только место в кадре, на нём раскрывается промежуток, кнопка влетает в его центр из угла, и оттуда
+     * раскрывается новая задача с курсором в названии. Этапы идут друг за другом без пауз
      */
-    LaunchedEffect(lazyListState) {
-        snapshotFlow { lazyListState.layoutInfo }.collect { info ->
-            if (fabSlot != null || lazyListState.firstVisibleItemIndex != 0 || lazyListState.firstVisibleItemScrollOffset != 0) return@collect
-            val flat = currentFlattened
-            val first = flat.indexOfFirst { FabInsertion.isAnchor(it) }
-            if (first < 0) return@collect
-            val key = flat.getOrNull(FabInsertion.normalizeSlot(flat, FabSlot(first, asHeading = false)).index)
-                ?.let { listItemKey(it) } ?: return@collect
-            info.visibleItemsInfo.firstOrNull { it.key == key }?.let { topSlotRowTopPx = (it.offset - info.viewportStartOffset).toFloat() }
-            info.visibleItemsInfo.firstOrNull { it.key == TaskListKeys.MAIN_HEADER }?.let { mainHeaderHeightPx = it.size }
-        }
-    }
-
     fun tapFab(): Boolean {
-        if (screen !in FAB_TAP_SCREENS || state.isSelectionMode || inlineExpandedTaskId != null) return false
+        if (screen !in FAB_TAP_SCREENS || state.isSelectionMode || inlineExpandedTaskId != null || fabTapRunning) return false
+        fabTapRunning = true
         spreadScope.launch {
-            val flat = currentFlattened
-            val first = flat.indexOfFirst { FabInsertion.isAnchor(it) }
-            val slot = FabInsertion.normalizeSlot(flat, FabSlot(if (first >= 0) first else flat.size, asHeading = false))
-            // Промежуток раскрывается сразу — кнопка влетает в уже открывающееся место
-            fabSlot = slot
-            // Список прокручивается к началу — к месту будущей задачи, пока кнопка летит в центр промежутка
-            val atTop = lazyListState.firstVisibleItemIndex == 0 && lazyListState.firstVisibleItemScrollOffset == 0
-            // Прокрутка и полёт кнопки — одновременно: кнопка сразу летит туда, где будет промежуток (верх первой
-            // строки у начала списка — запомнен), а когда список докрутился, цель уточняется на лету
-            val coordsNow = listCoordinates
-            val predicted = if (!atTop && coordsNow != null && coordsNow.isAttached) {
-                val origin = coordsNow.positionInRoot()
-                val rowTop = topSlotRowTopPx ?: (coordsNow.size.height * FAB_TAP_FALLBACK_TOP_FRACTION)
-                androidx.compose.ui.geometry.Offset(origin.x + coordsNow.size.width / 2f, origin.y + rowTop + fabDefaultGapPx / 2f)
-            } else null
-            predicted?.let { fabDrag?.settleFromHome(it) }
-            val scrollJob = launch {
-                if (!atTop) {
-                    // Длинный список — прокручивается к началу, а не перескакивает: видно, куда встаёт задача
-                    lazyListState.animateScrollToItem(0)
-                } else {
-                    lazyListState.scrollToItem(0)
+            try {
+                // Место будущей задачи — первой строкой списка; промежуток там пока нулевой высоты, его не видно
+                val flat = currentFlattened
+                val first = flat.indexOfFirst { FabInsertion.isAnchor(it) }
+                fabTapGap = true
+                fabSlot = FabInsertion.normalizeSlot(flat, FabSlot(if (first >= 0) first else flat.size, asHeading = false))
+                // Промежуток вырастет до высоты раскрытой задачи H за FAB_TAP_GROW_MS = T, начиная со скорости 2H/T
+                // (FAB_TAP_GROW_EASING), — с этой скоростью прокрутка и заканчивается: она резко обрывается, а
+                // строки под промежутком продолжают движение и плавно останавливаются
+                val growHeight = fabDrag?.expandedRowHeightPx ?: fabDefaultGapPx
+                val handoffPxPerMs = 2f * growHeight / FAB_TAP_GROW_MS
+                // Список и так у начала (короткий) — промежуток растёт с места, плавно разгоняясь и останавливаясь
+                val scrolls = lazyListState.firstVisibleItemIndex != 0 || lazyListState.firstVisibleItemScrollOffset != 0
+                fabDrag?.tapPending = true
+                scrollListToTop(lazyListState, endPxPerMs = handoffPxPerMs)
+                // Список у начала — промежуток тут же растёт, и вместе с ним, как в Things, открывается редактор новой
+                // задачи: остальное гаснет, выезжает клавиатура
+                val newTaskId = java.util.UUID.randomUUID().toString()
+                onEvent(ThingsCategoryListEvent.ChangeInlineExpandedTaskId(newTaskId))
+                showImePrimer()
+                var anchor: androidx.compose.ui.geometry.Offset? = null
+                var frames = 0
+                while (true) {
+                    val info = lazyListState.layoutInfo
+                    val gapInfo = info.visibleItemsInfo.firstOrNull { it.key == FabGapItem.KEY }
+                    val coords = listCoordinates
+                    if (gapInfo != null && coords != null && coords.isAttached) {
+                        val origin = coords.positionInRoot()
+                        val gapTop = gapInfo.offset - info.viewportStartOffset + lazyListState.firstVisibleItemScrollOffset
+                        anchor = androidx.compose.ui.geometry.Offset(origin.x + coords.size.width / 2f, origin.y + gapTop + fabDefaultGapPx / 2f)
+                        break
+                    }
+                    if (frames++ > FAB_TAP_GAP_WAIT_FRAMES) break
+                    withFrameNanos { }
                 }
-            }
-            var earlyAnchor: androidx.compose.ui.geometry.Offset? = null
-            // Прокрутка кончилась, а промежутка в кадре нет — ждём не дольше этого числа кадров
-            var framesAfterScroll = 0
-            while (true) {
-                val info = lazyListState.layoutInfo
-                val gapInfo = info.visibleItemsInfo.firstOrNull { it.key == FabGapItem.KEY }
-                val coords = listCoordinates
-                if (lazyListState.firstVisibleItemIndex == 0 && gapInfo != null && coords != null && coords.isAttached) {
-                    val origin = coords.positionInRoot()
-                    val gapTop = gapInfo.offset - info.viewportStartOffset + lazyListState.firstVisibleItemScrollOffset
-                    earlyAnchor = androidx.compose.ui.geometry.Offset(
-                        origin.x + coords.size.width / 2f,
-                        origin.y + gapTop + fabDefaultGapPx / 2f
-                    )
-                    break
+                val growEasing = if (scrolls) FAB_TAP_GROW_EASING else androidx.compose.animation.core.FastOutSlowInEasing
+                if (!dropFab(focusTitle = true, tapGrowMs = FAB_TAP_GROW_MS, presetTaskId = newTaskId, tapGrowEasing = growEasing)) {
+                    fabSlot = null
+                    fabTapGap = false
+                    fabDrag?.tapPending = false
+                    onEvent(ThingsCategoryListEvent.ChangeInlineExpandedTaskId(null))
+                    imePrimerView?.clearFocus()
+                    return@launch
                 }
-                if (!scrollJob.isActive && ++framesAfterScroll > FAB_TAP_GAP_WAIT_FRAMES) break
-                withFrameNanos { }
+                // Без строки впереди (пустой конец списка) — летит туда, где промежуток встал при сбросе
+                val target = anchor ?: fabDrag?.dropAnchor
+                fabDrag?.dropAnchor = null
+                // Кнопка взлетает чуть позже промежутка — садится, когда он раскрылся, и из неё вырастает задача
+                launch {
+                    delay(FAB_TAP_FLIGHT_DELAY_MS)
+                    target?.let { fabDrag?.settleFromHome(it) }
+                    fabDrag?.tapPending = false
+                }
+            } finally {
+                fabTapRunning = false
+                if (fabDrag?.isSettling != true && fabSlot == null) fabDrag?.tapPending = false
             }
-            earlyAnchor?.let { anchor -> if (predicted != null) fabDrag?.retarget(anchor) else fabDrag?.settleFromHome(anchor) }
-            scrollJob.join()
-            // Промежуток должен встать в список, прежде чем раздвинуться под новую задачу
-            kotlinx.coroutines.withTimeoutOrNull(FAB_TAP_GAP_WAIT_MS) {
-                snapshotFlow { lazyListState.layoutInfo.visibleItemsInfo.any { it.key == FabGapItem.KEY } }.first { it }
-            }
-            withFrameNanos { }
-            if (!dropFab(focusTitle = true)) {
-                fabSlot = null
-                return@launch
-            }
-            // Без строки впереди (пустой конец списка) — летит, когда промежуток уже на месте
-            if (earlyAnchor == null && predicted == null) fabDrag?.dropAnchor?.let { fabDrag.settleFromHome(it) }
-            fabDrag?.dropAnchor = null
         }
         return true
     }
@@ -935,6 +949,8 @@ fun ThingsCategoryListPanel(
     // отпускания был виден хвост чужой анимации — соседняя строка доползала уже после посадки
     val placementSpec: androidx.compose.animation.core.FiniteAnimationSpec<androidx.compose.ui.unit.IntOffset>? = when {
         isTransitionActive -> null
+        // Промежуток от нажатия на «+» растёт, продолжая прокрутку: строки под ним идут ровно за его высотой
+        fabTapGap -> null
         dragDropState.draggedItemKey != null -> spring(
             dampingRatio = Spring.DampingRatioNoBouncy,
             stiffness = Spring.StiffnessMedium
@@ -1042,7 +1058,6 @@ fun ThingsCategoryListPanel(
                 .nestedScroll(scrollTrackingConnection)
                 .graphicsLayer {
                     translationY = pullOffset.value
-                    alpha = fabJumpAlpha.value
                 }
                 .observeTouchesOutsideEditor(editorOutsideTouch) { isEditorOpen }
                 .pointerInput(Unit) {
@@ -1563,6 +1578,7 @@ fun ThingsCategoryListPanel(
                             FabGapRow(
                                 asHeading = item.asHeading,
                                 extraPx = { gapExtra.value },
+                                growsFromZero = fabTapGap,
                                 // Строка новой задачи встаёт на это место сразу — промежуток не растворяется
                                 modifier = Modifier.animateItem(placementSpec = placementSpec, fadeOutSpec = null)
                             )
@@ -1960,6 +1976,26 @@ fun ThingsCategoryListPanel(
             }
         )
     }
+
+    // Невидимое поле: в нём фокус, пока раскрывается новая задача от «+» (см. imePrimerView). Клавиатура — как у
+    // названия задачи (с заглавной, «Готово»), но поле однострочное: при переходе фокуса клавиатура видит другое поле
+    // и заново проверяет заглавную (у названия Compose сообщает её только так — иначе первая буква строчная)
+    androidx.compose.ui.viewinterop.AndroidView(
+        factory = { context ->
+            android.widget.EditText(context).apply {
+                inputType = android.text.InputType.TYPE_CLASS_TEXT or
+                    android.text.InputType.TYPE_TEXT_FLAG_CAP_SENTENCES or
+                    android.text.InputType.TYPE_TEXT_FLAG_AUTO_CORRECT
+                imeOptions = android.view.inputmethod.EditorInfo.IME_ACTION_DONE or
+                    android.view.inputmethod.EditorInfo.IME_FLAG_NO_FULLSCREEN
+                background = null
+                alpha = 0f
+                isFocusableInTouchMode = true
+                imePrimerView = this
+            }
+        },
+        modifier = Modifier.size(IME_PRIMER_SIZE)
+    )
 
     FloatingBottomCapsuleToolbar(
         // Пока открыто окно «Переместить», тулбар скрыт — как в Things
@@ -2377,13 +2413,84 @@ private val FAB_TAP_SCREENS = setOf(
     ActiveScreen.PROJECT_DETAIL, ActiveScreen.AREA_DETAIL, ActiveScreen.TAG_DETAIL
 )
 
-/** Нажатие на «+»: сколько ждать, пока промежуток встанет в список, мс */
-private const val FAB_TAP_GAP_WAIT_MS = 500L
+/** Нажатие на «+»: средняя скорость прокрутки списка к началу, px за мс — время прокрутки по расстоянию */
+private const val FAB_TAP_SCROLL_PX_PER_MS = 4f
 
-/** Нажатие на «+»: место первой строки, пока его ни разу не видели, — эта доля высоты списка сверху */
-private const val FAB_TAP_FALLBACK_TOP_FRACTION = 0.15f
+/** Нажатие на «+»: прокрутка к началу — не длиннее, мс */
+private const val FAB_TAP_SCROLL_MAX_MS = 900
 
-/** Нажатие на «+»: сколько кадров после прокрутки ждать промежуток в кадре, прежде чем лететь без него */
+/**
+ * Нажатие на «+»: средняя скорость прокрутки — не меньше стольких скоростей подхвата промежутком: и короткий путь
+ * начинается быстро, а к самой остановке замедляется до скорости промежутка
+ */
+private const val FAB_TAP_SCROLL_MIN_AVG_RATIO = 1.5f
+
+/** Нажатие на «+»: плавно прокручиваются не больше стольких экранов; что дальше — пропускается сразу, в начале */
+private const val FAB_TAP_SCROLL_MAX_SCREENS = 2.5f
+
+/** Нажатие на «+»: промежуток растёт до высоты раскрытой задачи за столько мс */
+private const val FAB_TAP_GROW_MS = 260
+
+/** Нажатие на «+»: кнопка взлетает позже начала промежутка на столько мс, как в Things (полёт — 270 мс) */
+private const val FAB_TAP_FLIGHT_DELAY_MS = 80L
+
+/** Нажатие на «+»: задача ждёт посадки кнопки не дольше, мс */
+private const val FAB_TAP_LANDING_WAIT_MS = 600L
+
+/** Нажатие на «+»: задача начинает появляться на этой доле полёта кнопки — кнопка гаснет уже поверх неё */
+private const val FAB_TAP_CARD_AT_FLIGHT = 0.8f
+
+/** Невидимое поле для клавиатуры новой задачи от «+» */
+private val IME_PRIMER_SIZE = 1.dp
+
+/** Рост промежутка от нажатия: с полной скорости (2H/T в начале) равномерно замедляется до остановки */
+private val FAB_TAP_GROW_EASING = androidx.compose.animation.core.Easing { u -> 1f - (1f - u) * (1f - u) }
+
+/**
+ * Прокрутка списка к началу одним плавным движением: быстро, а перед самой остановкой — замедление до скорости
+ * [endPxPerMs] (px за мс), с ней движение подхватывает промежуток новой задачи. Стандартная animateScrollToItem до невидимой строки едет
+ * кусками по экрану и перескакивает, поэтому — своя: сколько осталось до начала, считается заново каждый кадр
+ * (вдали — по средней высоте видимых строк, когда первая строка в кадре — точно), и список приходит ровно к началу
+ * без докрутки. Очень длинный путь сначала сразу сокращается до [FAB_TAP_SCROLL_MAX_SCREENS] экранов — иначе на
+ * такой скорости экраны мелькали бы.
+ */
+private suspend fun scrollListToTop(state: androidx.compose.foundation.lazy.LazyListState, endPxPerMs: Float) {
+    fun remaining(): Float {
+        if (state.firstVisibleItemIndex == 0) return state.firstVisibleItemScrollOffset.toFloat()
+        val visible = state.layoutInfo.visibleItemsInfo
+        if (visible.isEmpty()) return 0f
+        val averageRow = visible.sumOf { it.size }.toFloat() / visible.size
+        return state.firstVisibleItemIndex * averageRow + state.firstVisibleItemScrollOffset
+    }
+    if (remaining() <= 0f) return
+    val viewport = (state.layoutInfo.viewportEndOffset - state.layoutInfo.viewportStartOffset).toFloat()
+    state.scroll {
+        val maxSmooth = viewport * FAB_TAP_SCROLL_MAX_SCREENS
+        if (viewport > 0f && remaining() > maxSmooth) scrollBy(-(remaining() - maxSmooth))
+        val total = remaining()
+        if (total <= 0f) return@scroll
+        // Время — по расстоянию, но средняя скорость не ниже FAB_TAP_SCROLL_MIN_AVG_RATIO скоростей подхвата
+        val duration = minOf(
+            (total / FAB_TAP_SCROLL_PX_PER_MS).coerceAtMost(FAB_TAP_SCROLL_MAX_MS.toFloat()),
+            total / (endPxPerMs * FAB_TAP_SCROLL_MIN_AVG_RATIO)
+        ).coerceAtLeast(1f)
+        // Скорость v(u) = endV + (startV - endV)·(1 - u²): почти не падает в начале и сходится с endV к самой
+        // остановке. Путь total = duration·(endV + (startV - endV)·2/3)
+        val endV = endPxPerMs
+        val startV = endV + (total / duration - endV) * 1.5f
+        androidx.compose.animation.core.animate(
+            0f, 1f,
+            animationSpec = androidx.compose.animation.core.tween(duration.toInt().coerceAtLeast(1), easing = androidx.compose.animation.core.LinearEasing)
+        ) { u, _ ->
+            val travelled = duration * (endV * u + (startV - endV) * (u - u * u * u / 3f))
+            scrollBy(-(remaining() - (total - travelled)))
+        }
+        // Последний кадр: остаток (доли пикселя) — до самого начала
+        if (remaining() > 0f) scrollBy(-remaining())
+    }
+}
+
+/** Нажатие на «+»: сколько кадров ждать промежуток в кадре, прежде чем лететь без него */
 private const val FAB_TAP_GAP_WAIT_FRAMES = 30
 
 private val FAB_DROP_SCREENS = setOf(
@@ -2436,7 +2543,7 @@ private fun ListToggleRow(label: String, onClick: () -> Unit, modifier: Modifier
 
 /** Промежуток на месте пальца: серая плашка задачи или пунктир «NEW HEADING» */
 @Composable
-private fun FabGapRow(asHeading: Boolean, extraPx: () -> Float, modifier: Modifier = Modifier) {
+private fun FabGapRow(asHeading: Boolean, extraPx: () -> Float, modifier: Modifier = Modifier, growsFromZero: Boolean = false) {
     if (asHeading) {
         val lineColor = ThingsTheme.colors.newHeadingLine
         // Вместо серой плашки будущей задачи: та же высота 44 dp и те же отступы, пунктир — по её
@@ -2476,7 +2583,8 @@ private fun FabGapRow(asHeading: Boolean, extraPx: () -> Float, modifier: Modifi
                 .fillMaxWidth()
                 // Высота читается только при раскладке: раздвигание не пересобирает список
                 .layout { measurable, constraints ->
-                    val height = baseHeightPx + extraPx().toInt()
+                    // От нажатия на «+» — растёт от нуля сразу до высоты задачи, без плашки 44 dp
+                    val height = (if (growsFromZero) 0 else baseHeightPx) + extraPx().toInt()
                     val placeable = measurable.measure(constraints.copy(minHeight = height, maxHeight = height))
                     layout(placeable.width, height) { placeable.place(0, 0) }
                 },
