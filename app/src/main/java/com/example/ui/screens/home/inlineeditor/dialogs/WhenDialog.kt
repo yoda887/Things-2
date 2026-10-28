@@ -157,6 +157,9 @@ private const val GROW_FADE_MS = 60
 /** Гашение диалога при закрытии — размер при этом не меняется */
 private const val CLOSE_DURATION_MS = 130
 
+/** Выбор в окне «Когда?»: через столько мс после нажатия окно закрывается — видно, что выбрано */
+private const val CHOICE_CLOSE_DELAY_MS = 30L
+
 /** Затемнение фона под диалогом: как в эталоне — фон гаснет примерно до 0,8 исходной яркости */
 private const val DIM_ALPHA = 0.20f
 
@@ -229,6 +232,19 @@ fun ThingsWhenDialog(
     // WindowManager (нативное уменьшение к центру, растворение и плавное снятие затемнения).
     val requestClose: () -> Unit = {
         onDismissRequest()
+    }
+    // Выбор (дата, «Сегодня», «Когда-нибудь»…) закрывает окно не сразу, а через CHOICE_CLOSE_DELAY_MS: видно,
+    // на что нажали. Повторное нажатие за это время окно не закрывает дважды
+    val choiceScope = rememberCoroutineScope()
+    var choiceClosing by remember { mutableStateOf(false) }
+    val closeAfterChoice: () -> Unit = {
+        if (!choiceClosing) {
+            choiceClosing = true
+            choiceScope.launch {
+                delay(CHOICE_CLOSE_DELAY_MS)
+                requestClose()
+            }
+        }
     }
 
     // Открытие из строки: диалог начинается уменьшенной копией на месте строки и вырастает, доезжая
@@ -350,7 +366,7 @@ fun ThingsWhenDialog(
                             onSectionChange(if (isTodayDate(millis)) TaskSection.TODAY else TaskSection.UPCOMING)
                             onIsTonightChange(false)
                             onShowCalendarHelperChange(true)
-                            requestClose()
+                            closeAfterChoice()
                         }
                     }
                     }
@@ -405,7 +421,7 @@ fun ThingsWhenDialog(
                             onSectionChange(TaskSection.TODAY)
                             onIsTonightChange(false)
                             onShowCalendarHelperChange(true)
-                            requestClose()
+                            closeAfterChoice()
                         }
                         .height(MaterialTheme.dimens.rowHeight),
                     verticalAlignment = Alignment.CenterVertically
@@ -453,7 +469,7 @@ fun ThingsWhenDialog(
                             onSectionChange(TaskSection.TODAY)
                             onIsTonightChange(true)
                             onShowCalendarHelperChange(true)
-                            requestClose()
+                            closeAfterChoice()
                         }
                         .height(MaterialTheme.dimens.rowHeight),
                     verticalAlignment = Alignment.CenterVertically
@@ -637,7 +653,7 @@ fun ThingsWhenDialog(
                                                     onSectionChange(if (isTodayDate(cell.timestamp)) TaskSection.TODAY else TaskSection.UPCOMING)
                                                     onIsTonightChange(false)
                                                     onShowCalendarHelperChange(true)
-                                                    requestClose()
+                                                    closeAfterChoice()
                                                 },
                                             contentAlignment = Alignment.Center
                                         ) {
@@ -776,7 +792,7 @@ fun ThingsWhenDialog(
                             onIsTonightChange(false)
                             onReminderTimeChange?.invoke(null)
                             onShowCalendarHelperChange(true)
-                            requestClose()
+                            closeAfterChoice()
                         }
                         .height(MaterialTheme.dimens.rowHeight),
                     verticalAlignment = Alignment.CenterVertically
@@ -925,7 +941,7 @@ fun ThingsWhenDialog(
                             onIsTonightChange(false)
                             onReminderTimeChange?.invoke(null)
                             onShowCalendarHelperChange(false)
-                            requestClose()
+                            closeAfterChoice()
                         },
                         colors = ButtonDefaults.buttonColors(
                             containerColor = ThingsTheme.colors.clearAction,
