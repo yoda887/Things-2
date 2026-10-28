@@ -48,7 +48,8 @@ class SyncDatabase @Inject constructor(private val database: AppDatabase) {
 
     /**
      * Применить пришедшее: удалить [deletions] (сначала зависимые таблицы), вставить или заменить [rows] (сначала те,
-     * на кого ссылаются). Запись, которой не на что сослаться (её задачу здесь удалили), пропускается.
+     * на кого ссылаются). Запись, которой не на что сослаться (её задачу здесь удалили), пропускается — кроме
+     * области задачи: задача из удалённой области остаётся, без области (как при удалении области здесь).
      * Журнал удалений чистится от записей старше [pruneBefore].
      */
     suspend fun apply(rows: List<SyncRow>, deletions: List<Key>, pruneBefore: Long) = database.withTransaction {
@@ -72,7 +73,7 @@ class SyncDatabase @Inject constructor(private val database: AppDatabase) {
     /** Заменить запись (UPDATE) или вставить новую; UPSERT в SQLite старых Android нет */
     private fun upsert(table: String, row: SyncRow) {
         val values = ContentValues().apply {
-            row.values.forEach { (column, value) ->
+            withoutMissingArea(table, row.values).forEach { (column, value) ->
                 when (value) {
                     null -> putNull(column)
                     is String -> put(column, value)
@@ -87,6 +88,14 @@ class SyncDatabase @Inject constructor(private val database: AppDatabase) {
         if (updated == 0) {
             runCatching { db.insert("`$table`", SQLiteDatabase.CONFLICT_ABORT, values) }
         }
+    }
+
+    /** Задача из области, которой здесь нет (её удалили), — без области, а не пропускается целиком */
+    private fun withoutMissingArea(table: String, values: Map<String, Any?>): Map<String, Any?> {
+        val areaId = values[AREA_ID] as? String
+        if (table != "items" || areaId == null) return values
+        val exists = db.query("SELECT 1 FROM areas WHERE id = ?", arrayOf<Any>(areaId)).use { it.moveToFirst() }
+        return if (exists) values else values + (AREA_ID to null)
     }
 
     private fun whereOf(key: Key): Pair<String, Array<Any>> =
@@ -107,5 +116,10 @@ class SyncDatabase @Inject constructor(private val database: AppDatabase) {
             }
         }
         return values
+    }
+
+    private companion object {
+        /** Поле области задачи */
+        const val AREA_ID = "areaId"
     }
 }

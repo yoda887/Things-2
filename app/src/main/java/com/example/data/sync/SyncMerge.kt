@@ -54,6 +54,13 @@ object SyncMerge {
     /** Поле времени изменения записи — не сливается, его ставит слияние */
     private const val UPDATED_AT = "updatedAt"
 
+    /** Задачи: поля, по которым видно, что запись закрыта и когда её создали (re-created — см. [closedOverRecreated]) */
+    private const val ITEMS = "items"
+    private const val STATUS = "status"
+    private const val CREATION_DATE = "creationDate"
+    /** Item.STATUS_CANCELLED, Item.STATUS_COMPLETED */
+    private val CLOSED_STATUSES = setOf(2L, 3L)
+
     /** Поля задачи, которые выводятся из других таблиц: при правке на обоих — пересчитываются */
     private const val CACHED_TAGS = "cachedTags"
     private const val CHECKLIST_TOTAL = "checklistItemsCount"
@@ -98,8 +105,12 @@ object SyncMerge {
                     val mine = local.rows[key]
                     val theirs = remote.rows[key]
                     val was = base?.rows?.get(key)
-                    val merged = if (mine != null && theirs != null && was != null) mergeFields(mine, theirs, was) else null
-                    if (merged != null) {
+                    val kept = if (mine != null && theirs != null) closedOverRecreated(mine, theirs) else null
+                    val merged = if (kept == null && mine != null && theirs != null && was != null) mergeFields(mine, theirs, was) else null
+                    if (kept != null) {
+                        rows[key] = kept
+                        sources[key] = if (kept === mine) Source.MINE else Source.THEIRS
+                    } else if (merged != null) {
                         rows[key] = merged.row
                         sources[key] = merged.source
                         if (merged.conflicts.isNotEmpty()) conflicts[key] = merged.conflicts
@@ -129,6 +140,26 @@ object SyncMerge {
             }
         }
         return Result(State(rows, deletions), apply, delete, remoteChanged)
+    }
+
+    /**
+     * Копию повтора создали ещё раз (тот же вычисленный id — устройство, где её ещё не было, сделало её сам): с одной
+     * стороны задача закрыта, с другой — открыта, но создана позже. Новая открытая копия правлена позже и иначе
+     * взяла бы верх — выполненная задача снова стала бы открытой. Остаётся закрытая. Снова открыть задачу можно
+     * как обычно: у такой правки время создания прежнее. null — не тот случай.
+     */
+    private fun closedOverRecreated(mine: SyncRow, theirs: SyncRow): SyncRow? {
+        if (mine.key.table != ITEMS) return null
+        fun SyncRow.closed() = (values[STATUS] as? Number)?.toLong() in CLOSED_STATUSES
+        fun SyncRow.created() = (values[CREATION_DATE] as? Number)?.toLong()
+        val (closed, open) = when {
+            mine.closed() && !theirs.closed() -> mine to theirs
+            theirs.closed() && !mine.closed() -> theirs to mine
+            else -> return null
+        }
+        val closedAt = closed.created() ?: return null
+        val openAt = open.created() ?: return null
+        return if (openAt > closedAt) closed else null
     }
 
     private class FieldMerge(val row: SyncRow, val source: Source, val conflicts: Set<String>)

@@ -233,4 +233,30 @@ class SyncMergeTest {
         assertTrue(result.applyLocally.any { it.key == key("a") })
         assertTrue(result.remoteChanged)
     }
+
+    // ---------------------------------------------------------------- копия повтора, созданная заново
+
+    @Test
+    fun recreatedOpenCopy_doesNotReopenCompletedOne() {
+        // Здесь копию дня выполнили утром; другое устройство вечером создало её же (тот же id) заново, открытой
+        val done = item(100, "status" to 3L, "creationDate" to 50L)
+        val recreated = item(900, "status" to 0L, "creationDate" to 800L)
+        val result = SyncMerge.merge(state(listOf(done)), state(listOf(recreated)))
+        assertEquals(3L, result.merged.rows.getValue(key("a")).values["status"])
+        assertTrue(result.applyLocally.isEmpty())
+        // Выполненная уходит в общий файл — открытая копия там больше не останется
+        assertTrue(result.remoteChanged)
+        // И с другой стороны так же
+        val other = SyncMerge.merge(state(listOf(recreated)), state(listOf(done)))
+        assertEquals(listOf(done), other.applyLocally)
+    }
+
+    @Test
+    fun reopenedTask_sameCreationDate_stillWins() {
+        // Задачу просто открыли снова: время создания прежнее — побеждает более поздняя правка, как всегда
+        val done = item(100, "status" to 3L, "creationDate" to 50L)
+        val reopened = item(900, "status" to 0L, "creationDate" to 50L)
+        val result = SyncMerge.merge(state(listOf(done)), state(listOf(reopened)))
+        assertEquals(0L, result.merged.rows.getValue(key("a")).values["status"])
+    }
 }
