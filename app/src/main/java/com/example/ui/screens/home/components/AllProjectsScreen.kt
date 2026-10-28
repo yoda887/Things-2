@@ -7,8 +7,8 @@ data class ListToggleItem(val key: String, val label: String)
 
 /**
  * Строки особого списка «Все проекты» (правила — в [AllProjectsList]): заголовок области, её активные
- * проекты, затем переключатель более поздних (и они сами, если раскрыты); внизу — переключатель
- * завершённых проектов и они сами.
+ * проекты, затем переключатель более поздних (и они сами, если раскрыты); внизу — плашка «Показати завершені
+ * проєкти» — переход на экран завершённых проектов.
  */
 object AllProjectsScreen {
 
@@ -20,11 +20,9 @@ object AllProjectsScreen {
     fun rows(
         content: AllProjectsList.Content,
         expandedLater: Set<String>,
-        showLogged: Boolean,
         showLaterLabel: (Int) -> String,
         hideLaterLabel: (Int) -> String,
-        showLoggedLabel: String,
-        hideLoggedLabel: String
+        showLoggedLabel: String
     ): List<Any> = buildList {
         content.groups.forEach { group ->
             group.area?.let { area ->
@@ -38,10 +36,8 @@ object AllProjectsScreen {
                 add(ListToggleItem(key, if (expanded) hideLaterLabel(group.later.size) else showLaterLabel(group.later.size)))
             }
         }
-        if (content.logged.isNotEmpty()) {
-            add(ListToggleItem(LOGGED_KEY, if (showLogged) hideLoggedLabel else showLoggedLabel))
-            if (showLogged) addAll(content.logged)
-        }
+        // Завершённые здесь не раскрываются — плашка ведёт на экран «Завершені проєкти», как в Things
+        if (content.logged.isNotEmpty()) add(ListToggleItem(LOGGED_KEY, showLoggedLabel))
     }
 
     /**

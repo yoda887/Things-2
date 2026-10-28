@@ -256,7 +256,6 @@ fun rememberFlattenedList(
     val yesterdayLabel = stringResource(R.string.yesterday)
     val resources = androidx.compose.ui.platform.LocalContext.current.resources
     val showLoggedLabel = stringResource(R.string.all_projects_show_logged)
-    val hideLoggedLabel = stringResource(R.string.all_projects_hide_logged)
     val tagShowLaterLabel = stringResource(R.string.area_show_later_items)
     val tagHideLaterLabel = stringResource(R.string.area_hide_later_items)
     val tagHideLoggedLabel = stringResource(R.string.tag_hide_logged)
@@ -313,10 +312,10 @@ fun rememberFlattenedList(
             ActiveScreen.HOME -> displayTasks
             ActiveScreen.ALL_PROJECTS -> AllProjectsScreen.rows(
                 // Шаблоны повторяющихся проектов — среди всех задач, не среди проектов
-                AllProjectsList.content(projects, areas, templates = allTasks.map { it.item }), expandedLaterProjects, showLoggedProjects,
+                AllProjectsList.content(projects, areas, templates = allTasks.map { it.item }), expandedLaterProjects,
                 { count -> resources.getQuantityString(R.plurals.all_projects_show_later, count, count) },
                 { count -> resources.getQuantityString(R.plurals.all_projects_hide_later, count, count) },
-                showLoggedLabel, hideLoggedLabel
+                showLoggedLabel
             )
             // Более поздние проекты без области — как в «Усіх проєктах»: запланированные по дате, повторяющиеся, отложенные
             // — разделами «Плани» (с повторяющимися) и «Колись», как в Things
@@ -419,6 +418,8 @@ sealed interface ThingsCategoryListEvent {
     object RequestMoveDialog : ThingsCategoryListEvent
     /** «OK» на плашке «Входящих»: ушедшие задачи больше там не показываются */
     object DismissInboxMoved : ThingsCategoryListEvent
+    /** «Все проекты»: плашка «Показати завершені проєкти» — на экран «Завершені проєкти» */
+    object OpenLoggedProjects : ThingsCategoryListEvent
     // sourceBounds — круг индикатора оттяжки в координатах корня, из него вырастает Quick Find
     data class ClickSearch(val sourceBounds: Rect? = null) : ThingsCategoryListEvent
     object ClickBack : ThingsCategoryListEvent

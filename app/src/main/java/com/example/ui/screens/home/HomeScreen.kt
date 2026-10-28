@@ -1406,3 +1406,4 @@ private fun AnimatedVisibilityScope.ScreenTransitionWrapper(
     }
 }
 
+                                is ThingsCategoryListEvent.OpenLoggedProjects -> navigateTo(ActiveScreen.LOGGED_PROJECTS)

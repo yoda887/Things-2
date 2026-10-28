@@ -1511,7 +1511,9 @@ fun ThingsCategoryListPanel(
                             ListToggleRow(
                                 label = item.label,
                                 onClick = {
-                                    if (item.key == AllProjectsScreen.LOGGED_KEY) {
+                                    if (item.key == AllProjectsScreen.LOGGED_KEY && screen == ActiveScreen.ALL_PROJECTS) {
+                                        onEvent(ThingsCategoryListEvent.OpenLoggedProjects)
+                                    } else if (item.key == AllProjectsScreen.LOGGED_KEY) {
                                         showLoggedProjects = !showLoggedProjects
                                     } else {
                                         expandedLaterProjects = if (item.key in expandedLaterProjects) {
