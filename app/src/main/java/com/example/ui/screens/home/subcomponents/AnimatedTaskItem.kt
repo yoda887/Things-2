@@ -798,7 +798,12 @@ fun AnimatedTaskItem(
             run {
                 androidx.compose.animation.AnimatedVisibility(
                     visible = isExpanded,
-                    enter = androidx.compose.animation.expandVertically() + androidx.compose.animation.fadeIn(),
+                    // Плашки появляются ближе к концу раскрытия карточки, когда она уже почти полной высоты
+                    enter = androidx.compose.animation.expandVertically(
+                        tween(durationMillis = PILL_ENTER_MS, delayMillis = PILL_ENTER_DELAY_MS)
+                    ) + androidx.compose.animation.fadeIn(
+                        tween(durationMillis = PILL_ENTER_MS, delayMillis = PILL_ENTER_DELAY_MS)
+                    ),
                     exit = androidx.compose.animation.shrinkVertically() + androidx.compose.animation.fadeOut()
                 ) {
                     val progress = if (currentProject != null) projectProgressMap[currentProject.id] else null
@@ -820,7 +825,7 @@ fun AnimatedTaskItem(
                                 placeable.place(-extraPaddingPx, 0)
                             }
                         }
-                    Column {
+                    Column(modifier = Modifier.padding(bottom = ThingsSpacing.XS)) {
                     // Плашка места — только у задачи с проектом или областью, как в Things; без них переносят кнопкой
                     // «Перемістити» внизу
                     if (currentProject != null || currentArea != null) {
@@ -838,7 +843,8 @@ fun AnimatedTaskItem(
                                     placeable.place(-extraPaddingPx, 0)
                                 }
                             }
-                            .padding(top = ThingsSpacing.S_PLUS, bottom = ThingsSpacing.XS, end = ThingsSpacing.L),
+                            // Отступ сверху — одинаковый у каждой плашки (PILL_TOP_GAP), есть ли вторая или нет
+                            .padding(top = PILL_TOP_GAP, end = ThingsSpacing.L),
                         horizontalArrangement = Arrangement.End,
                         verticalAlignment = Alignment.CenterVertically
                     ) {
@@ -889,7 +895,8 @@ fun AnimatedTaskItem(
                             Spacer(modifier = Modifier.width(ThingsSpacing.XS_PLUS))
                             Text(
                                 text = currentProject?.title ?: currentArea?.title ?: androidx.compose.ui.res.stringResource(com.example.R.string.move_no_project),
-                                style = ThingsTheme.type.editorChecklist.copy(
+                                // Плашки под раскрытой задачей — полужирным (editorChecklistStrong), как в Things
+                                style = ThingsTheme.type.editorChecklistStrong.copy(
                                     color = pillContentColor
                                 ),
                                 // Длинное название — в одну строку с многоточием, «›» остаётся видна
@@ -944,7 +951,7 @@ fun AnimatedTaskItem(
                         val summary = com.example.ui.screens.home.inlineeditor.dialogs.repeatRuleSummary(repeatRule)
                             .replaceFirstChar { it.lowercase() }
                         Row(
-                            modifier = pillRowModifier.padding(bottom = ThingsSpacing.XS, end = ThingsSpacing.L),
+                            modifier = pillRowModifier.padding(top = PILL_TOP_GAP, end = ThingsSpacing.L),
                             horizontalArrangement = Arrangement.End,
                             verticalAlignment = Alignment.CenterVertically
                         ) {
@@ -987,10 +994,7 @@ fun AnimatedTaskItem(
                                 val pillText = nextPillText ?: androidx.compose.ui.res.stringResource(com.example.R.string.repeat_pill, summary)
                                 Text(
                                     text = androidx.compose.ui.text.buildAnnotatedString {
-                                        // Правило или день повтора — начертанием даты в редакторе (editorDateStrong), как в Things
-                                        pushStyle(androidx.compose.ui.text.SpanStyle(fontWeight = ThingsTheme.type.editorDateStrong.fontWeight))
                                         append(pillText)
-                                        pop()
                                         append(' ')
                                         appendInlineContent(REPEAT_PILL_CHEVRON, "›")
                                     },
@@ -1010,7 +1014,7 @@ fun AnimatedTaskItem(
                                             )
                                         }
                                     ),
-                                    style = ThingsTheme.type.editorChecklist.copy(color = pillContentColor),
+                                    style = ThingsTheme.type.editorChecklistStrong.copy(color = pillContentColor),
                                     onTextLayout = { layout ->
                                         textLayoutRef[0] = layout
                                         firstLineCenterPx = (layout.getLineTop(0) + layout.getLineBottom(0)) / 2f
@@ -1074,6 +1078,13 @@ private class ExpandedCardGeometry {
     var editorFullHeight = 0
     var measured = false
 }
+
+/** Плашки под раскрытой задачей появляются с этой задержкой от начала раскрытия (300 мс) и за это время */
+private const val PILL_ENTER_DELAY_MS = 200
+private const val PILL_ENTER_MS = 150
+
+/** Отступ над каждой плашкой под раскрытой задачей (место, повтор) — одинаковый, одна плашка или две */
+private val PILL_TOP_GAP = ThingsSpacing.M
 
 /** Место «›» в конце текста плашки повтора под раскрытой задачей */
 private const val REPEAT_PILL_CHEVRON = "repeat_pill_chevron"

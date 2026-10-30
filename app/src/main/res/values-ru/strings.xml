@@ -253,7 +253,7 @@
     <string name="settings_today_grouped">Группировать «Сегодня» по проектам</string>
     <string name="settings_today_grouped_hint">Дневная часть «Сегодня» — под своими проектами и областями; «Вечер» — как есть</string>
     <string name="settings_dates_month_name">Месяц словом в датах</string>
-    <string name="settings_dates_month_name_hint">Даты в карточках «Журнала» и списков проектов: «9 окт.» вместо «9.10.»</string>
+    <string name="settings_dates_month_name_hint">Даты в карточках задач и проектов во всех списках: «9 окт.» вместо «9.10.»</string>
     <plurals name="repeat_days_earlier"><item quantity="one">за %d день</item><item quantity="few">за %d дня</item><item quantity="many">за %d дней</item><item quantity="other">за %d дня</item></plurals>
     <plurals name="repeat_repetitions"><item quantity="one">%d повтор</item><item quantity="few">%d повтора</item><item quantity="many">%d повторов</item><item quantity="other">%d повтора</item></plurals>
     <plurals name="repeat_ends_after"><item quantity="one">после %d повтора</item><item quantity="few">после %d повторов</item><item quantity="many">после %d повторов</item><item quantity="other">после %d повтора</item></plurals>

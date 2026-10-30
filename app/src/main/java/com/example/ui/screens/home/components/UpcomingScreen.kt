@@ -26,7 +26,9 @@ object UpcomingScreen {
         calendarEvents: List<Item>,
         tomorrowLabel: String,
         now: Calendar = Calendar.getInstance(),
-        projects: List<Item> = emptyList()
+        projects: List<Item> = emptyList(),
+        // Месяц словом («22 жовт.») или цифрами («22.10.») — настройка «Месяц словом в датах»
+        monthName: Boolean = true
     ): UpcomingSchedule {
         val plan = UpcomingList.schedule(localTasksList, calendarEvents, now, projects)
 
@@ -34,7 +36,7 @@ object UpcomingScreen {
         val weekdayFormat = SimpleDateFormat("EEEE", locale)
         val monthFormat = SimpleDateFormat("LLLL", locale)
         // Плашка задачи в месячных разделах — число и месяц, как на экране проекта
-        val dayBadgeFormat = SimpleDateFormat("d MMM", locale)
+        val dayBadgeFormat = SimpleDateFormat(if (monthName) "d MMM" else "d.M.", locale)
         val dayNumFormat = SimpleDateFormat("d", locale)
         val cal = Calendar.getInstance()
 
@@ -133,12 +135,14 @@ fun rememberUpcomingSchedule(
     projects: List<Item> = emptyList()
 ): UpcomingSchedule {
     val tomorrowLabel = stringResource(R.string.tomorrow)
-    return remember(localTasksList, calendarEvents, projects, tomorrowLabel) {
+    val monthName = com.example.ui.components.LocalDatesWithMonthName.current
+    return remember(localTasksList, calendarEvents, projects, tomorrowLabel, monthName) {
         // Запланированные проекты — на своём дне или в своём месяце (UpcomingList.includesProject)
         val bounds = com.example.data.model.DayBounds.now()
         UpcomingScreen.schedule(
             localTasksList, calendarEvents, tomorrowLabel,
-            projects = projects.filter { UpcomingList.includesProject(it, bounds) }
+            projects = projects.filter { UpcomingList.includesProject(it, bounds) },
+            monthName = monthName
         )
     }
 }

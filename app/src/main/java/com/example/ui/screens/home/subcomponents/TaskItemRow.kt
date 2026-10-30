@@ -201,9 +201,11 @@ fun TaskItemRow(
     val eveningColor = ThingsTheme.colors.eveningIndicator
     val tonightDescription = stringResource(R.string.cd_tonight)
     val todayDescription = stringResource(R.string.category_today)
-    val dateIndicator = remember(task.startDate, task.isTonight, task.start, task.dueDate, eveningColor, tonightDescription, todayDescription) {
+    // Число и месяц — словом или цифрами, по настройке «Месяц словом в датах»
+    val monthName = com.example.ui.components.LocalDatesWithMonthName.current
+    val dateIndicator = remember(task.startDate, task.isTonight, task.start, task.dueDate, eveningColor, tonightDescription, todayDescription, monthName) {
         if (task.startDate != null) {
-            getStartDateIndicator(task.startDate, task.isTonight, eveningColor, tonightDescription, todayDescription)
+            getStartDateIndicator(task.startDate, task.isTonight, eveningColor, tonightDescription, todayDescription, monthName)
         } else if (task.isToday) {
             if (task.isTonight) {
                 DateIndicatorResult.IconIndicator(
@@ -644,7 +646,9 @@ private fun DateIndicatorMark(indicator: DateIndicatorResult) {
  */
 @Composable
 internal fun startDateBadgeText(startDate: Long, isTonight: Boolean = false): String =
-    when (val indicator = getStartDateIndicator(startDate, false, Color.Unspecified, "", "")) {
+    when (val indicator = getStartDateIndicator(
+        startDate, false, Color.Unspecified, "", "", com.example.ui.components.LocalDatesWithMonthName.current
+    )) {
         is DateIndicatorResult.IconIndicator ->
             stringResource(if (isTonight) R.string.category_this_evening else R.string.category_today)
         is DateIndicatorResult.TextIndicator ->
@@ -656,7 +660,8 @@ private fun getStartDateIndicator(
     isTonight: Boolean,
     eveningColor: Color,
     tonightDescription: String,
-    todayDescription: String
+    todayDescription: String,
+    monthName: Boolean = true
 ): DateIndicatorResult {
     val taskCal = java.util.Calendar.getInstance().apply { timeInMillis = startDate }
     val todayCal = java.util.Calendar.getInstance()
@@ -715,7 +720,8 @@ private fun getStartDateIndicator(
     }
     
     val locale = java.util.Locale.getDefault()
-    val monthAndDayStr = java.text.SimpleDateFormat("d MMM", locale).format(taskCal.time)
+    // «22 жовт.» или цифрами «22.10.», как в «Журнале» (настройка)
+    val monthAndDayStr = java.text.SimpleDateFormat(if (monthName) "d MMM" else "d.M.", locale).format(taskCal.time)
     return DateIndicatorResult.TextIndicator(monthAndDayStr)
 }
 
