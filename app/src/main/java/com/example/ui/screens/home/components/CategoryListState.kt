@@ -249,7 +249,9 @@ fun rememberFlattenedList(
     // «Сегодня»: сколько нового — плашка вверху списка, до «OK»
     todayNewCount: Int = 0,
     // «Сегодня»: дневная часть по проектам и областям (настройка)
-    todayGroupedDay: Boolean = false
+    todayGroupedDay: Boolean = false,
+    // Фильтр по тегу над списком (область): проекты — только с этим тегом
+    tagFilter: String? = null
 ): List<Any> {
     val headerLogbook = stringResource(R.string.category_logbook)
     val todayLabel = stringResource(R.string.category_today)
@@ -260,7 +262,7 @@ fun rememberFlattenedList(
     val tagHideLaterLabel = stringResource(R.string.area_hide_later_items)
     val tagHideLoggedLabel = stringResource(R.string.tag_hide_logged)
     val upcomingRepeatingLabel = stringResource(R.string.upcoming_repeating_section)
-    return remember(todayGroupedDay, todayNewCount, inboxGhosts, repeatRules, expandedLaterProjects, showLoggedProjects, resources, screen, standardToday, eveningToday, headerLogbook, todayLabel, yesterdayLabel, draggedItemKey, upcomingDays, upcomingMonths, projects, area, displayTasks, isLaterItemsHidden, tag, allTasks, areas, savedTags, searchQuery, headings, pinnedPlaces) {
+    return remember(todayGroupedDay, todayNewCount, inboxGhosts, repeatRules, expandedLaterProjects, showLoggedProjects, resources, screen, standardToday, eveningToday, headerLogbook, todayLabel, yesterdayLabel, draggedItemKey, upcomingDays, upcomingMonths, projects, area, displayTasks, isLaterItemsHidden, tag, allTasks, areas, savedTags, searchQuery, headings, pinnedPlaces, tagFilter) {
         // Все экраны перечислены явно (без else): новый экран компилятор заставит указать и здесь
         when (screen) {
             ActiveScreen.TODAY -> {
@@ -280,11 +282,11 @@ fun rememberFlattenedList(
                     waiting.map { if (it.item.type == com.example.data.model.Item.TYPE_PROJECT_TEMPLATE) it.item else it }
             }
             // Шаблоны повторяющихся проектов — среди всех задач, не среди проектов
-            ActiveScreen.AREA_DETAIL -> AreaScreen.rows(AreaList.content(area?.id, displayTasks, projects, templates = allTasks.map { it.item }), isLaterItemsHidden)
+            ActiveScreen.AREA_DETAIL -> AreaScreen.rows(AreaList.content(area?.id, displayTasks, projects, templates = allTasks.map { it.item }, tagFilter = tagFilter), isLaterItemsHidden)
             ActiveScreen.LOGBOOK -> LogbookScreen.rows(LogbookList.sections(displayTasks, projects), todayLabel, yesterdayLabel)
             // Поздние и выполненные — под плашками, по умолчанию скрыты (состояние плашек — как у «Всех проектов»)
             ActiveScreen.TAG_DETAIL -> TagScreen.rows(
-                TagList.content(tag?.title, displayTasks, allTasks, projects, areas, pinnedPlaces),
+                TagList.content(tag?.title, displayTasks, allTasks, projects, areas, pinnedPlaces, rules = repeatRules),
                 showLater = TagScreen.LATER_KEY in expandedLaterProjects,
                 showLogged = showLoggedProjects,
                 laterLabel = { shown -> if (shown) tagHideLaterLabel else tagShowLaterLabel },

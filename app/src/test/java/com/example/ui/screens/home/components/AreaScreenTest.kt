@@ -124,4 +124,18 @@ class AreaScreenTest {
         assertEquals(listOf("tpl"), content.upcomingProjects.map { it.id })
         assertTrue(content.hasLater)
     }
+
+    @Test
+    fun repeatingTaskTemplate_shownInUpcoming_copyAndPartNot() {
+        val template = Item(id = "t", title = "t", type = Item.TYPE_TEMPLATE, areaId = "a")
+        val part = Item(id = "part", title = "part", type = Item.TYPE_TEMPLATE, areaId = "a", repeatTemplateId = "pt")
+        // Шаблон повторяющейся задачи — на экране области, в «Планах»; часть шаблона проекта — нет
+        assertTrue(AreaList.includes(template, "a"))
+        assertFalse(AreaList.includes(part, "a"))
+        assertEquals(AreaList.Section.UPCOMING, AreaList.sectionOf(template, bounds))
+        val content = AreaList.content("a", listOf(current, ItemWithChecklist(template)), emptyList(), bounds)
+        assertEquals(listOf("t"), content.upcoming.map { it.item.id })
+        // Отложенный шаблон — в «Когда-нибудь»
+        assertEquals(AreaList.Section.SOMEDAY, AreaList.sectionOf(template.copy(start = Item.START_SOMEDAY), bounds))
+    }
 }

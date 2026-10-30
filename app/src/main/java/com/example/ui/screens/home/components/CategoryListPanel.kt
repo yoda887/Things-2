@@ -426,6 +426,13 @@ fun ThingsCategoryListPanel(
     val displayTasks = localTasksList
     
     var isLaterItemsHidden by rememberSaveable { mutableStateOf(false) }
+    // Число объектов под плашкой «пізніші» на экране области — то, что она прячет
+    val areaLaterCount = remember(screen, area?.id, state.displayTasks, projects, state.allTasks, state.selectedTagFilter) {
+        if (screen != ActiveScreen.AREA_DETAIL) 0
+        else AreaList.content(area?.id, state.displayTasks, projects, templates = state.allTasks.map { it.item }, tagFilter = state.selectedTagFilter).let {
+            it.upcoming.size + it.someday.size + it.upcomingProjects.size + it.somedayProjects.size
+        }
+    }
     var isTagsFilterVisible by remember(screen, project?.id, area?.id) { mutableStateOf(false) }
 
     // Извлечение выравнивания плоского списка для LazyColumn
@@ -1789,6 +1796,7 @@ fun ThingsCategoryListPanel(
                                     dividerColor = dividerColor,
                                     dimAlpha = dimAlpha,
                                     isLaterItemsHidden = isLaterItemsHidden,
+                                    laterCount = areaLaterCount,
                                     onLaterToggleClick = { isLaterItemsHidden = !isLaterItemsHidden },
                                     modifier = if (isAreaHeader) {
                                         Modifier.animateItem(placementSpec = placementSpec)

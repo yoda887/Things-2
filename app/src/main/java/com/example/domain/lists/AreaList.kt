@@ -17,13 +17,19 @@ object AreaList {
 
     fun sectionOf(item: Item, bounds: DayBounds): Section = when {
         item.start == Item.START_SOMEDAY -> Section.SOMEDAY
+        // Шаблон повторяющейся задачи — в «Планах», как шаблоны повторяющихся проектов: его следующий повтор впереди
+        RepeatingList.includes(item) -> Section.UPCOMING
         bounds.isUpcoming(item) -> Section.UPCOMING
         else -> Section.CURRENT
     }
 
-    /** Задачи списка экрана: невыполненные задачи области (и её проектов — они идут после своих, см. [order]). */
+    /**
+     * Задачи списка экрана: невыполненные задачи области (и её проектов — они идут после своих, см. [order]) и шаблоны
+     * её повторяющихся задач.
+     */
     fun includes(item: Item, areaId: String?): Boolean =
-        areaId != null && item.areaId == areaId && item.type == Item.TYPE_TASK && !item.isClosed
+        areaId != null && item.areaId == areaId && !item.isClosed &&
+            (item.type == Item.TYPE_TASK || RepeatingList.includes(item))
 
     /** Задача стоит в области сама, а не в одном из её проектов. */
     fun isOwnTask(item: Item, areaId: String?): Boolean =
@@ -51,11 +57,15 @@ object AreaList {
         tasks: List<ItemWithChecklist>,
         projects: List<Item>,
         bounds: DayBounds = DayBounds.now(),
-        templates: List<Item> = emptyList()
+        templates: List<Item> = emptyList(),
+        // Фильтр по тегу над списком: проекты (и шаблоны проектов) — только с этим тегом, как задачи
+        tagFilter: String? = null
     ): Content {
-        val own = tasks.filter { isOwnTask(it.item, areaId) }
+        fun tagged(item: Item) = tagFilter == null ||
+            item.tags.any { com.example.domain.tag.TagTitles.key(it) == com.example.domain.tag.TagTitles.key(tagFilter) }
+        val own = tasks.filter { isOwnTask(it.item, areaId) && tagged(it.item) }
         val bySection = own.groupBy { sectionOf(it.item, bounds) }
-        val areaProjects = projects.filter { areaId != null && it.areaId == areaId && ListRules.isOpenProject(it) }
+        val areaProjects = projects.filter { areaId != null && it.areaId == areaId && ListRules.isOpenProject(it) && tagged(it) }
         val (active, later) = areaProjects.partition { HomeList.showsProject(it, bounds) }
         val (someday, scheduled) = later.partition { it.start == Item.START_SOMEDAY }
         return Content(
@@ -64,7 +74,7 @@ object AreaList {
             upcoming = bySection[Section.UPCOMING].orEmpty(),
             someday = bySection[Section.SOMEDAY].orEmpty(),
             upcomingProjects = scheduled.sortedBy { it.startDate } + templates.filter { t ->
-                areaId != null && t.areaId == areaId && RepeatingList.includesProject(t) && areaProjects.none { it.id == t.id }
+                areaId != null && t.areaId == areaId && RepeatingList.includesProject(t) && tagged(t) && areaProjects.none { it.id == t.id }
             }.sortedBy { it.sortOrder },
             somedayProjects = someday
         )

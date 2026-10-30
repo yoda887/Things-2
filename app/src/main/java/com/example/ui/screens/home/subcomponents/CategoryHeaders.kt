@@ -518,6 +518,8 @@ fun SubCategoryHeader(
     dividerColor: Color,
     dimAlpha: Float,
     isLaterItemsHidden: Boolean = false,
+    // Сколько объектов под плашкой «пізніші» области (дела и проекты «Планов» и «Когда-нибудь»)
+    laterCount: Int = 0,
     onLaterToggleClick: () -> Unit = {},
     modifier: Modifier = Modifier
 ) {
@@ -651,8 +653,10 @@ fun SubCategoryHeader(
                 .padding(start = MaterialTheme.dimens.taskRowStartPadding, top = ThingsSpacing.L_PLUS, bottom = ThingsSpacing.M)
         ) {
             Text(
-                text = androidx.compose.ui.res.stringResource(
-                    if (isLaterItemsHidden) com.example.R.string.area_show_later_items else com.example.R.string.area_hide_later_items
+                // Как в Things: «Показати 12 пізніших об'єктів»
+                text = androidx.compose.ui.res.pluralStringResource(
+                    if (isLaterItemsHidden) com.example.R.plurals.area_show_later_count else com.example.R.plurals.area_hide_later_count,
+                    laterCount, laterCount
                 ),
                 style = ThingsTheme.type.bodyMedium.copy(
                     color = textSecondaryColor.copy(alpha = ThingsAlpha.HINT)

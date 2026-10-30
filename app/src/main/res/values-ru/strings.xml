@@ -18,6 +18,8 @@
     <string name="area_someday_heading">Когда-нибудь</string>
     <string name="area_hide_later_items">Скрыть более поздние объекты</string>
     <string name="area_show_later_items">Показать более поздние объекты</string>
+    <plurals name="area_show_later_count"><item quantity="one">Показать %1$d более поздний объект</item><item quantity="few">Показать %1$d более поздних объекта</item><item quantity="many">Показать %1$d более поздних объектов</item><item quantity="other">Показать %1$d более поздних объекта</item></plurals>
+    <plurals name="area_hide_later_count"><item quantity="one">Скрыть %1$d более поздний объект</item><item quantity="few">Скрыть %1$d более поздних объекта</item><item quantity="many">Скрыть %1$d более поздних объектов</item><item quantity="other">Скрыть %1$d более поздних объекта</item></plurals>
     <string name="category_inbox">Входящие</string>
     <string name="category_today">Сегодня</string>
     <string name="category_upcoming">Планы</string>
