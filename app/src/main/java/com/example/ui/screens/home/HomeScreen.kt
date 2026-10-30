@@ -794,6 +794,8 @@ fun ThingsHomeScreen(viewModel: ThingsViewModel = hiltViewModel()) {
                                 is ThingsCategoryListEvent.RenameArea -> viewModel.updateArea(event.area.copy(title = event.title))
                                 is ThingsCategoryListEvent.EditProject -> viewModel.editProject(event.project, event.edit)
                                 is ThingsCategoryListEvent.CompleteProject -> viewModel.completeProject(event.project)
+                                is ThingsCategoryListEvent.DeleteProjects -> event.projects.forEach { viewModel.deleteProject(it) }
+                                is ThingsCategoryListEvent.DuplicateProjects -> event.projects.forEach { viewModel.duplicateProject(it) }
                                 is ThingsCategoryListEvent.DuplicateProject -> {
                                     // Как в Things: копия встаёт сразу после проекта, экран проекта закрывается —
                                     // видно список, где появилась копия

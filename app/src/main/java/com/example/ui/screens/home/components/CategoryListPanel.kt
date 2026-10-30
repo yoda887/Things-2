@@ -222,6 +222,8 @@ fun ThingsCategoryListPanel(
     var localTasksList by remember { mutableStateOf(state.displayTasks) }
     val currentDisplayTasks by rememberUpdatedState(state.displayTasks)
     val currentAllTasks by rememberUpdatedState(state.allTasks)
+    val currentProjects by rememberUpdatedState(state.projects)
+    val currentAreas by rememberUpdatedState(state.areas)
     // Флаг: идёт ли анимация сворачивания редактора (300 мс)
     var isEditorCollapsing by remember { mutableStateOf(false) }
     // Предыдущий ID развёрнутой задачи для обнаружения момента сворачивания
@@ -393,12 +395,34 @@ fun ThingsCategoryListPanel(
         onEvent(ThingsCategoryListEvent.ExitSelectionMode)
     }
     
+    // «Пізніші проєкти»: выбор проектов (свайп влево), «Когда» по свайпу вправо и порядок во время перетаскивания —
+    // как у проектов на главном экране
+    val laterProjectGestures = screen == ActiveScreen.LATER_PROJECTS
+    var selectedProjectIds by remember(screen) { mutableStateOf(emptySet<String>()) }
+    val isProjectSelectionMode = selectedProjectIds.isNotEmpty()
+    var swipeWhenProject by remember(screen) { mutableStateOf<Item?>(null) }
+    var swipeWhenProjectOrigin by remember(screen) { mutableStateOf<androidx.compose.ui.geometry.Offset?>(null) }
+    var laterProjectsOverride by remember(screen) { mutableStateOf<List<Item>?>(null) }
+    // Сохранённый порядок пришёл из базы — показываем его
+    LaunchedEffect(state.projects) { laterProjectsOverride = null }
+    // Более поздние проекты без области — как на экране сейчас (во время перетаскивания — в новом порядке)
+    val laterProjectsNow: () -> List<Item> = {
+        AllProjectsList.content(laterProjectsOverride ?: currentProjects, currentAreas, templates = currentAllTasks.map { it.item })
+            .groups.firstOrNull { it.area == null }?.later.orEmpty()
+    }
+    val toggleProject: (Item) -> Unit = { project ->
+        selectedProjectIds = if (project.id in selectedProjectIds) selectedProjectIds - project.id else selectedProjectIds + project.id
+    }
+    BackHandler(enabled = isProjectSelectionMode) { selectedProjectIds = emptySet() }
+
     LaunchedEffect(
         showMoveDialog, showDeleteConfirm, isWhenDialogOpen, isTagDialogOpen, swipeWhenTask != null,
-        showBatchWhenDialog, showBatchMoveDialog, showBatchDeleteConfirm, showBatchTagDialog, showBatchDeadlineDialog
+        showBatchWhenDialog, showBatchMoveDialog, showBatchDeleteConfirm, showBatchTagDialog, showBatchDeadlineDialog,
+        isProjectSelectionMode, swipeWhenProject != null
     ) {
         val anyActive = showMoveDialog || showDeleteConfirm || isWhenDialogOpen || isTagDialogOpen || swipeWhenTask != null ||
-                showBatchWhenDialog || showBatchMoveDialog || showBatchDeleteConfirm || showBatchTagDialog || showBatchDeadlineDialog
+                showBatchWhenDialog || showBatchMoveDialog || showBatchDeleteConfirm || showBatchTagDialog || showBatchDeadlineDialog ||
+                isProjectSelectionMode || swipeWhenProject != null
         onDialogsActiveChange(anyActive)
     }
     
@@ -453,11 +477,12 @@ fun ThingsCategoryListPanel(
         draggedItemKey = dragDropState.draggedItemKey,
         upcomingDays = upcomingDays,
         upcomingMonths = upcomingMonths,
-        projects = projects,
+        projects = laterProjectsOverride ?: projects,
         area = area,
         displayTasks = displayTasks,
         isLaterItemsHidden = isLaterItemsHidden,
         tag = state.tag,
+        tagFilter = state.selectedTagFilter,
         allTasks = layoutAllTasks,
         areas = areasState,
         savedTags = allSavedTagObjects,
@@ -1368,9 +1393,18 @@ fun ThingsCategoryListPanel(
                             val task = item
                             if (task.type == Item.TYPE_PROJECT || task.type == Item.TYPE_PROJECT_TEMPLATE) {
                                 // Извлеченный подкомпонент строки проекта (и шаблона повторяющегося проекта)
+                                val laterGestures = laterProjectGestures && task.type == Item.TYPE_PROJECT
                                 ProjectItemRow(
                                     project = task,
                                     isNew = screen == ActiveScreen.TODAY && task.id in todayNew.ids,
+                                    isSelectionMode = laterProjectGestures && isProjectSelectionMode,
+                                    isSelected = task.id in selectedProjectIds,
+                                    onToggleSelect = { toggleProject(task) },
+                                    swipe = if (!laterGestures) null else com.example.ui.screens.home.subcomponents.ProjectRowSwipe(
+                                        onSwipeLeft = { toggleProject(task) },
+                                        onSwipeRight = { origin -> swipeWhenProject = task; swipeWhenProjectOrigin = origin },
+                                        enabled = dragDropState.draggedItemKey == null
+                                    ),
                                     tasks = state.displayTasks,
                                     projectProgressMap = state.projectProgressMap,
                                     textPrimaryColor = textPrimaryColor,
@@ -1450,6 +1484,27 @@ fun ThingsCategoryListPanel(
                                             Modifier.upcomingProjectDrag(dragDropState, task.id, upcomingDrag) { saved ->
                                                 if (saved.isNotEmpty()) onEvent(ThingsCategoryListEvent.ReorderTasks(saved))
                                             }
+                                        } else if (laterGestures && !isProjectSelectionMode) {
+                                            // «Пізніші проєкти»: между отложенными или между проектами того же дня
+                                            Modifier.universalDragAndDrop(
+                                                state = dragDropState,
+                                                key = task.id,
+                                                canDropOver = { key -> key is String && laterProjectsNow().any { it.id == key } },
+                                                onMoveIfNecessary = { dragged, target ->
+                                                    val moved = AllProjectsList.reorderLater(laterProjectsNow(), dragged as String, target as String)
+                                                    if (moved == null) false else {
+                                                        val byId = moved.associateBy { it.id }
+                                                        laterProjectsOverride = (laterProjectsOverride ?: currentProjects).map { byId[it.id] ?: it }
+                                                        true
+                                                    }
+                                                },
+                                                onDragEnd = {
+                                                    val stored = currentProjects.associateBy { it.id }
+                                                    val changed = laterProjectsOverride.orEmpty().filter { stored[it.id] != null && stored[it.id] != it }
+                                                    if (changed.isNotEmpty()) onEvent(ThingsCategoryListEvent.ReorderTasks(changed))
+                                                    else laterProjectsOverride = null
+                                                }
+                                            )
                                         } else Modifier
                                     )
                                 )
@@ -2332,6 +2387,30 @@ fun ThingsCategoryListPanel(
                     }
                 }
         )
+    }
+
+    // «Пізніші проєкти»: действия с выбранными проектами и «Когда» по свайпу — как на главном экране
+    if (laterProjectGestures) {
+        HomeProjectBatchLayer(
+            isActive = isProjectSelectionMode,
+            selected = projects.filter { it.id in selectedProjectIds },
+            allTasks = state.allTasks,
+            projects = projects,
+            areas = areasState,
+            onEditProjects = { list, edit -> list.forEach { onEvent(ThingsCategoryListEvent.EditProject(it, edit)) } },
+            onDeleteProjects = { onEvent(ThingsCategoryListEvent.DeleteProjects(it)) },
+            onCompleteProjects = { list -> list.forEach { onEvent(ThingsCategoryListEvent.CompleteProject(it)) } },
+            onDuplicateProjects = { onEvent(ThingsCategoryListEvent.DuplicateProjects(it)) },
+            onDone = { selectedProjectIds = emptySet() }
+        )
+        swipeWhenProject?.let { project ->
+            ProjectSwipeWhenDialog(
+                project = project,
+                growFromOffset = swipeWhenProjectOrigin,
+                onEditProject = { p, edit -> onEvent(ThingsCategoryListEvent.EditProject(p, edit)) },
+                onDismiss = { swipeWhenProject = null; swipeWhenProjectOrigin = null }
+            )
+        }
     }
 
     // Плавающий тулбар пакетных операций

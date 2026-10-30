@@ -501,6 +501,9 @@ sealed interface ThingsCategoryListEvent {
     data class RenameArea(val area: Area, val title: String) : ThingsCategoryListEvent
     data class CompleteProject(val project: Item) : ThingsCategoryListEvent
     data class DuplicateProject(val project: Item) : ThingsCategoryListEvent
+    /** Выбранные проекты («Пізніші проєкти»): удалить или дублировать, оставаясь на экране списка */
+    data class DeleteProjects(val projects: List<Item>) : ThingsCategoryListEvent
+    data class DuplicateProjects(val projects: List<Item>) : ThingsCategoryListEvent
     data class DeleteArea(val area: Area) : ThingsCategoryListEvent
 
     // Заголовки проекта

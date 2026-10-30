@@ -54,4 +54,24 @@ class AllProjectsListTest {
         assertEquals(listOf("w1"), content.groups.single().active.map { it.id })
         assertEquals(listOf("tpl", "wSomeday"), content.groups.single().later.map { it.id })
     }
+
+    @Test
+    fun reorderLater_somedayAmongSomeday_dayAmongSameDay_notAcross() {
+        val tomorrow = bounds.endOfToday + day
+        val later = listOf(
+            project("d1", startDate = tomorrow).copy(dayOrder = 10), project("d2", startDate = tomorrow).copy(dayOrder = 20),
+            project("far", startDate = tomorrow + 3 * day),
+            project("s1", start = Item.START_SOMEDAY).copy(sortOrder = 5), project("s2", start = Item.START_SOMEDAY).copy(sortOrder = 9)
+        )
+        // Отложенные меняются местами и номерами
+        val someday = AllProjectsList.reorderLater(later, "s2", "s1")!!
+        assertEquals(listOf("d1", "d2", "far", "s2", "s1"), someday.map { it.id })
+        assertEquals(listOf(5, 9), someday.drop(3).map { it.sortOrder })
+        // Проекты одного дня — порядком дня
+        val sameDay = AllProjectsList.reorderLater(later, "d2", "d1")!!
+        assertEquals(listOf("d2" to 10L, "d1" to 20L), sameDay.take(2).map { it.id to it.dayOrder })
+        // В другой день и в другой раздел — нельзя
+        assertEquals(null, AllProjectsList.reorderLater(later, "d1", "far"))
+        assertEquals(null, AllProjectsList.reorderLater(later, "s1", "d1"))
+    }
 }

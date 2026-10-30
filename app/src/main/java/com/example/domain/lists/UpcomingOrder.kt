@@ -102,5 +102,5 @@ object UpcomingOrder {
         }
     }
 
-    private fun dayOf(millis: Long, zone: ZoneId): Long = Instant.ofEpochMilli(millis).atZone(zone).toLocalDate().toEpochDay()
+    internal fun dayOf(millis: Long, zone: ZoneId = ZoneId.systemDefault()): Long = Instant.ofEpochMilli(millis).atZone(zone).toLocalDate().toEpochDay()
 }

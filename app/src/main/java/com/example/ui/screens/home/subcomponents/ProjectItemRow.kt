@@ -30,6 +30,15 @@ import com.example.data.model.Item
 import com.example.data.model.ItemWithChecklist
 import com.example.ui.components.ClosedProjectIcon
 import com.example.ui.components.ProjectProgressArc
+import com.example.ui.components.selectionTint
+import com.example.ui.components.swipe.SwipeableTaskContainer
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
+import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.layout.boundsInRoot
+import androidx.compose.ui.layout.findRootCoordinates
+import androidx.compose.ui.layout.onGloballyPositioned
 import com.example.ui.theme.dimens
 
 // Название → значок заметок → шеврон
@@ -66,6 +75,12 @@ fun ProjectItemRow(
     todayIconTint: Color = Color.Unspecified,
     // Новое в «Сегодня» — жёлтая точка перед названием, до «OK» на плашке
     isNew: Boolean = false,
+    // Множественный выбор проектов (свайп влево, как у задач): нажатие отмечает, справа — кружок выбора
+    isSelectionMode: Boolean = false,
+    isSelected: Boolean = false,
+    onToggleSelect: () -> Unit = {},
+    // Свайпы по проекту, как на главном экране: вправо — «Когда», влево — выбор; null — строка без свайпов
+    swipe: ProjectRowSwipe? = null,
     modifier: Modifier = Modifier
 ) {
     val progress = projectProgressMap[project.id]
@@ -79,12 +94,14 @@ fun ProjectItemRow(
         label = "dimAlpha_proj_${project.id}"
     )
 
+    val rowContent: @Composable (Modifier) -> Unit = { rowModifier ->
     Row(
-        modifier = modifier
+        modifier = rowModifier
             .fillMaxWidth()
             .heightIn(min = MaterialTheme.dimens.rowHeight)
             .clip(ThingsTheme.shapes.rowShape)
-            .clickable { onProjectClick(project) }
+            .selectionTint(if (isSelected) ThingsTheme.colors.accentSelection else Color.Transparent)
+            .clickable { if (isSelectionMode) onToggleSelect() else onProjectClick(project) }
             .graphicsLayer { alpha = dimAlpha }
             .padding(
                 start = MaterialTheme.dimens.taskRowStartPadding,
@@ -221,5 +238,42 @@ fun ProjectItemRow(
             )
         }
         }
+        androidx.compose.animation.AnimatedVisibility(
+            visible = isSelectionMode,
+            enter = androidx.compose.animation.scaleIn() + androidx.compose.animation.fadeIn() +
+                androidx.compose.animation.expandHorizontally(),
+            exit = androidx.compose.animation.scaleOut() + androidx.compose.animation.fadeOut() +
+                androidx.compose.animation.shrinkHorizontally()
+        ) {
+            SelectionCircle(isSelected = isSelected, isDragSelecting = false, onToggle = onToggleSelect)
+        }
+    }
+    }
+    if (swipe == null) {
+        rowContent(modifier)
+    } else {
+        // Смещение центра строки от центра экрана: из него вырастает диалог «Когда», как у задач.
+        // Перетаскивание ([modifier]) — на внешнем контейнере свайпа, иначе долгое нажатие перехватывает свайп
+        var rowCenter by remember { mutableStateOf<Offset?>(null) }
+        SwipeableTaskContainer(
+            modifier = modifier.onGloballyPositioned { coordinates ->
+                val root = coordinates.findRootCoordinates()
+                rowCenter = coordinates.boundsInRoot().center - Offset(root.size.width / 2f, root.size.height / 2f)
+            },
+            onSwipeLeft = swipe.onSwipeLeft,
+            onSwipeRight = { swipe.onSwipeRight(rowCenter) },
+            enabled = swipe.enabled,
+            // В режиме выбора свайп вправо «Когда» не вызывает — как у задач
+            swipeRightEnabled = !isSelectionMode
+        ) {
+            rowContent(Modifier.background(ThingsTheme.colors.background))
+        }
     }
 }
+
+/** Свайпы строки проекта: влево — отметить (выбор), вправо — «Когда» из точки [Offset] (центр строки от центра экрана) */
+class ProjectRowSwipe(
+    val onSwipeLeft: () -> Unit,
+    val onSwipeRight: (Offset?) -> Unit,
+    val enabled: Boolean = true
+)
