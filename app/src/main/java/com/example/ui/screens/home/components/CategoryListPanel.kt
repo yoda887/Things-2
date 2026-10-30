@@ -647,7 +647,9 @@ fun ThingsCategoryListPanel(
             try {
                 // Место будущей задачи — первой строкой списка; промежуток там пока нулевой высоты, его не видно
                 val flat = currentFlattened
-                val first = flat.indexOfFirst { FabInsertion.isAnchor(it) }
+                // Над группами проектов и областей («Сегодня» по проектам, тег): новая задача — в самом верху, без
+                // проекта и области, а не первой задачей первой группы
+                val first = flat.indexOfFirst { FabInsertion.isAnchor(it) || it is SearchSectionHeaderItem }
                 fabTapGap = true
                 fabSlot = FabInsertion.normalizeSlot(flat, FabSlot(if (first >= 0) first else flat.size, asHeading = false))
                 // Промежуток вырастет до высоты раскрытой задачи H за FAB_TAP_GROW_MS = T, начиная со скорости 2H/T

@@ -192,7 +192,14 @@ class ThingsViewModel @Inject constructor(
                     todayKnown = known
                     homeLayoutPrefs.setTodaySeenIds(known)
                 }
-                _todayNewIds.value = com.example.domain.lists.TodayNews.newIds(known, today)
+                val newIds = com.example.domain.lists.TodayNews.newIds(known, today)
+                _todayNewIds.value = newIds
+                // Новые задачи — наверх списка, один раз (дальше их порядок — как переставят)
+                val raised = homeLayoutPrefs.todayRaisedIds() intersect today
+                val lifted = com.example.domain.lists.TodayNews.raiseNew(list, newIds, raised, bounds)
+                if (lifted.isNotEmpty()) updateTasks(lifted)
+                val nowRaised = raised + lifted.map { it.id }
+                if (nowRaised != homeLayoutPrefs.todayRaisedIds()) homeLayoutPrefs.setTodayRaisedIds(nowRaised)
             }
         }
     }

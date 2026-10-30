@@ -81,4 +81,15 @@ class TodayNewsTest {
         val done = ItemWithChecklist(Item(id = "d", title = "d", startDate = today, start = Item.START_ANYTIME, status = Item.STATUS_COMPLETED))
         assertEquals(setOf("p"), TodayNews.todayIds(listOf(project, done, task("f", tomorrow)), bounds))
     }
+
+    @Test
+    fun newTasks_raisedOnce_inTheirOrder() {
+        fun withOrder(id: String, order: Int) = task(id, today).let { it.copy(item = it.item.copy(sortOrder = order)) }
+        val list = listOf(withOrder("old1", 0), withOrder("old2", 1), withOrder("new1", 5), withOrder("new2", 7))
+        val lifted = TodayNews.raiseNew(list, setOf("new1", "new2"), raised = emptySet(), bounds = bounds)
+        // Выше всех прежних, в прежнем порядке между собой
+        assertEquals(listOf("new1" to -2, "new2" to -1), lifted.map { it.id to it.sortOrder })
+        // Уже поднятые — второй раз не трогаются
+        assertEquals(emptyList<Item>(), TodayNews.raiseNew(list, setOf("new1", "new2"), setOf("new1", "new2"), bounds))
+    }
 }

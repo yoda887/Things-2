@@ -27,6 +27,13 @@ class HomeLayoutPrefs(context: Context) {
         prefs.edit().putStringSet(KEY_TODAY_SEEN, ids).apply()
     }
 
+    /** Новые задачи «Сегодня», которые уже поднимали наверх (id) — второй раз не поднимаются */
+    fun todayRaisedIds(): Set<String> = prefs.getStringSet(KEY_TODAY_RAISED, emptySet()).orEmpty().toSet()
+
+    fun setTodayRaisedIds(ids: Set<String>) {
+        prefs.edit().putStringSet(KEY_TODAY_RAISED, ids).apply()
+    }
+
     /** Дневная часть «Сегодня» — по проектам и областям (настройка; по умолчанию — нет, как в Things) */
     fun todayGroupedByPlace(): Boolean = prefs.getBoolean(KEY_TODAY_GROUPED, false)
 
@@ -45,6 +52,7 @@ class HomeLayoutPrefs(context: Context) {
         const val PREFS_NAME = "home_layout"
         const val KEY_COLLAPSED_AREAS = "collapsed_areas"
         const val KEY_TODAY_SEEN = "today_seen"
+        const val KEY_TODAY_RAISED = "today_raised"
         const val KEY_TODAY_GROUPED = "today_grouped_by_place"
         const val KEY_MONTH_NAME = "dates_month_name"
     }

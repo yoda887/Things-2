@@ -45,6 +45,20 @@ object TodayNews {
     /** Новое — то, что в «Сегодня», но ещё не видели */
     fun newIds(known: Set<String>, today: Set<String>): Set<String> = today - known
 
+    /**
+     * Новые задачи — наверх «Сегодня», один раз: тем, что ещё не поднимали ([raised]), — порядок выше всех задач
+     * списка, в их прежнем порядке между собой. Возвращает задачи с новым порядком (сохранить); дальше их можно
+     * переставлять, второй раз они не поднимаются.
+     */
+    fun raiseNew(items: List<ItemWithChecklist>, newIds: Set<String>, raised: Set<String>, bounds: DayBounds): List<Item> {
+        val todayTasks = items.map { it.item }.filter { !it.trashed && it.type == Item.TYPE_TASK && TodayList.includes(it, bounds) }
+        val toRaise = todayTasks.filter { it.id in newIds && it.id !in raised }.sortedBy { it.sortOrder }
+        if (toRaise.isEmpty()) return emptyList()
+        val raisingIds = toRaise.mapTo(HashSet()) { it.id }
+        val top = todayTasks.filter { it.id !in raisingIds }.minOfOrNull { it.sortOrder } ?: 0
+        return toRaise.mapIndexed { index, item -> item.copy(sortOrder = top - toRaise.size + index) }
+    }
+
     private fun placedJustNow(item: Item, now: Long): Boolean {
         val changed = maxOf(item.modificationDate, item.updatedAt)
         if (changed < now - JUST_NOW_MS) return false
