@@ -513,7 +513,8 @@ fun ThingsCategoryListPanel(
             tasks = { localTasksList },
             setTasks = { localTasksList = it },
             projects = { currentUpcomingProjects },
-            projectOverrides = upcomingProjectOverrides
+            projectOverrides = upcomingProjectOverrides,
+            stored = { id -> currentAllTasks.firstOrNull { it.item.id == id }?.item }
         )
     }
     LaunchedEffect(projects) { upcomingDrag?.onProjectsLoaded(projects) }

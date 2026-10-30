@@ -3,6 +3,7 @@ package com.example.ui.screens.home.components
 import androidx.compose.runtime.snapshots.SnapshotStateMap
 import com.example.data.model.Item
 import com.example.data.model.ItemWithChecklist
+import com.example.domain.lists.RepeatingList
 import com.example.domain.lists.UpcomingOrder
 import java.time.Instant
 import java.time.ZoneId
@@ -19,6 +20,9 @@ class UpcomingDragController(
     private val setTasks: (List<ItemWithChecklist>) -> Unit,
     private val projects: () -> List<Item>,
     val projectOverrides: SnapshotStateMap<String, Item>,
+    // Запись в базе по id: шаблон повтора стоит в «Планах» на дне следующей копии с подставленной датой —
+    // сохраняется он со своей датой, а не с подставленной
+    private val stored: (String) -> Item? = { null },
     private val zone: ZoneId = ZoneId.systemDefault()
 ) {
     /** Дни, где менялся порядок, — их нумеруют заново */
@@ -32,6 +36,9 @@ class UpcomingDragController(
     /** Строка [draggedId] — к цели [targetKey]. false — это не перенос в днях (раздел месяца, не строка дня) */
     fun move(draggedId: String, targetKey: Any, movingDown: Boolean): Boolean {
         val move = UpcomingDrag.plan(rows(), draggedId, targetKey, movingDown, keyOf) ?: return false
+        // Шаблон повтора — только в своём дне: его день задаёт правило повтора, а не перетаскивание
+        val dragged = tasks().firstOrNull { it.item.id == draggedId }?.item
+        if (dragged != null && RepeatingList.includes(dragged) && dayOf(dragged.startDate) != dayOf(move.dayStart)) return true
         touchedDays += move.dayStart
         // Порядок дня — пока тянут, просто по месту (0, 1, 2…); при отпускании нумеруется заново
         val index = move.order.withIndex().associate { it.value to it.index.toLong() }
@@ -62,12 +69,17 @@ class UpcomingDragController(
                     else -> null
                 }
             }
-            UpcomingOrder.renumber(items, now).map { it.copy(modificationDate = now) }
+            UpcomingOrder.renumber(items, now).map { item ->
+                val own = if (RepeatingList.includes(item)) stored(item.id)?.let { item.copy(startDate = it.startDate) } ?: item else item
+                own.copy(modificationDate = now)
+            }
         }
         touchedDays.clear()
         // На экране — уже сохраняемые значения: список не перескакивает, пока база не вернёт их
         val byId = saved.associateBy { it.id }
-        setTasks(tasks().map { w -> byId[w.item.id]?.let { w.copy(item = it) } ?: w })
+        // Шаблон на экране остаётся на дне копии — с подставленной датой
+        val shownDate = tasks().associate { it.item.id to it.item.startDate }
+        setTasks(tasks().map { w -> byId[w.item.id]?.let { w.copy(item = it.copy(startDate = shownDate[it.id] ?: it.startDate)) } ?: w })
         saved.filter { it.type == Item.TYPE_PROJECT }.forEach { projectOverrides[it.id] = it }
         return saved
     }

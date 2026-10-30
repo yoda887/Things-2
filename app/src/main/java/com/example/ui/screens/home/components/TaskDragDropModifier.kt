@@ -153,7 +153,9 @@ fun Modifier.taskDragAndDrop(
                 // Ушла в раздел месяца (там свои правила) — её новый день тоже сохранить
                 val dragged = localTasksList.firstOrNull { it.item.id == taskItem.id }?.item
                 val original = filteredTasks.firstOrNull { it.item.id == taskItem.id }?.item
-                val extra = if (dragged != null && saved.none { it.id == dragged.id } && dragged.startDate != original?.startDate) {
+                // Шаблон повтора дня не меняет (день — по правилу повтора)
+                val extra = if (dragged != null && !com.example.domain.lists.RepeatingList.includes(dragged) &&
+                    saved.none { it.id == dragged.id } && dragged.startDate != original?.startDate) {
                     listOf(dragged.copy(modificationDate = System.currentTimeMillis()))
                 } else emptyList()
                 if (saved.isNotEmpty() || extra.isNotEmpty()) onTasksReordered(saved + extra)
