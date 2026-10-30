@@ -693,7 +693,7 @@ fun ThingsHomePanel(
                             .padding(horizontal = MaterialTheme.dimens.homeRowInset),
                         verticalAlignment = Alignment.CenterVertically
                     ) {
-                        // Значок шире круга проекта (кольца стопки справа) — во всю ширину места значка, текст на месте
+                        // Значок стопки проектов — во всё место значка, текст на месте
                         Box(
                             modifier = Modifier.size(MaterialTheme.dimens.homeRowIconSize),
                             contentAlignment = Alignment.Center

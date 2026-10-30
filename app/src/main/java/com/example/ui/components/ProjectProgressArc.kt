@@ -9,6 +9,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.drawscope.Stroke
+import androidx.compose.ui.graphics.drawscope.clipPath
 import androidx.compose.ui.unit.dp
 
 /**
@@ -156,9 +157,9 @@ private fun androidx.compose.ui.graphics.drawscope.DrawScope.drawClosedMark(
 }
 
 /**
- * Значок особого списка проектов, как в Things: круг проекта, за ним справа ещё два кольца — стопка
- * проектов. [logged] — «Завершённые проекты»: передний круг залит, в нём белая галочка.
- * Холст шире высоты: кольца выступают вправо.
+ * Значок особого списка проектов, как в Things: круг проекта, за ним по диагонали вправо-вверх ещё два кольца —
+ * стопка проектов (видны серпами, с просветом). [logged] — «Завершённые проекты»: передний круг залит, в нём
+ * белая галочка. Холст квадратный.
  */
 @Composable
 fun ProjectStackIcon(
@@ -167,28 +168,43 @@ fun ProjectStackIcon(
     color: Color = ThingsTheme.colors.project
 ) {
     val markColor = ThingsTheme.colors.onAccent
-    Canvas(modifier = modifier.aspectRatio(1.5f)) {
-        val diameter = size.height
-        val stroke = diameter * 0.12f
+    Canvas(modifier = modifier.aspectRatio(1f)) {
+        val side = size.minDimension
+        val diameter = side * STACK_FRONT
+        val stroke = side * STACK_STROKE
         val radius = (diameter - stroke) / 2f
-        val cy = size.height / 2f
-        val front = androidx.compose.ui.geometry.Offset(diameter / 2f, cy)
-        // Задние кольца — только правые дуги, их левая часть скрыта передним кругом
-        listOf(0.42f, 0.24f).forEach { shift ->
-            val c = androidx.compose.ui.geometry.Offset(front.x + diameter * shift, cy)
-            drawArc(
-                color = color.copy(alpha = if (shift > 0.3f) 0.45f else 0.7f),
-                startAngle = -62f, sweepAngle = 124f, useCenter = false,
-                topLeft = androidx.compose.ui.geometry.Offset(c.x - radius, c.y - radius),
-                size = androidx.compose.ui.geometry.Size(radius * 2, radius * 2),
-                style = Stroke(width = stroke, cap = androidx.compose.ui.graphics.StrokeCap.Round)
+        val inset = side * STACK_INSET
+        // Передний круг — в левом нижнем углу, кольца за ним — шагами вправо-вверх
+        val centers = (0..2).map { step ->
+            androidx.compose.ui.geometry.Offset(
+                inset + diameter / 2f + side * STACK_STEP * step,
+                side - inset - diameter / 2f - side * STACK_STEP * step
             )
         }
+        // Заднее кольцо видно серпом: рядом с кольцом перед ним — просвет
+        val clearance = radius + stroke / 2f + stroke * STACK_GAP
+        fun around(center: androidx.compose.ui.geometry.Offset) = androidx.compose.ui.graphics.Path().apply {
+            addOval(androidx.compose.ui.geometry.Rect(center, clearance))
+        }
+        fun ring(center: androidx.compose.ui.geometry.Offset) =
+            drawCircle(color = color, radius = radius, center = center, style = Stroke(width = stroke))
+        clipPath(around(centers[0]), androidx.compose.ui.graphics.ClipOp.Difference) {
+            clipPath(around(centers[1]), androidx.compose.ui.graphics.ClipOp.Difference) { ring(centers[2]) }
+            ring(centers[1])
+        }
         if (logged) {
-            drawCircle(color = color, radius = diameter / 2f, center = front)
-            drawClosedMark(cancelled = false, center = front, diameter = diameter, color = markColor)
+            drawCircle(color = color, radius = diameter / 2f, center = centers[0])
+            drawClosedMark(cancelled = false, center = centers[0], diameter = diameter, color = markColor)
         } else {
-            drawCircle(color = color, radius = radius, center = front, style = Stroke(width = stroke))
+            ring(centers[0])
         }
     }
 }
+
+// Пропорции значка стопки (доли стороны) — по значку Later Projects в Things
+private const val STACK_FRONT = 0.66f
+private const val STACK_STROKE = 0.06f
+private const val STACK_STEP = 0.135f
+private const val STACK_INSET = 0.02f
+// Просвет между кольцами — в толщинах линии
+private const val STACK_GAP = 1.4f
