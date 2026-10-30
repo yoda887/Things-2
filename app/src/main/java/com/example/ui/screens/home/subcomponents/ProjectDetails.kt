@@ -71,7 +71,8 @@ import java.util.Calendar
 internal val Item.startSection: TaskSection
     get() = when {
         start == Item.START_SOMEDAY -> TaskSection.SOMEDAY
-        startDate != null -> TaskSection.UPCOMING
+        // «Сегодня» хранится датой старта сегодняшнего дня: в «Когда» отмечается «Сегодня», а не число в календаре
+        startDate != null -> if (startDate <= com.example.data.model.DayBounds.now().endOfToday) TaskSection.TODAY else TaskSection.UPCOMING
         start == Item.START_TODAY -> TaskSection.TODAY
         else -> TaskSection.ANYTIME
     }
