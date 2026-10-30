@@ -4,6 +4,7 @@ import com.example.data.model.Area
 import com.example.data.model.DayBounds
 import com.example.data.model.Item
 import com.example.data.model.ItemWithChecklist
+import com.example.data.model.RecurrenceRule
 
 /**
  * Тег: открытые задачи и проекты с тегом — по месту, как на главном экране ([PlaceGroups]): сначала без
@@ -47,14 +48,38 @@ object TagList {
         fun groups(showLater: Boolean, showLogged: Boolean): List<PlaceGroups.Group> {
             val tasks = currentTasks + (if (showLater) laterTasks else emptyList()) + (if (showLogged) logbook else emptyList())
             val rows = currentProjects + (if (showLater) laterProjects else emptyList())
-            return PlaceGroups.group(tasks, allProjects, areas, projectRows = rows, areaHeaderOnlyWithOwnItems = true, pinned = pinned)
+            return mergeRepeatCopies(PlaceGroups.group(tasks, allProjects, areas, projectRows = rows, areaHeaderOnlyWithOwnItems = true, pinned = pinned))
         }
     }
 
-    /** Поздняя задача или проект: старт после сегодня или «Когда-нибудь». Шаблон повтора — не поздний (у него свой день повтора) */
-    fun isLater(item: Item, bounds: DayBounds): Boolean =
-        !RepeatingList.includes(item) && !RepeatingList.includesProject(item) &&
-            (item.start == Item.START_SOMEDAY || bounds.isUpcoming(item))
+    /**
+     * Копии одного повторяющегося проекта (выполненная прошлая, текущая, поздняя следующая) — под одним заголовком,
+     * первым: для человека это один проект, а не два подзаголовка с одним и тем же названием.
+     */
+    private fun mergeRepeatCopies(groups: List<PlaceGroups.Group>): List<PlaceGroups.Group> {
+        fun familyOf(group: PlaceGroups.Group) = group.project?.let { "project:" + (it.repeatTemplateId ?: it.id) }
+        val merged = LinkedHashMap<Any, PlaceGroups.Group>()
+        groups.forEachIndexed { index, group ->
+            val key: Any = familyOf(group) ?: index
+            val first = merged[key]
+            merged[key] = if (first == null) group
+            else first.copy(tasks = first.tasks + group.tasks, projectRows = first.projectRows + group.projectRows)
+        }
+        return merged.values.toList()
+    }
+
+    /**
+     * Поздняя задача или проект: старт после сегодня или «Когда-нибудь». Шаблон повтора — по дню следующего
+     * повтора ([RepeatingList.dayOf]), как его копии: шаблон на 2 ноября и копия на 2 ноября — оба поздние
+     */
+    fun isLater(item: Item, bounds: DayBounds, rules: Map<String, RecurrenceRule> = emptyMap()): Boolean =
+        if (RepeatingList.includes(item) || RepeatingList.includesProject(item)) {
+            RepeatingList.dayOf(item, rules)?.let { it > bounds.endOfToday } ?: false
+        } else item.start == Item.START_SOMEDAY || bounds.isUpcoming(item)
+
+    /** День поздней задачи для порядка: шаблон — по следующему повтору, «Когда-нибудь» — в конце */
+    private fun laterDay(item: Item, rules: Map<String, RecurrenceRule>): Long =
+        if (item.start == Item.START_SOMEDAY) Long.MAX_VALUE else RepeatingList.dayOf(item, rules) ?: Long.MAX_VALUE
 
     /**
      * @param tasks задачи списка экрана (из ViewModel). Тег у них не перепроверяется: раскрытая
@@ -69,7 +94,9 @@ object TagList {
         projects: List<Item>,
         areas: List<Area> = emptyList(),
         pinned: Map<String, PlaceGroups.Place> = emptyMap(),
-        bounds: DayBounds = DayBounds.now()
+        bounds: DayBounds = DayBounds.now(),
+        // Правила повтора: по ним день шаблона — текущий он или поздний
+        rules: Map<String, RecurrenceRule> = emptyMap()
     ): Content {
         val title = tag.orEmpty()
         // Проекты с тегом — и шаблоны повторяющихся проектов (их нет среди проектов, они среди всех задач)
@@ -78,8 +105,10 @@ object TagList {
             projectTemplates.filter { template -> projects.none { it.id == template.id } }
         val active = tasks.filter { !it.item.trashed && !ListRules.isClosed(it.item) }
         // Задача в открытом редакторе — на месте, даже если ей только что поставили позднюю дату
-        val (current, later) = active.partition { it.item.id in pinned || !isLater(it.item, bounds) }
-        val (currentProjects, laterProjects) = taggedProjects.partition { !isLater(it, bounds) }
+        val (current, laterUnsorted) = active.partition { it.item.id in pinned || !isLater(it.item, bounds, rules) }
+        // Поздние — по дню, как в «Планах»: копия на 2 ноября перед шаблоном на 9-е (порядок внутри дня — прежний)
+        val later = laterUnsorted.sortedBy { laterDay(it.item, rules) }
+        val (currentProjects, laterProjects) = taggedProjects.partition { !isLater(it, bounds, rules) }
         return Content(
             projects = taggedProjects,
             active = active,

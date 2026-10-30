@@ -164,4 +164,32 @@ class TagScreenTest {
             ids(TagScreen.rows(content, showLater = true, showLogged = true))
         )
     }
+
+    @Test
+    fun repeatTemplate_laterByNextDay_likeItsCopies_laterSortedByDay() {
+        val bounds = com.example.data.model.DayBounds.now()
+        val day = 86_400_000L
+        val template = ItemWithChecklist(Item(id = "tpl", title = "tpl", type = Item.TYPE_TEMPLATE, cachedTags = "work", start = Item.START_ANYTIME))
+        val todayTemplate = ItemWithChecklist(Item(id = "tplNow", title = "tplNow", type = Item.TYPE_TEMPLATE, cachedTags = "work", start = Item.START_ANYTIME))
+        val copy = ItemWithChecklist(Item(id = "copy", title = "copy", cachedTags = "work", repeatTemplateId = "tpl", start = Item.START_ANYTIME, startDate = bounds.endOfToday + 1 + day))
+        val rules = mapOf(
+            "tpl" to com.example.data.model.RecurrenceRule(templateId = "tpl", rrule = "", nextGenerationDate = bounds.endOfToday + 1 + 3 * day),
+            "tplNow" to com.example.data.model.RecurrenceRule(templateId = "tplNow", rrule = "", nextGenerationDate = bounds.endOfToday - 1000)
+        )
+        val tasks = listOf(template, todayTemplate, copy)
+        val content = TagList.content("work", tasks, tasks, emptyList(), bounds = bounds, rules = rules)
+        // Шаблон на послезавтра+ — поздний, как и его копия; копия раньше — выше
+        assertEquals(listOf("tplNow", "toggle:later"), ids(TagScreen.rows(content, showLater = false)))
+        assertEquals(listOf("tplNow", "copy", "tpl", "toggle:later"), ids(TagScreen.rows(content, showLater = true)))
+    }
+
+    @Test
+    fun repeatingProjectCopies_oneHeader() {
+        val now = project("cur").copy(title = "Weekly", repeatTemplateId = "pt", status = Item.STATUS_OPEN)
+        val old = project("old").copy(title = "Weekly", repeatTemplateId = "pt", status = Item.STATUS_COMPLETED)
+        val open = task("a", projectId = "cur")
+        val done = task("b", projectId = "old", status = Item.STATUS_COMPLETED, stop = 100)
+        val content = TagList.content("work", listOf(open), listOf(open, done), listOf(now.copy(cachedTags = ""), old.copy(cachedTags = "")))
+        assertEquals(listOf("header:Weekly", "a", "b", "toggle:logged"), ids(TagScreen.rows(content, showLogged = true)))
+    }
 }
