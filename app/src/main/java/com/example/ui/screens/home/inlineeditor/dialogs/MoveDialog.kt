@@ -489,7 +489,8 @@ fun ThingsMoveDialog(
                         val (noAreaShown, noAreaLater) = splitLater(projectsWithNoArea)
 
                         // 3. Projects without Area
-                        if (!areasOnly && projectsWithNoArea.isNotEmpty()) {
+                        val noAreaGroupShown = !areasOnly && projectsWithNoArea.isNotEmpty()
+                        if (noAreaGroupShown) {
                             items(noAreaShown, key = { "proj_no_area_${it.id}" }) { project ->
                                 MoveProjectRow(project, currentProjectId, allTasks) { moveAnimated(project.id, null, false) }
                             }
@@ -499,9 +500,10 @@ fun ThingsMoveDialog(
                         }
 
                         // 4. Areas and Projects grouped under Areas
-                        areas.forEach { area ->
-                            // Horizontal divider before each area
-                            item(key = "divider_${area.id}") {
+                        areas.forEachIndexed { areaIndex, area ->
+                            // Разделитель перед каждой областью; перед первой — только если между ней и «Без проєкту»
+                            // есть проекты без области: иначе там уже стоит разделитель и их было бы два подряд
+                            if (areaIndex > 0 || noAreaGroupShown) item(key = "divider_${area.id}") {
                                 HorizontalDivider(
                                     modifier = Modifier.padding(top = ThingsSpacing.XS, bottom = ThingsSpacing.XS, start = ThingsSpacing.L_PLUS, end = ThingsSpacing.L_PLUS),
                                     color = ThingsTheme.colors.overlayDivider,

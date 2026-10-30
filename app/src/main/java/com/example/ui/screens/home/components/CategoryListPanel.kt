@@ -1147,9 +1147,11 @@ fun ThingsCategoryListPanel(
                             else onEvent(ThingsCategoryListEvent.RepeatTemplateAction(project.id, action))
                         },
                         onOpenRepeatTemplate = { project.repeatTemplateId?.let { onEvent(ThingsCategoryListEvent.OpenRepeatTemplate(it)) } },
+                        // При прокрутке гаснет только название (оно уходит в верхнюю панель); свойства проекта
+                        // остаются видимыми, пока сами не уедут за край
                         modifier = Modifier
                             .padding(horizontal = ThingsSpacing.S)
-                            .graphicsLayer { alpha = headerScrollAlpha * globalDimAlpha }
+                            .graphicsLayer { alpha = globalDimAlpha }
                     )
                 }
             }
