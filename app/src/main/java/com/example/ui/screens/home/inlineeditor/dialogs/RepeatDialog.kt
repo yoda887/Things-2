@@ -35,10 +35,12 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.ColumnScope
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.heightIn
+import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
@@ -393,7 +395,11 @@ private fun MainPage(
     Spacer(Modifier.height(ThingsSpacing.M))
     AnimatedContent(
         targetState = draft.afterCompletion,
-        transitionSpec = { fadeIn(tween(ThingsMotion.QUICK)) togetherWith fadeOut(tween(ThingsMotion.QUICK)) },
+        // Смена режима — плавно: новое содержимое проявляется, пока окно плавно меняет высоту
+        transitionSpec = {
+            (fadeIn(tween(ThingsMotion.MEDIUM, delayMillis = ThingsMotion.FAST)) togetherWith fadeOut(tween(ThingsMotion.FAST)))
+                .using(androidx.compose.animation.SizeTransform(clip = true) { _, _ -> tween(ThingsMotion.STANDARD, easing = FastOutSlowInEasing) })
+        },
         label = "repeatMode"
     ) { after ->
         Column(modifier = Modifier.fillMaxWidth().verticalScroll(rememberScrollState())) {
@@ -957,37 +963,48 @@ private fun HeaderText(text: String, modifier: Modifier, align: TextAlign, onCli
     )
 }
 
-/** Переключатель вариантов, как в Things: плашка с выделенным сегментом */
+/** Переключатель вариантов, как в Things: плашка с выделенным сегментом — выделение переезжает к выбранному */
 @Composable
 private fun Segmented(options: List<String>, selected: Int, onSelect: (Int) -> Unit) {
     val view = LocalView.current
     val selectedColor = ThingsTheme.colors.overlayContent.copy(alpha = ThingsAlpha.SUBTLE).compositeOver(ThingsTheme.colors.overlayControl)
-    Row(
+    androidx.compose.foundation.layout.BoxWithConstraints(
         modifier = Modifier
             .fillMaxWidth()
             .clip(ThingsTheme.shapes.capsuleShape)
             .background(ThingsTheme.colors.overlayControl)
-            .padding(ThingsSpacing.XXS),
-        horizontalArrangement = Arrangement.spacedBy(ThingsSpacing.XXS)
+            .padding(ThingsSpacing.XXS)
     ) {
-        options.forEachIndexed { index, label ->
-            val bg by animateColorAsState(
-                if (index == selected) selectedColor else ThingsTheme.colors.overlayControl,
-                tween(ThingsMotion.QUICK), label = "segment"
-            )
+        val gap = ThingsSpacing.XXS
+        val segment = (maxWidth - gap * (options.size - 1)) / options.size
+        val thumbX by androidx.compose.animation.core.animateDpAsState(
+            (segment + gap) * selected, tween(ThingsMotion.MEDIUM, easing = FastOutSlowInEasing), label = "segmentThumb"
+        )
+        Box(modifier = Modifier.matchParentSize()) {
             Box(
                 modifier = Modifier
-                    .weight(1f)
+                    .offset { androidx.compose.ui.unit.IntOffset(thumbX.roundToPx(), 0) }
+                    .width(segment)
+                    .fillMaxHeight()
                     .clip(ThingsTheme.shapes.capsuleShape)
-                    .background(bg)
-                    .clickable {
-                        if (index != selected) view.performHapticFeedback(HapticFeedbackConstants.CLOCK_TICK)
-                        onSelect(index)
-                    }
-                    .padding(vertical = ThingsSpacing.S),
-                contentAlignment = Alignment.Center
-            ) {
-                Text(label, style = ThingsTheme.type.dialogSegment.copy(color = ThingsTheme.colors.overlayContent))
+                    .background(selectedColor)
+            )
+        }
+        Row(horizontalArrangement = Arrangement.spacedBy(gap)) {
+            options.forEachIndexed { index, label ->
+                Box(
+                    modifier = Modifier
+                        .weight(1f)
+                        .clip(ThingsTheme.shapes.capsuleShape)
+                        .clickable {
+                            if (index != selected) view.performHapticFeedback(HapticFeedbackConstants.CLOCK_TICK)
+                            onSelect(index)
+                        }
+                        .padding(vertical = ThingsSpacing.S),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Text(label, style = ThingsTheme.type.dialogSegment.copy(color = ThingsTheme.colors.overlayContent))
+                }
             }
         }
     }
