@@ -32,9 +32,6 @@ import androidx.compose.foundation.text.BasicTextField
 import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.filled.ShortText
-import androidx.compose.material.icons.automirrored.filled.ShortText
-import androidx.compose.material.icons.automirrored.filled.ShortText
 import androidx.compose.material.icons.filled.*
 import androidx.compose.material.icons.outlined.*
 import androidx.compose.material3.*
@@ -100,6 +97,11 @@ private val QuickFindCardElevation = 12.dp
 
 private const val FOCUS_AFTER_OPEN_DELAY_MS = 110L
 private val RESULT_ICON_SIZE = 19.dp
+
+/** Значок подзаголовка проекта — ярлык, как в Things: ширина с иконки результата, высота, скругление и остриё */
+private val HEADING_ICON_HEIGHT = 13.dp
+private val HEADING_ICON_CORNER = 3.dp
+private val HEADING_ICON_TIP = 5.dp
 private const val EMPTY_HINT_ALPHA = 0.8f
 private const val ARC_ACCENT_TINT_ALPHA = 0.45f
 
@@ -452,7 +454,8 @@ fun ThingsSearchOverlay(
     // Карточка и поле ввода всегда имеют свой итоговый цвет с первого кадра (белая карточка, серый инпут)
     val currentCardBg = cardBackground
     val currentInputBg = inputNormalBackground
-    val closeButtonBackground = ThingsTheme.colors.searchCloseButton
+    // Кнопка ✕ — тем же цветом, что поле ввода, как в Things
+    val closeButtonBackground = ThingsTheme.colors.searchField
 
     // Карточка всегда раскладывается в своём итоговом месте, путь от источника к нему
     // целиком задаётся преобразованием слоя
@@ -773,7 +776,8 @@ fun ThingsSearchOverlay(
                             Text(
                                 text = stringResource(R.string.ui_recent),
                                 color = textSecondary,
-                                style = ThingsTheme.type.subheadMedium,
+                                // Размером с подсказку в поле ввода, полужирным
+                                style = ThingsTheme.type.headline,
                                 modifier = Modifier.padding(start = ThingsSpacing.XS, bottom = MaterialTheme.dimens.quickFindSectionGap)
                             )
                             HorizontalDivider(
@@ -1031,7 +1035,7 @@ fun SearchResultRow(
     val accentColor = ThingsTheme.colors.accent
     when (result) {
         is SearchResultItem.HeadingResult -> {
-            // Подзаголовок — его названием цветом проекта, как в самом проекте; под ним — проект
+            // Подзаголовок — значок-ярлык и название чёрным, как в Things; под ним — проект
             val rowBg = if (isHighlighted) accentColor.copy(alpha = ThingsAlpha.LOW) else Color.Transparent
             val projectTitle = (projects + allTasks.map { it.item }).firstOrNull { it.id == result.heading.projectId }?.title
             Row(
@@ -1045,18 +1049,13 @@ fun SearchResultRow(
                 verticalAlignment = Alignment.CenterVertically
             ) {
                 Box(modifier = Modifier.size(MaterialTheme.dimens.searchLeftColumnWidth), contentAlignment = Alignment.Center) {
-                    Icon(
-                        imageVector = Icons.AutoMirrored.Filled.ShortText,
-                        contentDescription = null,
-                        tint = ThingsTheme.colors.project,
-                        modifier = Modifier.requiredSize(ThingsIconSize.M)
-                    )
+                    HeadingLabelIcon()
                 }
                 Spacer(modifier = Modifier.width(MaterialTheme.dimens.searchSpacingToText))
                 Column(modifier = Modifier.weight(1f)) {
                     Text(
                         text = result.heading.title,
-                        style = ThingsTheme.type.listTitleStrong.copy(color = ThingsTheme.colors.project),
+                        style = ThingsTheme.type.listTitleStrong.copy(color = textPrimary),
                         maxLines = 1,
                         overflow = TextOverflow.Ellipsis
                     )
@@ -1087,7 +1086,11 @@ fun SearchResultRow(
                 // Найденная задача — только название, без даты старта и без значков напоминания, заметок, чек-листа,
                 // тегов и дедлайна
                 showMetaIcons = false,
-                showStartDate = false
+                showStartDate = false,
+                // Капсула и поля — как у остальных строк поиска: значки в одной колонке, названия с одного края
+                rowShape = ThingsTheme.shapes.capsuleShape,
+                startPadding = ThingsSpacing.S,
+                endPadding = ThingsSpacing.M
             )
         }
         is SearchResultItem.ProjectResult -> {
@@ -1296,3 +1299,33 @@ fun SearchResultRow(
     }
 }
 
+/** Значок подзаголовка проекта в Quick Find — ярлык остриём вправо со светло-серой заливкой, как в Things */
+@Composable
+private fun HeadingLabelIcon() {
+    val stroke = ThingsTheme.colors.headingIcon
+    val fill = ThingsTheme.colors.headingIconFill
+    Canvas(modifier = Modifier.requiredSize(RESULT_ICON_SIZE, HEADING_ICON_HEIGHT)) {
+        val w = ThingsStroke.FOCUS.toPx()
+        val half = w / 2f
+        val r = HEADING_ICON_CORNER.toPx()
+        val tip = HEADING_ICON_TIP.toPx()
+        val left = half
+        val top = half
+        val right = size.width - half
+        val bottom = size.height - half
+        val midY = size.height / 2f
+        val path = androidx.compose.ui.graphics.Path().apply {
+            moveTo(left + r, top)
+            lineTo(right - tip, top)
+            lineTo(right, midY)
+            lineTo(right - tip, bottom)
+            lineTo(left + r, bottom)
+            quadraticTo(left, bottom, left, bottom - r)
+            lineTo(left, top + r)
+            quadraticTo(left, top, left + r, top)
+            close()
+        }
+        drawPath(path, fill)
+        drawPath(path, stroke, style = Stroke(width = w, join = androidx.compose.ui.graphics.StrokeJoin.Round))
+    }
+}

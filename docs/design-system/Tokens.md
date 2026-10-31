@@ -39,12 +39,11 @@
 | `accent-selection` | `rgba(91, 154, 255, 0.22)` | `ThingsTheme.colors.accentSelection` | Фон выбранной строки в режиме мультивыбора: accent с прозрачностью 22 %. |
 | `list-dim` | `#f4f4f6` / `#151618` | `ThingsTheme.colors.listDim` | Фон списка, пока раскрыта задача (плавно, вместе с затемнением строк). |
 | `drop-placeholder` | `#e5e6eb` / `#2c2d32` | `ThingsTheme.colors.dropPlaceholder` | Серая плашка места вставки при перетаскивании задачи, подзаголовка и «+»; рисуется с прозрачностью 50 %. |
-| `hairline` | `#e5e5ea` / `#38393d` | `ThingsTheme.colors.hairline` | Обводка нижних карточек «стопки» при перетаскивании (0.5 dp), фон кнопки ✕ в Quick Find, разделитель Quick Add. |
+| `hairline` | `#e5e5ea` / `#38393d` | `ThingsTheme.colors.hairline` | Обводка нижних карточек «стопки» при перетаскивании (0.5 dp), разделитель Quick Add. |
 | `stack-card` | `#ffffff` / `#252629` | `ThingsTheme.colors.stackCard` | Нижние карточки стопки при групповом перетаскивании. |
-| `field-bg` | `#f2f2f7` / `#2c2c2e` | `ThingsTheme.colors.searchField` | Фон полей поиска (Quick Find, Search), капсулы на главном. |
+| `field-bg` | `#f2f2f7` / `#2c2c2e` | `ThingsTheme.colors.searchField` | Фон полей поиска (Quick Find, Search) и кнопки ✕ в Quick Find, капсулы на главном. |
 | `search-card` | `#ffffff` / `#1c1c1e` | `ThingsTheme.colors.searchCard` | Карточка быстрого поиска Quick Find. |
 | `search-highlight` | `#ffe692` / `#6e5d01` | `ThingsTheme.colors.searchMatchHighlight` | Подсветка совпадения в Quick Find под textPrimary. |
-| `search-close-button` | `#e5e5ea` / `#2c2c2e` | `ThingsTheme.colors.searchCloseButton` | Фон кнопки закрытия в Quick Find. |
 | `pull-indicator` | `#8e929c` / `#2c2c2e` | `ThingsTheme.colors.pullIndicatorBackground` | Круг индикатора оттяжки поиска. |
 | `pull-arrow` | `rgba(0, 11, 27, 0.31)` / `rgba(231, 241, 255, 0.29)` | `ThingsTheme.colors.pullArrow` | Стрелка индикатора оттяжки до порога. |
 | `pull-arrow-selected` | `#5b9aff` / `#3f85f4` | `ThingsTheme.colors.pullArrowSelected` | Стрелка после порога срабатывания. |
@@ -63,6 +62,8 @@
 | `someday` | `#8f93a3` | `ThingsTheme.colors.someday` | Раздел «Когда-нибудь», иконки тегов в списках и поиске, неактивные уровни приоритета. |
 | `area` | `#269c6e` / `#7ad0a7` | `ThingsTheme.colors.area` | Иконка области и её название; в тёмной теме светлее, чтобы читаться на чёрном. |
 | `project` | `#2a62d9` | `ThingsTheme.colors.project` | Иконка-прогресс проекта, подзаголовки проекта и их «•••» (ThingsDeepBlue). |
+| `heading-icon` | `#aeaeb2` / `#636366` | `ThingsTheme.colors.headingIcon` | Обводка значка подзаголовка проекта (ярлык) в Quick Find. |
+| `heading-icon-fill` | `#e5e5ea` / `#2c2c2e` | `ThingsTheme.colors.headingIconFill` | Заливка значка подзаголовка проекта (ярлык) в Quick Find. |
 | `swipe-when` | `#ffd401` | `ThingsTheme.colors.swipeWhen` | Фон свайпа вправо (действие «Когда»). |
 | `today-new` | `#f5c518` | `ThingsTheme.colors.todayNew` | Новое в «Сегодня»: точка слева от названия задачи или проекта. |
 | `today-new-banner` | `#fbe27c` / `#574612` | `ThingsTheme.colors.todayNewBanner` | Плашка «У вас N нових завдань» в «Сегодня». |

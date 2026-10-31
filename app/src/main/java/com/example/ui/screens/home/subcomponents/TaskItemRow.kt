@@ -108,7 +108,11 @@ fun TaskItemRow(
     // Значки напоминания, заметок, чек-листа, тегов и дедлайн; в быстром поиске их нет — только название
     showMetaIcons: Boolean = true,
     // Дата старта (плашка, звезда, луна, день повтора шаблона); в быстром поиске её нет
-    showStartDate: Boolean = true
+    showStartDate: Boolean = true,
+    // Форма и поля строки; в быстром поиске — капсула и поля строк поиска, как у проектов и подзаголовков
+    rowShape: androidx.compose.ui.graphics.Shape = ThingsTheme.shapes.rowShape,
+    startPadding: androidx.compose.ui.unit.Dp = androidx.compose.material3.MaterialTheme.dimens.taskRowStartPadding,
+    endPadding: androidx.compose.ui.unit.Dp = androidx.compose.material3.MaterialTheme.dimens.taskRowEndPadding
 ) {
     val scope = rememberCoroutineScope()
     var localCompleted by remember(task.isCompleted) { mutableStateOf(task.isCompleted) }
@@ -236,12 +240,12 @@ fun TaskItemRow(
                 scaleX = scale * cardScale * found.scale
                 scaleY = scale * cardScale * found.scale
             }
-            .shadow(elevation, ThingsTheme.shapes.rowShape)
-            .background(animatedRowBgColor, ThingsTheme.shapes.rowShape)
-            .selectionTint(animatedRowTint, ThingsTheme.shapes.rowShape)
+            .shadow(elevation, rowShape)
+            .background(animatedRowBgColor, rowShape)
+            .selectionTint(animatedRowTint, rowShape)
             // Жёлтый найденной задачи — поверх всей строки (foreground), как выделение
-            .foundHighlight(found, ThingsTheme.shapes.rowShape)
-            .clip(ThingsTheme.shapes.rowShape)
+            .foundHighlight(found, rowShape)
+            .clip(rowShape)
             .drawBehind {
                 if (localCompleted && completionFillProgress > 0f && !isSearchLogbookStyle) {
                     val centerX = (ROW_CHECKBOX_COLUMN_START + leftColumnWidth / 2f).toPx()
@@ -262,7 +266,7 @@ fun TaskItemRow(
                 indication = if (isDimmed || isSelectionMode) null else androidx.compose.foundation.LocalIndication.current,
                 enabled = !isCalendarTask && !isSelectionMode
             ) { onClick() }
-            .padding(start = androidx.compose.material3.MaterialTheme.dimens.taskRowStartPadding, end = androidx.compose.material3.MaterialTheme.dimens.taskRowEndPadding),
+            .padding(start = startPadding, end = endPadding),
         verticalAlignment = Alignment.CenterVertically
     ) {
             Box(

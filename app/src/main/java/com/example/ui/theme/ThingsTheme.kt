@@ -101,8 +101,6 @@ data class ThingsColors(
     val searchCard: Color,
     /** Подсветка совпадений в результатах поиска */
     val searchMatchHighlight: Color,
-    /** Кнопка закрытия ✕ в Quick Find */
-    val searchCloseButton: Color,
     /** Фон круга индикатора оттяжки поиска */
     val pullIndicatorBackground: Color,
     /** Стрелка индикатора оттяжки поиска */
@@ -135,6 +133,9 @@ data class ThingsColors(
     val area: Color,
     /** Проект: иконка-прогресс, подзаголовки проекта и их меню */
     val project: Color,
+    /** Значок подзаголовка проекта в Quick Find: обводка и заливка ярлыка, как в Things */
+    val headingIcon: Color,
+    val headingIconFill: Color,
     /** Фон свайпа вправо (действие «Когда») */
     val swipeWhen: Color,
     /** Новое в «Сегодня»: точка слева от названия задачи или проекта */
@@ -196,7 +197,6 @@ internal val LightThingsColors = ThingsColors(
     searchField = ThingsFieldLight,
     searchCard = Color.White,
     searchMatchHighlight = SearchMatchHighlightLight,
-    searchCloseButton = ThingsHairlineLight,
     pullIndicatorBackground = ThingsPullIndicatorLight,
     pullArrow = ThingsPullArrowLight,
     pullArrowSelected = ThingsBlue,
@@ -215,6 +215,8 @@ internal val LightThingsColors = ThingsColors(
     someday = ThingsSomedayGrey,
     area = ThingsAreaGreenLight,
     project = ThingsDeepBlue,
+    headingIcon = ThingsHeadingIconLight,
+    headingIconFill = ThingsHairlineLight,
     swipeWhen = ThingsSwipeWhenYellow,
     todayNew = ThingsTodayNewDot,
     todayNewBanner = ThingsTodayNewBannerLight,
@@ -229,6 +231,8 @@ internal val LightThingsColors = ThingsColors(
 )
 
 internal val DarkThingsColors = LightThingsColors.copy(
+    headingIcon = ThingsHeadingIconDark,
+    headingIconFill = ThingsFieldDark,
     isDark = true,
     todayNewBanner = ThingsTodayNewBannerDark,
     todayNewButton = ThingsTodayNewButtonDark,
@@ -253,7 +257,6 @@ internal val DarkThingsColors = LightThingsColors.copy(
     searchField = ThingsFieldDark,
     searchCard = ThingsInk,
     searchMatchHighlight = SearchMatchHighlightDark,
-    searchCloseButton = ThingsFieldDark,
     pullIndicatorBackground = ThingsFieldDark,
     pullArrow = ThingsPullArrowDark,
     pullArrowSelected = ThingsPullArrowSelectedDark,

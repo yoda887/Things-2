@@ -55,8 +55,11 @@ val ThingsEditorIconInactive = Color(0xFFA9A9A9)
 val ThingsFieldLight = Color(0xFFF2F2F7)
 /** Фон полей поиска и ввода, тёмная тема */
 val ThingsFieldDark = Color(0xFF2C2C2E)
-/** Обводка карточек стопки, фон кнопки ✕ в Quick Find, разделитель Quick Add — светлая тема */
+/** Обводка карточек стопки, разделитель Quick Add, заливка значка подзаголовка в Quick Find — светлая тема */
 val ThingsHairlineLight = Color(0xFFE5E5EA)
+/** Обводка значка подзаголовка проекта в Quick Find (ярлык, как в Things) — светлая и тёмная темы */
+val ThingsHeadingIconLight = Color(0xFFAEAEB2)
+val ThingsHeadingIconDark = Color(0xFF636366)
 /** Обводка карточек стопки — тёмная тема */
 val ThingsHairlineDark = Color(0xFF38393D)
 /** Приглушённый текст и полоски виджета календаря, светлая тема */
