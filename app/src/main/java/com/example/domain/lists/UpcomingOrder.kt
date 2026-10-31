@@ -102,5 +102,40 @@ object UpcomingOrder {
         }
     }
 
+    /**
+     * Перестановка задач в «Планах» по общим правилам ([updated] и [changed] — итог SortOrders.afterReorder): дни, где
+     * что-то изменилось, нумеруются заново ([afterDrag]). [shown] — задачи экрана с новым порядком дня, [save] — что
+     * сохранить: изменённые задачи как есть, перенумерованные задачи и проекты — со временем правки [now].
+     */
+    fun afterReorder(
+        updated: List<ItemWithChecklist>,
+        changed: List<Item>,
+        days: List<DayRows>,
+        zone: ZoneId = ZoneId.systemDefault(),
+        now: Long = System.currentTimeMillis()
+    ): Reorder {
+        val renumbered = afterDrag(updated, changed, days, zone, now).associateBy { it.id }
+        val shown = updated.map { w -> renumbered[w.item.id]?.let { w.copy(item = w.item.copy(dayOrder = it.dayOrder)) } ?: w }
+        val changedIds = changed.mapTo(HashSet()) { it.id }
+        val save = shown.filter { it.item.id in changedIds || it.item.id in renumbered }
+            .map { w -> if (w.item.id in changedIds) w.item else w.item.copy(modificationDate = now) } +
+            renumbered.values.filter { r -> shown.none { it.item.id == r.id } }.map { it.copy(modificationDate = now) }
+        return Reorder(shown, save)
+    }
+
+    /** Итог [afterReorder]: задачи экрана и что сохранить */
+    data class Reorder(val shown: List<ItemWithChecklist>, val save: List<Item>)
+
+    /**
+     * Строку перетащили в днях «Планов» (UpcomingDragController сохранил [saved]), а отпустили в разделе месяца:
+     * её новый день тоже сохранить. [dragged] — строка на экране после жеста, [original] — до него. Шаблон повтора
+     * дня не меняет — его день задаёт правило повтора.
+     */
+    fun movedToMonth(saved: List<Item>, dragged: Item?, original: Item?, now: Long = System.currentTimeMillis()): List<Item> {
+        if (dragged == null || RepeatingList.includes(dragged)) return emptyList()
+        if (saved.any { it.id == dragged.id } || dragged.startDate == original?.startDate) return emptyList()
+        return listOf(dragged.copy(modificationDate = now))
+    }
+
     internal fun dayOf(millis: Long, zone: ZoneId = ZoneId.systemDefault()): Long = Instant.ofEpochMilli(millis).atZone(zone).toLocalDate().toEpochDay()
 }

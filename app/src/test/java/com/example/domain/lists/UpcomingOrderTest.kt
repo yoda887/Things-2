@@ -87,4 +87,36 @@ class UpcomingOrderTest {
         )
         assertEquals(listOf("Q", "a", "P", "b"), ids(rows))
     }
+
+    @Test
+    fun afterReorder_shownGetsNewDayOrder_saveHasChangedAndRenumbered() {
+        val p = project("P", day(26), 2)
+        val tasks = listOf(task("b", day(26), 3), task("a", day(26), 1), task("z", day(27), 9))
+        val result = UpcomingOrder.afterReorder(
+            tasks, changed = listOf(tasks[0].item),
+            days = listOf(UpcomingOrder.DayRows(day(26), listOf(p)), UpcomingOrder.DayRows(day(27), emptyList())),
+            zone = zone, now = 1_000L
+        )
+        // На экране — новый порядок дня 26, день 27 не тронут
+        val shown = result.shown.associate { it.item.id to it.item.dayOrder }
+        assertTrue(shown.getValue("b")!! < shown.getValue("a")!!)
+        assertEquals(9L, shown["z"])
+        // Сохранить: изменённую «b», перенумерованную «a» и проект «P» — со временем правки
+        assertEquals(setOf("b", "a", "P"), result.save.map { it.id }.toSet())
+        assertEquals(1_000L, result.save.first { it.id == "a" }.modificationDate)
+        assertEquals(1_000L, result.save.first { it.id == "P" }.modificationDate)
+    }
+
+    @Test
+    fun movedToMonth_savesNewDay_notTemplate_notTwice() {
+        val original = Item(id = "a", startDate = day(26))
+        val dragged = original.copy(startDate = day(28))
+        assertEquals(listOf("a"), UpcomingOrder.movedToMonth(emptyList(), dragged, original, now = 5L).map { it.id })
+        // Уже сохранена переносом в днях или день не изменился — ничего
+        assertTrue(UpcomingOrder.movedToMonth(listOf(dragged), dragged, original).isEmpty())
+        assertTrue(UpcomingOrder.movedToMonth(emptyList(), original, original).isEmpty())
+        // Шаблон повтора день не меняет
+        val template = dragged.copy(type = Item.TYPE_TEMPLATE)
+        assertTrue(UpcomingOrder.movedToMonth(emptyList(), template, original.copy(type = Item.TYPE_TEMPLATE)).isEmpty())
+    }
 }

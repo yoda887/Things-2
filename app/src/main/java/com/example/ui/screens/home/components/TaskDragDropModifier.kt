@@ -151,13 +151,11 @@ fun Modifier.taskDragAndDrop(
             if (upcomingDrag != null && upcomingDrag.hasMoves && !isBatch) {
                 val saved = upcomingDrag.end()
                 // Ушла в раздел месяца (там свои правила) — её новый день тоже сохранить
-                val dragged = localTasksList.firstOrNull { it.item.id == taskItem.id }?.item
-                val original = filteredTasks.firstOrNull { it.item.id == taskItem.id }?.item
-                // Шаблон повтора дня не меняет (день — по правилу повтора)
-                val extra = if (dragged != null && !com.example.domain.lists.RepeatingList.includes(dragged) &&
-                    saved.none { it.id == dragged.id } && dragged.startDate != original?.startDate) {
-                    listOf(dragged.copy(modificationDate = System.currentTimeMillis()))
-                } else emptyList()
+                val extra = com.example.domain.lists.UpcomingOrder.movedToMonth(
+                    saved,
+                    dragged = localTasksList.firstOrNull { it.item.id == taskItem.id }?.item,
+                    original = filteredTasks.firstOrNull { it.item.id == taskItem.id }?.item
+                )
                 if (saved.isNotEmpty() || extra.isNotEmpty()) onTasksReordered(saved + extra)
                 return@universalDragAndDrop
             }
@@ -166,18 +164,12 @@ fun Modifier.taskDragAndDrop(
             val reordered = SortOrders.afterReorder(listWithBatchOrdered, filteredTasks)
             if (screen == ActiveScreen.UPCOMING && reordered.changed.isNotEmpty()) {
                 // «Планы»: задачи и проекты дня — общий порядок дня (UpcomingOrder), дни с переносом нумеруются заново
-                val renumbered = com.example.domain.lists.UpcomingOrder.afterDrag(
+                val result = com.example.domain.lists.UpcomingOrder.afterReorder(
                     reordered.updated, reordered.changed,
                     upcomingDays.map { com.example.domain.lists.UpcomingOrder.DayRows(it.dateMillis, it.projects) }
-                ).associateBy { it.id }
-                val updated = reordered.updated.map { w -> renumbered[w.item.id]?.let { w.copy(item = w.item.copy(dayOrder = it.dayOrder)) } ?: w }
-                val changedIds = reordered.changed.mapTo(HashSet()) { it.id }
-                val now = System.currentTimeMillis()
-                val toSave = updated.filter { it.item.id in changedIds || it.item.id in renumbered }
-                    .map { w -> if (w.item.id in changedIds) w.item else w.item.copy(modificationDate = now) } +
-                    renumbered.values.filter { r -> updated.none { it.item.id == r.id } }.map { it.copy(modificationDate = now) }
-                onLocalTasksListChange(updated)
-                onTasksReordered(toSave)
+                )
+                onLocalTasksListChange(result.shown)
+                onTasksReordered(result.save)
                 return@universalDragAndDrop
             }
             onLocalTasksListChange(reordered.updated)
