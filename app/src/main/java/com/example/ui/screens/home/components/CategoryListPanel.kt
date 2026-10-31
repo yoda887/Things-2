@@ -1334,26 +1334,16 @@ fun ThingsCategoryListPanel(
                                     } else if (event is ThingsCategoryListEvent.RequestRepeatMove) {
                                         requestRepeatMove(event.templateId, event.day)
                                     } else if (event is ThingsCategoryListEvent.ReorderTasks && event.items.any { it.isRepeatTemplate }) {
-                                        // Повторяющуюся задачу перенесли на другой день — переносится её ближайший повтор;
-                                        // сам шаблон дат не хранит и так не сохраняется
-                                        // Шаблон со своей датой из базы (перестановка в дне — UpcomingDragController) не
-                                        // переносили: сохраняется только его порядок дня
-                                        val (templates, others) = event.items.partition { item ->
-                                            item.isRepeatTemplate &&
-                                                item.startDate != state.allTasks.firstOrNull { it.item.id == item.id }?.item?.startDate
-                                        }
-                                        if (others.isNotEmpty()) onEvent(ThingsCategoryListEvent.ReorderTasks(others))
-                                        // Перенесён только тот шаблон, чей день не совпадает ни с одним днём, где он стоял: шаблон
-                                        // стоит в «Планах» на каждом дне своих повторов (один id), а в сохраняемые попадают и
-                                        // соседи, у которых сменились лишь место или порядок дня — для них предупреждения нет
-                                        val zone = java.time.ZoneId.systemDefault()
-                                        fun dayOf(millis: Long) = java.time.Instant.ofEpochMilli(millis).atZone(zone).toLocalDate()
-                                        templates.firstOrNull { moved ->
-                                            val day = moved.startDate ?: return@firstOrNull false
-                                            state.displayTasks.none { it.item.id == moved.id && it.item.startDate?.let { d -> dayOf(d) } == dayOf(day) }
-                                        }?.let { moved ->
-                                            val day = moved.startDate ?: return@let
-                                            if (!requestRepeatMove(moved.id, day)) localTasksList = state.displayTasks
+                                        // Шаблон повтора стоит на дне следующей копии: что сохранить и не перенесли ли его
+                                        // ближайший повтор на другой день — решает домен (RepeatDrops)
+                                        val result = com.example.domain.repeat.RepeatDrops.afterDrag(
+                                            items = event.items,
+                                            stored = { id -> state.allTasks.firstOrNull { it.item.id == id }?.item },
+                                            shown = state.displayTasks.map { it.item }
+                                        )
+                                        if (result.save.isNotEmpty()) onEvent(ThingsCategoryListEvent.ReorderTasks(result.save))
+                                        result.moved?.let { (templateId, day) ->
+                                            if (!requestRepeatMove(templateId, day)) localTasksList = state.displayTasks
                                         }
                                     } else if (event is ThingsCategoryListEvent.RepeatTemplateAction && event.action == RepeatAction.EDIT) {
                                         // «Изменить правило» — окно «Повторять» с правилом шаблона
