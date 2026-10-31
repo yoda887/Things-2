@@ -279,7 +279,7 @@ fun rememberFlattenedList(
                     waiting.map { if (it.item.type == com.example.data.model.Item.TYPE_PROJECT_TEMPLATE) it.item else it }
             }
             // Шаблоны повторяющихся проектов — среди всех задач, не среди проектов
-            ActiveScreen.AREA_DETAIL -> AreaScreen.rows(AreaList.content(area?.id, displayTasks, projects, templates = allTasks.map { it.item }, tagFilter = tagFilter), isLaterItemsHidden)
+            ActiveScreen.AREA_DETAIL -> AreaScreen.rows(AreaList.content(area?.id, displayTasks, projects, templates = allTasks.map { it.item }, tagFilter = tagFilter, rules = repeatRules), isLaterItemsHidden)
             ActiveScreen.LOGBOOK -> LogbookScreen.rows(LogbookList.sections(displayTasks, projects), todayLabel, yesterdayLabel)
             // Поздние — сразу, после текущих в своих группах; выполненных на экране тега нет
             ActiveScreen.TAG_DETAIL -> TagScreen.rows(
@@ -305,7 +305,7 @@ fun rememberFlattenedList(
             ActiveScreen.HOME -> displayTasks
             ActiveScreen.ALL_PROJECTS -> AllProjectsScreen.rows(
                 // Шаблоны повторяющихся проектов — среди всех задач, не среди проектов
-                AllProjectsList.content(projects, areas, templates = allTasks.map { it.item }), expandedLaterProjects,
+                AllProjectsList.content(projects, areas, templates = allTasks.map { it.item }, rules = repeatRules), expandedLaterProjects,
                 { count -> resources.getQuantityString(R.plurals.all_projects_show_later, count, count) },
                 { count -> resources.getQuantityString(R.plurals.all_projects_hide_later, count, count) },
                 showLoggedLabel
@@ -313,7 +313,7 @@ fun rememberFlattenedList(
             // Более поздние проекты без области — как в «Усіх проєктах»: запланированные по дате, повторяющиеся, отложенные
             // — разделами «Плани» (с повторяющимися) и «Колись», как в Things
             ActiveScreen.LATER_PROJECTS -> AllProjectsScreen.laterRows(
-                AllProjectsList.content(projects, areas, templates = allTasks.map { it.item })
+                AllProjectsList.content(projects, areas, templates = allTasks.map { it.item }, rules = repeatRules)
                     .groups.firstOrNull { it.area == null }?.later.orEmpty(),
                 resources.getString(R.string.category_upcoming),
                 resources.getString(R.string.category_someday)

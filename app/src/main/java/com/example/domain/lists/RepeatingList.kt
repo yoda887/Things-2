@@ -42,6 +42,22 @@ object RepeatingList {
     }
 
     /**
+     * Порядок более поздних по дате, как в «Планах»: по дню ([dayOf] — у шаблона день следующего повтора), внутри дня —
+     * порядок дня ([UpcomingOrder.key]), без него — по времени старта; без даты (шаблон ждёт или на паузе) — после всех
+     * с датой, в прежнем порядке.
+     */
+    fun byLaterDay(rules: Map<String, RecurrenceRule>): Comparator<Item> = compareBy<Item>(
+        { dayOf(it, rules) == null },
+        { dayOf(it, rules)?.let { day -> UpcomingOrder.dayOf(day) } ?: Long.MAX_VALUE },
+        { UpcomingOrder.key(it) },
+        { dayOf(it, rules) ?: Long.MAX_VALUE }
+    )
+
+    /** Шаблон без следующего повтора: ждёт выполнения копии, на паузе или закончился ([dayOf] — null) */
+    fun isWaitingTemplate(item: Item, rules: Map<String, RecurrenceRule>): Boolean =
+        (includes(item) || includesProject(item)) && dayOf(item, rules) == null
+
+    /**
      * Порядок: с датой — по дате; копии без даты; шаблоны без следующего повтора — в конце. Всё на сегодня и
      * раньше (просроченные копии) — один день «сегодня»: в нём «Сегодня» выше «Сегодня вечером».
      */

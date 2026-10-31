@@ -138,4 +138,25 @@ class AreaScreenTest {
         // Отложенный шаблон — в «Когда-нибудь»
         assertEquals(AreaList.Section.SOMEDAY, AreaList.sectionOf(template.copy(start = Item.START_SOMEDAY), bounds))
     }
+
+    @Test
+    fun areaUpcoming_byDate_waitingTemplatesLast() {
+        val day = 24 * 3600 * 1000L
+        val tomorrow = bounds.endOfToday + 1
+        fun t(id: String, startDate: Long? = null, type: Int = Item.TYPE_TASK) =
+            ItemWithChecklist(Item(id = id, title = id, type = type, areaId = "a", start = Item.START_ANYTIME, startDate = startDate))
+        val far = t("far", tomorrow + 5 * day)
+        val near = t("near", tomorrow)
+        val waiting = t("waiting", type = Item.TYPE_TEMPLATE)
+        val scheduledTemplate = t("tpl", type = Item.TYPE_TEMPLATE)
+        val rules = mapOf(
+            "waiting" to com.example.data.model.RecurrenceRule(templateId = "waiting", rrule = "", nextGenerationDate = 0L),
+            "tpl" to com.example.data.model.RecurrenceRule(templateId = "tpl", rrule = "", nextGenerationDate = tomorrow + 2 * day)
+        )
+        val tasks = listOf(waiting, far, scheduledTemplate, near)
+        val content = AreaList.content("a", tasks, emptyList(), bounds, rules = rules)
+        assertEquals(listOf("near", "tpl", "far", "waiting"), content.upcoming.map { it.item.id })
+        // Порядок списка экрана — тот же
+        assertEquals(listOf("near", "tpl", "far", "waiting"), AreaList.order(tasks, "a", bounds, rules).map { it.item.id })
+    }
 }

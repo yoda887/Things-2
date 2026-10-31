@@ -356,7 +356,7 @@ class ThingsViewModel @Inject constructor(
                 ActiveScreen.PROJECT_DETAIL -> ProjectList.order(listTasks, projectHeadings)
                 ActiveScreen.ANYTIME -> AnytimeList.order(listTasks, projectList, areaList)
                 ActiveScreen.SOMEDAY -> SomedayList.order(listTasks, projectList, areaList)
-                ActiveScreen.AREA_DETAIL -> AreaList.order(listTasks, area?.id, bounds)
+                ActiveScreen.AREA_DETAIL -> AreaList.order(listTasks, area?.id, bounds, repeatRules)
                 ActiveScreen.LOGBOOK -> LogbookList.order(listTasks)
                 // Порядок экрана — общий порядок задач (sortOrder)
                 // Тег — в порядке групп по месту, как видно на экране

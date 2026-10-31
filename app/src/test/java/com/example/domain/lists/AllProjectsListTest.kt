@@ -74,4 +74,21 @@ class AllProjectsListTest {
         assertEquals(null, AllProjectsList.reorderLater(later, "d1", "far"))
         assertEquals(null, AllProjectsList.reorderLater(later, "s1", "d1"))
     }
+
+    @Test
+    fun later_templatesByNextDay_waitingBeforeSomeday() {
+        val day = 24 * 3600 * 1000L
+        val tomorrow = bounds.endOfToday + 1
+        val near = Item(id = "near", title = "near", type = Item.TYPE_PROJECT, start = Item.START_ANYTIME, startDate = tomorrow)
+        val far = Item(id = "far", title = "far", type = Item.TYPE_PROJECT, start = Item.START_ANYTIME, startDate = tomorrow + 5 * day)
+        val shelved = Item(id = "shelved", title = "shelved", type = Item.TYPE_PROJECT, start = Item.START_SOMEDAY)
+        val tpl = Item(id = "tpl", title = "tpl", type = Item.TYPE_PROJECT_TEMPLATE, start = Item.START_ANYTIME)
+        val waiting = Item(id = "waiting", title = "waiting", type = Item.TYPE_PROJECT_TEMPLATE, start = Item.START_ANYTIME)
+        val rules = mapOf(
+            "tpl" to com.example.data.model.RecurrenceRule(templateId = "tpl", rrule = "", nextGenerationDate = tomorrow + 2 * day),
+            "waiting" to com.example.data.model.RecurrenceRule(templateId = "waiting", rrule = "", nextGenerationDate = 0L)
+        )
+        val content = AllProjectsList.content(listOf(far, shelved, near), emptyList(), bounds, templates = listOf(waiting, tpl), rules = rules)
+        assertEquals(listOf("near", "tpl", "far", "waiting", "shelved"), content.groups.single().later.map { it.id })
+    }
 }

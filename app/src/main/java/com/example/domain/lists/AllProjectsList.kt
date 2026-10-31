@@ -3,11 +3,13 @@ package com.example.domain.lists
 import com.example.data.model.Area
 import com.example.data.model.DayBounds
 import com.example.data.model.Item
+import com.example.data.model.RecurrenceRule
 
 /**
  * Особый список «Все проекты», как All Projects в Things: открытые проекты по областям (в порядке
  * главного экрана), в каждой группе сначала активные ([HomeList.showsProject]), затем более поздние —
- * запланированные по дате старта, шаблоны повторяющихся проектов и отложенные в «Когда-нибудь»; внизу —
+ * запланированные и шаблоны повторяющихся проектов по дню (шаблон — по дню следующего повтора), шаблоны, что ждут
+ * или на паузе, и отложенные в «Когда-нибудь»; внизу —
  * завершённые и отменённые, свежие сверху.
  * Закреплено тестами AllProjectsListTest.
  */
@@ -19,7 +21,14 @@ object AllProjectsList {
     data class Content(val groups: List<Group>, val logged: List<Item>)
 
     /** @param templates шаблоны повторяющихся проектов (их нет среди проектов) — в более поздних своей области */
-    fun content(projects: List<Item>, areas: List<Area>, bounds: DayBounds = DayBounds.now(), templates: List<Item> = emptyList()): Content {
+    fun content(
+        projects: List<Item>,
+        areas: List<Area>,
+        bounds: DayBounds = DayBounds.now(),
+        templates: List<Item> = emptyList(),
+        // Правила повтора: по ним день шаблона среди запланированных
+        rules: Map<String, RecurrenceRule> = emptyMap()
+    ): Content {
         val liveAreas = areas.filter { !it.trashed }
         val areaIds = liveAreas.map { it.id }.toSet()
         val openProjects = projects.filter { it.type == Item.TYPE_PROJECT && ListRules.isOpenProject(it) }
@@ -29,14 +38,13 @@ object AllProjectsList {
             if (list.isEmpty()) return null
             val (repeating, plain) = list.partition { RepeatingList.includesProject(it) }
             val (active, later) = plain.partition { HomeList.showsProject(it, bounds) }
-            // Более поздние, как в Things: сначала запланированные по дате старта, затем шаблоны повтора, затем отложенные
+            // Более поздние, как в Things: запланированные и шаблоны повтора по дню (шаблон — по следующему повтору),
+            // затем шаблоны, что ждут или на паузе, затем отложенные
             val (scheduled, someday) = later.partition { it.start != Item.START_SOMEDAY && it.startDate != null }
-            // Внутри дня — порядок дня, как в «Планах»; отложенные — в своём порядке (их можно переставлять перетаскиванием)
-            return Group(
-                area, active,
-                scheduled.sortedWith(compareBy<Item>({ UpcomingOrder.dayOf(it.startDate!!) }, { UpcomingOrder.key(it) })) +
-                    repeating.sortedBy { it.sortOrder } + someday.sortedBy { it.sortOrder }
-            )
+            // Внутри дня — порядок дня, как в «Планах»; ждущие шаблоны — в своём порядке; отложенные — в своём
+            // (их можно переставлять перетаскиванием)
+            val dated = (scheduled + repeating.sortedBy { it.sortOrder }).sortedWith(RepeatingList.byLaterDay(rules))
+            return Group(area, active, dated + someday.sortedBy { it.sortOrder })
         }
         val groups = buildList {
             // Проекты без области (или чья область удалена) — сверху, как на главном экране

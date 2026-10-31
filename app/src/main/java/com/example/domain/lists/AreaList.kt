@@ -3,11 +3,14 @@ package com.example.domain.lists
 import com.example.data.model.DayBounds
 import com.example.data.model.Item
 import com.example.data.model.ItemWithChecklist
+import com.example.data.model.RecurrenceRule
 
 /**
  * Область: что в ней показывается, в каком порядке и на какие разделы делится — активные проекты
  * области, затем её задачи без проекта по разделам: текущие, «Планы», «Когда-нибудь». Проекты с датой
  * старта позже сегодняшнего дня стоят в «Планах» (по дате), отложенные — в «Когда-нибудь», перед задачами.
+ * «Планы» — по дате, как экран «Планы» (шаблон — по дню следующего повтора); шаблоны, что ждут или на паузе, —
+ * в конце раздела.
  * Закреплено тестами AreaScreenTest.
  */
 object AreaList {
@@ -59,7 +62,9 @@ object AreaList {
         bounds: DayBounds = DayBounds.now(),
         templates: List<Item> = emptyList(),
         // Фильтр по тегу над списком: проекты (и шаблоны проектов) — только с этим тегом, как задачи
-        tagFilter: String? = null
+        tagFilter: String? = null,
+        // Правила повтора: по ним день шаблона в «Планах»
+        rules: Map<String, RecurrenceRule> = emptyMap()
     ): Content {
         fun tagged(item: Item) = tagFilter == null ||
             item.tags.any { com.example.domain.tag.TagTitles.key(it) == com.example.domain.tag.TagTitles.key(tagFilter) }
@@ -71,11 +76,11 @@ object AreaList {
         return Content(
             projects = active,
             current = bySection[Section.CURRENT].orEmpty(),
-            upcoming = bySection[Section.UPCOMING].orEmpty(),
+            upcoming = bySection[Section.UPCOMING].orEmpty().sortedWith(byLaterDay(rules)),
             someday = bySection[Section.SOMEDAY].orEmpty(),
-            upcomingProjects = scheduled.sortedBy { it.startDate } + templates.filter { t ->
+            upcomingProjects = (scheduled + templates.filter { t ->
                 areaId != null && t.areaId == areaId && RepeatingList.includesProject(t) && tagged(t) && areaProjects.none { it.id == t.id }
-            }.sortedBy { it.sortOrder },
+            }.sortedBy { it.sortOrder }).sortedWith(RepeatingList.byLaterDay(rules)),
             somedayProjects = someday
         )
     }
@@ -84,8 +89,21 @@ object AreaList {
      * Задачи в порядке экрана: свои задачи области по разделам, за ними — задачи её проектов
      * (на экране их нет, но в списке экрана они остаются, как и раньше). Порядок внутри раздела не меняется.
      */
-    fun order(tasks: List<ItemWithChecklist>, areaId: String?, bounds: DayBounds = DayBounds.now()): List<ItemWithChecklist> {
+    fun order(
+        tasks: List<ItemWithChecklist>,
+        areaId: String?,
+        bounds: DayBounds = DayBounds.now(),
+        rules: Map<String, RecurrenceRule> = emptyMap()
+    ): List<ItemWithChecklist> {
         val (own, rest) = tasks.partition { isOwnTask(it.item, areaId) }
-        return own.sortedBy { sectionOf(it.item, bounds).ordinal } + rest
+        val bySection = own.groupBy { sectionOf(it.item, bounds) }
+        return Section.entries.flatMap { section ->
+            val list = bySection[section].orEmpty()
+            if (section == Section.UPCOMING) list.sortedWith(byLaterDay(rules)) else list
+        } + rest
     }
+
+    /** «Планы» области — по дню, как экран «Планы»; шаблоны, что ждут или на паузе, — в конце */
+    private fun byLaterDay(rules: Map<String, RecurrenceRule>): Comparator<ItemWithChecklist> =
+        compareBy(RepeatingList.byLaterDay(rules)) { it.item }
 }

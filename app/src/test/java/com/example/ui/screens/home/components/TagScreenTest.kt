@@ -143,7 +143,8 @@ class TagScreenTest {
             allTasks = listOf(ItemWithChecklist(projectTemplate), ItemWithChecklist(template)),
             projects = emptyList()
         )
-        assertEquals(listOf("tpl", "copy", TaskListKeys.AREA_PROJECTS_SPACER, "project:ptpl"), ids(TagScreen.rows(content)))
+        // Шаблон без правила (ждёт) — в конце группы, после копии
+        assertEquals(listOf("copy", "tpl", TaskListKeys.AREA_PROJECTS_SPACER, "project:ptpl"), ids(TagScreen.rows(content)))
     }
 
     @Test
@@ -172,6 +173,26 @@ class TagScreenTest {
         val content = TagList.content("work", tasks, tasks, emptyList(), bounds = bounds, rules = rules)
         // Шаблон на послезавтра+ — поздний, как и его копия: после текущих, копия раньше — выше
         assertEquals(listOf("tplNow", "copy", "tpl"), ids(TagScreen.rows(content)))
+    }
+
+    @Test
+    fun waitingAndPausedTemplates_endOfGroup_beforeSomeday() {
+        val bounds = com.example.data.model.DayBounds.now()
+        val tomorrow = bounds.endOfToday + 1
+        val now = task("now")
+        val planned = ItemWithChecklist(Item(id = "planned", title = "planned", cachedTags = "work", startDate = tomorrow))
+        val someday = ItemWithChecklist(Item(id = "someday", title = "someday", cachedTags = "work", start = Item.START_SOMEDAY))
+        val waiting = ItemWithChecklist(Item(id = "waiting", title = "waiting", type = Item.TYPE_TEMPLATE, cachedTags = "work", start = Item.START_ANYTIME))
+        val paused = ItemWithChecklist(Item(id = "paused", title = "paused", type = Item.TYPE_TEMPLATE, cachedTags = "work", start = Item.START_ANYTIME))
+        val rules = mapOf(
+            // «После выполнения» ждёт отметки копии — следующего повтора нет
+            "waiting" to com.example.data.model.RecurrenceRule(templateId = "waiting", rrule = "", nextGenerationDate = 0L),
+            // На паузе — дата есть, но правило не действует
+            "paused" to com.example.data.model.RecurrenceRule(templateId = "paused", rrule = "", nextGenerationDate = tomorrow, isActive = false)
+        )
+        val tasks = listOf(waiting, someday, now, paused, planned)
+        val content = TagList.content("work", tasks, tasks, emptyList(), bounds = bounds, rules = rules)
+        assertEquals(listOf("now", "planned", "waiting", "paused", "someday"), ids(TagScreen.rows(content)))
     }
 
     @Test

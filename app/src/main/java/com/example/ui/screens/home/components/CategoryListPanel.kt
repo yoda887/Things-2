@@ -407,7 +407,7 @@ fun ThingsCategoryListPanel(
     LaunchedEffect(state.projects) { laterProjectsOverride = null }
     // Более поздние проекты без области — как на экране сейчас (во время перетаскивания — в новом порядке)
     val laterProjectsNow: () -> List<Item> = {
-        AllProjectsList.content(laterProjectsOverride ?: currentProjects, currentAreas, templates = currentAllTasks.map { it.item })
+        AllProjectsList.content(laterProjectsOverride ?: currentProjects, currentAreas, templates = currentAllTasks.map { it.item }, rules = state.repeatRules)
             .groups.firstOrNull { it.area == null }?.later.orEmpty()
     }
     val toggleProject: (Item) -> Unit = { project ->

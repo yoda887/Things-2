@@ -9,7 +9,8 @@ import com.example.data.model.RecurrenceRule
 /**
  * Тег: открытые задачи и проекты с тегом — по месту, как на главном экране ([PlaceGroups]): сначала без
  * проекта и области, потом под своим проектом или областью. Более поздние (старт после сегодня или
- * «Когда-нибудь») — в тех же группах, после текущих, по дню; без плашки. Выполненных на экране тега нет.
+ * «Когда-нибудь») — в тех же группах, после текущих, по дню; шаблоны, что ждут или на паузе, — после них, перед
+ * отложенными; без плашки. Выполненных на экране тега нет.
  * Закреплено тестами TagScreenTest.
  */
 object TagList {
@@ -98,10 +99,17 @@ object TagList {
             projectTemplates.filter { template -> projects.none { it.id == template.id } }
         val active = tasks.filter { !it.item.trashed && !ListRules.isClosed(it.item) }
         // Задача в открытом редакторе — на месте, даже если ей только что поставили позднюю дату
-        val (current, laterUnsorted) = active.partition { it.item.id in pinned || !isLater(it.item, bounds, rules) }
-        // Поздние — по дню, как в «Планах»: копия на 2 ноября перед шаблоном на 9-е (порядок внутри дня — прежний)
-        val later = laterUnsorted.sortedBy { laterDay(it.item, rules) }
-        val (currentProjects, laterProjects) = taggedProjects.partition { !isLater(it, bounds, rules) }
+        fun waiting(item: Item) = RepeatingList.isWaitingTemplate(item, rules)
+        val (currentAll, laterUnsorted) = active.partition { it.item.id in pinned || !isLater(it.item, bounds, rules) }
+        val (waitingTasks, current) = currentAll.partition { it.item.id !in pinned && waiting(it.item) }
+        // Поздние — по дню, как в «Планах»: копия на 2 ноября перед шаблоном на 9-е (порядок внутри дня — прежний);
+        // шаблоны, что ждут или на паузе, — после них, перед отложенными
+        val (laterSomeday, laterDated) = laterUnsorted.sortedBy { laterDay(it.item, rules) }.partition { it.item.start == Item.START_SOMEDAY }
+        val later = laterDated + waitingTasks + laterSomeday
+        val (currentProjectsAll, laterProjectsUnsorted) = taggedProjects.partition { !isLater(it, bounds, rules) }
+        val (waitingProjects, currentProjects) = currentProjectsAll.partition { waiting(it) }
+        val (somedayProjects, datedProjects) = laterProjectsUnsorted.sortedBy { laterDay(it, rules) }.partition { it.start == Item.START_SOMEDAY }
+        val laterProjects = datedProjects + waitingProjects + somedayProjects
         return Content(
             projects = taggedProjects,
             active = active,
