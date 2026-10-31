@@ -491,6 +491,33 @@ class RepeatTest {
     }
 
     @Test
+    fun orphanCopies_unlinkedWhenTemplateStopped_partsKept() {
+        // Остановленный шаблон — снова обычная задача (RepeatControl.stopped) и проект (RepeatProjects.stopped)
+        val stoppedTask = RepeatControl.stopped(Item(id = "t", type = Item.TYPE_TEMPLATE))
+        val stoppedProject = Item(id = "p", type = Item.TYPE_PROJECT)
+        val liveProjectTemplate = Item(id = "pt", type = Item.TYPE_PROJECT_TEMPLATE)
+        val copy = Item(id = "a", repeatTemplateId = "t")
+        val doneCopy = Item(id = "b", repeatTemplateId = "t", status = Item.STATUS_COMPLETED)
+        val projectCopy = Item(id = "c", type = Item.TYPE_PROJECT, repeatTemplateId = "p")
+        val part = Item(id = "d", type = Item.TYPE_TEMPLATE, projectId = "pt", repeatTemplateId = "pt")
+        val fixed = RepeatControl.orphanCopies(listOf(stoppedTask, stoppedProject, liveProjectTemplate, copy, doneCopy, projectCopy, part), now = 5L)
+        assertEquals(listOf("a", "b", "c"), fixed.map { it.id })
+        assertTrue(fixed.all { it.repeatTemplateId == null && it.modificationDate == 5L })
+        assertEquals(Item.STATUS_COMPLETED, fixed[1].status)
+        assertEquals(Item.TYPE_PROJECT, fixed[2].type)
+    }
+
+    @Test
+    fun detached_copyBecomesPlain() {
+        val copy = Item(id = "a", repeatTemplateId = "t", startDate = 100L)
+        val plain = RepeatControl.detached(copy, now = 9L)
+        assertNull(plain.repeatTemplateId)
+        assertEquals(Item.TYPE_TASK, plain.type)
+        assertEquals(100L, plain.startDate)
+        assertEquals(9L, plain.modificationDate)
+    }
+
+    @Test
     fun logbookDeletions_doNotTouchActiveRepeats() {
         val zone = ZoneId.of(TEST_ZONE)
         val after = RepeatRule(afterCompletion = true, unit = RepeatUnit.WEEK, start = wed)

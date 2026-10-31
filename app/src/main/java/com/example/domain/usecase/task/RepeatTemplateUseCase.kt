@@ -38,16 +38,22 @@ class RepeatTemplateUseCase @Inject constructor(private val repository: ITaskRep
         }
     }
 
-    /** Остановить: шаблон снова обычная задача (или проект со своими задачами), правило удаляется */
+    /**
+     * Остановить: шаблон снова обычная задача (или проект со своими задачами), правило удаляется, а его копии —
+     * открытые и выполненные — становятся обычными задачами и проектами, как при удалении шаблона
+     */
     suspend fun stop(templateId: String) {
         val template = repository.getTask(templateId) ?: return
         val projectItems = if (template.type == Item.TYPE_PROJECT_TEMPLATE) repository.getProjectItems(templateId) else emptyList()
+        val now = System.currentTimeMillis()
+        val copies = repository.getRepeatCopies(templateId).map { RepeatControl.detached(it, now) }
         repository.inTransaction {
             if (template.type == Item.TYPE_PROJECT_TEMPLATE) {
                 repository.insertTasks(RepeatProjects.stopped(template, projectItems))
             } else {
                 repository.insertTask(RepeatControl.stopped(template))
             }
+            if (copies.isNotEmpty()) repository.insertTasks(copies)
             repository.deleteRecurrenceRule(templateId)
         }
     }

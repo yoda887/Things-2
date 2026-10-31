@@ -145,18 +145,26 @@ object RepeatControl {
     }
 
     /**
-     * Копии, чей шаблон удалён насовсем, становятся обычными задачами и проектами: без серого значка и без
-     * ссылки «Это копия повторяющейся задачи». Шаблон в «Корзине» связь не рвёт — его ещё вернут.
-     * Возвращает исправленные записи.
+     * Копия без шаблона — обычная задача или проект: без серого значка и без ссылки «Это копия повторяющейся
+     * задачи».
+     */
+    fun detached(copy: Item, now: Long = System.currentTimeMillis()): Item = copy.copy(
+        type = if (copy.type == Item.TYPE_TEMPLATE) Item.TYPE_TASK else copy.type,
+        repeatTemplateId = null,
+        modificationDate = now
+    )
+
+    /**
+     * Копии, чей шаблон удалён насовсем или остановлен (снова обычная задача или проект), становятся обычными
+     * задачами и проектами ([detached]). Шаблон в «Корзине» связь не рвёт — его ещё вернут. Части шаблона
+     * проекта ссылаются на сам шаблон — их это не касается. Возвращает исправленные записи.
      */
     fun orphanCopies(items: List<Item>, now: Long = System.currentTimeMillis()): List<Item> {
-        val ids = items.mapTo(HashSet()) { it.id }
-        return items.filter { it.repeatTemplateId != null && it.repeatTemplateId !in ids }.map { item ->
-            item.copy(
-                type = if (item.type == Item.TYPE_TEMPLATE) Item.TYPE_TASK else item.type,
-                repeatTemplateId = null,
-                modificationDate = now
-            )
-        }
+        val byId = items.associateBy { it.id }
+        return items.filter { item ->
+            val templateId = item.repeatTemplateId ?: return@filter false
+            val template = byId[templateId]
+            template == null || !template.isRepeatTemplate
+        }.map { detached(it, now) }
     }
 }
