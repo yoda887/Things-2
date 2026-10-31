@@ -1,5 +1,6 @@
 package com.example.ui.screens.home.subcomponents
 
+import com.example.ui.screens.home.inlineeditor.dialogs.dialogGrowOrigin
 import com.example.domain.edits.ReminderChange
 import com.example.domain.edits.ProjectEdit
 import android.view.HapticFeedbackConstants
@@ -253,9 +254,13 @@ private fun ProjectStartRow(project: Item, textPrimaryColor: Color, onClick: () 
     }
 }
 
+/** Откуда вырастает окно «Термін» проекта: строка дедлайна (центр от центра экрана); из меню опций — null, по центру */
+private val projectDeadlineOrigin = androidx.compose.runtime.mutableStateOf<androidx.compose.ui.geometry.Offset?>(null)
+
 /** Дедлайн: дата и сколько осталось; сегодня и просроченный — цветом danger. */
 @Composable
 private fun ProjectDeadlineRow(dueDate: Long, onClick: () -> Unit) {
+    var origin by remember { mutableStateOf<androidx.compose.ui.geometry.Offset?>(null) }
     val delta = remember(dueDate) { deadlineDeltaDays(dueDate) }
     // Как в Things: «Чт 10 груд.» (другой год — «1 січ. 2027») и серым «залишилося 40 днів»
     val dateText = remember(dueDate) { com.example.ui.screens.home.inlineeditor.utils.editorDueDateText(dueDate) }
@@ -264,7 +269,11 @@ private fun ProjectDeadlineRow(dueDate: Long, onClick: () -> Unit) {
         verticalAlignment = Alignment.CenterVertically,
         modifier = Modifier
             .fillMaxWidth()
-            .detailsRowClick(onClick)
+            .dialogGrowOrigin { origin = it }
+            .detailsRowClick {
+                projectDeadlineOrigin.value = origin
+                onClick()
+            }
             .padding(vertical = ThingsSpacing.S_PLUS)
     ) {
         Icon(imageVector = AppIcons.Deadline, contentDescription = stringResource(R.string.cd_deadline_flag), tint = color, modifier = Modifier.size(ThingsIconSize.S))
@@ -425,7 +434,11 @@ fun ProjectDialogs(
         ProjectAction.DEADLINE -> DeadlineDatePickerDialog(
             initialSelectedDateMillis = project.dueDate,
             onDateSelected = { date -> onEditProject(ProjectEdit.Deadline(date)) },
-            onDismiss = onClose
+            onDismiss = {
+                projectDeadlineOrigin.value = null
+                onClose()
+            },
+            growFromOffset = projectDeadlineOrigin.value
         )
         ProjectAction.MOVE -> ThingsMoveDialog(
             currentProjectId = null,

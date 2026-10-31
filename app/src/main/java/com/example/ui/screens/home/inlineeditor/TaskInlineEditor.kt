@@ -1,5 +1,6 @@
 package com.example.ui.screens.home.inlineeditor
 
+import com.example.ui.screens.home.inlineeditor.dialogs.dialogGrowOrigin
 import androidx.compose.foundation.text.appendInlineContent
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.layout.onSizeChanged
@@ -186,6 +187,10 @@ fun ThingsTaskInlineEditor(
     var showTagDialog by remember(task.item.id) { mutableStateOf(false) }
     var showChecklistHelper by remember(task.item.id, task.checklist) { mutableStateOf(task.checklist.isNotEmpty()) }
     var showDatePicker by remember(task.item.id) { mutableStateOf(false) }
+    // Окно «Термін» вырастает из нажатого флажка или строки дедлайна
+    var deadlineGrowFrom by remember { mutableStateOf<androidx.compose.ui.geometry.Offset?>(null) }
+    var deadlineOrigin0 by remember { mutableStateOf<androidx.compose.ui.geometry.Offset?>(null) }
+    var deadlineOrigin1 by remember { mutableStateOf<androidx.compose.ui.geometry.Offset?>(null) }
 
     var isDeleted by remember { mutableStateOf(false) }
     var isSavedManually by remember { mutableStateOf(false) }
@@ -644,8 +649,10 @@ fun ThingsTaskInlineEditor(
                                 tint = iconInactiveColor,
                                 modifier = Modifier
                                     .size(ThingsIconSize.L)
+                                    .dialogGrowOrigin { deadlineOrigin0 = it }
                                     .clickable {
                                         view.performHapticFeedback(HapticFeedbackConstants.CLOCK_TICK)
+                                        deadlineGrowFrom = deadlineOrigin0
                                         showDatePicker = true
                                     }
                             )
@@ -793,8 +800,10 @@ fun ThingsTaskInlineEditor(
                         Row(
                             verticalAlignment = Alignment.CenterVertically,
                             modifier = Modifier
+                                .dialogGrowOrigin { deadlineOrigin1 = it }
                                 .clickable {
                                     view.performHapticFeedback(HapticFeedbackConstants.CLOCK_TICK)
+                                    deadlineGrowFrom = deadlineOrigin1
                                     showDatePicker = true
                                 }
                                 .padding(vertical = MaterialTheme.dimens.taskEditorIndicatorVerticalPadding)
@@ -868,6 +877,7 @@ fun ThingsTaskInlineEditor(
     if (showDatePicker) {
         DeadlineDatePickerDialog(
             initialSelectedDateMillis = dueDate,
+            growFromOffset = deadlineGrowFrom,
             onDateSelected = { dueDate = it },
             onDismiss = { showDatePicker = false }
         )
@@ -902,12 +912,15 @@ fun ThingsTaskInlineEditor(
 fun DeadlineDatePickerDialog(
     initialSelectedDateMillis: Long?,
     onDateSelected: (Long?) -> Unit,
-    onDismiss: () -> Unit
+    onDismiss: () -> Unit,
+    // Откуда вырастает окно — нажатая строка дедлайна или флажок (dialogGrowOrigin); null — по центру
+    growFromOffset: androidx.compose.ui.geometry.Offset? = null
 ) {
     com.example.ui.screens.home.inlineeditor.dialogs.ThingsDeadlineDialog(
         dueDate = initialSelectedDateMillis,
         onDueDateChange = onDateSelected,
-        onDismissRequest = onDismiss
+        onDismissRequest = onDismiss,
+        growFromOffset = growFromOffset
     )
 }
 

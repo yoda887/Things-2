@@ -1,5 +1,6 @@
 package com.example.ui.screens.home.inlineeditor.dialogs
 
+import com.example.ui.screens.home.inlineeditor.dialogs.dialogGrowOrigin
 import androidx.compose.ui.layout.onSizeChanged
 import android.view.HapticFeedbackConstants
 import androidx.compose.material.icons.filled.Notifications
@@ -130,6 +131,10 @@ fun QuickAddDialog(
     var showWhenDialog by remember { mutableStateOf(false) }
     var showTagDialog by remember { mutableStateOf(false) }
     var showDatePicker by remember { mutableStateOf(false) }
+    // Окно «Термін» вырастает из нажатого флажка или строки дедлайна
+    var deadlineGrowFrom by remember { mutableStateOf<androidx.compose.ui.geometry.Offset?>(null) }
+    var deadlineOrigin0 by remember { mutableStateOf<androidx.compose.ui.geometry.Offset?>(null) }
+    var deadlineOrigin1 by remember { mutableStateOf<androidx.compose.ui.geometry.Offset?>(null) }
     var showMoveDialog by remember { mutableStateOf(false) }
     var showChecklistHelper by remember { mutableStateOf(false) }
 
@@ -511,7 +516,11 @@ fun QuickAddDialog(
                                         tint = iconInactiveColor,
                                         modifier = Modifier
                                             .size(ThingsIconSize.L)
-                                            .clickable { showDatePicker = true }
+                                            .dialogGrowOrigin { deadlineOrigin0 = it }
+                                            .clickable {
+                                                deadlineGrowFrom = deadlineOrigin0
+                                                showDatePicker = true
+                                            }
                                     )
                                 }
                             }
@@ -648,8 +657,10 @@ fun QuickAddDialog(
                                 Row(
                                     verticalAlignment = Alignment.CenterVertically,
                                     modifier = Modifier
+                                        .dialogGrowOrigin { deadlineOrigin1 = it }
                                         .clickable {
                                             view.performHapticFeedback(HapticFeedbackConstants.CLOCK_TICK)
+                                            deadlineGrowFrom = deadlineOrigin1
                                             showDatePicker = true
                                         }
                                         .padding(vertical = MaterialTheme.dimens.taskEditorIndicatorVerticalPadding)
@@ -799,6 +810,7 @@ fun QuickAddDialog(
     if (showDatePicker) {
         DeadlineDatePickerDialog(
             initialSelectedDateMillis = dueDate,
+            growFromOffset = deadlineGrowFrom,
             onDateSelected = {
                 dueDate = it
                 showDatePicker = false

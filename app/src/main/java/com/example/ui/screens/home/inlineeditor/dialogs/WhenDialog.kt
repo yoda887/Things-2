@@ -1,5 +1,8 @@
 package com.example.ui.screens.home.inlineeditor.dialogs
 
+import androidx.compose.ui.layout.findRootCoordinates
+import androidx.compose.ui.layout.boundsInRoot
+import androidx.compose.ui.layout.onGloballyPositioned
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.layout.onSizeChanged
 import kotlinx.coroutines.flow.drop
@@ -1118,20 +1121,28 @@ private val DEADLINE_GAP_BEFORE_CLEAR = 12.dp
 fun ThingsDeadlineDialog(
     dueDate: Long?,
     onDueDateChange: (Long?) -> Unit,
-    onDismissRequest: () -> Unit
+    onDismissRequest: () -> Unit,
+    /**
+     * Смещение нажатой строки дедлайна или флажка от центра экрана ([dialogGrowOrigin]): окно вырастает из неё,
+     * как в Things. Не передано — проявляется по центру.
+     */
+    growFromOffset: Offset? = null
 ) {
     val view = LocalView.current
     val zone = java.time.ZoneId.systemDefault()
     var isVisible by remember { mutableStateOf(false) }
     LaunchedEffect(Unit) { isVisible = true }
+    // Рост из точки — как у «Когда?» из строки при свайпе
+    val grows = growFromOffset != null
     val scale by animateFloatAsState(
-        targetValue = if (isVisible) 1f else 0.85f,
-        animationSpec = spring(dampingRatio = Spring.DampingRatioMediumBouncy, stiffness = Spring.StiffnessLow),
+        targetValue = if (isVisible) 1f else if (grows) GROW_START_SCALE else 0.85f,
+        animationSpec = if (grows) tween(durationMillis = GROW_DURATION_MS, easing = FastOutSlowInEasing)
+        else spring(dampingRatio = Spring.DampingRatioMediumBouncy, stiffness = Spring.StiffnessLow),
         label = "deadlineScale"
     )
     val alpha by animateFloatAsState(
         targetValue = if (isVisible) 1f else 0f,
-        animationSpec = spring(stiffness = Spring.StiffnessLow),
+        animationSpec = if (grows) tween(durationMillis = GROW_FADE_MS, easing = LinearEasing) else spring(stiffness = Spring.StiffnessLow),
         label = "deadlineAlpha"
     )
     // Выбор закрывает окно не сразу, а через CHOICE_CLOSE_DELAY_MS — видно, что выбрано
@@ -1150,6 +1161,12 @@ fun ThingsDeadlineDialog(
         onDismissRequest = onDismissRequest,
         properties = DialogProperties(usePlatformDefaultWidth = false)
     ) {
+        if (grows) {
+            // Входную анимацию окна делает Compose (рост), закрытие — системная, как у «Когда?»
+            val dialogWindow = (LocalView.current.parent as? DialogWindowProvider)?.window
+            dialogWindow?.setWindowAnimations(com.example.R.style.DialogWindowAnimationGrowOpen)
+            dialogWindow?.setDimAmount(DIM_ALPHA)
+        }
         // Как у «Когда?»: содержимое окна сдвинуто вниз на полосу состояния — возвращаем карточку в центр экрана
         val hostView = LocalView.current
         val centerFixPx = remember(hostView) {
@@ -1170,6 +1187,13 @@ fun ThingsDeadlineDialog(
                             scaleX = scale
                             scaleY = scale
                             this.alpha = alpha
+                            // Окно разворачивается вокруг нажатой точки: она остаётся на месте (за краем карточки — край)
+                            growFromOffset?.let { from ->
+                                transformOrigin = TransformOrigin(
+                                    pivotFractionX = (0.5f + from.x / size.width).coerceIn(0f, 1f),
+                                    pivotFractionY = (0.5f + from.y / size.height).coerceIn(0f, 1f)
+                                )
+                            }
                         }
                         .width(WHEN_DIALOG_WIDTH)
                         .wrapContentHeight()
@@ -1243,4 +1267,12 @@ fun ThingsDeadlineDialog(
             }
         }
     }
+}
+
+/**
+ * Запоминает смещение центра элемента от центра экрана — точку, из которой вырастает окно ([ThingsDeadlineDialog]).
+ */
+fun Modifier.dialogGrowOrigin(onOrigin: (Offset) -> Unit): Modifier = onGloballyPositioned { coordinates ->
+    val root = coordinates.findRootCoordinates()
+    onOrigin(coordinates.boundsInRoot().center - Offset(root.size.width / 2f, root.size.height / 2f))
 }
