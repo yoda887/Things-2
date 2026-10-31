@@ -26,7 +26,7 @@ class TagScreenTest {
             is ItemWithChecklist -> it.item.id
             is Item -> "project:${it.id}"
             is SearchSectionHeaderItem -> "header:${it.title}"
-            is ListToggleItem -> if (it.key == AllProjectsScreen.LOGGED_KEY) "toggle:logged" else "toggle:later"
+            is ListToggleItem -> "toggle:${it.key}"
             else -> it.toString()
         }
     }
@@ -42,7 +42,7 @@ class TagScreenTest {
     }
 
     @Test
-    fun rows_openTasks_spacer_openProjects_thenLogbookNewestFirst() {
+    fun rows_openTasks_spacer_openProjects_noCompleted() {
         val open = task("open")
         val oldDone = task("old", status = Item.STATUS_COMPLETED, stop = 100)
         val newCancelled = task("new", status = Item.STATUS_CANCELLED, stop = 200)
@@ -54,15 +54,14 @@ class TagScreenTest {
             allTasks = listOf(open, oldDone, newCancelled, otherTagDone, trashedDone),
             projects = listOf(project("p"), project("done", status = Item.STATUS_COMPLETED), project("home", tags = "home"))
         )
-        assertEquals(
-            // Выполненные — в той же группе, что открытые, после них; плашка — внизу
-            listOf("open", "new", "old", TaskListKeys.AREA_PROJECTS_SPACER, "project:p", "toggle:logged"),
-            ids(TagScreen.rows(content))
-        )
+        // Выполненных и отменённых на экране тега нет, плашки тоже
+        assertEquals(listOf("open", TaskListKeys.AREA_PROJECTS_SPACER, "project:p"), ids(TagScreen.rows(content)))
+        // Только выполненные с тегом — экран пуст
+        assertTrue(TagList.content("work", emptyList(), listOf(oldDone, newCancelled), emptyList()).isEmpty)
     }
 
     @Test
-    fun laterAndCompleted_underToggles_hiddenUntilShown() {
+    fun later_shownRightAway_afterCurrent_noToggles() {
         val bounds = com.example.data.model.DayBounds.now()
         val tomorrow = bounds.endOfToday + 3_600_000L
         val now = task("now")
@@ -74,21 +73,17 @@ class TagScreenTest {
             "work", tasks = listOf(now, planned, someday), allTasks = listOf(now, planned, someday, done),
             projects = listOf(laterProject), bounds = bounds
         )
-        assertEquals(3, content.laterCount)
-        // По умолчанию скрыты: видны только текущие и плашки
-        assertEquals(listOf("now", "toggle:later", "toggle:logged"), ids(TagScreen.rows(content, showLater = false, showLogged = false)))
-        // Раскрыты — поздние по месту перед своей плашкой, выполненные после своей
+        // Поздние — сразу, в тех же группах после текущих (без второго заголовка); выполненной нет
         assertEquals(
-            // Поздние и выполненные — в тех же группах, что текущие (без второго заголовка); плашки — внизу
-            listOf("now", "planned", "someday", "done", TaskListKeys.AREA_PROJECTS_SPACER, "project:lp", "toggle:later", "toggle:logged"),
-            ids(TagScreen.rows(content, showLater = true, showLogged = true))
+            listOf("now", "planned", "someday", TaskListKeys.AREA_PROJECTS_SPACER, "project:lp"),
+            ids(TagScreen.rows(content))
         )
-        // Задача в открытом редакторе не уходит под плашку, даже с поздней датой
+        // Задача в открытом редакторе — на месте, даже с поздней датой
         val pinned = TagList.content(
             "work", tasks = listOf(planned), allTasks = listOf(planned), projects = emptyList(),
             pinned = mapOf("planned" to com.example.domain.lists.PlaceGroups.Place(null, null)), bounds = bounds
         )
-        assertEquals(listOf("planned"), ids(TagScreen.rows(pinned, showLater = false, showLogged = false)))
+        assertEquals(listOf("planned"), ids(TagScreen.rows(pinned)))
     }
 
     @Test
@@ -152,17 +147,14 @@ class TagScreenTest {
     }
 
     @Test
-    fun shownLaterAndCompleted_sameProjectOneHeader() {
+    fun later_sameProjectOneHeader() {
         val p = Item(id = "p", type = Item.TYPE_PROJECT, title = "P")
         val tomorrow = com.example.data.model.DayBounds.now().endOfToday + 1
         val now = task("now", projectId = "p")
         val later = ItemWithChecklist(Item(id = "later", title = "later", cachedTags = "work", projectId = "p", start = Item.START_ANYTIME, startDate = tomorrow))
         val done = task("done", status = Item.STATUS_COMPLETED, stop = 1L, projectId = "p")
         val content = TagList.content("work", listOf(now, later), listOf(now, later, done), listOf(p))
-        assertEquals(
-            listOf("header:P", "now", "later", "done", "toggle:later", "toggle:logged"),
-            ids(TagScreen.rows(content, showLater = true, showLogged = true))
-        )
+        assertEquals(listOf("header:P", "now", "later"), ids(TagScreen.rows(content)))
     }
 
     @Test
@@ -178,18 +170,19 @@ class TagScreenTest {
         )
         val tasks = listOf(template, todayTemplate, copy)
         val content = TagList.content("work", tasks, tasks, emptyList(), bounds = bounds, rules = rules)
-        // Шаблон на послезавтра+ — поздний, как и его копия; копия раньше — выше
-        assertEquals(listOf("tplNow", "toggle:later"), ids(TagScreen.rows(content, showLater = false)))
-        assertEquals(listOf("tplNow", "copy", "tpl", "toggle:later"), ids(TagScreen.rows(content, showLater = true)))
+        // Шаблон на послезавтра+ — поздний, как и его копия: после текущих, копия раньше — выше
+        assertEquals(listOf("tplNow", "copy", "tpl"), ids(TagScreen.rows(content)))
     }
 
     @Test
     fun repeatingProjectCopies_oneHeader() {
-        val now = project("cur").copy(title = "Weekly", repeatTemplateId = "pt", status = Item.STATUS_OPEN)
-        val old = project("old").copy(title = "Weekly", repeatTemplateId = "pt", status = Item.STATUS_COMPLETED)
+        val tomorrow = com.example.data.model.DayBounds.now().endOfToday + 1
+        val now = project("cur").copy(title = "Weekly", repeatTemplateId = "pt", cachedTags = "")
+        val next = project("next").copy(title = "Weekly", repeatTemplateId = "pt", cachedTags = "", startDate = tomorrow)
         val open = task("a", projectId = "cur")
-        val done = task("b", projectId = "old", status = Item.STATUS_COMPLETED, stop = 100)
-        val content = TagList.content("work", listOf(open), listOf(open, done), listOf(now.copy(cachedTags = ""), old.copy(cachedTags = "")))
-        assertEquals(listOf("header:Weekly", "a", "b", "toggle:logged"), ids(TagScreen.rows(content, showLogged = true)))
+        val later = ItemWithChecklist(Item(id = "c", title = "c", cachedTags = "work", projectId = "next", start = Item.START_ANYTIME, startDate = tomorrow))
+        val content = TagList.content("work", listOf(open, later), listOf(open, later), listOf(now, next))
+        // Текущая и поздняя следующая копии — под одним заголовком
+        assertEquals(listOf("header:Weekly", "a", "c"), ids(TagScreen.rows(content)))
     }
 }

@@ -9,8 +9,8 @@ import com.example.data.model.RecurrenceRule
 /**
  * Тег: открытые задачи и проекты с тегом — по месту, как на главном экране ([PlaceGroups]): сначала без
  * проекта и области, потом под своим проектом или областью. Более поздние (старт после сегодня или
- * «Когда-нибудь») — отдельно, тоже по месту ([Content.laterGroups]); закрытые задачи с тегом — Logbook, свежие
- * сверху. Экран прячет поздние и выполненные под плашками «Показать». Закреплено тестами TagScreenTest.
+ * «Когда-нибудь») — в тех же группах, после текущих, по дню; без плашки. Выполненных на экране тега нет.
+ * Закреплено тестами TagScreenTest.
  */
 object TagList {
 
@@ -23,13 +23,6 @@ object TagList {
     data class Content(
         val projects: List<Item>,
         val active: List<ItemWithChecklist>,
-        val logbook: List<ItemWithChecklist>,
-        /** Текущие открытые задачи и проекты по месту: задачи — [PlaceGroups.Group.tasks], проекты — строками */
-        val groups: List<PlaceGroups.Group> = emptyList(),
-        /** Более поздние — со стартом после сегодня и «Когда-нибудь», тоже по месту */
-        val laterGroups: List<PlaceGroups.Group> = emptyList(),
-        /** Сколько поздних задач и проектов */
-        val laterCount: Int = 0,
         /** Для [groups]: текущие и поздние задачи и проекты, все проекты и области, закреплённые места */
         private val currentTasks: List<ItemWithChecklist> = emptyList(),
         private val laterTasks: List<ItemWithChecklist> = emptyList(),
@@ -39,21 +32,21 @@ object TagList {
         private val areas: List<Area> = emptyList(),
         private val pinned: Map<String, PlaceGroups.Place> = emptyMap()
     ) {
-        val isEmpty: Boolean get() = projects.isEmpty() && active.isEmpty() && logbook.isEmpty()
+        val isEmpty: Boolean get() = projects.isEmpty() && active.isEmpty()
 
         /**
-         * Группы экрана: текущие, а показанные поздние ([showLater]) и выполненные ([showLogged]) — в тех же группах
-         * своего проекта или области, после текущих (один заголовок на проект или область, не второй такой же).
+         * Группы экрана: текущие, а поздние — в тех же группах своего проекта или области, после текущих (один
+         * заголовок на проект или область, не второй такой же).
          */
-        fun groups(showLater: Boolean, showLogged: Boolean): List<PlaceGroups.Group> {
-            val tasks = currentTasks + (if (showLater) laterTasks else emptyList()) + (if (showLogged) logbook else emptyList())
-            val rows = currentProjects + (if (showLater) laterProjects else emptyList())
+        fun groups(): List<PlaceGroups.Group> {
+            val tasks = currentTasks + laterTasks
+            val rows = currentProjects + laterProjects
             return mergeRepeatCopies(PlaceGroups.group(tasks, allProjects, areas, projectRows = rows, areaHeaderOnlyWithOwnItems = true, pinned = pinned))
         }
     }
 
     /**
-     * Копии одного повторяющегося проекта (выполненная прошлая, текущая, поздняя следующая) — под одним заголовком,
+     * Копии одного повторяющегося проекта (текущая и поздняя следующая) — под одним заголовком,
      * первым: для человека это один проект, а не два подзаголовка с одним и тем же названием.
      */
     private fun mergeRepeatCopies(groups: List<PlaceGroups.Group>): List<PlaceGroups.Group> {
@@ -84,7 +77,7 @@ object TagList {
     /**
      * @param tasks задачи списка экрана (из ViewModel). Тег у них не перепроверяется: раскрытая
      * в редакторе задача остаётся на месте, даже если тег с неё только что сняли
-     * @param allTasks все задачи — из них берётся Logbook тега
+     * @param allTasks все задачи — из них берутся шаблоны повторяющихся проектов с тегом
      * @param pinned место задачи в открытом редакторе — она стоит там до закрытия ([PlaceGroups.group])
      */
     fun content(
@@ -112,19 +105,13 @@ object TagList {
         return Content(
             projects = taggedProjects,
             active = active,
-            groups = PlaceGroups.group(current, projects, areas, projectRows = currentProjects, areaHeaderOnlyWithOwnItems = true, pinned = pinned),
-            laterGroups = PlaceGroups.group(later, projects, areas, projectRows = laterProjects, areaHeaderOnlyWithOwnItems = true),
-            laterCount = later.size + laterProjects.size,
             currentTasks = current,
             laterTasks = later,
             currentProjects = currentProjects,
             laterProjects = laterProjects,
             allProjects = projects,
             areas = areas,
-            pinned = pinned,
-            logbook = allTasks
-                .filter { !it.item.trashed && ListRules.isClosed(it.item) && hasTag(it.item, title) }
-                .sortedByDescending { it.item.stopDate ?: it.item.modificationDate }
+            pinned = pinned
         )
     }
 }

@@ -258,9 +258,6 @@ fun rememberFlattenedList(
     val yesterdayLabel = stringResource(R.string.yesterday)
     val resources = androidx.compose.ui.platform.LocalContext.current.resources
     val showLoggedLabel = stringResource(R.string.all_projects_show_logged)
-    val tagShowLaterLabel = stringResource(R.string.area_show_later_items)
-    val tagHideLaterLabel = stringResource(R.string.area_hide_later_items)
-    val tagHideLoggedLabel = stringResource(R.string.tag_hide_logged)
     val upcomingRepeatingLabel = stringResource(R.string.upcoming_repeating_section)
     return remember(todayGroupedDay, todayNewCount, inboxGhosts, repeatRules, expandedLaterProjects, showLoggedProjects, resources, screen, standardToday, eveningToday, headerLogbook, todayLabel, yesterdayLabel, draggedItemKey, upcomingDays, upcomingMonths, projects, area, displayTasks, isLaterItemsHidden, tag, allTasks, areas, savedTags, searchQuery, headings, pinnedPlaces, tagFilter) {
         // Все экраны перечислены явно (без else): новый экран компилятор заставит указать и здесь
@@ -284,15 +281,9 @@ fun rememberFlattenedList(
             // Шаблоны повторяющихся проектов — среди всех задач, не среди проектов
             ActiveScreen.AREA_DETAIL -> AreaScreen.rows(AreaList.content(area?.id, displayTasks, projects, templates = allTasks.map { it.item }, tagFilter = tagFilter), isLaterItemsHidden)
             ActiveScreen.LOGBOOK -> LogbookScreen.rows(LogbookList.sections(displayTasks, projects), todayLabel, yesterdayLabel)
-            // Поздние и выполненные — под плашками, по умолчанию скрыты (состояние плашек — как у «Всех проектов»)
+            // Поздние — сразу, после текущих в своих группах; выполненных на экране тега нет
             ActiveScreen.TAG_DETAIL -> TagScreen.rows(
-                TagList.content(tag?.title, displayTasks, allTasks, projects, areas, pinnedPlaces, rules = repeatRules),
-                showLater = TagScreen.LATER_KEY in expandedLaterProjects,
-                showLogged = showLoggedProjects,
-                laterLabel = { shown -> if (shown) tagHideLaterLabel else tagShowLaterLabel },
-                loggedLabel = { shown, count ->
-                    if (shown) tagHideLoggedLabel else resources.getQuantityString(R.plurals.tag_show_logged, count, count)
-                }
+                TagList.content(tag?.title, displayTasks, allTasks, projects, areas, pinnedPlaces, rules = repeatRules)
             )
             ActiveScreen.PROJECT_DETAIL -> ProjectScreen.rows(displayTasks, headings, draggedItemKey)
             ActiveScreen.ANYTIME -> PlaceGroupRows.rows(AnytimeList.groups(displayTasks, projects, areas, pinnedPlaces))
