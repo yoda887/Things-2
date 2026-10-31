@@ -172,4 +172,19 @@ class EditsTest {
         // Без дня — снимается
         assertNull(ProjectEdits.apply(p, ProjectEdit.Start(TaskSection.SOMEDAY, null, false), now).reminderTime)
     }
+
+    @Test
+    fun afterProjectReorder_savesMovedAndAreaChanged_only() {
+        val a = Item(id = "a", type = Item.TYPE_PROJECT, sortOrder = 0)
+        val b = Item(id = "b", type = Item.TYPE_PROJECT, sortOrder = 1)
+        val c = Item(id = "c", type = Item.TYPE_PROJECT, sortOrder = 2, areaId = "x")
+        // «b» подняли наверх, «c» осталась на месте, но перешла в другую область
+        val result = SortOrders.afterProjectReorder(listOf(b, a, c.copy(areaId = "y")), listOf(a, b, c), now = 7L)
+        assertEquals(listOf(0, 1, 2), result.updated.map { it.sortOrder })
+        assertEquals(listOf("b", "a", "c"), result.changed.map { it.id })
+        assertTrue(result.changed.all { it.modificationDate == 7L })
+
+        val unchanged = SortOrders.afterProjectReorder(listOf(a, b, c), listOf(a, b, c), now = 7L)
+        assertTrue(unchanged.changed.isEmpty())
+    }
 }

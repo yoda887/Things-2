@@ -167,24 +167,8 @@ fun Modifier.projectDragAndDrop(
                 localProjectsList
             }
 
-            // Перерасчёт порядковых индексов sortOrder для сохранения в БД
-            val updatedList = finalProjectsList.mapIndexed { index, proj ->
-                val original = originalProjects.firstOrNull { it.id == proj.id }
-                val changed = original == null || original.sortOrder != index || original.areaId != proj.areaId
-                if (changed) {
-                    proj.copy(
-                        sortOrder = index,
-                        modificationDate = System.currentTimeMillis()
-                    )
-                } else {
-                    proj.copy(sortOrder = index)
-                }
-            }
-
-            val changedProjects = updatedList.filter { proj ->
-                val original = originalProjects.firstOrNull { it.id == proj.id }
-                original == null || original.sortOrder != proj.sortOrder || original.areaId != proj.areaId
-            }
+            // Порядковые индексы sortOrder и что сохранить — по правилу домена
+            val (updatedList, changedProjects) = com.example.domain.edits.SortOrders.afterProjectReorder(finalProjectsList, originalProjects)
 
             onLocalProjectsListChange(updatedList)
             if (changedProjects.isNotEmpty()) {

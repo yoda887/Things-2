@@ -71,4 +71,24 @@ object SortOrders {
         val changed = updated.filterIndexed { index, wrapper -> order[index].changedAt(index) }.map { it.item }
         return Reordered(updated, changed)
     }
+
+    /** Проекты после перестановки ([updated]) и те, что надо сохранить ([changed]). */
+    data class ProjectsReordered(val updated: List<Item>, val changed: List<Item>)
+
+    /**
+     * Проекты после перетаскивания: sortOrder — по позиции в новом порядке [order]. Сохранять нужно проекты, у
+     * которых по сравнению с [before] изменились позиция или область, — они же получают новую дату изменения.
+     */
+    fun afterProjectReorder(order: List<Item>, before: List<Item>, now: Long = System.currentTimeMillis()): ProjectsReordered {
+        val previous = before.associateBy { it.id }
+        fun Item.changedAt(index: Int): Boolean {
+            val original = previous[id] ?: return true
+            return original.sortOrder != index || original.areaId != areaId
+        }
+        val updated = order.mapIndexed { index, project ->
+            if (project.changedAt(index)) project.copy(sortOrder = index, modificationDate = now) else project.copy(sortOrder = index)
+        }
+        val changed = updated.filterIndexed { index, _ -> order[index].changedAt(index) }
+        return ProjectsReordered(updated, changed)
+    }
 }
