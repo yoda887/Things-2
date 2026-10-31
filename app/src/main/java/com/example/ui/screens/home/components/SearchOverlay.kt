@@ -359,11 +359,13 @@ fun ThingsSearchOverlay(
         // Особые списки, как в Things: находятся только по названию — на языке приложения или по-английски
         ActiveScreen.ALL_PROJECTS to stringResource(R.string.special_all_projects),
         ActiveScreen.LOGGED_PROJECTS to stringResource(R.string.special_logged_projects),
+        ActiveScreen.LATER_PROJECTS to stringResource(R.string.special_later_projects),
         ActiveScreen.REPEATING to stringResource(R.string.special_repeating)
     )
     val specialListEnglishNames = mapOf(
         ActiveScreen.ALL_PROJECTS to "All Projects",
         ActiveScreen.LOGGED_PROJECTS to "Logged Projects",
+        ActiveScreen.LATER_PROJECTS to "Later Projects",
         ActiveScreen.REPEATING to "Repeating"
     )
     val searchResults = remember(searchQuery, allTasks, projects, areas, allSavedTagObjects, smartListNames, headings) {
@@ -1222,12 +1224,18 @@ fun SearchResultRow(
                                 )
                             }
                         } else if (
-                            result.screen == ActiveScreen.ALL_PROJECTS || result.screen == ActiveScreen.LOGGED_PROJECTS
+                            result.screen == ActiveScreen.ALL_PROJECTS || result.screen == ActiveScreen.LOGGED_PROJECTS ||
+                            result.screen == ActiveScreen.LATER_PROJECTS
                         ) {
-                            com.example.ui.components.ProjectStackIcon(
-                                logged = result.screen == ActiveScreen.LOGGED_PROJECTS,
-                                modifier = iconModifier.requiredWidth(RESULT_ICON_SIZE)
-                            )
+                            // «Пізніші проєкти» — серой стопкой, как в заголовке своего экрана. Подсветка обрезает слой по его
+                            // краю — слой на рамке полного размера, как у «Повторяющихся», иначе низ стопки срезан
+                            Box(modifier = iconModifier.requiredSize(RESULT_ICON_SIZE), contentAlignment = Alignment.Center) {
+                                com.example.ui.components.ProjectStackIcon(
+                                    logged = result.screen == ActiveScreen.LOGGED_PROJECTS,
+                                    color = if (result.screen == ActiveScreen.LATER_PROJECTS) ThingsTheme.colors.textSecondary else ThingsTheme.colors.project,
+                                    modifier = Modifier.requiredWidth(RESULT_ICON_SIZE)
+                                )
+                            }
                         } else {
                             val info = when (result.screen) {
                                 ActiveScreen.TODAY -> Pair(AppIcons.Today, Color.Unspecified)
