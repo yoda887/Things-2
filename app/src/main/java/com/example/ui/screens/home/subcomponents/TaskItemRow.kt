@@ -540,7 +540,8 @@ fun TaskItemRow(
                             }
                         }
 
-                        val relativeText = com.example.ui.screens.home.inlineeditor.utils.relativeDueText(delta)
+                        // Позже, чем через месяц, — датой, ближе — днями (listDueText)
+                        val relativeText = com.example.ui.screens.home.inlineeditor.utils.listDueText(task.dueDate)
 
                         val isOverdueOrToday = delta <= 0
                         val color = if (isOverdueOrToday) ThingsTheme.colors.danger else textSecondaryColor.copy(alpha = DUE_TEXT_ALPHA)

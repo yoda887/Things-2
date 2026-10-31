@@ -214,11 +214,19 @@ fun ProjectItemRow(
                 // Дедлайн сегодня или просрочен — красным, как у задачи
                 val dueSoon = project.dueDate <= com.example.data.model.DayBounds.now().endOfToday
                 Spacer(modifier = Modifier.width(NOTES_ICON_GAP))
+                val dueColor = if (dueSoon) ThingsTheme.colors.danger else metaTint
                 Icon(
                     imageVector = com.example.ui.theme.AppIcons.Deadline,
                     contentDescription = stringResource(R.string.cd_deadline_flag),
-                    tint = if (dueSoon) ThingsTheme.colors.danger else metaTint,
+                    tint = dueColor,
                     modifier = Modifier.size(NOTES_ICON_SIZE)
+                )
+                // Срок текстом, как у задачи: позже, чем через месяц, — датой, ближе — днями
+                Spacer(modifier = Modifier.width(com.example.ui.theme.ThingsSpacing.XS))
+                Text(
+                    text = com.example.ui.screens.home.inlineeditor.utils.listDueText(project.dueDate),
+                    style = ThingsTheme.type.taskSubtitle.copy(color = dueColor),
+                    maxLines = 1
                 )
             }
             Spacer(modifier = Modifier.width(CHEVRON_GAP))
