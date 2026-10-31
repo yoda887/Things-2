@@ -880,10 +880,22 @@ internal fun RepeatCalendar(selected: LocalDate?, from: LocalDate, modifier: Mod
                             )
                         }
                         val color = dayColor
-                        if (date.dayOfMonth == 1 || date == from) {
+                        if (isSelected) {
+                            // Выбранный день, как в Things: в кольце мелко месяц, число и год, если он не текущий
+                            Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                                Text(date.month.getDisplayName(TextStyle.SHORT_STANDALONE, Locale.getDefault()), style = ThingsTheme.type.badge.copy(color = color))
+                                Text(date.dayOfMonth.toString(), style = ThingsTheme.type.badge.copy(color = color))
+                                if (date.year != LocalDate.now().year) {
+                                    Text(date.year.toString(), style = ThingsTheme.type.badge.copy(color = color))
+                                }
+                            }
+                        } else if (date.dayOfMonth == 1 || date == from) {
+                            // Первое число (и первый день календаря) — с месяцем; в другом году, как в Things, ещё и с годом
+                            val otherYear = date.year != LocalDate.now().year
                             Column(horizontalAlignment = Alignment.CenterHorizontally) {
                                 Text(date.month.getDisplayName(TextStyle.SHORT_STANDALONE, Locale.getDefault()), style = ThingsTheme.type.bodySmall.copy(color = color))
                                 Text(date.dayOfMonth.toString(), style = ThingsTheme.type.bodySmall.copy(color = color))
+                                if (otherYear) Text(date.year.toString(), style = ThingsTheme.type.badge.copy(color = color))
                             }
                         } else {
                             Text(date.dayOfMonth.toString(), style = ThingsTheme.type.dialogRow.copy(color = color))
