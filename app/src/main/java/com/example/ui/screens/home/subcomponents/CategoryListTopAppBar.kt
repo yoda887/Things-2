@@ -12,6 +12,7 @@ import androidx.compose.foundation.layout.*
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.Close
+import androidx.compose.material.icons.filled.KeyboardArrowDown
 import androidx.compose.material.icons.filled.MoreVert
 import androidx.compose.material.icons.filled.Search
 import androidx.compose.material.icons.outlined.Layers
@@ -51,6 +52,9 @@ private val TOP_APP_BAR_ICON_SIZE = 22.dp
 private val PROJECT_PROGRESS_ARC_SIZE = 20.dp
 private val AREA_ICON_SIZE = 20.dp
 private val TOP_APP_BAR_SPACING = 8.dp
+/** Шеврон вниз справа от компактного заголовка (открывает Quick Find) и промежуток до него */
+private val TOP_APP_BAR_CHEVRON_SIZE = 18.dp
+private val TOP_APP_BAR_CHEVRON_GAP = 2.dp
 
 /**
  * Состояние и действия режима множественного выбора для верхнего тулбара.
@@ -143,14 +147,26 @@ fun CategoryListTopAppBar(
                         indication = null
                     ) { onTitleClick?.invoke(titleBounds) }
             ) {
-                CategoryTopAppBarTitleContent(
-                    screen = screen,
-                    project = project,
-                    area = area,
-                    tag = tag,
-                    tasks = tasks,
-                    textPrimaryColor = textPrimaryColor
-                )
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    CategoryTopAppBarTitleContent(
+                        screen = screen,
+                        project = project,
+                        area = area,
+                        tag = tag,
+                        tasks = tasks,
+                        textPrimaryColor = textPrimaryColor
+                    )
+                    // Шеврон вниз справа — нажатие на заголовок открывает Quick Find, как в Things
+                    if (onTitleClick != null) {
+                        Spacer(modifier = Modifier.width(TOP_APP_BAR_CHEVRON_GAP))
+                        Icon(
+                            imageVector = Icons.Default.KeyboardArrowDown,
+                            contentDescription = null,
+                            tint = textSecondaryColor,
+                            modifier = Modifier.size(TOP_APP_BAR_CHEVRON_SIZE)
+                        )
+                    }
+                }
             }
         },
         navigationIcon = {
