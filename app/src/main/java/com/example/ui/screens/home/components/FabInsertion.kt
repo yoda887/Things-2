@@ -131,7 +131,10 @@ object FabInsertion {
             taskIndex, headingId, isTonight, upcomingDate(flattened, above),
             inAreaUpcoming = sectionHeader == TaskListKeys.AREA_UPCOMING_HEADING,
             inAreaSomeday = sectionHeader == TaskListKeys.AREA_SOMEDAY_HEADING,
-            placeHeader = above.lastOrNull { it is SearchSectionHeaderItem } as? SearchSectionHeaderItem,
+            // Группа проекта или области — только в своей секции: «Вечер» в «Сегодня» по проектам не группируется,
+            // и группа дневной части над ним к вечерней задаче не относится
+            placeHeader = above.takeLastWhile { it != TaskListKeys.EVENING_HEADER }
+                .lastOrNull { it is SearchSectionHeaderItem } as? SearchSectionHeaderItem,
         )
     }
 

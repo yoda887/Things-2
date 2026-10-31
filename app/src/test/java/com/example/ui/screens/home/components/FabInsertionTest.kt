@@ -217,4 +217,19 @@ class FabInsertionTest {
         // В проекте над заголовком B — после a2, последней задачи группы A
         assertEquals(3, FabInsertion.taskPlacement(project, 4, tasks).taskIndex)
     }
+
+    @Test
+    fun taskPlacement_todayByProjects_eveningHasNoGroup() {
+        // «Сегодня» по проектам: группа проекта P в дневной части, «Вечер» — без групп
+        val group = SearchSectionHeaderItem("group:P", "P", SearchSectionKind.PROJECT, project = Item(id = "P", title = "P", type = Item.TYPE_PROJECT))
+        val d1 = task("d1"); val e1 = task("e1", tonight = true)
+        val today: List<Any> = listOf(group, d1, TaskListKeys.EVENING_HEADER, e1)
+        // В группе дня — её проект
+        assertEquals("P", FabInsertion.taskPlacement(today, 1, listOf(d1, e1)).placeHeader?.project?.id)
+        // В «Вечере» — вечерняя, без проекта и области
+        val evening = FabInsertion.taskPlacement(today, 3, listOf(d1, e1))
+        assertTrue(evening.isTonight)
+        assertNull(evening.placeHeader)
+        assertNull(FabInsertion.taskPlacement(today, 4, listOf(d1, e1)).placeHeader)
+    }
 }
