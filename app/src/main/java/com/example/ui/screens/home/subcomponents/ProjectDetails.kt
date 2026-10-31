@@ -137,19 +137,6 @@ fun ProjectDetailsBlock(
         if (project.isRepeatTemplate || project.repeatTemplateId != null) {
             add { com.example.ui.screens.home.inlineeditor.RepeatEditorRow(project, onRepeatAction, onOpenRepeatTemplate) }
         }
-        // Правило повтора у копии — как плашка под задачей; нажатие — шаблон (у шаблона правило — в строке повтора)
-        val ruleOwnerId = if (project.isRepeatTemplate) null else project.repeatTemplateId
-        val rule = ruleOwnerId
-            ?.let { com.example.ui.components.LocalRepeatRules.current[it] }
-            ?.let { com.example.domain.repeat.RepeatRule.decode(it.rrule) }
-        if (rule != null) {
-            add {
-                ProjectRepeatRuleRow(rule) {
-                    if (project.isRepeatTemplate) onRepeatAction(com.example.ui.screens.home.components.RepeatAction.EDIT)
-                    else onOpenRepeatTemplate()
-                }
-            }
-        }
     }
     Column(modifier = modifier.fillMaxWidth()) {
         rows.forEach { row ->
@@ -282,28 +269,6 @@ private fun ProjectDeadlineRow(dueDate: Long, onClick: () -> Unit) {
         Spacer(modifier = Modifier.width(ThingsSpacing.XS))
         Text(
             text = com.example.ui.screens.home.inlineeditor.utils.editorDueRelativeText(dueDate),
-            maxLines = 1,
-            overflow = TextOverflow.Ellipsis,
-            style = ThingsTheme.type.editorDate.copy(color = ThingsTheme.colors.textSecondary)
-        )
-    }
-}
-
-/** Правило повтора проекта: «Повторюється щотижня: чт» — серым, со значком повтора; нажатие — [onClick]. */
-@Composable
-private fun ProjectRepeatRuleRow(rule: com.example.domain.repeat.RepeatRule, onClick: () -> Unit) {
-    val summary = com.example.ui.screens.home.inlineeditor.dialogs.repeatRuleSummary(rule).replaceFirstChar { it.lowercase() }
-    Row(
-        verticalAlignment = Alignment.CenterVertically,
-        modifier = Modifier
-            .fillMaxWidth()
-            .detailsRowClick(onClick)
-            .padding(vertical = ThingsSpacing.S_PLUS)
-    ) {
-        Icon(imageVector = AppIcons.RepeatCopy, contentDescription = null, tint = ThingsTheme.colors.textSecondary, modifier = Modifier.size(ThingsIconSize.S))
-        Spacer(modifier = Modifier.width(ThingsSpacing.XS_PLUS))
-        Text(
-            text = stringResource(R.string.repeat_pill, summary),
             maxLines = 1,
             overflow = TextOverflow.Ellipsis,
             style = ThingsTheme.type.editorDate.copy(color = ThingsTheme.colors.textSecondary)

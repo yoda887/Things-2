@@ -985,6 +985,16 @@ internal fun RepeatEditorRow(
     }
     val repeatLabel = stringResource(R.string.ui_repeat)
     val secondaryColor = ThingsTheme.colors.textSecondary
+    // Копия — правило повтора её шаблона: второй строкой, серым, под «Це копія повторюваного завдання / проєкту»
+    val copyRuleText = if (isTemplate) null else item.repeatTemplateId
+        ?.let { com.example.ui.components.LocalRepeatRules.current[it] }
+        ?.let { com.example.domain.repeat.RepeatRule.decode(it.rrule) }
+        ?.let {
+            stringResource(
+                R.string.repeat_pill,
+                com.example.ui.screens.home.inlineeditor.dialogs.repeatRuleSummary(it).replaceFirstChar { c -> c.lowercase() }
+            )
+        }
     val ruleText = rule?.let { com.example.ui.screens.home.inlineeditor.dialogs.repeatRuleSentence(it) } ?: repeatLabel
     val text: androidx.compose.ui.text.AnnotatedString = when {
         !isTemplate -> androidx.compose.ui.text.AnnotatedString(copyText)
@@ -1006,8 +1016,7 @@ internal fun RepeatEditorRow(
         }
     }
     Box {
-        Row(
-            verticalAlignment = Alignment.Top,
+        Column(
             modifier = Modifier
                 .clickable {
                     view.performHapticFeedback(HapticFeedbackConstants.CLOCK_TICK)
@@ -1015,6 +1024,7 @@ internal fun RepeatEditorRow(
                 }
                 .padding(vertical = MaterialTheme.dimens.taskEditorIndicatorVerticalPadding)
         ) {
+        Row(verticalAlignment = Alignment.Top) {
             if (!isTemplate) {
                 // Копия — серая круговая стрелка, как в строке списка
                 Icon(AppIcons.RepeatCopy, contentDescription = null, tint = ThingsTheme.colors.textSecondary, modifier = Modifier.size(ThingsIconSize.S))
@@ -1046,6 +1056,17 @@ internal fun RepeatEditorRow(
             if (!isTemplate) {
                 Icon(Icons.Default.ChevronRight, contentDescription = null, tint = ThingsTheme.colors.textSecondary, modifier = Modifier.size(ThingsIconSize.S))
             }
+        }
+        if (copyRuleText != null) {
+            // Под текстом ссылки, с того же края, что он (после значка)
+            Text(
+                text = copyRuleText,
+                maxLines = 2,
+                overflow = TextOverflow.Ellipsis,
+                style = ThingsTheme.type.editorDate.copy(color = secondaryColor),
+                modifier = Modifier.padding(start = ThingsIconSize.S + ThingsSpacing.XS_PLUS)
+            )
+        }
         }
         // Шаблон — меню действий, как в Things: «Изменить правило» | следующая и предыдущая копия | пауза | остановить
         if (isTemplate) {
