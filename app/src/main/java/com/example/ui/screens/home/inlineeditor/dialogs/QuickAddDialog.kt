@@ -638,13 +638,9 @@ fun QuickAddDialog(
                                 }
 
                                 val lang = remember { Locale.getDefault().language }
-                                val relativeText = com.example.ui.screens.home.inlineeditor.utils.relativeDueText(delta)
-
-                                val locale = remember { java.util.Locale.getDefault() }
-                                val sdf = remember(locale) { SimpleDateFormat("EEE, d MMMM", locale) }
-                                val dateText = remember(dueDate) {
-                                    dueDate?.let { sdf.format(Date(it)).lowercase() } ?: ""
-                                }
+                                // Как в Things: «Чт 10 груд.» (другой год — «1 січ. 2027») и серым «залишилося 40 днів»
+                                val relativeText = com.example.ui.screens.home.inlineeditor.utils.editorDueRelativeText(dueDate!!)
+                                val dateText = remember(dueDate) { com.example.ui.screens.home.inlineeditor.utils.editorDueDateText(dueDate!!) }
 
                                 val isOverdueOrToday = delta <= 0
                                 val primaryColor = if (isOverdueOrToday) ThingsTheme.colors.danger else ThingsTheme.colors.editorText

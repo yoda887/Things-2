@@ -170,6 +170,10 @@
         <item quantity="one">in %d day</item>
         <item quantity="other">in %d days</item>
     </plurals>
+    <plurals name="due_days_left">
+        <item quantity="one">%d day left</item>
+        <item quantity="other">%d days left</item>
+    </plurals>
     <string name="priority_high">High Priority</string>
     <string name="priority_medium">Medium Priority</string>
     <string name="priority_low">Low Priority</string>

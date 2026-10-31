@@ -257,10 +257,8 @@ private fun ProjectStartRow(project: Item, textPrimaryColor: Color, onClick: () 
 @Composable
 private fun ProjectDeadlineRow(dueDate: Long, onClick: () -> Unit) {
     val delta = remember(dueDate) { deadlineDeltaDays(dueDate) }
-    val dateText = remember(dueDate) {
-        java.text.SimpleDateFormat("EEE, d MMMM", java.util.Locale.getDefault())
-            .format(java.util.Date(dueDate)).lowercase()
-    }
+    // Как в Things: «Чт 10 груд.» (другой год — «1 січ. 2027») и серым «залишилося 40 днів»
+    val dateText = remember(dueDate) { com.example.ui.screens.home.inlineeditor.utils.editorDueDateText(dueDate) }
     val color = if (delta <= 0) ThingsTheme.colors.danger else ThingsTheme.colors.editorText
     Row(
         verticalAlignment = Alignment.CenterVertically,
@@ -274,7 +272,7 @@ private fun ProjectDeadlineRow(dueDate: Long, onClick: () -> Unit) {
         Text(text = dateText, maxLines = 1, style = ThingsTheme.type.editorDateStrong.copy(color = color))
         Spacer(modifier = Modifier.width(ThingsSpacing.XS))
         Text(
-            text = relativeDueText(delta),
+            text = com.example.ui.screens.home.inlineeditor.utils.editorDueRelativeText(dueDate),
             maxLines = 1,
             overflow = TextOverflow.Ellipsis,
             style = ThingsTheme.type.editorDate.copy(color = ThingsTheme.colors.textSecondary)

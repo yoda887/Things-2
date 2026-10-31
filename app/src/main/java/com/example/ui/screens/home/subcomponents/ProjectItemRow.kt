@@ -146,6 +146,12 @@ fun ProjectItemRow(
         }
         Column(modifier = Modifier.weight(1f)) {
         Row(
+            verticalAlignment = Alignment.CenterVertically,
+            modifier = Modifier.fillMaxWidth()
+        ) {
+        // Название, свойства и шеврон — слева; дедлайн — у правого края строки, как в Things
+        Row(
+            modifier = Modifier.weight(1f),
             verticalAlignment = Alignment.CenterVertically
         ) {
             // Шаблон повторяющегося проекта — как шаблон задачи: кольцо проекта на месте, синий значок повтора перед названием
@@ -181,7 +187,7 @@ fun ProjectItemRow(
                     modifier = Modifier.size(NOTES_ICON_SIZE)
                 )
             }
-            // Свойства проекта, как у задачи: напоминание, заметки, теги, дедлайн — между названием и шевроном
+            // Свойства проекта, как у задачи: напоминание, заметки, теги — между названием и шевроном
             val metaTint = ThingsTheme.colors.textSecondary.copy(alpha = ThingsAlpha.MUTED)
             if (project.reminderTime != null && !isDone) {
                 Spacer(modifier = Modifier.width(NOTES_ICON_GAP))
@@ -210,11 +216,19 @@ fun ProjectItemRow(
                     modifier = Modifier.size(NOTES_ICON_SIZE)
                 )
             }
+            Spacer(modifier = Modifier.width(CHEVRON_GAP))
+            Icon(
+                imageVector = Icons.AutoMirrored.Filled.KeyboardArrowRight,
+                contentDescription = null,
+                tint = ThingsTheme.colors.textSecondary.copy(alpha = ThingsAlpha.MUTED),
+                modifier = Modifier.size(ThingsIconSize.XS)
+            )
+        }
             if (project.dueDate != null && !isDone) {
                 // Дедлайн сегодня или просрочен — красным, как у задачи
                 val dueSoon = project.dueDate <= com.example.data.model.DayBounds.now().endOfToday
-                Spacer(modifier = Modifier.width(NOTES_ICON_GAP))
-                val dueColor = if (dueSoon) ThingsTheme.colors.danger else metaTint
+                Spacer(modifier = Modifier.width(CHEVRON_GAP))
+                val dueColor = if (dueSoon) ThingsTheme.colors.danger else ThingsTheme.colors.textSecondary.copy(alpha = ThingsAlpha.MUTED)
                 Icon(
                     imageVector = com.example.ui.theme.AppIcons.Deadline,
                     contentDescription = stringResource(R.string.cd_deadline_flag),
@@ -229,13 +243,6 @@ fun ProjectItemRow(
                     maxLines = 1
                 )
             }
-            Spacer(modifier = Modifier.width(CHEVRON_GAP))
-            Icon(
-                imageVector = Icons.AutoMirrored.Filled.KeyboardArrowRight,
-                contentDescription = null,
-                tint = ThingsTheme.colors.textSecondary.copy(alpha = ThingsAlpha.MUTED),
-                modifier = Modifier.size(ThingsIconSize.XS)
-            )
         }
         if (subtitle != null) {
             Text(

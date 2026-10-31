@@ -782,13 +782,9 @@ fun ThingsTaskInlineEditor(
                             }
                         }
 
-                        val relativeText = com.example.ui.screens.home.inlineeditor.utils.relativeDueText(delta)
-
-                        val locale = remember { java.util.Locale.getDefault() }
-                        val sdf = remember(locale) { java.text.SimpleDateFormat("EEE, d MMMM", locale) }
-                        val dateText = remember(dueDate) {
-                            dueDate?.let { sdf.format(java.util.Date(it)).lowercase() } ?: ""
-                        }
+                        // Как в Things: «Чт 10 груд.» (другой год — «1 січ. 2027») и серым «залишилося 40 днів»
+                        val relativeText = com.example.ui.screens.home.inlineeditor.utils.editorDueRelativeText(dueDate!!)
+                        val dateText = remember(dueDate) { com.example.ui.screens.home.inlineeditor.utils.editorDueDateText(dueDate!!) }
 
                         val isOverdueOrToday = delta <= 0
                         val primaryColor = if (isOverdueOrToday) ThingsTheme.colors.danger else ThingsTheme.colors.editorText
@@ -898,56 +894,21 @@ fun ThingsTaskInlineEditor(
     }
 }
 
-@OptIn(ExperimentalMaterial3Api::class)
+/**
+ * Выбор дедлайна — окно «Термін», как Deadline в Things ([com.example.ui.screens.home.inlineeditor.dialogs.ThingsDeadlineDialog]):
+ * нажатие на день ставит срок, «Очистити» ([onDateSelected] с null) — только если срок уже стоит.
+ */
 @Composable
 fun DeadlineDatePickerDialog(
     initialSelectedDateMillis: Long?,
     onDateSelected: (Long?) -> Unit,
     onDismiss: () -> Unit
 ) {
-    // Календарь работает в UTC — переводим местный день туда и обратно (см. localDayToUtcMidnight)
-    val datePickerState = rememberDatePickerState(
-        initialSelectedDateMillis = com.example.ui.screens.home.inlineeditor.utils.localDayToUtcMidnight(
-            initialSelectedDateMillis ?: System.currentTimeMillis()
-        )
+    com.example.ui.screens.home.inlineeditor.dialogs.ThingsDeadlineDialog(
+        dueDate = initialSelectedDateMillis,
+        onDueDateChange = onDateSelected,
+        onDismissRequest = onDismiss
     )
-    DatePickerDialog(
-        onDismissRequest = onDismiss,
-        confirmButton = {
-            TextButton(
-                onClick = {
-                    onDateSelected(
-                        datePickerState.selectedDateMillis?.let {
-                            com.example.ui.screens.home.inlineeditor.utils.utcMidnightToLocalDay(it)
-                        }
-                    )
-                    onDismiss()
-                }
-            ) {
-                Text(stringResource(R.string.ui_ok), color = ThingsTheme.colors.accent)
-            }
-        },
-        dismissButton = {
-            Row {
-                TextButton(
-                    onClick = {
-                        onDateSelected(null) // Clear option
-                        onDismiss()
-                    }
-                ) {
-                    Text(stringResource(R.string.cd_clear), color = ThingsTheme.colors.danger)
-                }
-                Spacer(modifier = Modifier.width(ThingsSpacing.S))
-                TextButton(
-                    onClick = onDismiss
-                ) {
-                    Text(stringResource(R.string.tag_dialog_cancel), color = ThingsTheme.colors.textSecondary)
-                }
-            }
-        }
-    ) {
-        DatePicker(state = datePickerState)
-    }
 }
 
 /**

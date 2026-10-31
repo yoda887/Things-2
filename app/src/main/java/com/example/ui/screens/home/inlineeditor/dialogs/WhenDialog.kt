@@ -1102,3 +1102,145 @@ private fun ReminderWheelCard(
     }
     }
 }
+
+/** Календарь окна «Термін»: восемь недель видно сразу, остальные — прокруткой, как в Things */
+private val DEADLINE_CALENDAR_HEIGHT = 352.dp
+
+/** Промежуток над «Очистити» в окне «Термін» */
+private val DEADLINE_GAP_BEFORE_CLEAR = 12.dp
+
+/**
+ * Окно «Термін», как Deadline в Things: тёмная карточка с заголовком и ✕, под ними — календарь недель подряд с
+ * текущей ([RepeatCalendar]: подписи месяцев, при прокрутке — названия месяцев поверх недель), выбранный день обведён.
+ * Нажатие на день ставит срок и закрывает окно; «Очистити» — только если срок уже стоит.
+ */
+@Composable
+fun ThingsDeadlineDialog(
+    dueDate: Long?,
+    onDueDateChange: (Long?) -> Unit,
+    onDismissRequest: () -> Unit
+) {
+    val view = LocalView.current
+    val zone = java.time.ZoneId.systemDefault()
+    var isVisible by remember { mutableStateOf(false) }
+    LaunchedEffect(Unit) { isVisible = true }
+    val scale by animateFloatAsState(
+        targetValue = if (isVisible) 1f else 0.85f,
+        animationSpec = spring(dampingRatio = Spring.DampingRatioMediumBouncy, stiffness = Spring.StiffnessLow),
+        label = "deadlineScale"
+    )
+    val alpha by animateFloatAsState(
+        targetValue = if (isVisible) 1f else 0f,
+        animationSpec = spring(stiffness = Spring.StiffnessLow),
+        label = "deadlineAlpha"
+    )
+    // Выбор закрывает окно не сразу, а через CHOICE_CLOSE_DELAY_MS — видно, что выбрано
+    val choiceScope = rememberCoroutineScope()
+    var choiceClosing by remember { mutableStateOf(false) }
+    val closeAfterChoice: () -> Unit = {
+        if (!choiceClosing) {
+            choiceClosing = true
+            choiceScope.launch {
+                delay(CHOICE_CLOSE_DELAY_MS)
+                onDismissRequest()
+            }
+        }
+    }
+    Dialog(
+        onDismissRequest = onDismissRequest,
+        properties = DialogProperties(usePlatformDefaultWidth = false)
+    ) {
+        // Как у «Когда?»: содержимое окна сдвинуто вниз на полосу состояния — возвращаем карточку в центр экрана
+        val hostView = LocalView.current
+        val centerFixPx = remember(hostView) {
+            val activityView = generateSequence(hostView.context) {
+                (it as? android.content.ContextWrapper)?.baseContext
+            }.filterIsInstance<android.app.Activity>().firstOrNull()?.window?.decorView
+            androidx.core.view.ViewCompat.getRootWindowInsets(activityView ?: hostView)
+                ?.getInsets(androidx.core.view.WindowInsetsCompat.Type.statusBars())?.top ?: 0
+        }
+        CompositionLocalProvider(LocalRippleTheme provides DialogRippleTheme) {
+            Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+                Card(
+                    shape = ThingsTheme.shapes.dialogShape,
+                    colors = CardDefaults.cardColors(containerColor = ThingsTheme.colors.overlaySurface),
+                    modifier = Modifier
+                        .offset { IntOffset(0, -centerFixPx) }
+                        .graphicsLayer {
+                            scaleX = scale
+                            scaleY = scale
+                            this.alpha = alpha
+                        }
+                        .width(WHEN_DIALOG_WIDTH)
+                        .wrapContentHeight()
+                ) {
+                    Column(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(horizontal = ThingsSpacing.L, vertical = WHEN_DIALOG_VERTICAL_PADDING)
+                    ) {
+                        // Заголовок «Термін» по центру и ✕ справа, как у «Когда?»
+                        Row(modifier = Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
+                            Box(modifier = Modifier.weight(1f))
+                            Box(modifier = Modifier.weight(5f), contentAlignment = Alignment.Center) {
+                                Text(
+                                    text = stringResource(R.string.repeat_deadline),
+                                    style = ThingsTheme.type.dialogTitle.copy(color = ThingsTheme.colors.overlayContent)
+                                )
+                            }
+                            Box(modifier = Modifier.weight(1f), contentAlignment = Alignment.Center) {
+                                Box(
+                                    modifier = Modifier
+                                        .size(MaterialTheme.dimens.dialogHeaderButtonSize)
+                                        .clip(CircleShape)
+                                        .background(ThingsTheme.colors.overlayControl)
+                                        .clickable { onDismissRequest() },
+                                    contentAlignment = Alignment.Center
+                                ) {
+                                    Icon(
+                                        imageVector = Icons.Default.Close,
+                                        contentDescription = stringResource(R.string.cd_close),
+                                        tint = ThingsTheme.colors.overlayContent,
+                                        modifier = Modifier.size(ThingsIconSize.S)
+                                    )
+                                }
+                            }
+                        }
+                        Spacer(modifier = Modifier.height(MaterialTheme.dimens.dialogTitleGap))
+                        val selected = dueDate?.let { java.time.Instant.ofEpochMilli(it).atZone(zone).toLocalDate() }
+                        RepeatCalendar(
+                            selected = selected,
+                            from = java.time.LocalDate.now(zone),
+                            modifier = Modifier.height(DEADLINE_CALENDAR_HEIGHT)
+                        ) { date ->
+                            view.performHapticFeedback(HapticFeedbackConstants.CLOCK_TICK)
+                            onDueDateChange(date.atStartOfDay(zone).toInstant().toEpochMilli())
+                            closeAfterChoice()
+                        }
+                        // «Очистити» — только когда срок уже стоит
+                        if (dueDate != null) {
+                            Spacer(modifier = Modifier.height(DEADLINE_GAP_BEFORE_CLEAR))
+                            Button(
+                                onClick = {
+                                    view.performHapticFeedback(HapticFeedbackConstants.CLOCK_TICK)
+                                    onDueDateChange(null)
+                                    closeAfterChoice()
+                                },
+                                colors = ButtonDefaults.buttonColors(
+                                    containerColor = ThingsTheme.colors.clearAction,
+                                    contentColor = ThingsTheme.colors.overlayContent
+                                ),
+                                shape = ThingsTheme.shapes.capsuleShape,
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .height(CLEAR_BUTTON_HEIGHT)
+                            ) {
+                                Text(text = stringResource(R.string.cd_clear), style = ThingsTheme.type.dialogButton)
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    }
+}

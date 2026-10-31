@@ -175,6 +175,12 @@
         <item quantity="many">через %d дней</item>
         <item quantity="other">через %d дня</item>
     </plurals>
+    <plurals name="due_days_left">
+        <item quantity="one">остался %d день</item>
+        <item quantity="few">осталось %d дня</item>
+        <item quantity="many">осталось %d дней</item>
+        <item quantity="other">осталось %d дня</item>
+    </plurals>
     <string name="priority_high">Высокий приоритет</string>
     <string name="priority_medium">Средний приоритет</string>
     <string name="priority_low">Низкий приоритет</string>
