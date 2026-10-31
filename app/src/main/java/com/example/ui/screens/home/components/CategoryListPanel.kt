@@ -1336,7 +1336,12 @@ fun ThingsCategoryListPanel(
                                     } else if (event is ThingsCategoryListEvent.ReorderTasks && event.items.any { it.isRepeatTemplate }) {
                                         // Повторяющуюся задачу перенесли на другой день — переносится её ближайший повтор;
                                         // сам шаблон дат не хранит и так не сохраняется
-                                        val (templates, others) = event.items.partition { it.isRepeatTemplate }
+                                        // Шаблон со своей датой из базы (перестановка в дне — UpcomingDragController) не
+                                        // переносили: сохраняется только его порядок дня
+                                        val (templates, others) = event.items.partition { item ->
+                                            item.isRepeatTemplate &&
+                                                item.startDate != state.allTasks.firstOrNull { it.item.id == item.id }?.item?.startDate
+                                        }
                                         if (others.isNotEmpty()) onEvent(ThingsCategoryListEvent.ReorderTasks(others))
                                         // Перенесён только тот шаблон, чей день не совпадает ни с одним днём, где он стоял: шаблон
                                         // стоит в «Планах» на каждом дне своих повторов (один id), а в сохраняемые попадают и
