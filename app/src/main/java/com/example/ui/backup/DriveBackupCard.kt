@@ -21,8 +21,6 @@ import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.Switch
-import androidx.compose.material3.SwitchDefaults
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
@@ -144,10 +142,9 @@ fun DriveBackupCard(
                     verticalAlignment = Alignment.CenterVertically
                 ) {
                     Text(stringResource(R.string.backup_auto), style = ThingsTheme.type.bodyMedium.copy(color = textPrimaryColor))
-                    Switch(
+                    com.example.ui.components.ThingsSwitch(
                         checked = state.autoBackup,
-                        onCheckedChange = viewModel::setAutoBackup,
-                        colors = SwitchDefaults.colors(checkedTrackColor = ThingsTheme.colors.accent)
+                        onCheckedChange = viewModel::setAutoBackup
                     )
                 }
                 Spacer(modifier = Modifier.height(ThingsSpacing.S))
@@ -183,10 +180,9 @@ fun DriveBackupCard(
                             style = ThingsTheme.type.caption.copy(color = textSecondaryColor)
                         )
                     }
-                    Switch(
+                    com.example.ui.components.ThingsSwitch(
                         checked = syncState.enabled,
-                        onCheckedChange = viewModel::setSyncEnabled,
-                        colors = SwitchDefaults.colors(checkedTrackColor = ThingsTheme.colors.accent)
+                        onCheckedChange = viewModel::setSyncEnabled
                     )
                 }
                 syncState.error?.let { error ->

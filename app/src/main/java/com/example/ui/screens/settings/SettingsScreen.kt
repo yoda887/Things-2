@@ -176,17 +176,9 @@ private fun SettingsSwitchCard(
                 Text(hint, style = ThingsTheme.type.caption.copy(color = textSecondaryColor))
             }
             Spacer(modifier = Modifier.width(ThingsSpacing.M))
-            Switch(
+            com.example.ui.components.ThingsSwitch(
                 checked = checked,
-                onCheckedChange = { toggle(it) },
-                // Выключенный — серые контур и бегунок на фоне карточки: иначе на светлой карточке его почти не видно
-                colors = SwitchDefaults.colors(
-                    checkedThumbColor = ThingsTheme.colors.onAccent,
-                    checkedTrackColor = ThingsTheme.colors.accent,
-                    uncheckedThumbColor = textSecondaryColor,
-                    uncheckedTrackColor = cardSurfaceColor,
-                    uncheckedBorderColor = textSecondaryColor
-                )
+                onCheckedChange = { toggle(it) }
             )
         }
     }
