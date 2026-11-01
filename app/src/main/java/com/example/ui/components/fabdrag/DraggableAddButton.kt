@@ -55,10 +55,17 @@ import androidx.compose.ui.layout.onGloballyPositioned
 import androidx.compose.ui.platform.LocalView
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.zIndex
+import androidx.compose.material3.Text
+import androidx.compose.foundation.layout.widthIn
 
 // Кружки «отмена» и «во Входящие», пока тянут «+»: размер и отступ от края
 private val FAB_ACTION_SIZE = 44.dp
 private val FAB_ACTION_EDGE = 20.dp
+
+/** Круг «Добавить во Входящие», раскрывающийся из угла, пока «+» над кружком «Входящих» (как в Things) */
+private val FAB_INBOX_BUBBLE_RADIUS = 140.dp
+/** Подпись в круге — выше центра кружка «Входящих» на эту долю радиуса круга */
+private const val FAB_INBOX_LABEL_RISE = 0.62f
 
 private const val FAB_SETTLE_MS = 180
 /** Нажатие: полёт к месту новой задачи, мс — как в Things, заметно медленнее посадки после перетаскивания */
@@ -299,7 +306,36 @@ fun BoxScope.FabDragActions(controller: FabDragController) {
     val density = androidx.compose.ui.platform.LocalDensity.current
     val sizePx = with(density) { FAB_ACTION_SIZE.roundToPx() }
     val startPx = with(density) { FAB_ACTION_EDGE.roundToPx() }
+    // «+» над кружком «Входящих» — из угла экрана раскрывается большой тёмный круг с подписью, как в Things
+    val overInbox = controller.isDragging && controller.actionAt(controller.pointer) == FabAction.INBOX
+    val bubble by animateFloatAsState(
+        targetValue = if (overInbox) 1f else 0f,
+        animationSpec = spring(dampingRatio = 0.8f, stiffness = Spring.StiffnessMediumLow),
+        label = "inboxBubble"
+    )
     Box(modifier = Modifier.matchParentSize().onGloballyPositioned { origin = it.positionInRoot() }) {
+        if (bubble > 0f) {
+            val bubbleRadiusPx = with(density) { FAB_INBOX_BUBBLE_RADIUS.toPx() }
+            val bubbleColor = ThingsTheme.colors.overlaySurface
+            androidx.compose.foundation.Canvas(modifier = Modifier.matchParentSize()) {
+                val center = Offset(startPx + sizePx / 2f, controller.homeCenter.y - origin.y)
+                drawCircle(bubbleColor, radius = bubbleRadiusPx * bubble, center = center)
+            }
+            Text(
+                text = stringResource(R.string.fab_add_to_inbox),
+                style = ThingsTheme.type.headlineStrong.copy(color = ThingsTheme.colors.overlayContent),
+                modifier = Modifier
+                    .graphicsLayer { alpha = ((bubble - 0.5f) / 0.5f).coerceIn(0f, 1f) }
+                    .offset {
+                        val r = bubbleRadiusPx
+                        androidx.compose.ui.unit.IntOffset(
+                            startPx,
+                            (controller.homeCenter.y - origin.y - r * FAB_INBOX_LABEL_RISE).toInt()
+                        )
+                    }
+                    .widthIn(max = FAB_INBOX_BUBBLE_RADIUS)
+            )
+        }
         FabActionButton(
             visible = controller.isDragging,
             icon = { Icon(Icons.Default.MoveToInbox, contentDescription = stringResource(R.string.cd_move_to_inbox), tint = ThingsTheme.colors.overlayContent, modifier = Modifier.size(ThingsIconSize.L)) },

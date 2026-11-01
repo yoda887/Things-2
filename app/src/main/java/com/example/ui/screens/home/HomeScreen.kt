@@ -434,8 +434,10 @@ fun ThingsHomeScreen(viewModel: ThingsViewModel = hiltViewModel()) {
                     }
                 DraggableAddButton(
                     controller = fabDragController,
-                    // Перетаскивать можно туда, где экран принимает сброс
-                    canDrag = { fabDragController.dropTarget != null },
+                    // Тянуть «+» можно на любом экране: к кружку «Входящих» (сброс на нём открывает новую задачу во
+                    // «Входящих», как в Things), к кружку отмены и — где экран принимает сброс — в список.
+                    // Сброс мимо списка, где его нет, — как отмена
+                    canDrag = { true },
                     onClick = onFabClick,
                     onDropToInbox = {
                         taskToEdit = null

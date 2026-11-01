@@ -113,6 +113,7 @@
     <string name="cd_more_options">More options</string>
     <string name="cd_move_icon">Move icon</string>
     <string name="cd_move_to_inbox">Move to Inbox</string>
+    <string name="fab_add_to_inbox">Add to Inbox</string>
     <string name="cd_next_month">Next Month</string>
     <string name="cd_previous_month">Previous Month</string>
     <string name="cd_priority">Priority</string>

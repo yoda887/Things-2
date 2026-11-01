@@ -116,6 +116,7 @@
     <string name="cd_more_options">Другие действия</string>
     <string name="cd_move_icon">Переместить</string>
     <string name="cd_move_to_inbox">Во Входящие</string>
+    <string name="fab_add_to_inbox">Добавить во Входящие</string>
     <string name="cd_next_month">Следующий месяц</string>
     <string name="cd_previous_month">Предыдущий месяц</string>
     <string name="cd_priority">Приоритет</string>
