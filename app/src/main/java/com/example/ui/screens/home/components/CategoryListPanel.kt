@@ -667,7 +667,14 @@ fun ThingsCategoryListPanel(
      * раскрывается новая задача с курсором в названии. Этапы идут друг за другом без пауз
      */
     fun tapFab(): Boolean {
-        if (screen !in FAB_TAP_SCREENS || state.isSelectionMode || inlineExpandedTaskId != null || fabTapRunning) return false
+        if (screen !in FAB_TAP_SCREENS || state.isSelectionMode || inlineExpandedTaskId != null || fabTapRunning) {
+            android.util.Log.w(
+                FAB_TAP_LOG_TAG,
+                "tap declined: screen=$screen selection=${state.isSelectionMode} " +
+                    "editorOpen=${inlineExpandedTaskId != null} running=$fabTapRunning"
+            )
+            return false
+        }
         fabTapRunning = true
         spreadScope.launch {
             try {
@@ -708,7 +715,16 @@ fun ThingsCategoryListPanel(
                     withFrameNanos { }
                 }
                 val growEasing = if (scrolls) FAB_TAP_GROW_EASING else androidx.compose.animation.core.FastOutSlowInEasing
+                // Слот запоминаем до сброса: dropFab отказывает, только если его к этому моменту обнулили
+                val slotBeforeDrop = fabSlot
                 if (!dropFab(focusTitle = true, tapGrowMs = FAB_TAP_GROW_MS, presetTaskId = newTaskId, tapGrowEasing = growEasing)) {
+                    // Нажатие открыло клавиатуру, но задача не создалась — состояние для разбора (adb logcat -s ThingsFab)
+                    android.util.Log.w(
+                        FAB_TAP_LOG_TAG,
+                        "tap cancelled: screen=$screen slot=$slotBeforeDrop gapFound=${anchor != null} frames=$frames " +
+                            "rows=${currentFlattened.size} scrolled=$scrolls dragging=${fabDrag?.isDragging} " +
+                            "settling=${fabDrag?.isSettling} pending=$pendingFabTaskId"
+                    )
                     fabSlot = null
                     fabTapGap = false
                     fabDrag?.tapPending = false
@@ -2527,6 +2543,9 @@ private const val FAB_TAP_FLIGHT_DELAY_MS = 80L
 
 /** Нажатие на «+»: задача ждёт посадки кнопки не дольше, мс */
 private const val FAB_TAP_LANDING_WAIT_MS = 600L
+
+/** Нажатие на «+»: тег журнала для отказов и отмен (первое нажатие открывало только клавиатуру) */
+private const val FAB_TAP_LOG_TAG = "ThingsFab"
 
 /** Нажатие на «+»: задача начинает появляться на этой доле полёта кнопки — кнопка гаснет уже поверх неё */
 private const val FAB_TAP_CARD_AT_FLIGHT = 0.8f
