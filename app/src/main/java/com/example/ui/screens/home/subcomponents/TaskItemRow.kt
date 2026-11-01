@@ -365,9 +365,8 @@ fun TaskItemRow(
                 repeatRule != null -> repeatBadge
                 // Копия, созданная заранее, в «Повторяющихся» — под шаблоном, со своим днём
                 // Копия в «Повторяющихся» — как задача на экране проекта: звезда или луна сегодня, иначе день
-                // (это показывает индикатор даты ниже); у отложенной — «Когда-нибудь»
-                screen == ActiveScreen.REPEATING && task.isRepeatCopy ->
-                    if (task.start == Item.START_SOMEDAY) stringResource(R.string.category_someday) else null
+                // (это показывает индикатор даты ниже); у отложенной подписи нет — её чекбокс пунктирный, как в Things
+                screen == ActiveScreen.REPEATING && task.isRepeatCopy -> null
                 else -> dateBadge
             }
             val badgeBesideBothLines = dateBadge != null && subtitle != null
