@@ -10,6 +10,13 @@ import androidx.compose.animation.core.FastOutSlowInEasing
 import androidx.compose.animation.core.Animatable
 import androidx.activity.compose.BackHandler
 import com.example.ui.theme.ThingsAlpha
+import androidx.compose.ui.draw.clipToBounds
+import androidx.compose.ui.layout.layout
+import kotlin.math.roundToInt
+import androidx.compose.ui.input.nestedscroll.nestedScroll
+import androidx.compose.foundation.layout.imeAnimationTarget
+import androidx.compose.foundation.layout.ExperimentalLayoutApi
+import androidx.compose.material.icons.filled.Add
 import androidx.compose.ui.graphics.SolidColor
 import androidx.compose.foundation.text.BasicTextField
 import com.example.ui.theme.ThingsSpacing
@@ -134,7 +141,7 @@ enum class DialogScreen {
  * @param onTagsSelected Callback triggered with the newly selected list of tags.
  * @param onDismissRequest Dismiss handler.
  */
-@OptIn(ExperimentalMaterial3Api::class, ExperimentalFoundationApi::class)
+@OptIn(ExperimentalMaterial3Api::class, ExperimentalFoundationApi::class, ExperimentalLayoutApi::class)
 @Composable
 fun ThingsTagDialog(
     activeTags: List<String>,
@@ -211,6 +218,9 @@ fun ThingsTagDialog(
     var childTagsToDelete by remember { mutableStateOf<List<Tag>>(emptyList()) }
 
     var currentScreen by remember { mutableStateOf(DialogScreen.LIST) }
+    // Поиск по тегам на экране списка: поле вытягивается тягой списка вниз, как в окне «Переместить»
+    var tagQuery by remember { mutableStateOf("") }
+    var tagSearchFocused by remember { mutableStateOf(false) }
     var selectedGroup: Tag? by remember { mutableStateOf<Tag?>(null) }
     var newTagName by remember { mutableStateOf("") }
     var editTagName by remember { mutableStateOf("") }
@@ -428,6 +438,73 @@ fun ThingsTagDialog(
             }
         }
 
+        // Поиск: «Назад» очищает запрос и снимает курсор, окно остаётся
+        val searchFocusManager = androidx.compose.ui.platform.LocalFocusManager.current
+        fun leaveTagSearch() {
+            tagQuery = ""
+            searchFocusManager.clearFocus()
+        }
+        BackHandler(enabled = !closing && currentScreen == DialogScreen.LIST && (tagSearchFocused || tagQuery.isNotEmpty())) {
+            leaveTagSearch()
+        }
+        // Курсор снимается с выдержкой после ухода клавиатуры, а видимый выход из поиска начинается сразу,
+        // как только клавиатура пошла вниз (как в окне «Переместить»)
+        val searchDensity = androidx.compose.ui.platform.LocalDensity.current
+        val searchImeTarget = androidx.compose.foundation.layout.WindowInsets.imeAnimationTarget
+        val keyboardGoingAway by remember(searchImeTarget, searchDensity) {
+            derivedStateOf { searchImeTarget.getBottom(searchDensity) == 0 }
+        }
+        var keyboardWasShown by remember { mutableStateOf(false) }
+        LaunchedEffect(keyboardGoingAway, tagSearchFocused) {
+            if (!tagSearchFocused) keyboardWasShown = false
+            else if (!keyboardGoingAway) keyboardWasShown = true
+        }
+        val tagSearchActive = tagSearchFocused && !(keyboardWasShown && keyboardGoingAway)
+        val tagSearchFocusRequester = remember { FocusRequester() }
+        val searchKeyboard = androidx.compose.ui.platform.LocalSoftwareKeyboardController.current
+        var focusSearchAfterPull by remember { mutableStateOf(false) }
+        val tagSearchPinned = tagSearchFocused || tagQuery.isNotEmpty()
+        val searchPull = rememberDialogSearchPull(
+            pinned = tagSearchPinned,
+            onArmedRelease = { focusSearchAfterPull = true }
+        )
+        LaunchedEffect(tagSearchPinned, searchPull.fullPx) {
+            if (tagSearchPinned && searchPull.fullPx > 0 && searchPull.pull.value < searchPull.fullPx) {
+                searchPull.pull.animateTo(searchPull.fullPx.toFloat(), searchPull.springBack)
+            }
+        }
+        val searchArmed = searchPull.armed
+        LaunchedEffect(searchArmed) {
+            if (searchArmed) dialogView.performHapticFeedback(android.view.HapticFeedbackConstants.CLOCK_TICK)
+        }
+        LaunchedEffect(focusSearchAfterPull) {
+            if (focusSearchAfterPull) {
+                focusSearchAfterPull = false
+                tagSearchFocusRequester.requestFocus()
+                searchKeyboard?.show()
+            }
+        }
+        // Найденные теги — по названию, без учёта регистра; первый подсвечен — «Go» отмечает его
+        val foundTags = remember(tagQuery, flatTagList) {
+            val q = tagQuery.trim()
+            if (q.isEmpty()) emptyList() else flatTagList.filter { it.first.title.contains(q, ignoreCase = true) }
+        }
+        /** Отметка тега из поиска: запрос очищается, курсор остаётся — можно искать следующий */
+        fun toggleFromSearch(tag: Tag) {
+            selectedTags = if (tag.title in selectedTags) selectedTags - tag.title else selectedTags + tag.title
+            tagQuery = ""
+        }
+        /** «Новый тег «…»» из поиска: тег с названием запроса сразу отмечен, как из экрана «Новый тег» */
+        fun createFromSearch(name: String) {
+            val existing = existingTag(name)
+            val title = existing?.title ?: name
+            if (existing == null) onNewTagCreated(title, null)
+            selectedTags = selectedTags + title
+            deletedTags = deletedTags - title
+            revealTagTitle = title
+            tagQuery = ""
+        }
+
         fun saveEditedTag() {
             val name = editTagName.trim()
             val tagToEdit = editingTag
@@ -538,24 +615,75 @@ fun ThingsTagDialog(
                             }
                         }
 
+                        Column(modifier = Modifier.fillMaxWidth().weight(1f)) {
+                        val searching = tagQuery.isNotBlank()
+                        MoveSearchField(
+                            query = tagQuery,
+                            onQueryChange = { tagQuery = it },
+                            onFocusChange = { tagSearchFocused = it },
+                            active = tagSearchActive,
+                            armed = searchArmed,
+                            focusRequester = tagSearchFocusRequester,
+                            onGo = {
+                                val first = foundTags.firstOrNull()?.first
+                                when {
+                                    first != null -> toggleFromSearch(first)
+                                    tagQuery.isNotBlank() -> createFromSearch(tagQuery.trim())
+                                }
+                            },
+                            modifier = Modifier
+                                // Раскрывается только место под поле, само поле проявляется со второй половины пути
+                                .clipToBounds()
+                                .layout { measurable, constraints ->
+                                    val placeable = measurable.measure(constraints)
+                                    if (searchPull.fullPx != placeable.height) searchPull.fullPx = placeable.height
+                                    val shown = searchPull.pull.value.roundToInt().coerceIn(0, placeable.height)
+                                    layout(placeable.width, shown) { placeable.place(0, 0) }
+                                }
+                                .graphicsLayer {
+                                    val revealed = if (searchPull.fullPx > 0) searchPull.pull.value / searchPull.fullPx else 0f
+                                    alpha = ((revealed - SEARCH_FADE_START) / (1f - SEARCH_FADE_START)).coerceIn(0f, 1f)
+                                }
+                                .padding(bottom = ThingsSpacing.S_PLUS)
+                        )
+                        // Пока поле в фокусе и пустое, список приглушён; нажатие на него — выход из поиска
+                        val searchDimsList = tagSearchActive && tagQuery.isEmpty()
+                        val listAlpha by animateFloatAsState(
+                            targetValue = if (searchDimsList) ThingsAlpha.MUTED else 1f,
+                            animationSpec = tween(ThingsMotion.QUICK),
+                            label = "tagListAlpha"
+                        )
+                        Box(modifier = Modifier.fillMaxWidth().weight(1f)) {
                         // Tags List
                         LazyColumn(
                             state = tagListState,
                             modifier = Modifier
-                                .fillMaxWidth()
-                                .weight(1f),
+                                .fillMaxSize()
+                                .nestedScroll(searchPull.connection)
+                                .graphicsLayer {
+                                    alpha = listAlpha
+                                    // Перетяжка за полной высотой поля — сам список ниже
+                                    translationY = searchPull.overPull
+                                },
                             verticalArrangement = Arrangement.spacedBy(ThingsSpacing.XS)
                         ) {
-                            items(flatTagList, key = { it.first.id }) { item ->
+                            items(if (searching) foundTags else flatTagList, key = { it.first.id }) { item ->
                                 val tag = item.first
-                                val isChild = item.second
+                                val isChild = item.second && !searching
                                 val isSelected = selectedTags.contains(tag.title)
+                                // Первый найденный залит акцентом, как в окне «Переместить»: его отмечает «Go»
+                                val isHighlighted = searching && item == foundTags.firstOrNull()
                                 Row(
                                     modifier = Modifier
                                         .fillMaxWidth()
                                         .animateItem()
                                         .clip(ThingsTheme.shapes.capsuleShape)
+                                        .background(if (isHighlighted) ThingsTheme.colors.accent else Color.Transparent)
                                         .clickable {
+                                            if (searching) {
+                                                toggleFromSearch(tag)
+                                                return@clickable
+                                            }
                                             selectedTags = if (isSelected) {
                                                 selectedTags - tag.title
                                             } else {
@@ -573,7 +701,11 @@ fun ThingsTagDialog(
                                     Icon(
                                         imageVector = if (isSelected) AppIcons.TagFilled else AppIcons.Tag,
                                         contentDescription = null,
-                                        tint = if (isSelected) ThingsTheme.colors.accent else ItemMutedColor,
+                                        tint = when {
+                                            isHighlighted -> ThingsTheme.colors.onAccent
+                                            isSelected -> ThingsTheme.colors.accent
+                                            else -> ItemMutedColor
+                                        },
                                         modifier = Modifier.size(ThingsIconSize.S)
                                     )
 
@@ -589,12 +721,74 @@ fun ThingsTagDialog(
                                         Icon(
                                             imageVector = Icons.Default.Check,
                                             contentDescription = stringResource(R.string.cd_selected),
-                                            tint = ThingsTheme.colors.accent,
+                                            tint = if (isHighlighted) ThingsTheme.colors.onAccent else ThingsTheme.colors.accent,
                                             modifier = Modifier.size(ThingsIconSize.S)
                                         )
                                     }
                                 }
                             }
+                            // «Новый тег «…»» — если тега с точно таким названием нет; ничего не найдено — он подсвечен
+                            val newTagQuery = tagQuery.trim()
+                            if (searching && existingTag(newTagQuery) == null) {
+                                item(key = "search_new_tag") {
+                                    val highlighted = foundTags.isEmpty()
+                                    Row(
+                                        modifier = Modifier
+                                            .fillMaxWidth()
+                                            .clip(ThingsTheme.shapes.capsuleShape)
+                                            .background(if (highlighted) ThingsTheme.colors.accent else Color.Transparent)
+                                            .clickable { createFromSearch(newTagQuery) }
+                                            .padding(
+                                                start = RowPaddingStartNormal,
+                                                end = RowPaddingEnd,
+                                                top = TagRowVerticalPadding,
+                                                bottom = TagRowVerticalPadding
+                                            ),
+                                        verticalAlignment = Alignment.CenterVertically
+                                    ) {
+                                        Icon(
+                                            imageVector = Icons.Default.Add,
+                                            contentDescription = null,
+                                            tint = if (highlighted) ThingsTheme.colors.onAccent else ThingsTheme.colors.overlayContent,
+                                            modifier = Modifier.size(ThingsIconSize.S)
+                                        )
+                                        Spacer(modifier = Modifier.width(ThingsSpacing.M))
+                                        Text(
+                                            text = stringResource(R.string.tag_search_new_tag, newTagQuery),
+                                            style = ThingsTheme.type.dialogRow.copy(
+                                                color = if (highlighted) ThingsTheme.colors.onAccent else ThingsTheme.colors.overlayContent
+                                            ),
+                                            modifier = Modifier.weight(1f)
+                                        )
+                                    }
+                                }
+                            }
+                        }
+                        // Стрелка вниз — посередине промежутка между полем и уехавшим ниже списком; синеет вместе с полем
+                        val chevronColor by androidx.compose.animation.animateColorAsState(
+                            if (searchArmed) ThingsTheme.colors.accent else ThingsTheme.colors.overlayContentSecondary,
+                            tween(ThingsMotion.FAST), label = "tagSearchChevron"
+                        )
+                        if (!tagSearchPinned) {
+                            SearchPullChevron(
+                                color = chevronColor,
+                                modifier = Modifier
+                                    .align(Alignment.TopCenter)
+                                    .graphicsLayer {
+                                        val gap = searchPull.overPull
+                                        translationY = gap / 2f - size.height / 2f
+                                        alpha = (gap / searchPull.armPx).coerceIn(0f, 1f)
+                                    }
+                            )
+                        }
+                        if (searchDimsList) {
+                            Box(
+                                modifier = Modifier
+                                    .matchParentSize()
+                                    .pointerInput(Unit) { detectTapGestures { searchFocusManager.clearFocus() } }
+                            )
+                        }
+                        }
                         }
 
                         // Bottom Actions

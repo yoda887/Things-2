@@ -186,6 +186,7 @@
     <string name="priority_low">Низкий приоритет</string>
     <string name="priority_none">Без приоритета</string>
     <string name="move_new_project">Новый проект «%1$s»</string>
+    <string name="tag_search_new_tag">Новый тег «%1$s»</string>
     <string name="move_no_project">Без проекта</string>
     <string name="fallback_project">Проект</string>
     <string name="fallback_area">Область</string>
