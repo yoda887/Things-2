@@ -369,8 +369,10 @@ fun ThingsHomeScreen(viewModel: ThingsViewModel = hiltViewModel()) {
 
     // Добавление перетаскиванием кнопки «+» (см. FabDragController)
     val fabDragController = remember { FabDragController() }
-    // Редактор закрылся — кнопка снова показывается (она была спрятана после приземления в место новой задачи)
-    LaunchedEffect(inlineExpandedTaskId) {
+    // Редактор закрылся — кнопка снова показывается (она была спрятана после приземления в место новой задачи).
+    // Ключ — и само скрытие: если редактор закрыли раньше, чем кнопка приземлилась (второе нажатие пришлось
+    // мимо редактора), скрытие выставится уже при закрытом редакторе, и кнопка пропадала до следующего редактора
+    LaunchedEffect(inlineExpandedTaskId, fabDragController.hiddenAfterSettle) {
         if (inlineExpandedTaskId == null) fabDragController.hiddenAfterSettle = false
     }
 
