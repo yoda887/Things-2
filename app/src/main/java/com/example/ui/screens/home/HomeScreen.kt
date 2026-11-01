@@ -1345,7 +1345,7 @@ fun ThingsHomeScreen(viewModel: ThingsViewModel = hiltViewModel()) {
             onDeleteTag = { tag -> viewModel.deleteTag(tag) },
             onUpdateTag = { tag -> viewModel.updateTag(tag) },
             onUpdateTagsOrder = { tags -> viewModel.updateTagsOrder(tags) },
-            onSave = { title, notes, section, isTonight, startDate, dueDate, tags, projectId, checklistItems, priority, reminderTime ->
+            onSave = { title, notes, section, isTonight, startDate, dueDate, tags, projectId, areaId, checklistItems, priority, reminderTime ->
                 viewModel.addTask(
                     title = title,
                     notes = notes,
@@ -1357,6 +1357,7 @@ fun ThingsHomeScreen(viewModel: ThingsViewModel = hiltViewModel()) {
                     reminderTime = reminderTime,
                     tags = tags,
                     projectId = projectId,
+                    areaId = areaId,
                     checklist = checklistItems,
                     priority = priority
                 )

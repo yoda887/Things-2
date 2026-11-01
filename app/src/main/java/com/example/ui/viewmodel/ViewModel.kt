@@ -667,6 +667,7 @@ class ThingsViewModel @Inject constructor(
         reminderTime: Int? = null,
         tags: List<String> = emptyList(),
         projectId: String? = null,
+        areaId: String? = null,
         checklist: List<ChecklistItem> = emptyList(),
         priority: Int = 0
     ) {
@@ -684,6 +685,7 @@ class ThingsViewModel @Inject constructor(
                 reminderTime = reminderTime,
                 tags = tags,
                 projectId = projectId,
+                areaId = areaId,
                 checklist = checklist,
                 priority = priority
             )

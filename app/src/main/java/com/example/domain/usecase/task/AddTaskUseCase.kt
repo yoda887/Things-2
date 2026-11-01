@@ -28,6 +28,8 @@ class AddTaskUseCase @Inject constructor(private val repository: ITaskRepository
         reminderTime: Int? = null,
         tags: List<String> = emptyList(),
         projectId: String? = null,
+        /** Область задачи без проекта; у задачи проекта не ставится — область берётся из проекта */
+        areaId: String? = null,
         checklist: List<ChecklistItem> = emptyList(),
         priority: Int = 0,
         // Место в общем порядке задач (NewTasks.topSortOrder — первой в списке)
@@ -35,7 +37,9 @@ class AddTaskUseCase @Inject constructor(private val repository: ITaskRepository
     ) {
         val itemId = UUID.randomUUID().toString()
         val cleanTags = tags.map { it.trim() }.filter { it.isNotEmpty() }
-        val effectiveSection = if (projectId != null && section == TaskSection.INBOX) {
+        val area = areaId.takeIf { projectId == null }
+        // В проекте или области — не во «Входящих»: как при перемещении, задача уходит в «В любое время»
+        val effectiveSection = if ((projectId != null || area != null) && section == TaskSection.INBOX) {
             TaskSection.ANYTIME
         } else {
             section
@@ -52,6 +56,7 @@ class AddTaskUseCase @Inject constructor(private val repository: ITaskRepository
             startDate = computedStartDate,
             dueDate = dueDate,
             projectId = projectId,
+            areaId = area,
             priority = priority,
             sortOrder = sortOrder,
             reminderTime = reminderTime?.takeIf { Reminders.hasDay(computedStartDate, startValue) }

@@ -108,6 +108,8 @@ fun QuickAddDialog(
         dueDate: Long?,
         tags: List<String>,
         projectId: String?,
+        // Область — если задача положена в область без проекта (окно перемещения)
+        areaId: String?,
         checklist: List<ChecklistItem>,
         priority: Int,
         reminderTime: Int?
@@ -122,6 +124,7 @@ fun QuickAddDialog(
     var dueDate by remember { mutableStateOf<Long?>(null) }
     var tagInput by remember { mutableStateOf("") }
     var selectedProjectId by remember { mutableStateOf<String?>(null) }
+    var selectedAreaId by remember { mutableStateOf<String?>(null) }
     var checklist by remember { mutableStateOf<List<ChecklistItem>>(emptyList()) }
     var priority by remember { mutableStateOf(0) }
     // Напоминание — время дня в минутах; задаётся в окне «Когда»
@@ -152,8 +155,12 @@ fun QuickAddDialog(
         projects.firstOrNull { it.id == selectedProjectId }
     }
 
+    val currentArea = remember(selectedAreaId, areas) { areas.firstOrNull { it.id == selectedAreaId } }
+
     val destinationName = if (currentProject != null) {
         currentProject.name
+    } else if (currentArea != null) {
+        currentArea.title
     } else {
         when (section) {
             TaskSection.TODAY -> if (isTonight) androidx.compose.ui.res.stringResource(com.example.R.string.category_this_evening) else androidx.compose.ui.res.stringResource(com.example.R.string.category_today)
@@ -254,6 +261,7 @@ fun QuickAddDialog(
                     dueDate,
                     tagList,
                     selectedProjectId,
+                    selectedAreaId,
                     checklist.filter { it.title.isNotBlank() },
                     priority,
                     reminderTime
@@ -712,8 +720,20 @@ fun QuickAddDialog(
                                 .padding(horizontal = ThingsSpacing.XS_PLUS, vertical = ThingsSpacing.XS_PLUS),
                             verticalAlignment = Alignment.CenterVertically
                         ) {
+                            // Значок — по месту назначения: проект, область или список
+                            val destinationIcon = when {
+                                currentProject != null -> AppIcons.BulletList
+                                currentArea != null -> AppIcons.Area
+                                else -> when (section) {
+                                    TaskSection.TODAY -> AppIcons.Today
+                                    TaskSection.UPCOMING -> AppIcons.Upcoming
+                                    TaskSection.ANYTIME -> AppIcons.Anytime
+                                    TaskSection.SOMEDAY -> AppIcons.Someday
+                                    else -> AppIcons.Inbox
+                                }
+                            }
                             Icon(
-                                imageVector = AppIcons.Inbox,
+                                imageVector = destinationIcon,
                                 contentDescription = stringResource(R.string.cd_destination),
                                 tint = ThingsTheme.colors.textSecondary,
                                 modifier = Modifier.size(ThingsIconSize.M)
@@ -822,13 +842,15 @@ fun QuickAddDialog(
     if (showMoveDialog) {
         ThingsMoveDialog(
             currentProjectId = selectedProjectId,
-            currentAreaId = null,
-            currentIsInbox = selectedProjectId == null && section == TaskSection.INBOX,
+            currentAreaId = selectedAreaId,
+            currentIsInbox = selectedProjectId == null && selectedAreaId == null && section == TaskSection.INBOX,
             projects = projects,
             areas = areas,
             allTasks = allTasksRaw,
-            onMove = { projId, _, moveToInbox ->
+            onMove = { projId, areaId, moveToInbox ->
                 selectedProjectId = projId
+                // Область — только без проекта: у задачи проекта область берётся из проекта
+                selectedAreaId = if (projId == null) areaId else null
                 if (moveToInbox) {
                     section = TaskSection.INBOX
                 }
