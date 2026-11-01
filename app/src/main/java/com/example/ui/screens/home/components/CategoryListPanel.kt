@@ -733,11 +733,15 @@ fun ThingsCategoryListPanel(
         return true
     }
 
+    // Цель регистрируется один раз, а список переиспользуется для разных экранов (на десктопе — всегда):
+    // сброс и нажатие идут через последние версии функций, иначе задача вставала по правилам первого экрана
+    val currentDropFab by rememberUpdatedState({ dropFab() })
+    val currentTapFab by rememberUpdatedState({ tapFab() })
     if (fabDrag != null && acceptsFabDrop) {
         DisposableEffect(fabDrag) {
             val target = object : FabDropTarget {
-                override fun onFabDrop(): Boolean = dropFab()
-                override fun onFabTap(): Boolean = tapFab()
+                override fun onFabDrop(): Boolean = currentDropFab()
+                override fun onFabTap(): Boolean = currentTapFab()
             }
             fabDrag.dropTarget = target
             onDispose { if (fabDrag.dropTarget === target) fabDrag.dropTarget = null }
