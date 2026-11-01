@@ -170,10 +170,12 @@ data class Item(
 
     /**
      * Determines if the task belongs to Inbox category.
+     * Дедлайн, как в Things, задачу из «Входящих» не уводит: без него она не попадала бы ни в один список
+     * до самого срока (в «В любое время» входящие не идут). С горящим сроком она ещё и в «Сегодня».
      */
     @get:Ignore
     val isInbox: Boolean
-        get() = type == Item.TYPE_TASK && start == Item.START_INBOX && startDate == null && dueDate == null && projectId == null
+        get() = type == Item.TYPE_TASK && start == Item.START_INBOX && startDate == null && projectId == null
 
     /**
      * Determines if the task belongs to Today category.

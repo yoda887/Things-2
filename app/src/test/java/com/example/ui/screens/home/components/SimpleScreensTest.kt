@@ -22,7 +22,8 @@ class SimpleScreensTest {
         assertFalse(InboxList.includes(inbox.copy(trashed = true)))
         assertFalse(InboxList.includes(inbox.copy(start = Item.START_ANYTIME)))
         assertFalse(InboxList.includes(inbox.copy(startDate = 1L)))
-        assertFalse(InboxList.includes(inbox.copy(dueDate = 1L)))
+        // Дедлайн из «Входящих» не уводит, как в Things: иначе задача не видна ни в одном списке до срока
+        assertTrue(InboxList.includes(inbox.copy(dueDate = 1L)))
         assertFalse(InboxList.includes(inbox.copy(projectId = "p")))
         assertFalse(InboxList.includes(inbox.copy(type = Item.TYPE_PROJECT)))
     }

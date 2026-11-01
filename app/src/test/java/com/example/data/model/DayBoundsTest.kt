@@ -104,6 +104,16 @@ class DayBoundsTest {
     }
 
     @Test
+    fun `задача из Inbox с дальним дедлайном остаётся во Входящих`() {
+        // Иначе она не видна ни в одном списке до самого срока
+        val item = task(start = 0, dueDate = noonInDays(30))
+        assertTrue(item.isInbox)
+        assertTrue(com.example.domain.lists.InboxList.includes(item))
+        assertFalse(bounds.isAnytime(item))
+        assertFalse(bounds.isToday(item))
+    }
+
+    @Test
     fun `задача проекта без дат попадает в Anytime`() {
         val item = task(start = 2, projectId = "p1")
         assertTrue(bounds.isAnytime(item))
