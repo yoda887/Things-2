@@ -198,6 +198,9 @@ fun ThingsWhenDialog(
 
     var isVisible by remember { mutableStateOf(false) }
     LaunchedEffect(Unit) { isVisible = true }
+    // Как в Things: пока ничего не изменилось, в углу ✕; изменили то, что не закрывает окно само (напоминание), — ✓
+    val opened = remember { listOf<Any?>(startDate, section, isTonight, reminderTime) }
+    val changed = opened != listOf<Any?>(startDate, section, isTonight, reminderTime)
     // Страница выбора времени напоминания вместо календаря
     var pickingReminder by remember { mutableStateOf(false) }
     // Календарь на всё окно — открывается стрелками у краёв дат, как строка «Следующая» в окне «Повторять»
@@ -333,12 +336,10 @@ fun ThingsWhenDialog(
             // «Назад» при открытом барабане закрывает только его
             androidx.activity.compose.BackHandler(enabled = pickingReminder) { pickingReminder = false }
             androidx.activity.compose.BackHandler(enabled = pickingDate) { pickingDate = false }
-            // Высота главной страницы без блока «Очистить» — календарь выбора даты открывается в окне той же высоты
+            // Высота главной страницы — календарь выбора даты открывается в окне той же высоты, как в Things: окно не меняет размер
             var mainPagePx by remember { mutableIntStateOf(0) }
-            var clearBlockPx by remember { mutableIntStateOf(0) }
-            var clearShown by remember { mutableStateOf(false) }
             val datePageHeight = with(LocalDensity.current) {
-                (mainPagePx - if (clearShown) clearBlockPx else 0).takeIf { mainPagePx > 0 }?.toDp()
+                mainPagePx.takeIf { it > 0 }?.toDp()
             }
             Box {
             Column(
@@ -352,16 +353,33 @@ fun ThingsWhenDialog(
                 // внутренние поля, поэтому при одинаковом spacedBy расстояния выглядели разными
                 verticalArrangement = Arrangement.spacedBy(ThingsSpacing.NONE)
             ) {
-                if (pickingDate) {
+                androidx.compose.animation.AnimatedContent(
+                    targetState = pickingDate,
+                    transitionSpec = {
+                        val spec = tween<androidx.compose.ui.unit.IntOffset>(ThingsMotion.MEDIUM, easing = FastOutSlowInEasing)
+                        val dir = if (targetState) 1 else -1
+                        (androidx.compose.animation.slideInHorizontally(spec) { it * dir } togetherWith
+                            androidx.compose.animation.slideOutHorizontally(spec) { -it * dir })
+                            .using(androidx.compose.animation.SizeTransform(clip = true) { _, _ -> tween(ThingsMotion.MEDIUM, easing = FastOutSlowInEasing) })
+                    },
+                    label = "whenPages"
+                ) { picking ->
+                Column(modifier = Modifier.fillMaxWidth()) {
+                if (picking) {
                     val zone = java.time.ZoneId.systemDefault()
                     val selected = startDate?.takeIf { section == TaskSection.UPCOMING }
                         ?.let { java.time.Instant.ofEpochMilli(it).atZone(zone).toLocalDate() }
                     Column(modifier = if (datePageHeight != null) Modifier.height(datePageHeight) else Modifier) {
-                    SubPage(stringResource(R.string.ui_when), onBack = { pickingDate = false }) {
+                    SubPage(
+                        stringResource(R.string.ui_when),
+                        onBack = { pickingDate = false },
+                        trailing = { WhenHeaderButton(changed = changed, onClick = requestClose) }
+                    ) {
                         RepeatCalendar(
                             selected = selected,
                             from = java.time.LocalDate.now(zone),
-                            // Календарь занимает всё под заголовком: окно той же высоты, что «Когда?» без «Очистить»
+                            todayStar = true,
+                            // Календарь занимает всё под заголовком: окно той же высоты, что главная страница «Когда?»
                             modifier = if (datePageHeight != null) Modifier.weight(1f) else Modifier.height(WHEN_FULL_CALENDAR_HEIGHT)
                         ) { date ->
                             val millis = date.atStartOfDay(zone).toInstant().toEpochMilli()
@@ -393,21 +411,7 @@ fun ThingsWhenDialog(
                         modifier = Modifier.weight(1f),
                         contentAlignment = Alignment.Center
                     ) {
-                        Box(
-                            modifier = Modifier
-                                .size(MaterialTheme.dimens.dialogHeaderButtonSize)
-                                .clip(CircleShape)
-                                .background(ThingsTheme.colors.overlayControl)
-                                .clickable { requestClose() },
-                            contentAlignment = Alignment.Center
-                        ) {
-                            Icon(
-                                imageVector = Icons.Default.Close,
-                                contentDescription = stringResource(R.string.cd_close),
-                                tint = ThingsTheme.colors.overlayContent,
-                                modifier = Modifier.size(ThingsIconSize.S)
-                            )
-                        }
+                        WhenHeaderButton(changed = changed, onClick = requestClose)
                     }
                 }
 
@@ -918,13 +922,12 @@ fun ThingsWhenDialog(
                 // Есть что очищать: дата или раздел, который задаёт это окно (Сегодня, вечер, Планы, Когда-нибудь).
                 // «Входящие» и «В любое время» — без «Очистить»: у новой задачи во «Входящих» срока нет, как в Things
                 val hasTimeAssignment = startDate != null || (section != TaskSection.ANYTIME && section != TaskSection.INBOX)
-                SideEffect { clearShown = hasTimeAssignment }
                 androidx.compose.animation.AnimatedVisibility(
                     visible = hasTimeAssignment,
                     enter = fadeIn(tween(ThingsMotion.QUICK)),
                     exit = fadeOut(tween(ThingsMotion.QUICK))
                 ) {
-                Column(modifier = Modifier.onSizeChanged { clearBlockPx = it.height }) {
+                Column {
                     // С поставленным напоминанием над его строкой стоит разделитель — на его высоту промежуток
                     // меньше, чтобы «Очистить» осталась на месте, когда «+ Добавить напоминание» сменяется строкой
                     Spacer(
@@ -960,6 +963,8 @@ fun ThingsWhenDialog(
                             style = ThingsTheme.type.dialogButton
                         )
                     }
+                }
+                }
                 }
                 }
                 }
@@ -1004,6 +1009,34 @@ fun ThingsWhenDialog(
         }
         }
         }
+    }
+}
+
+/**
+ * Кнопка в правом углу шапки «Когда?» — как в Things: ✕ в сером круге, пока ничего не изменилось,
+ * ✓ в синем, когда изменили то, что не закрывает окно само (напоминание). Нажатие закрывает окно:
+ * изменения уже применены
+ */
+@Composable
+private fun WhenHeaderButton(changed: Boolean, onClick: () -> Unit) {
+    val background by androidx.compose.animation.animateColorAsState(
+        if (changed) ThingsTheme.colors.accent else ThingsTheme.colors.overlayControl,
+        tween(ThingsMotion.QUICK), label = "whenHeaderButton"
+    )
+    Box(
+        modifier = Modifier
+            .size(MaterialTheme.dimens.dialogHeaderButtonSize)
+            .clip(CircleShape)
+            .background(background)
+            .clickable(onClick = onClick),
+        contentAlignment = Alignment.Center
+    ) {
+        Icon(
+            imageVector = if (changed) Icons.Default.Check else Icons.Default.Close,
+            contentDescription = stringResource(if (changed) R.string.cd_save else R.string.cd_close),
+            tint = if (changed) ThingsTheme.colors.onAccent else ThingsTheme.colors.overlayContent,
+            modifier = Modifier.size(ThingsIconSize.S)
+        )
     }
 }
 

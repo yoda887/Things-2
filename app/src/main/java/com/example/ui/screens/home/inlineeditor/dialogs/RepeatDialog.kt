@@ -55,6 +55,7 @@ import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.ChevronLeft
 import androidx.compose.material.icons.filled.ChevronRight
 import androidx.compose.material.icons.filled.Remove
+import androidx.compose.material.icons.filled.Star
 import androidx.compose.material.icons.outlined.Flag
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
@@ -469,7 +470,13 @@ private fun MainPage(
 // ---------------------------------------------------------------- вложенные страницы
 
 @Composable
-internal fun ColumnScope.SubPage(title: String, onBack: () -> Unit, content: @Composable ColumnScope.() -> Unit) {
+internal fun ColumnScope.SubPage(
+    title: String,
+    onBack: () -> Unit,
+    // Кнопка справа в шапке (окно «Когда?»: ✕ / ✓); нет — место пустое
+    trailing: (@Composable () -> Unit)? = null,
+    content: @Composable ColumnScope.() -> Unit
+) {
     Row(modifier = Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
         // «‹» в сером круге — назад, как в Things
         Box(modifier = Modifier.weight(1f), contentAlignment = Alignment.CenterStart) {
@@ -481,7 +488,7 @@ internal fun ColumnScope.SubPage(title: String, onBack: () -> Unit, content: @Co
             textAlign = TextAlign.Center,
             modifier = Modifier.weight(1.4f)
         )
-        Spacer(Modifier.weight(1f))
+        Box(modifier = Modifier.weight(1f), contentAlignment = Alignment.CenterEnd) { trailing?.invoke() }
     }
     Spacer(Modifier.height(MaterialTheme.dimens.dialogTitleGap))
     content()
@@ -817,7 +824,14 @@ private fun ReminderPage(draft: RepeatDraft) {
  * у первого дня и у первых чисел — подпись месяца, месяцы разделены ступенчатой линией; выбранный день обведён.
  */
 @Composable
-internal fun RepeatCalendar(selected: LocalDate?, from: LocalDate, modifier: Modifier = Modifier, onPick: (LocalDate) -> Unit) {
+internal fun RepeatCalendar(
+    selected: LocalDate?,
+    from: LocalDate,
+    modifier: Modifier = Modifier,
+    // Сегодня — звездой, как в календаре окна «Когда?» (окно «Когда?», календарь дальних дат)
+    todayStar: Boolean = false,
+    onPick: (LocalDate) -> Unit
+) {
     val view = LocalView.current
     val firstMonday = from.with(TemporalAdjusters.previousOrSame(DayOfWeek.MONDAY))
     val selectedWeek = selected?.let { java.time.temporal.ChronoUnit.WEEKS.between(firstMonday, it.with(TemporalAdjusters.previousOrSame(DayOfWeek.MONDAY))).toInt() } ?: 0
@@ -889,6 +903,13 @@ internal fun RepeatCalendar(selected: LocalDate?, from: LocalDate, modifier: Mod
                                     Text(date.year.toString(), style = ThingsTheme.type.badge.copy(color = color))
                                 }
                             }
+                        } else if (todayStar && date == LocalDate.now()) {
+                            Icon(
+                                imageVector = Icons.Filled.Star,
+                                contentDescription = stringResource(R.string.category_today),
+                                tint = ThingsTheme.colors.badgeText,
+                                modifier = Modifier.size(ThingsIconSize.XS)
+                            )
                         } else if (date.dayOfMonth == 1 || date == from) {
                             // Первое число (и первый день календаря) — с месяцем; в другом году, как в Things, ещё и с годом
                             val otherYear = date.year != LocalDate.now().year
