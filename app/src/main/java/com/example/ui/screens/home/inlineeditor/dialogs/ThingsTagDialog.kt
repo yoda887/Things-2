@@ -10,6 +10,7 @@ import androidx.compose.animation.core.FastOutSlowInEasing
 import androidx.compose.animation.core.Animatable
 import androidx.activity.compose.BackHandler
 import com.example.ui.theme.ThingsAlpha
+import com.example.ui.theme.ThingsStroke
 import androidx.compose.ui.draw.clipToBounds
 import androidx.compose.ui.layout.layout
 import kotlin.math.roundToInt
@@ -220,6 +221,9 @@ fun ThingsTagDialog(
     var currentScreen by remember { mutableStateOf(DialogScreen.LIST) }
     // Поиск по тегам на экране списка: поле вытягивается тягой списка вниз, как в окне «Переместить»
     var tagQuery by remember { mutableStateOf("") }
+    // По запросу уже нажали «Go» (или выбрали строку): подсветка снимается до следующей правки запроса, как в Things
+    var searchChoiceMade by remember { mutableStateOf(false) }
+    var searchGoClosing by remember { mutableStateOf(false) }
     var tagSearchFocused by remember { mutableStateOf(false) }
     var selectedGroup: Tag? by remember { mutableStateOf<Tag?>(null) }
     var newTagName by remember { mutableStateOf("") }
@@ -484,15 +488,18 @@ fun ThingsTagDialog(
                 searchKeyboard?.show()
             }
         }
-        // Найденные теги — по названию, без учёта регистра; первый подсвечен — «Go» отмечает его
+        // Найденные теги — по названию, без учёта регистра: сначала начинающиеся с запроса, затем остальные,
+        // как в Things; первый подсвечен — «Go» отмечает его
         val foundTags = remember(tagQuery, flatTagList) {
             val q = tagQuery.trim()
-            if (q.isEmpty()) emptyList() else flatTagList.filter { it.first.title.contains(q, ignoreCase = true) }
+            if (q.isEmpty()) emptyList()
+            else flatTagList.filter { it.first.title.contains(q, ignoreCase = true) }
+                .sortedBy { !it.first.title.startsWith(q, ignoreCase = true) }
         }
-        /** Отметка тега из поиска: запрос очищается, курсор остаётся — можно искать следующий */
+        /** Отметка тега из поиска: запрос остаётся, как в Things, — отмеченный тег виден в найденном */
         fun toggleFromSearch(tag: Tag) {
             selectedTags = if (tag.title in selectedTags) selectedTags - tag.title else selectedTags + tag.title
-            tagQuery = ""
+            searchChoiceMade = true
         }
         /** «Новый тег «…»» из поиска: тег с названием запроса сразу отмечен, как из экрана «Новый тег» */
         fun createFromSearch(name: String) {
@@ -502,7 +509,29 @@ fun ThingsTagDialog(
             selectedTags = selectedTags + title
             deletedTags = deletedTags - title
             revealTagTitle = title
-            tagQuery = ""
+            searchChoiceMade = true
+        }
+        /**
+         * «Go» в поиске, как в Things: подсвеченный тег (или «Новый тег «…»») отмечается — отметка видна мгновение,
+         * — и окно закрывается с сохранением, как по галочке
+         */
+        fun chooseFromSearchAndClose(tag: Tag?, newTitle: String?) {
+            // Повторный «Go», пока видна отметка, не сохраняет второй раз
+            if (closing || searchGoClosing) return
+            searchGoClosing = true
+            // Ничего не подсвечено (строку уже выбрали нажатием) — только сохранить и закрыть
+            when {
+                tag != null -> selectedTags = selectedTags + tag.title
+                newTitle != null -> createFromSearch(newTitle)
+            }
+            searchChoiceMade = true
+            val chosen = selectedTags
+            dialogView.hideSoftKeyboardNow()
+            scope.launch {
+                delay(ThingsMotion.FAST.toLong())
+                if (chosen != activeTags.toSet()) onTagsSelected(chosen.toList())
+                closeWindow()
+            }
         }
 
         fun saveEditedTag() {
@@ -619,7 +648,10 @@ fun ThingsTagDialog(
                         val searching = tagQuery.isNotBlank()
                         MoveSearchField(
                             query = tagQuery,
-                            onQueryChange = { tagQuery = it },
+                            onQueryChange = {
+                                if (it != tagQuery) searchChoiceMade = false
+                                tagQuery = it
+                            },
                             onFocusChange = { tagSearchFocused = it },
                             active = tagSearchActive,
                             armed = searchArmed,
@@ -627,8 +659,9 @@ fun ThingsTagDialog(
                             onGo = {
                                 val first = foundTags.firstOrNull()?.first
                                 when {
-                                    first != null -> toggleFromSearch(first)
-                                    tagQuery.isNotBlank() -> createFromSearch(tagQuery.trim())
+                                    searchChoiceMade -> chooseFromSearchAndClose(null, null)
+                                    first != null -> chooseFromSearchAndClose(first, null)
+                                    tagQuery.isNotBlank() -> chooseFromSearchAndClose(null, tagQuery.trim())
                                 }
                             },
                             modifier = Modifier
@@ -672,7 +705,7 @@ fun ThingsTagDialog(
                                 val isChild = item.second && !searching
                                 val isSelected = selectedTags.contains(tag.title)
                                 // Первый найденный залит акцентом, как в окне «Переместить»: его отмечает «Go»
-                                val isHighlighted = searching && item == foundTags.firstOrNull()
+                                val isHighlighted = searching && !searchChoiceMade && item == foundTags.firstOrNull()
                                 Row(
                                     modifier = Modifier
                                         .fillMaxWidth()
@@ -701,9 +734,10 @@ fun ThingsTagDialog(
                                     Icon(
                                         imageVector = if (isSelected) AppIcons.TagFilled else AppIcons.Tag,
                                         contentDescription = null,
+                                        // Отмеченный, как в Things: значок залит цветом текста, синяя — только галочка
                                         tint = when {
                                             isHighlighted -> ThingsTheme.colors.onAccent
-                                            isSelected -> ThingsTheme.colors.accent
+                                            isSelected -> ThingsTheme.colors.overlayContent
                                             else -> ItemMutedColor
                                         },
                                         modifier = Modifier.size(ThingsIconSize.S)
@@ -713,7 +747,9 @@ fun ThingsTagDialog(
 
                                     Text(
                                         text = tag.title,
-                                        style = (if (isSelected) ThingsTheme.type.dialogRowSelected else ThingsTheme.type.dialogRow).copy(color = ThingsTheme.colors.overlayContent),
+                                        style = ThingsTheme.type.dialogRow.copy(
+                                            color = if (isHighlighted) ThingsTheme.colors.onAccent else ThingsTheme.colors.overlayContent
+                                        ),
                                         modifier = Modifier.weight(1f)
                                     )
 
@@ -730,8 +766,16 @@ fun ThingsTagDialog(
                             // «Новый тег «…»» — если тега с точно таким названием нет; ничего не найдено — он подсвечен
                             val newTagQuery = tagQuery.trim()
                             if (searching && existingTag(newTagQuery) == null) {
+                                // Под найденным — разделитель, как в Things; ничего не найдено — строка первой
+                                if (foundTags.isNotEmpty()) item(key = "search_new_tag_divider") {
+                                    HorizontalDivider(
+                                        modifier = Modifier.padding(vertical = ThingsSpacing.XS, horizontal = RowPaddingStartNormal),
+                                        color = ThingsTheme.colors.overlayDivider,
+                                        thickness = ThingsStroke.THIN
+                                    )
+                                }
                                 item(key = "search_new_tag") {
-                                    val highlighted = foundTags.isEmpty()
+                                    val highlighted = foundTags.isEmpty() && !searchChoiceMade
                                     Row(
                                         modifier = Modifier
                                             .fillMaxWidth()
