@@ -989,8 +989,9 @@ private fun Segmented(options: List<String>, selected: Int, onSelect: (Int) -> U
     ) {
         val gap = ThingsSpacing.XXS
         val segment = (maxWidth - gap * (options.size - 1)) / options.size
+        // Подсветка доезжает быстро (QUICK), чтобы переключение режима ощущалось мгновенным
         val thumbX by androidx.compose.animation.core.animateDpAsState(
-            (segment + gap) * selected, tween(ThingsMotion.MEDIUM, easing = FastOutSlowInEasing), label = "segmentThumb"
+            (segment + gap) * selected, tween(ThingsMotion.QUICK, easing = FastOutSlowInEasing), label = "segmentThumb"
         )
         Box(modifier = Modifier.matchParentSize()) {
             Box(
