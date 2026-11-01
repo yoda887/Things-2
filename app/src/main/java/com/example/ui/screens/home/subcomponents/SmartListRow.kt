@@ -37,7 +37,7 @@ fun SmartListRow(
     textPrimaryColor: Color,
     textSecondaryColor: Color,
     isGrayCountAndNoBg: Boolean = false,
-    // Размер самой иконки; рамка под неё всегда ThingsIconSize.L — названия стоят ровно
+    // Размер самой иконки; рамка под неё всегда homeRowIconSize — названия стоят ровно
     iconSize: androidx.compose.ui.unit.Dp = ThingsIconSize.L,
     onClick: () -> Unit
 ) {
@@ -49,8 +49,10 @@ fun SmartListRow(
             .padding(vertical = ThingsSpacing.XS_PLUS, horizontal = ThingsSpacing.XS_PLUS),
         verticalAlignment = Alignment.CenterVertically
     ) {
-        Box(modifier = Modifier.size(ThingsIconSize.L), contentAlignment = Alignment.Center) {
-            Icon(icon, contentDescription = title, tint = iconColor, modifier = Modifier.size(iconSize))
+        // Рамка значка — той же ширины, что у проектов и областей (homeRowIconSize): названия всех строк главного
+        // экрана начинаются на одной вертикали; высота — прежняя. Сам значок шире рамки и выступает из неё поровну с боков
+        Box(modifier = Modifier.size(width = MaterialTheme.dimens.homeRowIconSize, height = ThingsIconSize.L), contentAlignment = Alignment.Center) {
+            Icon(icon, contentDescription = title, tint = iconColor, modifier = Modifier.requiredSize(iconSize))
         }
         Spacer(modifier = Modifier.width(MaterialTheme.dimens.homeRowIconTextGap))
         Text(title, style = ThingsTheme.type.listTitle.copy(color = textPrimaryColor), modifier = Modifier.weight(1f))
