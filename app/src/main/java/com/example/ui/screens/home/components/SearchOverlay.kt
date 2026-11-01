@@ -222,6 +222,8 @@ fun ThingsSearchOverlay(
     // Подзаголовки проектов — их находит поиск, нажатие ведёт к подзаголовку в проекте
     headings: List<Item> = emptyList(),
     onHeadingClick: (Item) -> Unit = {},
+    // «Настройки» среди результатов: открывает экран настроек
+    onSettingsClick: () -> Unit = {},
     // [ИЗМЕНЕНИЕ]: Список недавно искавшихся/выбранных в поиске объектов
     recentSearchItems: List<SearchResultItem> = emptyList(),
     onContinueSearchClick: () -> Unit = {},
@@ -368,7 +370,8 @@ fun ThingsSearchOverlay(
         ActiveScreen.LATER_PROJECTS to "Later Projects",
         ActiveScreen.REPEATING to "Repeating"
     )
-    val searchResults = remember(searchQuery, allTasks, projects, areas, allSavedTagObjects, smartListNames, headings) {
+    val settingsTitle = stringResource(R.string.settings_title)
+    val searchResults = remember(searchQuery, allTasks, projects, areas, allSavedTagObjects, smartListNames, headings, settingsTitle) {
         if (searchQuery.isBlank()) {
             emptyList<SearchResultItem>()
         } else {
@@ -382,6 +385,10 @@ fun ThingsSearchOverlay(
                 if (name.contains(query, ignoreCase = true) || englishName?.contains(query, ignoreCase = true) == true) {
                     results.add(SearchResultItem.SmartListResult(name, screen))
                 }
+            }
+            // Настройки, как в Things: после списков, по названию на языке приложения или по-английски
+            if (settingsTitle.contains(query, ignoreCase = true) || SETTINGS_ENGLISH_NAME.contains(query, ignoreCase = true)) {
+                results.add(SearchResultItem.SettingsResult(settingsTitle))
             }
 
             // 2. Проекты, области, теги — в том же порядке, что на экране поиска
@@ -437,6 +444,7 @@ fun ThingsSearchOverlay(
             is SearchResultItem.HeadingResult -> onHeadingClick(first.heading)
             is SearchResultItem.SmartListResult -> onSmartListClick(first.screen)
             is SearchResultItem.SpecialResult -> onSmartListClick(ActiveScreen.INBOX)
+            is SearchResultItem.SettingsResult -> onSettingsClick()
             null -> onContinueSearchClick()
         }
     }
@@ -769,6 +777,7 @@ fun ThingsSearchOverlay(
                                     }
                                     is SearchResultItem.SmartListResult -> item
                                     is SearchResultItem.SpecialResult -> item
+                                    is SearchResultItem.SettingsResult -> item
                                 }
                             }
                         }
@@ -809,6 +818,7 @@ fun ThingsSearchOverlay(
                                         searchQuery = searchQuery,
                                         isHighlighted = false,
                                         isChecked = isCurrent,
+                                        onSettingsClick = onSettingsClick,
                                         onTaskClick = onTaskClick,
                                         onProjectClick = onProjectClick,
                                         onAreaClick = onAreaClick,
@@ -885,6 +895,7 @@ fun ThingsSearchOverlay(
                                         searchQuery = searchQuery,
                                         isHighlighted = (index == 0),
                                         isChecked = false,
+                                        onSettingsClick = onSettingsClick,
                                         onTaskClick = onTaskClick,
                                         onProjectClick = onProjectClick,
                                         onAreaClick = onAreaClick,
@@ -1013,7 +1024,12 @@ sealed class SearchResultItem {
     data class TaskResult(val taskWrapper: ItemWithChecklist) : SearchResultItem()
     /** Подзаголовок проекта: нажатие — в проект, к подзаголовку */
     data class HeadingResult(val heading: Item) : SearchResultItem()
+    /** Экран настроек: нажатие открывает его */
+    data class SettingsResult(val title: String) : SearchResultItem()
 }
+
+/** Английское название настроек — по нему они находятся на любом языке приложения, как особые списки */
+private const val SETTINGS_ENGLISH_NAME = "Settings"
 
 @Composable
 fun SearchResultRow(
@@ -1032,7 +1048,8 @@ fun SearchResultRow(
     onTagClick: (Tag) -> Unit = {},
     onHeadingClick: (Item) -> Unit = {},
     onSmartListClick: (ActiveScreen) -> Unit,
-    onTaskToggle: (ItemWithChecklist) -> Unit = {}
+    onTaskToggle: (ItemWithChecklist) -> Unit = {},
+    onSettingsClick: () -> Unit = {}
 ) {
     val accentColor = ThingsTheme.colors.accent
     when (result) {
@@ -1173,6 +1190,7 @@ fun SearchResultRow(
             val title = when (result) {
                 is SearchResultItem.SmartListResult -> result.title
                 is SearchResultItem.SpecialResult -> result.title
+                is SearchResultItem.SettingsResult -> result.title
                 is SearchResultItem.AreaResult -> result.area.title
                 is SearchResultItem.TagResult -> result.tag.title
                 else -> ""
@@ -1190,6 +1208,7 @@ fun SearchResultRow(
                         when (result) {
                             is SearchResultItem.SmartListResult -> onSmartListClick(result.screen)
                             is SearchResultItem.SpecialResult -> onSmartListClick(ActiveScreen.INBOX)
+                            is SearchResultItem.SettingsResult -> onSettingsClick()
                             is SearchResultItem.AreaResult -> onAreaClick(result.area)
                             is SearchResultItem.TagResult -> onTagClick(result.tag)
                             else -> {}
@@ -1259,6 +1278,15 @@ fun SearchResultRow(
                                 imageVector = result.icon,
                                 contentDescription = null,
                                 tint = result.iconColor,
+                                modifier = iconModifier.requiredSize(ThingsIconSize.M)
+                            )
+                        }
+                        is SearchResultItem.SettingsResult -> {
+                            // Шестерёнка, как у строки «Настройки» на стартовом экране
+                            Icon(
+                                imageVector = Icons.Outlined.Settings,
+                                contentDescription = null,
+                                tint = textSecondary,
                                 modifier = iconModifier.requiredSize(ThingsIconSize.M)
                             )
                         }

@@ -282,6 +282,7 @@ fun ThingsHomeScreen(viewModel: ThingsViewModel = hiltViewModel()) {
                         existing.heading.id == item.heading.id
                     existing is SearchResultItem.SmartListResult && item is SearchResultItem.SmartListResult -> 
                         existing.screen == item.screen
+                    existing is SearchResultItem.SettingsResult && item is SearchResultItem.SettingsResult -> true
                     else -> false
                 }
             }
@@ -978,6 +979,7 @@ fun ThingsHomeScreen(viewModel: ThingsViewModel = hiltViewModel()) {
 
             // [ИЗМЕНЕНИЕ]: Полноэкранный оверлей поиска с бесшовным пространственным морфингом (Spatial UI)
             // Названия смарт-списков для Recent — на языке системы
+            val settingsTitle = stringResource(R.string.settings_title)
             val smartListTitles = mapOf(
                 ActiveScreen.TODAY to stringResource(R.string.category_today),
                 ActiveScreen.INBOX to stringResource(R.string.category_inbox),
@@ -1018,6 +1020,11 @@ fun ThingsHomeScreen(viewModel: ThingsViewModel = hiltViewModel()) {
                     dividerColor = dividerColor,
                     onTaskToggle = { viewModel.toggleTaskCompletion(it) },
                     headings = searchHeadings,
+                    onSettingsClick = {
+                        addToRecent(SearchResultItem.SettingsResult(settingsTitle))
+                        leaveSearchOverlay()
+                        openSettings()
+                    },
                     onHeadingClick = { heading ->
                         addToRecent(SearchResultItem.HeadingResult(heading))
                         openFoundHeading(heading)
