@@ -9,7 +9,6 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.drawscope.Stroke
-import androidx.compose.ui.graphics.drawscope.clipPath
 import androidx.compose.ui.unit.dp
 
 /**
@@ -181,17 +180,35 @@ fun ProjectStackIcon(
                 side - inset - diameter / 2f - side * STACK_STEP * step
             )
         }
-        // Заднее кольцо видно серпом: рядом с кольцом перед ним — просвет
+        // Заднее кольцо видно серпом, как в Things: дуга со скруглёнными концами, а не кольцо, срезанное передним, —
+        // с просветом до колец перед ним
         val clearance = radius + stroke / 2f + stroke * STACK_GAP
-        fun around(center: androidx.compose.ui.geometry.Offset) = androidx.compose.ui.graphics.Path().apply {
-            addOval(androidx.compose.ui.geometry.Rect(center, clearance))
-        }
         fun ring(center: androidx.compose.ui.geometry.Offset) =
             drawCircle(color = color, radius = radius, center = center, style = Stroke(width = stroke))
-        clipPath(around(centers[0]), androidx.compose.ui.graphics.ClipOp.Difference) {
-            clipPath(around(centers[1]), androidx.compose.ui.graphics.ClipOp.Difference) { ring(centers[2]) }
-            ring(centers[1])
+        fun crescent(center: androidx.compose.ui.geometry.Offset, front: List<androidx.compose.ui.geometry.Offset>) {
+            // Кольца перед ним лежат по одной диагонали — закрытая часть симметрична направлению на них:
+            // половина её угла — самая широкая из закрытых каждым кольцом; к ней — скругление конца линии
+            val toFront = front.first() - center
+            val facing = Math.toDegrees(kotlin.math.atan2(toFront.y, toFront.x).toDouble()).toFloat()
+            val hidden = front.maxOf { c ->
+                val d = (c - center).getDistance()
+                val k = ((radius * radius + d * d - clearance * clearance) / (2f * radius * d)).coerceIn(-1f, 1f)
+                Math.toDegrees(kotlin.math.acos(k).toDouble()).toFloat()
+            }
+            val cap = Math.toDegrees((stroke / 2f / radius).toDouble()).toFloat()
+            val from = hidden + cap
+            drawArc(
+                color = color,
+                startAngle = facing + from,
+                sweepAngle = 360f - 2f * from,
+                useCenter = false,
+                topLeft = androidx.compose.ui.geometry.Offset(center.x - radius, center.y - radius),
+                size = androidx.compose.ui.geometry.Size(radius * 2f, radius * 2f),
+                style = Stroke(width = stroke, cap = androidx.compose.ui.graphics.StrokeCap.Round)
+            )
         }
+        crescent(centers[2], listOf(centers[1], centers[0]))
+        crescent(centers[1], listOf(centers[0]))
         if (logged) {
             drawCircle(color = color, radius = diameter / 2f, center = centers[0])
             drawClosedMark(cancelled = false, center = centers[0], diameter = diameter, color = markColor)
