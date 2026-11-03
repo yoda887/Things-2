@@ -51,6 +51,8 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
+import androidx.compose.foundation.interaction.collectIsPressedAsState
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.TransformOrigin
 import androidx.compose.ui.platform.LocalContext
@@ -1129,19 +1131,17 @@ fun ThingsHomeScreen(viewModel: ThingsViewModel = hiltViewModel()) {
                 }
             }
 
+            // Меню «+», как в Things: лёгкое затемнение и карточка появляются сразу, уходят — карточка сжимается к
+            // углу кнопки и гаснет вместе с затемнением
             AnimatedVisibility(
                 visible = showFabMenu,
-                enter = fadeIn(
-                    animationSpec = spring(stiffness = androidx.compose.animation.core.Spring.StiffnessMedium)
-                ),
-                exit = fadeOut(
-                    animationSpec = spring(stiffness = androidx.compose.animation.core.Spring.StiffnessMedium)
-                )
+                enter = fadeIn(tween(ThingsMotion.FAST)),
+                exit = fadeOut(tween(ThingsMotion.MEDIUM, easing = FastOutSlowInEasing))
             ) {
                 Box(
                     modifier = Modifier
                         .fillMaxSize()
-                        .background(ThingsTheme.colors.scrim.copy(alpha = ThingsAlpha.MUTED))
+                        .background(ThingsTheme.colors.scrim.copy(alpha = ThingsAlpha.SUBTLE))
                         .clickable(
                             interactionSource = remember { MutableInteractionSource() },
                             indication = null
@@ -1153,176 +1153,83 @@ fun ThingsHomeScreen(viewModel: ThingsViewModel = hiltViewModel()) {
                         visible = showFabMenu,
                         enter = scaleIn(
                             transformOrigin = TransformOrigin(1f, 1f),
-                            animationSpec = spring(stiffness = androidx.compose.animation.core.Spring.StiffnessMedium)
-                        ) + fadeIn(
-                            animationSpec = spring(stiffness = androidx.compose.animation.core.Spring.StiffnessMedium)
-                        ),
+                            initialScale = FAB_MENU_ENTER_SCALE,
+                            animationSpec = tween(ThingsMotion.FAST, easing = FastOutSlowInEasing)
+                        ) + fadeIn(tween(ThingsMotion.FAST)),
                         exit = scaleOut(
                             transformOrigin = TransformOrigin(1f, 1f),
-                            animationSpec = spring(stiffness = androidx.compose.animation.core.Spring.StiffnessMedium)
-                        ) + fadeOut(
-                            animationSpec = spring(stiffness = androidx.compose.animation.core.Spring.StiffnessMedium)
-                        ),
+                            targetScale = FAB_MENU_EXIT_SCALE,
+                            animationSpec = tween(ThingsMotion.MEDIUM, easing = FastOutSlowInEasing)
+                        ) + fadeOut(tween(ThingsMotion.MEDIUM, easing = FastOutSlowInEasing)),
                         modifier = Modifier
                             .align(Alignment.BottomCenter)
                             .padding(bottom = ThingsSpacing.XXL, start = ThingsSpacing.L, end = ThingsSpacing.L)
                             .fillMaxWidth()
                             .wrapContentHeight()
                     ) {
+                        // Пункты без разделителей; нажатый подсвечивается скруглённой плашкой внутри карточки
                         Column(
                             modifier = Modifier
                                 .fillMaxWidth()
                                 .background(ThingsTheme.colors.overlaySurface, shape = ThingsTheme.shapes.menuShape)
                                 .border(ThingsStroke.THIN, ThingsTheme.colors.overlayContent.copy(alpha = ThingsAlpha.FAINT), ThingsTheme.shapes.menuShape)
-                                .padding(vertical = ThingsSpacing.XS)
+                                .padding(ThingsSpacing.S)
                         ) {
-                            // 1. New To-Do
-                            Row(
-                                modifier = Modifier
-                                    .fillMaxWidth()
-                                    .clickable {
-                                        showFabMenu = false
-                                        showAddDialog = true
-                                    }
-                                    .padding(ThingsSpacing.L),
-                                verticalAlignment = Alignment.Top
-                            ) {
-                                Box(
-                                    modifier = Modifier
-                                        .size(ThingsIconSize.XL)
-                                        .padding(top = ThingsSpacing.XXS),
-                                    contentAlignment = Alignment.Center
-                                ) {
-                                    Icon(
-                                        imageVector = Icons.Default.Add,
-                                        contentDescription = null,
-                                        tint = ThingsTheme.colors.overlayContent,
-                                        modifier = Modifier.size(ThingsIconSize.M)
-                                    )
+                            FabMenuItem(
+                                icon = { Icon(
+                                    imageVector = Icons.Default.Add,
+                                    contentDescription = null,
+                                    tint = ThingsTheme.colors.overlayContent,
+                                    modifier = Modifier.size(ThingsIconSize.M)
+                                ) },
+                                title = stringResource(R.string.ui_new_to_do),
+                                description = stringResource(R.string.ui_quickly_add_a_to_do_to),
+                                onClick = {
+                                    showFabMenu = false
+                                    showAddDialog = true
                                 }
-                                Spacer(modifier = Modifier.width(ThingsSpacing.L))
-                                Column {
-                                    Text(
-                                        text = stringResource(R.string.ui_new_to_do),
-                                        style = ThingsTheme.type.menuItem.copy(color = ThingsTheme.colors.overlayContent)
-                                    )
-                                    Spacer(modifier = Modifier.height(ThingsSpacing.XXS))
-                                    Text(
-                                        text = stringResource(R.string.ui_quickly_add_a_to_do_to),
-                                        style = ThingsTheme.type.bodySmall.copy(
-                                            color = ThingsTheme.colors.overlayContentSecondary
-                                        )
-                                    )
-                                }
-                            }
-
-                            Spacer(
-                                modifier = Modifier
-                                    .fillMaxWidth()
-                                    .padding(horizontal = ThingsSpacing.L)
-                                    .height(ThingsStroke.HAIRLINE)
-                                    .background(ThingsTheme.colors.overlayContent.copy(alpha = ThingsAlpha.FAINT))
                             )
-
-                            // 2. New Project
-                            Row(
-                                modifier = Modifier
-                                    .fillMaxWidth()
-                                    .clickable {
-                                        showFabMenu = false
-                                        // Проект и область создаются и называются на главном экране — с особого
-                                        // списка сначала возвращаемся туда
-                                        if (activeScreen != ActiveScreen.HOME) navController.popBackStack(HomeRoute, inclusive = false)
-                                        val newProjectId = java.util.UUID.randomUUID().toString()
-                                        viewModel.createProject(newProjectId)
-                                        editingProjectId = newProjectId
-                                    }
-                                    .padding(ThingsSpacing.L),
-                                verticalAlignment = Alignment.Top
-                            ) {
-                                Box(
-                                    modifier = Modifier
-                                        .size(ThingsIconSize.XL)
-                                        .padding(top = ThingsSpacing.XXS),
-                                    contentAlignment = Alignment.Center
-                                ) {
-                                    Icon(
-                                        imageVector = Icons.Default.CheckCircle,
-                                        contentDescription = null,
-                                        tint = ThingsTheme.colors.accent,
-                                        modifier = Modifier.size(ThingsIconSize.M)
-                                    )
+                            FabMenuItem(
+                                icon = { // Значок проекта — кольцо с сектором, как в списках
+                                com.example.ui.components.ProjectProgressArc(
+                                    completed = 2,
+                                    total = 3,
+                                    color = ThingsTheme.colors.accent,
+                                    modifier = Modifier.size(ThingsIconSize.M)
+                                ) },
+                                title = stringResource(R.string.ui_new_project),
+                                description = stringResource(R.string.ui_define_a_goal_then_work_towards),
+                                onClick = {
+                                    showFabMenu = false
+                                    // Проект и область создаются и называются на главном экране — с особого
+                                    // списка сначала возвращаемся туда
+                                    if (activeScreen != ActiveScreen.HOME) navController.popBackStack(HomeRoute, inclusive = false)
+                                    val newProjectId = java.util.UUID.randomUUID().toString()
+                                    viewModel.createProject(newProjectId)
+                                    editingProjectId = newProjectId
                                 }
-                                Spacer(modifier = Modifier.width(ThingsSpacing.L))
-                                Column {
-                                    Text(
-                                        text = stringResource(R.string.ui_new_project),
-                                        style = ThingsTheme.type.menuItem.copy(color = ThingsTheme.colors.overlayContent)
-                                    )
-                                    Spacer(modifier = Modifier.height(ThingsSpacing.XXS))
-                                    Text(
-                                        text = stringResource(R.string.ui_define_a_goal_then_work_towards),
-                                        style = ThingsTheme.type.bodySmall.copy(
-                                            color = ThingsTheme.colors.overlayContentSecondary
-                                        )
-                                    )
-                                }
-                            }
-
-                            Spacer(
-                                modifier = Modifier
-                                    .fillMaxWidth()
-                                    .padding(horizontal = ThingsSpacing.L)
-                                    .height(ThingsStroke.HAIRLINE)
-                                    .background(ThingsTheme.colors.overlayContent.copy(alpha = ThingsAlpha.FAINT))
                             )
-
-                            // 3. New Area
-                            Row(
-                                modifier = Modifier
-                                    .fillMaxWidth()
-                                    .clickable {
-                                        showFabMenu = false
-                                        if (activeScreen != ActiveScreen.HOME) navController.popBackStack(HomeRoute, inclusive = false)
-                                        val newAreaId = java.util.UUID.randomUUID().toString()
-                                        val newArea = Area(
-                                            id = newAreaId,
-                                            title = ""
-                                        )
-                                        viewModel.updateArea(newArea)
-                                        editingAreaId = newAreaId
-                                    }
-                                    .padding(ThingsSpacing.L),
-                                verticalAlignment = Alignment.Top
-                            ) {
-                                Box(
-                                    modifier = Modifier
-                                        .size(ThingsIconSize.XL)
-                                        .padding(top = ThingsSpacing.XXS),
-                                    contentAlignment = Alignment.Center
-                                ) {
-                                    Icon(
-                                        imageVector = Icons.Default.Layers,
-                                        contentDescription = null,
-                                        tint = ThingsTheme.colors.area,
-                                        modifier = Modifier.size(ThingsIconSize.M)
+                            FabMenuItem(
+                                icon = { Icon(
+                                    imageVector = AppIcons.Area,
+                                    contentDescription = null,
+                                    tint = ThingsTheme.colors.area,
+                                    modifier = Modifier.size(ThingsIconSize.M)
+                                ) },
+                                title = stringResource(R.string.ui_new_area),
+                                description = stringResource(R.string.ui_group_projects_and_to_dos_based),
+                                onClick = {
+                                    showFabMenu = false
+                                    if (activeScreen != ActiveScreen.HOME) navController.popBackStack(HomeRoute, inclusive = false)
+                                    val newAreaId = java.util.UUID.randomUUID().toString()
+                                    val newArea = Area(
+                                        id = newAreaId,
+                                        title = ""
                                     )
+                                    viewModel.updateArea(newArea)
+                                    editingAreaId = newAreaId
                                 }
-                                Spacer(modifier = Modifier.width(ThingsSpacing.L))
-                                Column {
-                                    Text(
-                                        text = stringResource(R.string.ui_new_area),
-                                        style = ThingsTheme.type.menuItem.copy(color = ThingsTheme.colors.overlayContent)
-                                    )
-                                    Spacer(modifier = Modifier.height(ThingsSpacing.XXS))
-                                    Text(
-                                        text = stringResource(R.string.ui_group_projects_and_to_dos_based),
-                                        style = ThingsTheme.type.bodySmall.copy(
-                                            color = ThingsTheme.colors.overlayContentSecondary
-                                        )
-                                    )
-                                }
-                            }
+                            )
                         }
                     }
                 }
@@ -1422,3 +1329,52 @@ private fun AnimatedVisibilityScope.ScreenTransitionWrapper(
     }
 }
 
+/** Пункт меню «+»: значок, полужирное название и пояснение; нажатие — скруглённая подсветка внутри карточки */
+@Composable
+private fun FabMenuItem(
+    icon: @Composable () -> Unit,
+    title: String,
+    description: String,
+    onClick: () -> Unit
+) {
+    // Нажатый пункт, как в Things, — светлая скруглённая плашка (волна на тёмной карточке почти не видна)
+    val interaction = remember { MutableInteractionSource() }
+    val pressed by interaction.collectIsPressedAsState()
+    // Выбранный пункт остаётся подсвеченным, пока меню уходит
+    var chosen by remember { mutableStateOf(false) }
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .clip(ThingsTheme.shapes.chipShape)
+            .background(if (pressed || chosen) ThingsTheme.colors.overlayControl else Color.Transparent)
+            .clickable(interactionSource = interaction, indication = null) {
+                chosen = true
+                onClick()
+            }
+            .padding(horizontal = ThingsSpacing.S, vertical = ThingsSpacing.S_PLUS),
+        verticalAlignment = Alignment.Top
+    ) {
+        Box(
+            modifier = Modifier
+                .size(ThingsIconSize.XL)
+                .padding(top = ThingsSpacing.XXS),
+            contentAlignment = Alignment.Center
+        ) { icon() }
+        Spacer(modifier = Modifier.width(ThingsSpacing.M))
+        Column {
+            Text(
+                text = title,
+                style = ThingsTheme.type.dialogRowSelected.copy(color = ThingsTheme.colors.overlayContent)
+            )
+            Spacer(modifier = Modifier.height(ThingsSpacing.XXS))
+            Text(
+                text = description,
+                style = ThingsTheme.type.subhead.copy(color = ThingsTheme.colors.overlayContentSecondary)
+            )
+        }
+    }
+}
+
+/** Меню «+»: карточка появляется с этого масштаба и уходит к углу кнопки до этого (как в Things) */
+private const val FAB_MENU_ENTER_SCALE = 0.92f
+private const val FAB_MENU_EXIT_SCALE = 0.2f
