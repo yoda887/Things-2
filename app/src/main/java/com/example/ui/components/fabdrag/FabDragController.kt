@@ -38,6 +38,20 @@ class FabDragController {
     var cancelBounds: androidx.compose.ui.geometry.Rect? = null
     var inboxBounds: androidx.compose.ui.geometry.Rect? = null
 
+    /**
+     * Верх полосы кнопок «Входящие» и отмены (в координатах корня), пока «+» тянут; null — кнопок нет.
+     * Ниже этой линии список не прокручивается: палец идёт к кнопкам, а не листает список
+     */
+    val actionsBandTop: Float?
+        get() = listOfNotNull(inboxBounds, cancelBounds).minOfOrNull { it.top }?.takeIf { isDragging }
+
+    /**
+     * Линия включения автопрокрутки вниз (в координатах корня), пока «+» тянут: середина кружка «Входящих» —
+     * список листается, когда палец ниже неё, на уровне нижней половины кружков; null — кнопок нет
+     */
+    val scrollDownLine: Float?
+        get() = inboxBounds?.center?.y?.takeIf { isDragging }
+
     /** Центр кнопки «+» в покое в координатах корня; кружок отмены встаёт ровно на него */
     var homeCenter by mutableStateOf(Offset.Zero)
 

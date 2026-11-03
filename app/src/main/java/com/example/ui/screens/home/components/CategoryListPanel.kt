@@ -1,5 +1,6 @@
 package com.example.ui.screens.home.components
 
+import com.example.ui.components.fabdrag.actionAt
 import androidx.compose.material.icons.automirrored.filled.ShortText
 import androidx.compose.ui.layout.findRootCoordinates
 import com.example.ui.screens.home.subcomponents.EXPANDED_BOTTOM_GAP
@@ -507,6 +508,10 @@ fun ThingsCategoryListPanel(
     val acceptsFabDrop = screen in FAB_DROP_SCREENS && !state.isSelectionMode
     // Высота промежутка до его появления — по ней первый раз выбирается место
     val fabDefaultGapPx = with(androidx.compose.ui.platform.LocalDensity.current) { FAB_GAP_HEIGHT.toPx() }
+    val fabScrollBottomZonePx = with(androidx.compose.ui.platform.LocalDensity.current) { FAB_SCROLL_BOTTOM_ZONE.toPx() }
+    // Линия прокрутки вверх для центра «+»: кнопка почти касается нижнего края верхней панели (список идёт под ней
+    // от верха экрана)
+    val fabScrollTopLinePx = with(androidx.compose.ui.platform.LocalDensity.current) { (TOP_APP_BAR_HEIGHT + FAB_SCROLL_TOP_GAP).toPx() }
     var listCoordinates by remember { mutableStateOf<androidx.compose.ui.layout.LayoutCoordinates?>(null) }
     var fabSlot by remember { mutableStateOf<FabSlot?>(null) }
     // Раздвигание после сброса: промежуток вырастает до высоты раскрытой задачи, и только потом создаётся задача
@@ -797,6 +802,10 @@ fun ThingsCategoryListPanel(
                 if (!FabInsertion.isAnchor(flat[index])) return@mapNotNull null
                 var top = (info.offset - layoutInfo.viewportStartOffset).toFloat()
                 if (gapInfo != null && info.offset > gapInfo.offset) top -= gapSize
+                // Строка, зашедшая под верхнюю панель, — не место для промежутка: список держит на месте первую
+                // видимую строку, и промежуток перед ней встал бы за краем экрана. При прокрутке вверх у подзаголовков
+                // групп (они не якоря) место перескакивало туда и обратно, и список дёргался
+                if (top < layoutInfo.beforeContentPadding) return@mapNotNull null
                 FabRow(index, top, info.size.toFloat())
             }
             val asHeading = screen == ActiveScreen.PROJECT_DETAIL && x < width * FAB_HEADING_EDGE_FRACTION
@@ -809,12 +818,23 @@ fun ThingsCategoryListPanel(
             }
             // Автопрокрутка, когда палец у края списка
             val zone = height * FAB_SCROLL_ZONE_FRACTION
+            // Нижний край — над полосой кнопок «Входящие» и отмены: пока палец ведут к ним по низу экрана,
+            // список стоит на месте
+            val bottom = controller.actionsBandTop?.let { (it - origin.y).coerceIn(zone * 2f, height) } ?: height
+            // Ниже линии прокрутки скорость нарастает на этом отрезке; над кружком «Входящих» прокрутка останавливается
+            val bottomZone = fabScrollBottomZonePx
+            val fingerY = pointer.y - origin.y
+            // Прокрутка вниз — когда палец на уровне нижней половины кружков (ниже середины кружка «Входящих»)
+            val scrollLine = controller.scrollDownLine?.let { it - origin.y } ?: (bottom - bottomZone)
             // Кнопка стартует у нижнего края — прокрутка включается, только когда палец хотя бы раз
             // вышел из зон у краёв, иначе список уезжал бы сразу после долгого нажатия
-            if (y in zone..(height - zone)) autoScrollArmed = true
+            if (y > fabScrollTopLinePx && fingerY < scrollLine) autoScrollArmed = true
             val delta = if (!autoScrollArmed) 0f else when {
-                y < zone -> -FAB_SCROLL_MAX_STEP * ((zone - y) / zone).coerceIn(0f, 1f)
-                y > height - zone -> FAB_SCROLL_MAX_STEP * ((y - (height - zone)) / zone).coerceIn(0f, 1f)
+                // Вверх — когда «+» подвели почти к краю верхней панели (по центру кнопки, её видно под пальцем),
+                // скорость нарастает на том же отрезке, что внизу
+                y < fabScrollTopLinePx -> -FAB_SCROLL_MAX_STEP * ((fabScrollTopLinePx - y) / bottomZone).coerceIn(0f, 1f)
+                controller.actionAt(pointer) == com.example.ui.components.fabdrag.FabAction.INBOX -> 0f
+                fingerY > scrollLine -> FAB_SCROLL_MAX_STEP * ((fingerY - scrollLine) / bottomZone).coerceIn(0f, 1f)
                 else -> 0f
             }
             if (delta != 0f) lazyListState.scrollBy(delta)
@@ -2617,6 +2637,15 @@ private const val FAB_SPREAD_MS = 100
 /** Автопрокрутка, пока тянут «+»: зона у краёв и наибольший шаг за кадр */
 private const val FAB_SCROLL_ZONE_FRACTION = 0.12f
 private const val FAB_SCROLL_MAX_STEP = 28f
+
+/** Тянут «+»: ниже линии прокрутки (середины кружков) скорость прокрутки вниз нарастает до полной на этом отрезке */
+internal val FAB_SCROLL_BOTTOM_ZONE = 24.dp
+
+/**
+ * Тянут «+»: прокрутка вверх включается, когда центр кнопки на столько ниже нижнего края верхней панели — кнопка
+ * (радиус 28 dp) чуть отступает от панели
+ */
+private val FAB_SCROLL_TOP_GAP = 60.dp
 
 /** Ключ элемента плоского списка — тот же, что у строк LazyColumn */
 private fun listItemKey(element: Any): Any? = when (element) {

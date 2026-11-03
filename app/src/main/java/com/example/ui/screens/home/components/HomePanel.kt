@@ -1,5 +1,6 @@
 package com.example.ui.screens.home.components
 
+import com.example.ui.components.fabdrag.actionAt
 import androidx.compose.ui.layout.findRootCoordinates
 import androidx.compose.ui.layout.boundsInRoot
 import com.example.ui.screens.home.subcomponents.SelectionCircle
@@ -545,12 +546,22 @@ fun ThingsHomePanel(
                 fabGapIndex = FabInsertion.slotAt(y, rows, asHeading = false, gapHeight = if (gapSize > 0) gapSize.toFloat() else fabDefaultGapPx)?.index
                     ?: if (tree.isEmpty() && y > 0f) 0 else fabGapIndex
                 val zone = height * 0.12f
+                // Нижний край — над полосой кнопок «Входящие» и отмены: пока палец ведут к ним по низу экрана,
+                // список стоит на месте
+                val originY = coords.positionInRoot().y
+                val bottom = controller.actionsBandTop?.let { (it - originY).coerceIn(zone * 2f, height) } ?: height
+                val bottomZone = with(density) { FAB_SCROLL_BOTTOM_ZONE.toPx() }
+                val fingerY = pointer.y - originY
+                // Прокрутка вниз — когда палец на уровне нижней половины кружков (ниже середины кружка «Входящих»)
+                val scrollLine = controller.scrollDownLine?.let { it - originY } ?: (bottom - bottomZone)
+                // Ниже линии прокрутки скорость нарастает на этом отрезке; над кружком «Входящих» прокрутка останавливается
                 // Кнопка стартует у нижнего края — прокрутка включается, только когда палец хотя бы раз
                 // вышел из зон у краёв, иначе список уезжал бы сразу после долгого нажатия
-                if (y in zone..(height - zone)) autoScrollArmed = true
+                if (y > zone && fingerY < scrollLine) autoScrollArmed = true
                 val delta = if (!autoScrollArmed) 0f else when {
                     y < zone -> -28f * ((zone - y) / zone).coerceIn(0f, 1f)
-                    y > height - zone -> 28f * ((y - (height - zone)) / zone).coerceIn(0f, 1f)
+                    controller.actionAt(pointer) == com.example.ui.components.fabdrag.FabAction.INBOX -> 0f
+                    fingerY > scrollLine -> 28f * ((fingerY - scrollLine) / bottomZone).coerceIn(0f, 1f)
                     else -> 0f
                 }
                 if (delta != 0f) lazyListState.scrollBy(delta)
