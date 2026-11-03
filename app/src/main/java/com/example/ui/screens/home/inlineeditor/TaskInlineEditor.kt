@@ -442,9 +442,14 @@ fun ThingsTaskInlineEditor(
                     showCursor = isExpanded && outsideTouch?.hideHandles != true,
                     checklistBelow = showChecklistHelper || checklist.isNotEmpty(),
                     autoFocusTitle = autoFocusTitle,
-                    // На клавиатуре у названия — перенос строки, а не «Done», и у новой задачи тоже: название бывает
-                    // в несколько строк; редактор сворачивают тапом вне него
-                    onTitleDone = null,
+                    // На клавиатуре у названия — всегда «Done», а не перенос строки (у новой задачи и у существующей):
+                    // как тап вне редактора — клавиатура уходит в этом же кадре, редактор сворачивается, задача
+                    // сохраняется (пустая новая — удаляется)
+                    onTitleDone = {
+                        outsideTouch?.onCollapseRequested()
+                        view.hideSoftKeyboardNow()
+                        currentOnDone()
+                    },
                     onCheckboxClick = onCheckboxClick@{
                         // Задачу шаблона проекта не отмечают — отмечают её копии
                         if (task.item.isTemplatePart) return@onCheckboxClick
