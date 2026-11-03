@@ -60,12 +60,23 @@ import androidx.compose.foundation.layout.widthIn
 
 // Кружки «отмена» и «во Входящие», пока тянут «+»: размер и отступ от края
 private val FAB_ACTION_SIZE = 44.dp
+
+/**
+ * Размеры кружков, как в Things (замер по кадрам эталона): «Входящие» — крупнее; кружок отмены полного размера,
+ * пока «+» у своего места, и уменьшается, когда его уводят дальше — на этом отрезке пути
+ */
+private val FAB_INBOX_SIZE = 50.dp
+private val FAB_CANCEL_SMALL_SIZE = 30.dp
+private val FAB_CANCEL_SHRINK_FROM = 40.dp
+private val FAB_CANCEL_SHRINK_TO = 80.dp
 private val FAB_ACTION_EDGE = 20.dp
 
 /** Круг «Добавить во Входящие», раскрывающийся из угла, пока «+» над кружком «Входящих» (как в Things) */
 private val FAB_INBOX_BUBBLE_RADIUS = 140.dp
 /** Подпись в круге — выше центра кружка «Входящих» на эту долю радиуса круга */
 private const val FAB_INBOX_LABEL_RISE = 0.62f
+/** Подпись в круге — узкой колонкой в две строки, как «Add to / Inbox» в Things */
+private val FAB_INBOX_LABEL_WIDTH = 96.dp
 
 private const val FAB_SETTLE_MS = 180
 /** Нажатие: полёт к месту новой задачи, мс — как в Things, заметно медленнее посадки после перетаскивания */
@@ -288,8 +299,22 @@ private fun BoxScope.FabBody(
 /** Кружок отмены: центр совпадает с центром кнопки «+» (оба центрируются в одном слоте). */
 @Composable
 private fun BoxScope.FabCancelButton(controller: FabDragController) {
+    // «+» у своего места — кружок отмены полного размера, дальше — меньше (плавно, вместе с ходом пальца)
+    val density = androidx.compose.ui.platform.LocalDensity.current
+    val far = if (controller.isDragging && controller.pointer != Offset.Unspecified) {
+        val distance = (controller.pointer - controller.grabOffset - controller.homeCenter).getDistance()
+        with(density) {
+            ((distance - FAB_CANCEL_SHRINK_FROM.toPx()) / (FAB_CANCEL_SHRINK_TO - FAB_CANCEL_SHRINK_FROM).toPx()).coerceIn(0f, 1f)
+        }
+    } else 0f
+    val cancelSize by androidx.compose.animation.core.animateDpAsState(
+        targetValue = androidx.compose.ui.unit.lerp(FAB_ACTION_SIZE, FAB_CANCEL_SMALL_SIZE, far),
+        animationSpec = spring(stiffness = Spring.StiffnessMedium),
+        label = "fabCancelSize"
+    )
     FabActionButton(
         visible = controller.isDragging,
+        size = cancelSize,
         icon = { Icon(Icons.Default.Close, contentDescription = stringResource(R.string.tag_dialog_cancel), tint = ThingsTheme.colors.overlayContent, modifier = Modifier.size(ThingsIconSize.M)) },
         onBounds = { controller.cancelBounds = it },
         modifier = Modifier.align(Alignment.Center)
@@ -304,7 +329,7 @@ private fun BoxScope.FabCancelButton(controller: FabDragController) {
 fun BoxScope.FabDragActions(controller: FabDragController) {
     var origin by remember { mutableStateOf(Offset.Zero) }
     val density = androidx.compose.ui.platform.LocalDensity.current
-    val sizePx = with(density) { FAB_ACTION_SIZE.roundToPx() }
+    val sizePx = with(density) { FAB_INBOX_SIZE.roundToPx() }
     val startPx = with(density) { FAB_ACTION_EDGE.roundToPx() }
     // «+» над кружком «Входящих» — из угла экрана раскрывается большой тёмный круг с подписью, как в Things
     val overInbox = controller.isDragging && controller.actionAt(controller.pointer) == FabAction.INBOX
@@ -319,7 +344,9 @@ fun BoxScope.FabDragActions(controller: FabDragController) {
             val bubbleColor = ThingsTheme.colors.overlaySurface
             androidx.compose.foundation.Canvas(modifier = Modifier.matchParentSize()) {
                 val center = Offset(startPx + sizePx / 2f, controller.homeCenter.y - origin.y)
-                drawCircle(bubbleColor, radius = bubbleRadiusPx * bubble, center = center)
+                // Растёт из самого кружка «Входящих», как в Things, а не из точки
+                val fromRadius = sizePx / 2f
+                drawCircle(bubbleColor, radius = fromRadius + (bubbleRadiusPx - fromRadius) * bubble, center = center)
             }
             Text(
                 text = stringResource(R.string.fab_add_to_inbox),
@@ -333,11 +360,12 @@ fun BoxScope.FabDragActions(controller: FabDragController) {
                             (controller.homeCenter.y - origin.y - r * FAB_INBOX_LABEL_RISE).toInt()
                         )
                     }
-                    .widthIn(max = FAB_INBOX_BUBBLE_RADIUS)
+                    .widthIn(max = FAB_INBOX_LABEL_WIDTH)
             )
         }
         FabActionButton(
             visible = controller.isDragging,
+            size = FAB_INBOX_SIZE,
             icon = { Icon(Icons.Default.MoveToInbox, contentDescription = stringResource(R.string.cd_move_to_inbox), tint = ThingsTheme.colors.overlayContent, modifier = Modifier.size(ThingsIconSize.L)) },
             onBounds = { controller.inboxBounds = it },
             modifier = Modifier.offset {
@@ -351,6 +379,7 @@ fun BoxScope.FabDragActions(controller: FabDragController) {
 @Composable
 private fun FabActionButton(
     visible: Boolean,
+    size: androidx.compose.ui.unit.Dp = FAB_ACTION_SIZE,
     icon: @Composable () -> Unit,
     onBounds: (Rect?) -> Unit,
     modifier: Modifier
@@ -363,7 +392,7 @@ private fun FabActionButton(
     ) {
         Box(
             modifier = Modifier
-                .size(FAB_ACTION_SIZE)
+                .size(size)
                 .onGloballyPositioned { onBounds(it.boundsInRoot()) }
                 .background(ThingsTheme.colors.overlaySurface, CircleShape),
             contentAlignment = Alignment.Center
