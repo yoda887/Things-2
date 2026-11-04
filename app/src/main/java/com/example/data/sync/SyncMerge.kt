@@ -105,7 +105,10 @@ object SyncMerge {
                 remote.rows[key]?.let { Event.Row(it, mine = false) },
                 remote.deletions[key]?.let { Event.Deletion(it, mine = false) }
             ) ?: continue
-            val winner = deletionOverRecreated(latestEvent, local.deletions[key], remote.deletions[key]) ?: latestEvent
+            // Удаление, уже бывшее общим в прошлом обмене ([base]), здесь знали: запись после него создали сознательно
+            val deletionKnown = base?.deletions?.containsKey(key) == true
+            val winner = (if (deletionKnown) null else deletionOverRecreated(latestEvent, local.deletions[key], remote.deletions[key]))
+                ?: latestEvent
 
             when (winner) {
                 is Event.Row -> {
@@ -191,7 +194,8 @@ object SyncMerge {
      * вычисленный id) — запись новее удаления и иначе вернула бы задачу на все устройства. Побеждает удаление: запись
      * создана ([CREATION_DATE]) не раньше удаления — значит, это не правка удалённой задачи, а её новая копия. У обычных
      * задач id случайные и с удалённой записью не совпадают; восстановленная задача сохраняет прежнее время создания.
-     * null — не тот случай.
+     * Только пока удаление не было общим: если оно уже было в прошлом обмене, копию создали, зная о нём (повтор включили
+     * заново в тот же день, — тот же вычисленный id), и она остаётся. null — не тот случай.
      */
     private fun deletionOverRecreated(winner: Event, mine: SyncDeletionMark?, theirs: SyncDeletionMark?): Event? {
         if (winner !is Event.Row || winner.row.key.table != ITEMS) return null

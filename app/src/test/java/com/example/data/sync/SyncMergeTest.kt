@@ -316,4 +316,15 @@ class SyncMergeTest {
         assertTrue(again.applyLocally.isEmpty())
         assertFalse(again.remoteChanged)
     }
+
+    @Test
+    fun repeatCopyRecreatedAfterKnownDeletion_stays() {
+        // Удаление уже было общим (в прошлом обмене); здесь копию того же дня создали снова — повтор включили
+        // заново. Это не «воскрешение» с устройства, не знавшего об удалении: копия остаётся
+        val base = state(deletions = listOf(deletion("a", 100)))
+        val recreated = item(300, "status" to 0L, "creationDate" to 300L)
+        val result = SyncMerge.merge(state(listOf(recreated)), state(deletions = listOf(deletion("a", 100))), base)
+        assertTrue(result.merged.rows.containsKey(key("a")))
+        assertTrue(result.deleteLocally.isEmpty())
+    }
 }
