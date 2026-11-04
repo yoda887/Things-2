@@ -561,7 +561,9 @@ fun TaskItemRow(
                                 text = relativeText,
                                 style = ThingsTheme.type.taskSubtitle.copy(
                                     color = color
-                                )
+                                ),
+                                maxLines = 1,
+                                softWrap = false
                             )
                         }
                     }
@@ -573,11 +575,14 @@ fun TaskItemRow(
                     } else {
                         ThingsTheme.colors.textSecondary
                     }
+                    // Подпись — одной строкой, как и название
                     Text(
                         text = subtitle,
                         style = ThingsTheme.type.taskSubtitle.copy(
                             color = subtitleColor
-                        )
+                        ),
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis
                     )
                 }
                 }
@@ -618,6 +623,8 @@ internal fun DateBadge(text: String) {
         style = ThingsTheme.type.badge.copy(
             color = ThingsTheme.colors.badgeText
         ),
+        maxLines = 1,
+        softWrap = false,
         modifier = Modifier
             .background(
                 color = ThingsTheme.colors.badgeBackground,

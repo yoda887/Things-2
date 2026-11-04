@@ -55,7 +55,7 @@ fun SmartListRow(
             Icon(icon, contentDescription = title, tint = iconColor, modifier = Modifier.requiredSize(iconSize))
         }
         Spacer(modifier = Modifier.width(MaterialTheme.dimens.homeRowIconTextGap))
-        Text(title, style = ThingsTheme.type.listTitle.copy(color = textPrimaryColor), modifier = Modifier.weight(1f))
+        Text(title, style = ThingsTheme.type.listTitle.copy(color = textPrimaryColor), maxLines = 1, overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis, modifier = Modifier.weight(1f))
         
         if (count > 0) {
             // [ИЗМЕНЕНИЕ]: Если флаг равен true (для Today и Inbox), рисуем цифру серого цвета и без фона

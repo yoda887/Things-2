@@ -109,7 +109,7 @@ fun ProjectHeadingRow(
                 if (isEditing) {
                     HeadingTitleField(heading = heading, onCommit = onTitleCommit)
                 } else {
-                    Text(text = heading.title, style = headingTitleStyle, maxLines = 1)
+                    Text(text = heading.title, style = headingTitleStyle, maxLines = 1, overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis)
                 }
             }
 

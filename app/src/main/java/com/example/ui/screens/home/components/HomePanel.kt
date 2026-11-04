@@ -718,7 +718,9 @@ fun ThingsHomePanel(
                         Spacer(modifier = Modifier.width(MaterialTheme.dimens.homeRowIconTextGap))
                         Text(
                             text = pluralStringResource(R.plurals.home_later_projects, treeItem.count, treeItem.count),
-                            style = ThingsTheme.type.listItem.copy(color = textSecondaryColor)
+                            style = ThingsTheme.type.listItem.copy(color = textSecondaryColor),
+                            maxLines = 1,
+                            overflow = TextOverflow.Ellipsis
                         )
                     }
                 }
@@ -934,6 +936,8 @@ fun ThingsHomePanel(
                                     style = ThingsTheme.type.listTitle.copy(
                                         color = textPrimaryColor
                                     ),
+                                    maxLines = 1,
+                                    overflow = TextOverflow.Ellipsis,
                                     modifier = Modifier.weight(1f)
                                 )
                             }
