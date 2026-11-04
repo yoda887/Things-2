@@ -3,6 +3,7 @@ package com.example.domain.usecase.project
 import com.example.data.model.Item
 import com.example.data.model.ItemWithChecklist
 import com.example.domain.repository.ITaskRepository
+import com.example.domain.usecase.task.withoutRepeat
 import java.util.UUID
 import javax.inject.Inject
 
@@ -24,7 +25,8 @@ class DuplicateProjectUseCase @Inject constructor(private val repository: ITaskR
         orderedProjects: List<Item> = emptyList()
     ) {
         val now = System.currentTimeMillis()
-        fun Item.fresh(id: String) = copy(
+        // Дубликат повторяющегося проекта (шаблона или копии) — обычный проект с обычными задачами, без повтора
+        fun Item.fresh(id: String) = withoutRepeat().copy(
             id = id,
             googleTaskId = null,
             googleTaskListId = null,

@@ -1,5 +1,6 @@
 package com.example.domain.usecase.task
 
+import com.example.data.model.Item
 import com.example.data.model.ItemWithChecklist
 import com.example.domain.repository.ITaskRepository
 import java.util.UUID
@@ -16,7 +17,8 @@ class DuplicateTaskUseCase @Inject constructor(private val repository: ITaskRepo
      */
     suspend operator fun invoke(wrapper: ItemWithChecklist) {
         val newId = UUID.randomUUID().toString()
-        val copiedItem = wrapper.item.copy(
+        // Дубликат повторяющейся задачи (шаблона или копии) — обычная задача, без повтора
+        val copiedItem = wrapper.item.withoutRepeat().copy(
             id = newId,
             googleTaskId = null,
             googleTaskListId = null,
@@ -33,4 +35,15 @@ class DuplicateTaskUseCase @Inject constructor(private val repository: ITaskRepo
             repository.setItemTagsByTitles(newId, copiedItem.tags)
         }
     }
+}
+
+/**
+ * Обычная задача или проект вместо повторяющихся: шаблон задачи — задача, шаблон проекта — проект, задача внутри
+ * шаблона проекта — задача, у копии повтора — без ссылки на шаблон. Так дубликат не повторяется и не считается
+ * копией повтора. Остальное не меняется.
+ */
+internal fun Item.withoutRepeat(): Item = when (type) {
+    Item.TYPE_TEMPLATE -> copy(type = Item.TYPE_TASK, repeatTemplateId = null)
+    Item.TYPE_PROJECT_TEMPLATE -> copy(type = Item.TYPE_PROJECT, repeatTemplateId = null)
+    else -> if (repeatTemplateId != null) copy(repeatTemplateId = null) else this
 }
