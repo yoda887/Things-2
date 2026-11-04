@@ -2650,6 +2650,8 @@ private fun listItemKey(element: Any): Any? = when (element) {
     is UpcomingMonthHeaderItem -> "${TaskListKeys.MONTH_HEADER_PREFIX}${element.monthMillis}"
     is LogbookHeaderItem -> element.key
     is ListToggleItem -> element.key
+    // Заголовок группы по проекту или области («Сегодня», «В любое время») — промежуток «+» встаёт и перед ним
+    is SearchSectionHeaderItem -> element.key
     is String -> element
     else -> null
 }

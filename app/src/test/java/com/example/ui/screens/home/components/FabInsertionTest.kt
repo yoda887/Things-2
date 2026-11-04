@@ -232,4 +232,19 @@ class FabInsertionTest {
         assertNull(evening.placeHeader)
         assertNull(FabInsertion.taskPlacement(today, 4, listOf(d1, e1)).placeHeader)
     }
+
+    @Test
+    fun groupHeader_isAnchor_gapBetweenGroupsGoesToUpperGroup() {
+        // «Сегодня» по проектам и областям: промежуток можно поставить и перед заголовком группы — между группами;
+        // задача тогда встаёт в конец верхней группы
+        assertTrue(FabInsertion.isAnchor(SearchSectionHeaderItem("group:A", "A", SearchSectionKind.AREA)))
+        val a = SearchSectionHeaderItem("group:P", "P", SearchSectionKind.PROJECT, project = Item(id = "P", title = "P", type = Item.TYPE_PROJECT))
+        val b = SearchSectionHeaderItem("group:Q", "Q", SearchSectionKind.PROJECT, project = Item(id = "Q", title = "Q", type = Item.TYPE_PROJECT))
+        val p1 = ItemWithChecklist(Item(id = "p1", title = "p1", projectId = "P"))
+        val q1 = ItemWithChecklist(Item(id = "q1", title = "q1", projectId = "Q"))
+        val flat = listOf<Any>(a, p1, b, q1)
+        val placement = FabInsertion.taskPlacement(flat, 2, listOf(p1, q1))
+        assertEquals("P", placement.placeHeader?.project?.id)
+        assertEquals(1, placement.taskIndex)
+    }
 }

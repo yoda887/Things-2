@@ -48,13 +48,17 @@ data class FabHeadingPlacement(val headingIndex: Int, val movedTaskIds: List<Str
  */
 object FabInsertion {
 
-    /** Строки, между которыми может раскрыться промежуток: задачи, заголовки проекта, «Вечер» */
     /** Подзаголовок, разделяющий секции списка: всё, что можно пометить промежутком, кроме задач */
-    private fun isSectionBoundary(element: Any): Boolean =
-        element !is ItemWithChecklist && (isAnchor(element) || element is SearchSectionHeaderItem)
+    private fun isSectionBoundary(element: Any): Boolean = element !is ItemWithChecklist && isAnchor(element)
 
+    /**
+     * Строки, перед которыми может раскрыться промежуток: задачи, заголовки проекта, «Вечер», дни и месяцы «Планов»,
+     * разделы области и заголовки групп по проектам и областям («Сегодня», «В любое время») — промежуток перед
+     * заголовком группы стоит между группами, задача встаёт в конец верхней
+     */
     fun isAnchor(element: Any): Boolean =
         element is ItemWithChecklist || element is ProjectHeadingItem || element == TaskListKeys.EVENING_HEADER ||
+            element is SearchSectionHeaderItem ||
             element is UpcomingHeaderItem || element is UpcomingMonthHeaderItem ||
             element == TaskListKeys.AREA_UPCOMING_HEADING || element == TaskListKeys.AREA_SOMEDAY_HEADING
 
