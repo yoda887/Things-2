@@ -359,7 +359,11 @@ fun TaskItemRow(
             val repeatRule = if (task.isRepeatTemplate && screen != ActiveScreen.UPCOMING) {
                 com.example.ui.components.LocalRepeatRules.current[task.id]
             } else null
-            val repeatBadge = com.example.ui.components.repeatBadge(repeatRule)
+            // Следующий повтор шаблона сегодня (или уже наступил) — звезда перед названием, как у задачи на сегодня,
+            // а не слово «Сегодня» на плашке
+            val repeatToday = repeatRule != null && repeatRule.isActive &&
+                repeatRule.nextGenerationDate in 1..com.example.data.model.DayBounds.now().endOfToday
+            val repeatBadge = if (repeatToday) null else com.example.ui.components.repeatBadge(repeatRule)
             val dateBadge = when {
                 !showStartDate -> null
                 repeatRule != null -> repeatBadge
@@ -425,6 +429,10 @@ fun TaskItemRow(
 
                             // Повторяющаяся задача — синий значок повтора перед названием, как в Things
                             // (у копий — серая стрелка в ряду служебных иконок справа)
+                            if (task.isRepeatTemplate && repeatToday && showStartDate) {
+                                DateIndicatorMark(DateIndicatorResult.IconIndicator(AppIcons.Today, androidx.compose.ui.graphics.Color.Unspecified, todayDescription))
+                                Spacer(modifier = Modifier.width(ThingsSpacing.XS_PLUS))
+                            }
                             if (task.isRepeatTemplate) {
                                 com.example.ui.components.RepeatTemplateIcon(modifier = Modifier.size(ROW_REPEAT_ICON_SIZE))
                                 Spacer(modifier = Modifier.width(ThingsSpacing.XS_PLUS))
