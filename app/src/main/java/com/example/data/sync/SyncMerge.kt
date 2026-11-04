@@ -61,6 +61,9 @@ object SyncMerge {
     /** Item.STATUS_CANCELLED, Item.STATUS_COMPLETED */
     private val CLOSED_STATUSES = setOf(2L, 3L)
 
+    /** Задачи: когда видели новой в «Сегодня» — из двух устройств берётся самое позднее ([keepLatestSeen]) */
+    private const val TODAY_SEEN = "todaySeenAt"
+
     /** Таблицы, чьи записи принадлежат задаче (поле itemId): без задачи они не нужны */
     private val ITEM_CHILDREN = setOf("item_tags", "checklist_items")
 
@@ -122,6 +125,7 @@ object SyncMerge {
                         rows[key] = winner.row
                         sources[key] = if (winner.mine) Source.MINE else Source.THEIRS
                     }
+                    keepLatestSeen(key, mine, theirs, rows, sources)
                 }
                 is Event.Deletion -> {
                     deletions[key] = winner.mark
@@ -195,6 +199,22 @@ object SyncMerge {
         val deletion = listOfNotNull(mine?.let { Event.Deletion(it, mine = true) }, theirs?.let { Event.Deletion(it, mine = false) })
             .maxByOrNull { it.mark.deletedAt } ?: return null
         return if (created >= deletion.mark.deletedAt) deletion else null
+    }
+
+    /**
+     * Отметка «видели в «Сегодня»» ([TODAY_SEEN]) у задачи с двух устройств — самая поздняя, какая бы запись ни взяла
+     * верх: копию повтора каждое устройство создаёт само, и более поздняя копия без отметки иначе стёрла бы «OK»,
+     * нажатый на другом устройстве, — задача снова стала бы новой
+     */
+    private fun keepLatestSeen(key: Key, mine: SyncRow?, theirs: SyncRow?, rows: HashMap<Key, SyncRow>, sources: HashMap<Key, Source>) {
+        if (key.table != ITEMS || mine == null || theirs == null) return
+        val row = rows.getValue(key)
+        val latest = maxOf((mine.values[TODAY_SEEN] as? Number)?.toLong() ?: 0L, (theirs.values[TODAY_SEEN] as? Number)?.toLong() ?: 0L)
+        if (latest <= ((row.values[TODAY_SEEN] as? Number)?.toLong() ?: 0L)) return
+        // Новая запись — позже обеих: на обоих устройствах она перебьёт прежнюю
+        val at = if (sources[key] == Source.MERGED) row.updatedAt else maxOf(mine.updatedAt, theirs.updatedAt) + 1
+        rows[key] = SyncRow(key, at, row.values + (TODAY_SEEN to latest) + (UPDATED_AT to at))
+        sources[key] = Source.MERGED
     }
 
     private class FieldMerge(val row: SyncRow, val source: Source, val conflicts: Set<String>)

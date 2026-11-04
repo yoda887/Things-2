@@ -92,4 +92,31 @@ class TodayNewsTest {
         // Уже поднятые — второй раз не трогаются
         assertEquals(emptyList<Item>(), TodayNews.raiseNew(list, setOf("new1", "new2"), setOf("new1", "new2"), bounds))
     }
+
+    // ---------------------------------------------------------------- виденное на другом устройстве
+
+    private fun seen(id: String, startDate: Long?, seenAt: Long) =
+        task(id, startDate).let { it.copy(item = it.item.copy(todaySeenAt = seenAt)) }
+
+    @Test
+    fun seenOnOtherDevice_isNotNew() {
+        // «b» пришла в «Сегодня», пока приложение было закрыто, но на другом устройстве её уже видели («OK»)
+        val list = listOf(task("a", today), seen("b", today, seenAt = nowMs - 1000))
+        val known = TodayNews.update(setOf("a"), null, list, bounds, nowMs)
+        assertEquals(emptySet<String>(), TodayNews.newIds(known, TodayNews.todayIds(list, bounds)))
+    }
+
+    @Test
+    fun seenBeforeItsNewDay_isNewAgain() {
+        // Видели вчера, потом задачу перенесли, и сегодня она вернулась с новым днём старта — снова новая
+        val list = listOf(seen("b", today, seenAt = old))
+        val known = TodayNews.update(emptySet(), null, list, bounds, nowMs)
+        assertEquals(setOf("b"), TodayNews.newIds(known, TodayNews.todayIds(list, bounds)))
+    }
+
+    @Test
+    fun toMarkSeen_onlyTodayItemsWithoutMark() {
+        val list = listOf(task("a", today), seen("b", today, seenAt = nowMs), task("c", tomorrow))
+        assertEquals(listOf("a"), TodayNews.toMarkSeen(setOf("a", "b", "c"), list, bounds).map { it.id })
+    }
 }

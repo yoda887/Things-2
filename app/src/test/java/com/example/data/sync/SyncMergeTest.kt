@@ -300,4 +300,20 @@ class SyncMergeTest {
         assertTrue(result.merged.deletions.containsKey(Key("item_tags", "a|t")))
         assertTrue(result.applyLocally.isEmpty())
     }
+
+    @Test
+    fun todaySeenMark_survivesNewerCopyWithoutIt() {
+        // Здесь нажали «OK» (отметка 200); там копию повтора создали позже, без отметки
+        val seenHere = item(200, "todaySeenAt" to 200L, "creationDate" to 100L)
+        val copyThere = item(300, "todaySeenAt" to 0L, "creationDate" to 300L)
+        val result = SyncMerge.merge(state(listOf(seenHere)), state(listOf(copyThere)))
+        val merged = result.merged.rows.getValue(key("a"))
+        assertEquals(200L, merged.values["todaySeenAt"])
+        assertEquals(301L, merged.updatedAt)
+        assertTrue(result.remoteChanged)
+        // Обменялись — второй раз ничего не меняется
+        val again = SyncMerge.merge(state(listOf(merged)), state(listOf(merged)))
+        assertTrue(again.applyLocally.isEmpty())
+        assertFalse(again.remoteChanged)
+    }
 }

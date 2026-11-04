@@ -37,6 +37,16 @@ val MIGRATION_10_11 = object : Migration(10, 11) {
 }
 
 /**
+ * 11 → 12: когда задачу видели новой в «Сегодня» (items.todaySeenAt, 0 — не видели) — отметка синхронизируется, и
+ * плашка новых задач не показывается снова на другом устройстве. Только добавляется столбец.
+ */
+val MIGRATION_11_12 = object : Migration(11, 12) {
+    override fun migrate(db: SupportSQLiteDatabase) {
+        db.execSQL("ALTER TABLE `items` ADD COLUMN `todaySeenAt` INTEGER NOT NULL DEFAULT 0")
+    }
+}
+
+/**
  * Версия 10: синхронизация устройств — у каждой записи время последнего изменения (`updatedAt`), журнал удалений
  * (`sync_deletions`) и триггеры, которые их ведут (SyncTriggers). Время уже существующих записей — время миграции
  * (у задач — их modificationDate): до синхронизации все записи «изменены» одинаково.

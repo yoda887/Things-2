@@ -15,6 +15,7 @@ import com.example.data.model.SyncDeletion
 // Версия 9: повторяющиеся задачи — копия ссылается на шаблон, у правила счётчик копий — MIGRATION_8_9
 // Версия 10: синхронизация устройств — время изменения записей, журнал удалений, триггеры — MIGRATION_9_10
 // Версия 11: порядок внутри дня в «Планах» (items.dayOrder) — MIGRATION_10_11
+// Версия 12: когда задачу видели новой в «Сегодня» (items.todaySeenAt) — MIGRATION_11_12
 @Database(
     entities = [Area::class, Item::class, Tag::class, ItemTag::class, ChecklistItem::class, RecurrenceRule::class, SyncDeletion::class],
     version = AppDatabase.VERSION,
@@ -26,6 +27,6 @@ abstract class AppDatabase : RoomDatabase() {
 
     companion object {
         /** Версия схемы — её же проверяет восстановление из копии (DatabaseBackup) */
-        const val VERSION = 11
+        const val VERSION = 12
     }
 }

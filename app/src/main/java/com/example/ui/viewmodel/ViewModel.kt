@@ -188,6 +188,13 @@ class ThingsViewModel @Inject constructor(
                     todayKnown ?: today, previousToday, list, bounds, System.currentTimeMillis()
                 )
                 previousToday = today
+                // Виденное здесь с прошлого списка (поставили на сегодня сами) — отметка в базе для других устройств.
+                // Самый первый раз (todayKnown ещё не было) всё «Сегодня» виденное лишь здесь — без отметок
+                if (todayKnown != null) {
+                    val fresh = known - todayKnown.orEmpty()
+                    val toMark = com.example.domain.lists.TodayNews.toMarkSeen(fresh, list, bounds)
+                    if (toMark.isNotEmpty()) markTodaySeen(toMark)
+                }
                 if (known != todayKnown) {
                     todayKnown = known
                     homeLayoutPrefs.setTodaySeenIds(known)
@@ -222,12 +229,21 @@ class ThingsViewModel @Inject constructor(
         _datesWithMonthName.value = monthName
     }
 
-    /** «OK» на плашке «Сегодня»: всё, что там сейчас, — виденное, точки и плашка пропадают */
+    /** «OK» на плашке «Сегодня»: всё, что там сейчас, — виденное, точки и плашка пропадают — и на других устройствах */
     fun dismissTodayNew() {
-        val known = (todayKnown ?: emptySet()) + _todayNewIds.value
+        val dismissed = _todayNewIds.value
+        val known = (todayKnown ?: emptySet()) + dismissed
         todayKnown = known
         homeLayoutPrefs.setTodaySeenIds(known)
         _todayNewIds.value = emptySet()
+        val toMark = com.example.domain.lists.TodayNews.toMarkSeen(dismissed, tasks.value, com.example.data.model.DayBounds.now())
+        if (toMark.isNotEmpty()) markTodaySeen(toMark)
+    }
+
+    /** Отметка «видели в «Сегодня»» в базе — она уходит на другие устройства синхронизацией */
+    private fun markTodaySeen(items: List<Item>) {
+        val now = System.currentTimeMillis()
+        updateTasks(items.map { it.copy(todaySeenAt = now) })
     }
 
     private val _highlightedTaskId = MutableStateFlow<String?>(null)

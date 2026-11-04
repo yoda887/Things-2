@@ -96,6 +96,12 @@ data class Item(
      * выше; null — ещё не задан (после null-ов). Правила — [com.example.domain.lists.UpcomingOrder].
      */
     val dayOrder: Long? = null,
+    /**
+     * Когда задачу или проект последний раз видели новыми в «Сегодня» — нажали «OK» на плашке новых или сами поставили
+     * на сегодня (мс; 0 — не видели). Синхронизируется: что увидели на одном устройстве, на другом уже не новое
+     * ([com.example.domain.lists.TodayNews])
+     */
+    @ColumnInfo(defaultValue = "0") val todaySeenAt: Long = 0L,
     /** Когда запись менялась последний раз (мс) — ставит триггер базы (SyncTriggers), для синхронизации устройств */
     @ColumnInfo(defaultValue = "0") val updatedAt: Long = 0L
 ) {

@@ -39,7 +39,24 @@ object TodayNews {
         val entered = if (previous == null) emptySet() else today - previous
         val byId = items.associateBy { it.item.id }
         val placed = entered.filter { id -> byId[id]?.item?.let { placedJustNow(it, now) } == true }
-        return (known intersect today) + placed
+        // Увиденное на другом устройстве (отметка пришла синхронизацией) — тоже виденное
+        val seenElsewhere = today.filter { id -> byId[id]?.item?.let(::seenInToday) == true }
+        return (known intersect today) + placed + seenElsewhere
+    }
+
+    /**
+     * Задачу уже видели в «Сегодня» — на этом или другом устройстве: отметка [Item.todaySeenAt] не раньше её дня
+     * старта. Ушедшая из «Сегодня» на другой день и вернувшаяся задача получает новый день старта — снова новая
+     */
+    fun seenInToday(item: Item): Boolean = item.todaySeenAt > 0 && item.todaySeenAt >= (item.startDate ?: 0L)
+
+    /**
+     * Что отметить виденным в базе, чтобы другие устройства не показали это новым: виденное ([known]) из «Сегодня»
+     * ([items]) без отметки или с устаревшей
+     */
+    fun toMarkSeen(known: Set<String>, items: List<ItemWithChecklist>, bounds: DayBounds): List<Item> {
+        val today = todayIds(items, bounds)
+        return items.map { it.item }.filter { it.id in known && it.id in today && !seenInToday(it) }
     }
 
     /** Новое — то, что в «Сегодня», но ещё не видели */
