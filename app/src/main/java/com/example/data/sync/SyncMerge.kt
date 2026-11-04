@@ -61,6 +61,9 @@ object SyncMerge {
     /** Item.STATUS_CANCELLED, Item.STATUS_COMPLETED */
     private val CLOSED_STATUSES = setOf(2L, 3L)
 
+    /** Таблицы, чьи записи принадлежат задаче (поле itemId): без задачи они не нужны */
+    private val ITEM_CHILDREN = setOf("item_tags", "checklist_items")
+
     /** Поля задачи, которые выводятся из других таблиц: при правке на обоих — пересчитываются */
     private const val CACHED_TAGS = "cachedTags"
     private const val CHECKLIST_TOTAL = "checklistItemsCount"
@@ -93,12 +96,13 @@ object SyncMerge {
         var remoteChanged = false
 
         for (key in keys) {
-            val winner = latest(
+            val latestEvent = latest(
                 local.rows[key]?.let { Event.Row(it, mine = true) },
                 local.deletions[key]?.let { Event.Deletion(it, mine = true) },
                 remote.rows[key]?.let { Event.Row(it, mine = false) },
                 remote.deletions[key]?.let { Event.Deletion(it, mine = false) }
             ) ?: continue
+            val winner = deletionOverRecreated(latestEvent, local.deletions[key], remote.deletions[key]) ?: latestEvent
 
             when (winner) {
                 is Event.Row -> {
@@ -126,6 +130,22 @@ object SyncMerge {
                         remoteChanged = true
                     }
                 }
+            }
+        }
+
+        // Пункты чек-листа и связи с тегами задачи, удалённой насовсем, уходят вместе с ней: копию повтора, созданную
+        // заново на другом устройстве, удаление перебило, а её пункты и связи (с теми же вычисленными id) остались бы
+        // без задачи
+        val deletedItems = deletions.keys.filter { it.table == ITEMS && it !in rows }.associateBy { it.id }
+        if (deletedItems.isNotEmpty()) {
+            val orphans = rows.keys.filter { it.table in ITEM_CHILDREN && (rows.getValue(it).values["itemId"] as? String) in deletedItems }
+            for (key in orphans) {
+                val itemKey = deletedItems.getValue(rows.getValue(key).values["itemId"] as String)
+                rows.remove(key)
+                sources.remove(key)
+                deletions[key] = SyncDeletionMark(key, deletions.getValue(itemKey).deletedAt)
+                if (key in local.rows) delete += key
+                if (key in remote.rows || key !in remote.deletions) remoteChanged = true
             }
         }
 
@@ -160,6 +180,21 @@ object SyncMerge {
         val closedAt = closed.created() ?: return null
         val openAt = open.created() ?: return null
         return if (openAt > closedAt) closed else null
+    }
+
+    /**
+     * Копию повтора удалили насовсем на одном устройстве, а другое, ещё не узнав об этом, создало её заново (тот же
+     * вычисленный id) — запись новее удаления и иначе вернула бы задачу на все устройства. Побеждает удаление: запись
+     * создана ([CREATION_DATE]) не раньше удаления — значит, это не правка удалённой задачи, а её новая копия. У обычных
+     * задач id случайные и с удалённой записью не совпадают; восстановленная задача сохраняет прежнее время создания.
+     * null — не тот случай.
+     */
+    private fun deletionOverRecreated(winner: Event, mine: SyncDeletionMark?, theirs: SyncDeletionMark?): Event? {
+        if (winner !is Event.Row || winner.row.key.table != ITEMS) return null
+        val created = (winner.row.values[CREATION_DATE] as? Number)?.toLong() ?: return null
+        val deletion = listOfNotNull(mine?.let { Event.Deletion(it, mine = true) }, theirs?.let { Event.Deletion(it, mine = false) })
+            .maxByOrNull { it.mark.deletedAt } ?: return null
+        return if (created >= deletion.mark.deletedAt) deletion else null
     }
 
     private class FieldMerge(val row: SyncRow, val source: Source, val conflicts: Set<String>)

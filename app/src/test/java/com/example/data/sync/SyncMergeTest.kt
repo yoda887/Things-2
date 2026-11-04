@@ -259,4 +259,45 @@ class SyncMergeTest {
         val result = SyncMerge.merge(state(listOf(done)), state(listOf(reopened)))
         assertEquals(0L, result.merged.rows.getValue(key("a")).values["status"])
     }
+
+    // ---------------------------------------------------------------- удалённая копия повтора, созданная заново
+
+    @Test
+    fun deletedRepeatCopy_recreatedOnOtherDevice_staysDeleted() {
+        // Здесь копию удалили в 100; там, ещё не узнав, создали её заново в 300 (тот же вычисленный id)
+        val recreated = item(300, "status" to 0L, "creationDate" to 300L)
+        val result = SyncMerge.merge(state(deletions = listOf(deletion("a", 100))), state(listOf(recreated)))
+        assertFalse(result.merged.rows.containsKey(key("a")))
+        assertEquals(100L, result.merged.deletions.getValue(key("a")).deletedAt)
+        assertTrue(result.applyLocally.isEmpty())
+        assertTrue(result.remoteChanged)
+    }
+
+    @Test
+    fun recreatedRepeatCopyHere_deletedThere_removedLocally() {
+        val recreated = item(300, "status" to 0L, "creationDate" to 300L)
+        val result = SyncMerge.merge(state(listOf(recreated)), state(deletions = listOf(deletion("a", 100))))
+        assertEquals(listOf(key("a")), result.deleteLocally)
+        assertFalse(result.merged.rows.containsKey(key("a")))
+    }
+
+    @Test
+    fun taskEditedAfterDeletionElsewhere_stillComesBack() {
+        // Задача была до удаления (создана раньше), её правили там позже — правка по-прежнему побеждает
+        val edited = item(300, "status" to 0L, "creationDate" to 50L)
+        val result = SyncMerge.merge(state(deletions = listOf(deletion("a", 100))), state(listOf(edited)))
+        assertTrue(result.merged.rows.containsKey(key("a")))
+    }
+
+    @Test
+    fun checklistAndTagsOfDeletedRepeatCopy_goWithIt() {
+        val recreated = item(300, "status" to 0L, "creationDate" to 300L)
+        val point = other("checklist_items", "p", 300, "id" to "p", "itemId" to "a")
+        val link = other("item_tags", "a|t", 300, "itemId" to "a", "tagId" to "t")
+        val result = SyncMerge.merge(state(deletions = listOf(deletion("a", 100))), state(listOf(recreated, point, link)))
+        assertTrue(result.merged.rows.isEmpty())
+        assertTrue(result.merged.deletions.containsKey(Key("checklist_items", "p")))
+        assertTrue(result.merged.deletions.containsKey(Key("item_tags", "a|t")))
+        assertTrue(result.applyLocally.isEmpty())
+    }
 }
