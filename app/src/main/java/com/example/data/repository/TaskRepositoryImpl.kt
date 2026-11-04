@@ -96,6 +96,10 @@ class TaskRepositoryImpl @Inject constructor(
         }
     }
 
+    override suspend fun markTodaySeen(ids: List<String>, at: Long): Unit = withContext(Dispatchers.IO) {
+        if (ids.isNotEmpty()) localDataSource.markTodaySeen(ids, at)
+    }
+
     override suspend fun refreshChecklistCounters(itemId: String): Unit = withContext(Dispatchers.IO) {
         val total = localDataSource.getTotalChecklistCount(itemId)
         val open = localDataSource.getOpenChecklistCount(itemId)

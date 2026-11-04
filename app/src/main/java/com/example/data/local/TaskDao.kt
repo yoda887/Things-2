@@ -123,6 +123,10 @@ interface TaskDao {
     @Query("UPDATE items SET checklistItemsCount = :total, openChecklistItemsCount = :open WHERE id = :itemId")
     suspend fun updateChecklistCounters(itemId: String, total: Int, open: Int)
 
+    /** Отметка «видели в «Сегодня»» — только это поле, остальное в задачах не трогается ([at] — не раньше прежней) */
+    @Query("UPDATE items SET todaySeenAt = :at WHERE id IN (:ids) AND todaySeenAt < :at")
+    suspend fun markTodaySeen(ids: List<String>, at: Long)
+
     @Query("SELECT COUNT(*) FROM checklist_items WHERE itemId = :itemId")
     suspend fun getTotalChecklistCount(itemId: String): Int
 

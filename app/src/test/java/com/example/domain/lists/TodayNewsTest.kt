@@ -119,4 +119,13 @@ class TodayNewsTest {
         val list = listOf(task("a", today), seen("b", today, seenAt = nowMs), task("c", tomorrow))
         assertEquals(listOf("a"), TodayNews.toMarkSeen(setOf("a", "b", "c"), list, bounds).map { it.id })
     }
+
+    @Test
+    fun seenEarlierSameDay_beforeStartTime_isSeen() {
+        // Старт сегодня в 09:00, на другом устройстве видели в 02:00 того же дня — не новая
+        val at9 = bounds.todayStart + 9 * 60 * 60 * 1000L
+        val list = listOf(seen("b", at9, seenAt = bounds.todayStart + 2 * 60 * 60 * 1000L))
+        val known = TodayNews.update(emptySet(), null, list, bounds, nowMs)
+        assertEquals(emptySet<String>(), TodayNews.newIds(known, TodayNews.todayIds(list, bounds)))
+    }
 }

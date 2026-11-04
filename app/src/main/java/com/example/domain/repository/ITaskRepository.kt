@@ -55,6 +55,9 @@ interface ITaskRepository {
      */
     suspend fun refreshChecklistCounters(itemId: String)
 
+    /** Отметка «видели в «Сегодня»» у задач [ids] — только это поле: правки задач, сделанные тем временем, не теряются */
+    suspend fun markTodaySeen(ids: List<String>, at: Long)
+
     /**
      * Извлекает локальные события календаря из системного контент-провайдера.
      * @return [Result] со списком событий календаря

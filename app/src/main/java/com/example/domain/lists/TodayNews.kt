@@ -40,15 +40,22 @@ object TodayNews {
         val byId = items.associateBy { it.item.id }
         val placed = entered.filter { id -> byId[id]?.item?.let { placedJustNow(it, now) } == true }
         // Увиденное на другом устройстве (отметка пришла синхронизацией) — тоже виденное
-        val seenElsewhere = today.filter { id -> byId[id]?.item?.let(::seenInToday) == true }
+        val seenElsewhere = today.filter { id -> byId[id]?.item?.let { seenInToday(it) } == true }
         return (known intersect today) + placed + seenElsewhere
     }
 
     /**
-     * Задачу уже видели в «Сегодня» — на этом или другом устройстве: отметка [Item.todaySeenAt] не раньше её дня
-     * старта. Ушедшая из «Сегодня» на другой день и вернувшаяся задача получает новый день старта — снова новая
+     * Задачу уже видели в «Сегодня» — на этом или другом устройстве: отметка [Item.todaySeenAt] не раньше начала её
+     * дня старта (не самого времени старта: у задачи «сегодня в 09:00» отметка в 02:00 — та же). Ушедшая из «Сегодня»
+     * на другой день и вернувшаяся задача получает новый день старта — снова новая
      */
-    fun seenInToday(item: Item): Boolean = item.todaySeenAt > 0 && item.todaySeenAt >= (item.startDate ?: 0L)
+    fun seenInToday(item: Item, zone: java.time.ZoneId = java.time.ZoneId.systemDefault()): Boolean {
+        if (item.todaySeenAt <= 0) return false
+        val startDay = item.startDate?.let {
+            java.time.Instant.ofEpochMilli(it).atZone(zone).toLocalDate().atStartOfDay(zone).toInstant().toEpochMilli()
+        } ?: 0L
+        return item.todaySeenAt >= startDay
+    }
 
     /**
      * Что отметить виденным в базе, чтобы другие устройства не показали это новым: виденное ([known]) из «Сегодня»

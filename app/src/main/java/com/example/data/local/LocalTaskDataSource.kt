@@ -256,6 +256,9 @@ class LocalTaskDataSource(private val taskDao: TaskDao) {
         return taskDao.getOpenChecklistCount(itemId)
     }
 
+    /** Отметка «видели в «Сегодня»» у задач [ids] — только это поле */
+    suspend fun markTodaySeen(ids: List<String>, at: Long) = taskDao.markTodaySeen(ids, at)
+
     /**
      * Обновляет счетчики подпунктов в родительской задаче.
      * @param itemId Идентификатор задачи

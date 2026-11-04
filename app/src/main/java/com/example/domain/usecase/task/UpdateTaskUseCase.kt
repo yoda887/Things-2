@@ -14,6 +14,9 @@ class UpdateTaskUseCase @Inject constructor(private val repository: ITaskReposit
     /**
      * Обновляет задачу базовой информацией.
      */
+    /** Отметка «видели в «Сегодня»» — точечно, без перезаписи задач целиком из (возможно, устаревшего) списка */
+    suspend fun markTodaySeen(ids: List<String>, at: Long) = repository.markTodaySeen(ids, at)
+
     suspend operator fun invoke(item: Item) {
         repository.inTransaction {
             repository.insertTask(item)

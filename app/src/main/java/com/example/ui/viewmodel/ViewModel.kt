@@ -188,11 +188,11 @@ class ThingsViewModel @Inject constructor(
                     todayKnown ?: today, previousToday, list, bounds, System.currentTimeMillis()
                 )
                 previousToday = today
-                // Виденное здесь с прошлого списка (поставили на сегодня сами) — отметка в базе для других устройств.
-                // Самый первый раз (todayKnown ещё не было) всё «Сегодня» виденное лишь здесь — без отметок
+                // Всё виденное здесь — отметка в базе для других устройств: и поставленное на сегодня только что, и
+                // виденное до появления отметок (оно помнилось лишь в настройках этого устройства). Отмеченное второй
+                // раз не пишется. Самый первый раз (todayKnown ещё не было) всё «Сегодня» виденное лишь здесь — без отметок
                 if (todayKnown != null) {
-                    val fresh = known - todayKnown.orEmpty()
-                    val toMark = com.example.domain.lists.TodayNews.toMarkSeen(fresh, list, bounds)
+                    val toMark = com.example.domain.lists.TodayNews.toMarkSeen(known, list, bounds)
                     if (toMark.isNotEmpty()) markTodaySeen(toMark)
                 }
                 if (known != todayKnown) {
@@ -243,7 +243,7 @@ class ThingsViewModel @Inject constructor(
     /** Отметка «видели в «Сегодня»» в базе — она уходит на другие устройства синхронизацией */
     private fun markTodaySeen(items: List<Item>) {
         val now = System.currentTimeMillis()
-        updateTasks(items.map { it.copy(todaySeenAt = now) })
+        viewModelScope.launch { taskUseCases.updateTask.markTodaySeen(items.map { it.id }, now) }
     }
 
     private val _highlightedTaskId = MutableStateFlow<String?>(null)
