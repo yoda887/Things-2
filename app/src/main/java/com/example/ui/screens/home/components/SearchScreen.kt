@@ -42,11 +42,18 @@ private fun MutableList<Any>.addSearchResults(
     if (q.isEmpty()) return
 
     fun Item.isDone() = isCompleted || status == Item.STATUS_CANCELLED
-    val projectsById = projects.filter { it.type == Item.TYPE_PROJECT }.associateBy { it.id }
+    // Шаблоны повторяющихся проектов (они среди всех задач): их задачи группируются под ними, как под проектами
+    val projectTemplates = allTasks.map { it.item }.filter { t ->
+        com.example.domain.lists.RepeatingList.includesProject(t) && projects.none { it.id == t.id }
+    }
+    val groupable = projects + projectTemplates
+    val projectsById = groupable.filter { it.type == Item.TYPE_PROJECT || it.type == Item.TYPE_PROJECT_TEMPLATE }.associateBy { it.id }
     val areasById = areas.associateBy { it.id }
-    // Задача в удалённом проекте или области — в корзине вместе с ними, в поиске её нет
+    // Задача в удалённом проекте или области — в корзине вместе с ними, в поиске её нет; задача шаблона
+    // повторяющегося проекта — только пока есть сам шаблон
     val active = matchedTasks.filter { task ->
         !task.item.isDone() &&
+            !(task.item.isTemplatePart && task.item.projectId?.let { projectsById[it] } == null) &&
             task.item.projectId?.let { projectsById[it]?.trashed } != true &&
             task.item.areaId?.let { areasById[it]?.trashed } != true
     }
@@ -60,9 +67,6 @@ private fun MutableList<Any>.addSearchResults(
 
     // 2. Найденные открытые проекты (и шаблоны повторяющихся проектов — они среди всех задач), области и теги —
     // строками, без заголовка секции
-    val projectTemplates = allTasks.map { it.item }.filter { t ->
-        com.example.domain.lists.RepeatingList.includesProject(t) && projects.none { it.id == t.id }
-    }
     val matchedProjects = (projects + projectTemplates).filter {
         (it.type == Item.TYPE_PROJECT || it.type == Item.TYPE_PROJECT_TEMPLATE) && !it.trashed && !it.isDone() &&
             (it.title.contains(q, ignoreCase = true) || it.notes.contains(q, ignoreCase = true))
@@ -87,7 +91,7 @@ private fun MutableList<Any>.addSearchResults(
         add(SearchSectionHeaderItem("search_hdr_project_${project.id}", project.title, SearchSectionKind.PROJECT, project = project))
         addAll(tasks)
     }
-    val groupProjects = projects.filter { it.id in tasksByProject }
+    val groupProjects = groupable.filter { it.id in tasksByProject }
     // Проект, чьей области нет, на главном экране стоит среди проектов без области
     groupProjects.filter { it.areaId.isNullOrEmpty() || it.areaId !in areasById }.forEach(::addProjectGroup)
     areas.filter { it.id in tasksByArea || groupProjects.any { p -> p.areaId == it.id } }.forEach { area ->

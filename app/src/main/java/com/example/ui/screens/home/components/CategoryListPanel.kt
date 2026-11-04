@@ -1813,14 +1813,8 @@ fun ThingsCategoryListPanel(
                         is SearchHeadingItem -> {
                             SearchEntityRow(
                                 title = item.heading.title,
-                                icon = {
-                                    Icon(
-                                        imageVector = Icons.AutoMirrored.Filled.ShortText,
-                                        contentDescription = null,
-                                        tint = ThingsTheme.colors.project,
-                                        modifier = Modifier.requiredSize(SEARCH_ROW_ICON_SIZE)
-                                    )
-                                },
+                                // Значок-ярлык подзаголовка — тот же, что в Quick Find
+                                icon = { HeadingLabelIcon() },
                                 textPrimaryColor = textPrimaryColor,
                                 subtitle = item.projectTitle,
                                 onClick = { onEvent(ThingsCategoryListEvent.OpenHeading(item.heading)) },

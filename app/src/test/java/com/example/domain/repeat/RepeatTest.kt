@@ -454,8 +454,8 @@ class RepeatTest {
         val part = Item(id = "p", type = Item.TYPE_TEMPLATE, repeatTemplateId = "proj", title = "Полить цветы")
         assertTrue(com.example.domain.lists.SearchList.includes(wrap(template), "цвет"))
         assertTrue(com.example.domain.lists.SearchList.includes(wrap(copy), "цвет"))
-        // Задача внутри шаблона проекта — не отдельная повторяющаяся задача
-        assertFalse(com.example.domain.lists.SearchList.includes(wrap(part), "цвет"))
+        // Задача внутри шаблона повторяющегося проекта — тоже находится (её ищут по словам, хотя копий проекта ещё нет)
+        assertTrue(com.example.domain.lists.SearchList.includes(wrap(part), "цвет"))
     }
 
     @Test

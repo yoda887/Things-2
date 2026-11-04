@@ -421,7 +421,7 @@ fun ThingsSearchOverlay(
             // 3. Поиск по задачам (только активные по названию, заметкам, чеклистам; исключая удаленные и завершенные/отмененные).
             // Повторяющиеся задачи (шаблоны) находятся тоже — со своим значком, как в «Повторяющихся»; их копии — обычные задачи
             val matchedTasks = allTasks.filter { wrapper ->
-                (wrapper.item.type == Item.TYPE_TASK || com.example.domain.lists.RepeatingList.includes(wrapper.item)) && !wrapper.item.trashed && !wrapper.item.isCompleted && wrapper.item.status != Item.STATUS_CANCELLED && (
+                com.example.domain.lists.SearchList.searchable(wrapper.item) && !wrapper.item.trashed && !wrapper.item.isCompleted && wrapper.item.status != Item.STATUS_CANCELLED && (
                     wrapper.item.title.contains(query, ignoreCase = true) ||
                     wrapper.item.notes.contains(query, ignoreCase = true) ||
                     wrapper.checklist.any { it.title.contains(query, ignoreCase = true) }
@@ -1098,7 +1098,8 @@ fun SearchResultRow(
                 isHighlighted = isHighlighted,
                 onToggle = { onTaskToggle(result.taskWrapper) },
                 onClick = { onTaskClick(result.taskWrapper) },
-                projects = projects,
+                // У задачи внутри повторяющегося проекта подпись — название его шаблона
+                projects = projects + allTasks.map { it.item }.filter { com.example.domain.lists.RepeatingList.includesProject(it) },
                 areas = areas,
                 leftColumnWidth = MaterialTheme.dimens.searchLeftColumnWidth,
                 spacingToText = MaterialTheme.dimens.searchSpacingToText,
@@ -1335,12 +1336,15 @@ fun SearchResultRow(
     }
 }
 
-/** Значок подзаголовка проекта в Quick Find — ярлык остриём вправо со светло-серой заливкой, как в Things */
+/**
+ * Значок подзаголовка проекта — ярлык остриём вправо со светло-серой заливкой, как в Things: в Quick Find и на
+ * экране «Поиск». [width] — ширина значка; высота — в той же пропорции, что в Quick Find
+ */
 @Composable
-private fun HeadingLabelIcon() {
+internal fun HeadingLabelIcon(width: androidx.compose.ui.unit.Dp = RESULT_ICON_SIZE) {
     val stroke = ThingsTheme.colors.headingIcon
     val fill = ThingsTheme.colors.headingIconFill
-    Canvas(modifier = Modifier.requiredSize(RESULT_ICON_SIZE, HEADING_ICON_HEIGHT)) {
+    Canvas(modifier = Modifier.requiredSize(width, HEADING_ICON_HEIGHT * (width / RESULT_ICON_SIZE))) {
         val w = ThingsStroke.FOCUS.toPx()
         val half = w / 2f
         val r = HEADING_ICON_CORNER.toPx()

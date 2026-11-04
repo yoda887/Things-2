@@ -5,7 +5,7 @@ import com.example.data.model.ItemWithChecklist
 
 /**
  * Поиск: какие задачи находятся — открытые, выполненные и отменённые, по названию, заметкам и чек-листу;
- * повторяющиеся задачи (шаблоны) и их копии — тоже.
+ * повторяющиеся задачи (шаблоны) и их копии, задачи внутри повторяющихся проектов — тоже.
  */
 object SearchList {
 
@@ -23,10 +23,17 @@ object SearchList {
         }
     }
 
+    /**
+     * Что ищется среди задач: обычные задачи и копии повторов, шаблоны повторяющихся задач и задачи внутри шаблонов
+     * повторяющихся проектов — их тоже ищут по словам, хотя копий проекта ещё нет
+     */
+    fun searchable(item: Item): Boolean =
+        item.type == Item.TYPE_TASK || RepeatingList.includes(item) || item.isTemplatePart
+
     fun includes(task: ItemWithChecklist, query: String): Boolean {
         val q = query.trim()
         val item = task.item
-        return q.isNotEmpty() && (item.type == Item.TYPE_TASK || RepeatingList.includes(item)) && !item.trashed && (
+        return q.isNotEmpty() && searchable(item) && !item.trashed && (
             item.title.contains(q, ignoreCase = true) ||
                 item.notes.contains(q, ignoreCase = true) ||
                 task.checklist.any { it.title.contains(q, ignoreCase = true) }
