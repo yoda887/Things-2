@@ -11,11 +11,12 @@ object TodayList {
 
     /**
      * Проект на сегодня, как в Things: открытый, не «Когда-нибудь», начат сегодня или раньше (в том числе
-     * «Сегодня» без даты) или с горящим дедлайном. Стоит строкой проекта над задачами своей части дня.
+     * «Сегодня» без даты). Дедлайн, как и у задачи, в «Сегодня» не поднимает. Стоит строкой проекта над задачами
+     * своей части дня.
      */
     fun includesProject(project: Item, bounds: DayBounds): Boolean {
         if (project.type != Item.TYPE_PROJECT || !ListRules.isOpenProject(project) || project.start == Item.START_SOMEDAY) return false
-        if (project.start == Item.START_TODAY || bounds.isDueSoon(project.dueDate)) return true
+        if (project.start == Item.START_TODAY) return true
         val startDate = project.startDate ?: return false
         return startDate <= bounds.endOfToday
     }

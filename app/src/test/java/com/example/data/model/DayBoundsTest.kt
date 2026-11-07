@@ -29,9 +29,11 @@ class DayBoundsTest {
         startDate: Long? = null,
         dueDate: Long? = null,
         projectId: String? = null,
-        type: Int = 0
+        type: Int = 0,
+        repeatTemplateId: String? = null
     ) = Item(
         type = type,
+        repeatTemplateId = repeatTemplateId,
         start = start,
         status = status,
         startDate = startDate,
@@ -69,31 +71,28 @@ class DayBoundsTest {
     }
 
     @Test
-    fun `дедлайн сегодня поднимает задачу в Today`() {
+    fun `дедлайн обычной задачи не поднимает её в Today`() {
+        // Дедлайн и старт независимы: дедлайн на показ обычной задачи в «Сегодня» не влияет
         assertTrue(bounds.isDueSoon(noonInDays(0)))
-        assertTrue(bounds.isToday(task(start = 2, dueDate = noonInDays(0))))
-    }
-
-    @Test
-    fun `дедлайн через несколько дней не поднимает задачу в Today заранее`() {
-        // Как в Things: задача приходит в «Сегодня» в день дедлайна, а не за несколько дней до него
-        assertFalse(bounds.isDueSoon(noonInDays(1)))
-        assertFalse(bounds.isDueSoon(noonInDays(3)))
+        assertFalse(bounds.isToday(task(start = 2, dueDate = noonInDays(0))))
+        assertFalse(bounds.isToday(task(start = 2, dueDate = noonInDays(-2))))
         assertFalse(bounds.isToday(task(start = 2, dueDate = noonInDays(3))))
     }
 
     @Test
-    fun `просроченный дедлайн считается горящим`() {
-        assertTrue(bounds.isDueSoon(noonInDays(-2)))
-        assertTrue(bounds.isToday(task(start = 2, dueDate = noonInDays(-2))))
+    fun `дедлайн раньше старта не поднимает задачу в Today — она приходит в день старта`() {
+        val item = task(start = 2, startDate = noonInDays(2), dueDate = noonInDays(0))
+        assertFalse(bounds.isToday(item))
+        assertTrue(bounds.isUpcoming(item))
+        assertTrue(bounds.isToday(item.copy(startDate = noonInDays(0))))
     }
 
     @Test
-    fun `дедлайн сегодня перекрывает дату старта в будущем`() {
-        // Старт завтра, но дедлайн сегодня — задача должна оказаться в Today, а не в Upcoming
-        val item = task(start = 2, startDate = noonInDays(1), dueDate = noonInDays(0))
-        assertTrue(bounds.isToday(item))
-        assertFalse(bounds.isUpcoming(item))
+    fun `горящий дедлайн копии повтора поднимает её в Today`() {
+        assertFalse(bounds.isDueSoon(noonInDays(1)))
+        assertTrue(bounds.isDueSoon(noonInDays(-2)))
+        assertTrue(bounds.isToday(task(start = 2, startDate = noonInDays(1), dueDate = noonInDays(0), repeatTemplateId = "t")))
+        assertFalse(bounds.isToday(task(start = 2, startDate = noonInDays(1), dueDate = noonInDays(1), repeatTemplateId = "t")))
     }
 
     @Test
@@ -159,9 +158,10 @@ class DayBoundsTest {
     fun `sectionOf учитывает даты старта и дедлайна`() {
         assertEquals(TaskSection.UPCOMING, bounds.sectionOf(task(start = 2, startDate = noonInDays(5))))
         assertEquals(TaskSection.TODAY, bounds.sectionOf(task(start = 2, startDate = noonInDays(0))))
-        assertEquals(TaskSection.TODAY, bounds.sectionOf(task(start = 3, dueDate = noonInDays(0))))
-        // Дедлайн завтра заранее в «Сегодня» не поднимает
-        assertEquals(TaskSection.SOMEDAY, bounds.sectionOf(task(start = 3, dueDate = noonInDays(1))))
+        // Дедлайн обычной задачи раздел не меняет; у копии повтора горящий — поднимает в «Сегодня»
+        assertEquals(TaskSection.SOMEDAY, bounds.sectionOf(task(start = 3, dueDate = noonInDays(0))))
+        assertEquals(TaskSection.UPCOMING, bounds.sectionOf(task(start = 2, startDate = noonInDays(5), dueDate = noonInDays(0))))
+        assertEquals(TaskSection.TODAY, bounds.sectionOf(task(start = 2, startDate = noonInDays(5), dueDate = noonInDays(0), repeatTemplateId = "t")))
     }
 
     @Test

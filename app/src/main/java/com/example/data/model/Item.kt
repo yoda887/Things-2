@@ -242,14 +242,19 @@ class DayBounds private constructor(
      */
     fun isDueSoon(dueDate: Long?): Boolean = dueDate != null && dueDate <= dueSoonCutoff
 
+    /** Дедлайн поднимает в «Сегодня» только копию повторяющейся задачи; у обычной задачи — нет. */
+    private fun deadlinePullsToToday(item: Item): Boolean =
+        item.repeatTemplateId != null && isDueSoon(item.dueDate)
+
     /**
-     * Задача относится к категории «Сегодня»: помещена туда вручную,
-     * имеет горящий дедлайн или дату старта не позже конца сегодняшнего дня.
+     * Задача относится к категории «Сегодня»: помещена туда вручную или с датой старта не позже конца
+     * сегодняшнего дня. Дедлайн обычной задачи на это не влияет — дедлайн и старт независимы; горящий
+     * дедлайн поднимает в «Сегодня» только копию повторяющейся задачи (её дедлайн задан шаблоном).
      */
     fun isToday(item: Item): Boolean {
         if (item.type != Item.TYPE_TASK || item.isClosed) return false
         if (item.start == Item.START_TODAY) return true
-        if (isDueSoon(item.dueDate)) return true
+        if (deadlinePullsToToday(item)) return true
         val startDate = item.startDate ?: return false
         return startDate <= endOfToday
     }
@@ -290,8 +295,8 @@ class DayBounds private constructor(
      * Секция, в которую попадает задача с учётом дедлайна и даты старта.
      */
     fun sectionOf(item: Item): TaskSection {
-        // Горящий дедлайн перекрывает всё остальное и поднимает задачу в «Сегодня»
-        if (isDueSoon(item.dueDate)) return TaskSection.TODAY
+        // Горящий дедлайн копии повтора перекрывает всё остальное и поднимает её в «Сегодня»
+        if (deadlinePullsToToday(item)) return TaskSection.TODAY
 
         val startDate = item.startDate
         if (startDate != null) {

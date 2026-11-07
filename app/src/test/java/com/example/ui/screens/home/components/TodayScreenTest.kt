@@ -38,7 +38,7 @@ class TodayScreenTest {
     }
 
     @Test
-    fun projects_startedTodayOrEarlierOrDue_onTopOfTheirPart() {
+    fun projects_startedTodayOrEarlier_onTopOfTheirPart_deadlineDoesNotPull() {
         val bounds = com.example.data.model.DayBounds.now()
         val now = System.currentTimeMillis()
         val dayAgo = now - 86_400_000L
@@ -51,10 +51,11 @@ class TodayScreenTest {
         val done = Item(id = "p6", type = Item.TYPE_PROJECT, startDate = dayAgo, status = Item.STATUS_COMPLETED)
         val template = Item(id = "p7", type = Item.TYPE_PROJECT_TEMPLATE, startDate = dayAgo)
         val projects = TodayList.projects(listOf(started, todayEvening, due, later, someday, done, template), bounds)
-        assertEquals(listOf("p1", "p3"), projects.first.map { it.id })
+        // Дедлайн сегодня проект в «Сегодня» не поднимает — как и задачу
+        assertEquals(listOf("p1"), projects.first.map { it.id })
         assertEquals(listOf("p2"), projects.second.map { it.id })
         val rows = TodayScreen.rows(listOf(task("d1")), listOf(task("e1", true)), false, projects)
-        assertEquals(listOf("p1", "p3", "d1", TaskListKeys.EVENING_HEADER, "p2", "e1"), rows.map { if (it is Item) it.id else if (it is ItemWithChecklist) it.item.id else it.toString() })
+        assertEquals(listOf("p1", "d1", TaskListKeys.EVENING_HEADER, "p2", "e1"), rows.map { if (it is Item) it.id else if (it is ItemWithChecklist) it.item.id else it.toString() })
         assertFalse(TodayScreen.isEmpty(emptyList(), emptyList(), false, projects))
     }
 
