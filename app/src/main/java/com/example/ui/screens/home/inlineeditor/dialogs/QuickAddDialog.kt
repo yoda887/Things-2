@@ -27,6 +27,7 @@ import androidx.compose.ui.text.input.KeyboardCapitalization
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.*
 import androidx.compose.material.icons.outlined.*
+import com.example.ui.components.ProjectProgressArc
 import com.example.ui.theme.AppIcons
 import com.example.ui.theme.dimens
 import androidx.compose.material3.*
@@ -71,6 +72,7 @@ private val QUICK_ADD_DISMISS_DROP = 220.dp
 private val QUICK_ADD_CARD_TOP = 26.dp
 private val QUICK_ADD_CARD_BOTTOM = 18.dp
 private val QUICK_ADD_TITLE_END = 40.dp
+private val QUICK_ADD_TITLE_CLOSE_GAP = 20.dp
 private val QUICK_ADD_FOOTER_START = 22.dp
 private val QUICK_ADD_FOOTER_END = 18.dp
 private val QUICK_ADD_FOOTER_BUTTON_HEIGHT = 36.dp
@@ -139,6 +141,8 @@ fun QuickAddDialog(
     var deadlineOrigin0 by remember { mutableStateOf<androidx.compose.ui.geometry.Offset?>(null) }
     var deadlineOrigin1 by remember { mutableStateOf<androidx.compose.ui.geometry.Offset?>(null) }
     var showMoveDialog by remember { mutableStateOf(false) }
+    // В окне перемещения выбрано «Без проекта» — подпись внизу «Без проекта», как в Things
+    var noProjectChosen by remember { mutableStateOf(false) }
     var showChecklistHelper by remember { mutableStateOf(false) }
 
     val titleFocusRequester = remember { FocusRequester() }
@@ -161,6 +165,8 @@ fun QuickAddDialog(
         currentProject.name
     } else if (currentArea != null) {
         currentArea.title
+    } else if (noProjectChosen) {
+        androidx.compose.ui.res.stringResource(com.example.R.string.move_no_project)
     } else {
         when (section) {
             TaskSection.TODAY -> if (isTonight) androidx.compose.ui.res.stringResource(com.example.R.string.category_this_evening) else androidx.compose.ui.res.stringResource(com.example.R.string.category_today)
@@ -330,7 +336,8 @@ fun QuickAddDialog(
                                     .weight(1f)
                                     .padding(end = QUICK_ADD_TITLE_END)
                             ) {
-                                Box(modifier = Modifier.fillMaxWidth()) {
+                                // Длинный заголовок, как в Things, переносится заметно раньше кнопки ✕, а не впритык к ней
+                                Box(modifier = Modifier.fillMaxWidth().padding(end = QUICK_ADD_TITLE_CLOSE_GAP)) {
                                     if (title.isEmpty()) {
                                         Text(
                                             text = stringResource(R.string.ui_new_to_do),
@@ -712,40 +719,58 @@ fun QuickAddDialog(
                         horizontalArrangement = Arrangement.SpaceBetween,
                         verticalAlignment = Alignment.CenterVertically
                     ) {
-                        // Кнопка выбора назначения
+                        // Кнопка выбора назначения. Как в Things: «Входящие» — серым контурным значком и серым
+                        // текстом; проект (кольцо прогресса), область и «Без проекта» — цветом акцента; список — своим
+                        // значком. Длинное название обрезается многоточием и не залезает под «Сохранить»
+                        val destinationAccent = currentProject != null || currentArea != null || noProjectChosen
+                        val destinationColor = if (destinationAccent) ThingsTheme.colors.accent else ThingsTheme.colors.textSecondary
                         Row(
                             modifier = Modifier
+                                .weight(1f, fill = false)
                                 .clip(ThingsTheme.shapes.rowShape)
                                 .clickable { showMoveDialog = true }
                                 .padding(horizontal = ThingsSpacing.XS_PLUS, vertical = ThingsSpacing.XS_PLUS),
                             verticalAlignment = Alignment.CenterVertically
                         ) {
-                            // Значок — по месту назначения: проект, область или список
-                            val destinationIcon = when {
-                                currentProject != null -> AppIcons.BulletList
-                                currentArea != null -> AppIcons.Area
-                                else -> when (section) {
-                                    TaskSection.TODAY -> AppIcons.Today
-                                    TaskSection.UPCOMING -> AppIcons.Upcoming
-                                    TaskSection.ANYTIME -> AppIcons.Anytime
-                                    TaskSection.SOMEDAY -> AppIcons.Someday
-                                    else -> AppIcons.Inbox
+                            if (currentProject != null) {
+                                val projectTasks = allTasksRaw.filter { it.item.projectId == currentProject.id && it.item.type == Item.TYPE_TASK && !it.item.trashed }
+                                ProjectProgressArc(
+                                    completed = projectTasks.count { it.item.isClosed },
+                                    total = projectTasks.size,
+                                    color = ThingsTheme.colors.accent,
+                                    dashed = currentProject.start == Item.START_SOMEDAY,
+                                    modifier = Modifier.size(ThingsIconSize.M)
+                                )
+                                Spacer(modifier = Modifier.width(ThingsSpacing.XS_PLUS))
+                            } else if (!noProjectChosen) {
+                                val (destinationIcon, destinationTint) = when {
+                                    currentArea != null -> AppIcons.Area to ThingsTheme.colors.accent
+                                    else -> when (section) {
+                                        TaskSection.TODAY -> AppIcons.Today to ThingsTheme.colors.today
+                                        TaskSection.UPCOMING -> AppIcons.Upcoming to ThingsTheme.colors.upcoming
+                                        TaskSection.ANYTIME -> AppIcons.Anytime to ThingsTheme.colors.anytime
+                                        TaskSection.SOMEDAY -> AppIcons.Someday to ThingsTheme.colors.someday
+                                        else -> androidx.compose.material.icons.Icons.Outlined.Inbox to ThingsTheme.colors.textSecondary
+                                    }
                                 }
+                                Icon(
+                                    imageVector = destinationIcon,
+                                    contentDescription = stringResource(R.string.cd_destination),
+                                    tint = destinationTint,
+                                    modifier = Modifier.size(ThingsIconSize.M)
+                                )
+                                Spacer(modifier = Modifier.width(ThingsSpacing.XS_PLUS))
                             }
-                            Icon(
-                                imageVector = destinationIcon,
-                                contentDescription = stringResource(R.string.cd_destination),
-                                tint = ThingsTheme.colors.textSecondary,
-                                modifier = Modifier.size(ThingsIconSize.M)
-                            )
-                            Spacer(modifier = Modifier.width(ThingsSpacing.XS_PLUS))
                             Text(
                                 text = destinationName,
+                                maxLines = 1,
+                                overflow = TextOverflow.Ellipsis,
                                 style = ThingsTheme.type.editorChecklistStrong.copy(
-                                    color = ThingsTheme.colors.textSecondary
+                                    color = destinationColor
                                 )
                             )
                         }
+                        Spacer(modifier = Modifier.width(ThingsSpacing.S))
 
                         // Кнопка "Save" (синяя капсула)
                         Button(
@@ -851,8 +876,12 @@ fun QuickAddDialog(
                 selectedProjectId = projId
                 // Область — только без проекта: у задачи проекта область берётся из проекта
                 selectedAreaId = if (projId == null) areaId else null
+                noProjectChosen = projId == null && areaId == null && !moveToInbox
                 if (moveToInbox) {
                     section = TaskSection.INBOX
+                } else if (noProjectChosen && section == TaskSection.INBOX) {
+                    // «Без проекта» — уже не «Входящие»: задача уходит в «В любое время», как в Things
+                    section = TaskSection.ANYTIME
                 }
                 showMoveDialog = false
             },
