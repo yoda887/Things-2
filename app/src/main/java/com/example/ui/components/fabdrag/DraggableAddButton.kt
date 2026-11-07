@@ -186,8 +186,11 @@ private fun BoxScope.FabBody(
             .zIndex(10f)
             .onGloballyPositioned {
                 onHome(it)
-                // Центр кнопки в покое — от него считаются сдвиг за пальцем и положение кружка отмены
-                controller.homeCenter = it.boundsInRoot().center
+                // Центр кнопки в покое — от него считаются сдвиг за пальцем и положение кружка отмены. Когда кнопку
+                // убирают с экрана (открылось окно новой задачи), границы приходят пустыми — центр не трогаем,
+                // иначе кружки «во Входящие» доигрывают исчезновение из угла экрана
+                val bounds = it.boundsInRoot()
+                if (it.isAttached && bounds.width > 0f && bounds.height > 0f) controller.homeCenter = bounds.center
             }
             .graphicsLayer {
                 val coords = homeCoordinates()
@@ -333,17 +336,26 @@ fun BoxScope.FabDragActions(controller: FabDragController) {
     val startPx = with(density) { FAB_ACTION_EDGE.roundToPx() }
     // «+» над кружком «Входящих» — из угла экрана раскрывается большой тёмный круг с подписью, как в Things
     val overInbox = controller.isDragging && controller.actionAt(controller.pointer) == FabAction.INBOX
+    // Высота линии кружков — по центру «+», пока его тянут; после сброса кружки исчезают на том же месте
+    var lineY by remember { mutableStateOf(controller.homeCenter.y) }
+    if (controller.isDragging) lineY = controller.homeCenter.y
     val bubble by animateFloatAsState(
         targetValue = if (overInbox) 1f else 0f,
         animationSpec = spring(dampingRatio = 0.8f, stiffness = Spring.StiffnessMediumLow),
         label = "inboxBubble"
     )
+    // Раскрывается круг сразу непрозрачным, а сжимаясь (палец ушёл с кружка или «+» отпустили) — плавно тает
+    val bubbleAlpha by animateFloatAsState(
+        targetValue = if (overInbox) 1f else 0f,
+        animationSpec = androidx.compose.animation.core.tween(durationMillis = if (overInbox) 0 else com.example.ui.theme.ThingsMotion.BASE),
+        label = "inboxBubbleAlpha"
+    )
     Box(modifier = Modifier.matchParentSize().onGloballyPositioned { origin = it.positionInRoot() }) {
-        if (bubble > 0f) {
+        if (bubble > 0f && bubbleAlpha > 0f) {
             val bubbleRadiusPx = with(density) { FAB_INBOX_BUBBLE_RADIUS.toPx() }
-            val bubbleColor = ThingsTheme.colors.overlaySurface
+            val bubbleColor = ThingsTheme.colors.overlaySurface.let { it.copy(alpha = it.alpha * bubbleAlpha) }
             androidx.compose.foundation.Canvas(modifier = Modifier.matchParentSize()) {
-                val center = Offset(startPx + sizePx / 2f, controller.homeCenter.y - origin.y)
+                val center = Offset(startPx + sizePx / 2f, lineY - origin.y)
                 // Растёт из самого кружка «Входящих», как в Things, а не из точки
                 val fromRadius = sizePx / 2f
                 drawCircle(bubbleColor, radius = fromRadius + (bubbleRadiusPx - fromRadius) * bubble, center = center)
@@ -357,7 +369,7 @@ fun BoxScope.FabDragActions(controller: FabDragController) {
                         val r = bubbleRadiusPx
                         androidx.compose.ui.unit.IntOffset(
                             startPx,
-                            (controller.homeCenter.y - origin.y - r * FAB_INBOX_LABEL_RISE).toInt()
+                            (lineY - origin.y - r * FAB_INBOX_LABEL_RISE).toInt()
                         )
                     }
                     .widthIn(max = FAB_INBOX_LABEL_WIDTH)
@@ -369,8 +381,7 @@ fun BoxScope.FabDragActions(controller: FabDragController) {
             icon = { Icon(Icons.Default.MoveToInbox, contentDescription = stringResource(R.string.cd_move_to_inbox), tint = ThingsTheme.colors.overlayContent, modifier = Modifier.size(ThingsIconSize.L)) },
             onBounds = { controller.inboxBounds = it },
             modifier = Modifier.offset {
-                val center = controller.homeCenter
-                androidx.compose.ui.unit.IntOffset(startPx, (center.y - origin.y - sizePx / 2f).toInt())
+                androidx.compose.ui.unit.IntOffset(startPx, (lineY - origin.y - sizePx / 2f).toInt())
             }
         )
     }
