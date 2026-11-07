@@ -453,7 +453,8 @@ fun ThingsCategoryListPanel(
     var isLaterItemsHidden by rememberSaveable { mutableStateOf(false) }
     // Число объектов под плашкой «пізніші» на экране области — то, что она прячет
     val areaLaterCount = remember(screen, area?.id, state.displayTasks, projects, state.allTasks, state.selectedTagFilter) {
-        if (screen != ActiveScreen.AREA_DETAIL) 0
+        if (screen == ActiveScreen.PROJECT_DETAIL) ProjectScreen.laterCount(state.displayTasks)
+        else if (screen != ActiveScreen.AREA_DETAIL) 0
         else AreaList.content(area?.id, state.displayTasks, projects, templates = state.allTasks.map { it.item }, tagFilter = state.selectedTagFilter).let {
             it.upcoming.size + it.someday.size + it.upcomingProjects.size + it.somedayProjects.size
         }

@@ -33,6 +33,28 @@ object AnytimeList {
     fun order(tasks: List<ItemWithChecklist>, projects: List<Item>, areas: List<Area>): List<ItemWithChecklist> =
         PlaceGroups.order(tasks, projects, areas)
 
+    /** Сколько задач видно в разделе проекта или области, пока его не раскрыли (как в Things). */
+    const val GROUP_LIMIT = 3
+
+    /**
+     * Видимые задачи раздела и сколько скрыто. Задачи без проекта и области ([loose]) видны все; в разделе
+     * проекта или области — первые [GROUP_LIMIT], пока раздел не раскрыт ([expanded]). Задачи из [keep] (раскрытая в
+     * редакторе) видны всегда — сверх лимита.
+     */
+    fun visible(
+        tasks: List<ItemWithChecklist>,
+        loose: Boolean,
+        expanded: Boolean,
+        keep: Set<String> = emptySet()
+    ): Pair<List<ItemWithChecklist>, Int> {
+        if (loose || expanded || tasks.size <= GROUP_LIMIT) return tasks to 0
+        val shown = tasks.filterIndexed { index, task -> index < GROUP_LIMIT || task.item.id in keep }
+        return shown to (tasks.size - shown.size)
+    }
+
+    /** Раздел длиннее лимита — его можно раскрыть и свернуть обратно; задачи без проекта и области видны всегда */
+    fun collapsible(tasks: List<ItemWithChecklist>, loose: Boolean): Boolean = !loose && tasks.size > GROUP_LIMIT
+
     fun groups(
         tasks: List<ItemWithChecklist>,
         projects: List<Item>,

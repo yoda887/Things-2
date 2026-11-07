@@ -285,8 +285,23 @@ fun rememberFlattenedList(
             ActiveScreen.TAG_DETAIL -> TagScreen.rows(
                 TagList.content(tag?.title, displayTasks, allTasks, projects, areas, pinnedPlaces, rules = repeatRules)
             )
-            ActiveScreen.PROJECT_DETAIL -> ProjectScreen.rows(displayTasks, headings, draggedItemKey)
-            ActiveScreen.ANYTIME -> PlaceGroupRows.rows(AnytimeList.groups(displayTasks, projects, areas, pinnedPlaces))
+            // Более поздние — в конце своих частей; переключатель тот же, что у области
+            ActiveScreen.PROJECT_DETAIL -> ProjectScreen.rows(displayTasks, headings, draggedItemKey, isLaterItemsHidden)
+            // Задачи без места — все, вверху без заголовка; в разделе проекта или области — первые три и «Показати ще N»
+            ActiveScreen.ANYTIME -> PlaceGroupRows.rows(AnytimeList.groups(displayTasks, projects, areas, pinnedPlaces)) { group ->
+                val key = TaskListKeys.LIST_TOGGLE_PREFIX + "more_" + (group.project?.id ?: group.area?.id ?: "none")
+                val (shown, hidden) = AnytimeList.visible(
+                    group.tasks, loose = group.project == null && group.area == null,
+                    expanded = key in expandedLaterProjects, keep = pinnedPlaces.keys
+                )
+                // Раскрытый раздел сворачивается той же строкой — «Скрыть»
+                val collapsible = AnytimeList.collapsible(group.tasks, loose = group.project == null && group.area == null)
+                when {
+                    hidden > 0 -> group.projectRows + shown + ListToggleItem(key, resources.getQuantityString(R.plurals.anytime_show_more, hidden, hidden))
+                    collapsible && key in expandedLaterProjects -> group.projectRows + shown + ListToggleItem(key, resources.getString(R.string.anytime_show_less))
+                    else -> group.projectRows + shown
+                }
+            }
             ActiveScreen.SOMEDAY -> PlaceGroupRows.rows(SomedayList.groups(displayTasks, projects, areas, pinnedPlaces))
             ActiveScreen.SEARCH -> SearchScreen.rows(displayTasks, projects, areas, savedTags, searchQuery, headerLogbook, headings, allTasks)
             // «Входящие» — задачи как есть, под ними внизу — плашка и ушедшие оттуда задачи; у главного экрана списка нет
