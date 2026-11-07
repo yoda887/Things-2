@@ -42,7 +42,8 @@ fun repeatBadge(rule: RecurrenceRule?): String? = when {
     !rule.isActive -> stringResource(R.string.repeat_paused)
     rule.nextGenerationDate <= 0 && com.example.domain.repeat.RepeatRule.decode(rule.rrule)?.afterCompletion == true ->
         stringResource(R.string.repeat_waiting)
-    rule.nextGenerationDate > 0 -> com.example.ui.screens.home.subcomponents.startDateBadgeText(rule.nextGenerationDate)
+    // День появления карточки в «Сегодня», а не день повтора (у повтора с дедлайном это день дедлайна)
+    rule.nextGenerationDate > 0 -> com.example.ui.screens.home.subcomponents.startDateBadgeText(com.example.domain.lists.RepeatingList.appearsAt(rule))
     else -> null
 }
 

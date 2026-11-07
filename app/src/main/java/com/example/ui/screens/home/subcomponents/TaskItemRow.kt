@@ -362,7 +362,7 @@ fun TaskItemRow(
             // Следующий повтор шаблона сегодня (или уже наступил) — звезда перед названием, как у задачи на сегодня,
             // а не слово «Сегодня» на плашке
             val repeatToday = repeatRule != null && repeatRule.isActive &&
-                repeatRule.nextGenerationDate in 1..com.example.data.model.DayBounds.now().endOfToday
+                com.example.domain.lists.RepeatingList.appearsAt(repeatRule) in 1..com.example.data.model.DayBounds.now().endOfToday
             val repeatBadge = if (repeatToday) null else com.example.ui.components.repeatBadge(repeatRule)
             val dateBadge = when {
                 !showStartDate -> null
@@ -521,6 +521,37 @@ fun TaskItemRow(
                                     )
                                 }
                             }
+                        }
+                    }
+
+                    // Шаблон повтора с дедлайном — справа серый флажок и срок следующей копии, как в Things
+                    // (сама дата шаблона на плашке — день, когда копия придёт в «Сегодня»)
+                    val templateRule = if (showMetaIcons && task.isRepeatTemplate && task.dueDate == null) {
+                        com.example.ui.components.LocalRepeatRules.current[task.id]
+                    } else null
+                    val templateDue = templateRule?.takeIf { it.isActive && it.nextGenerationDate > 0 }?.let { stored ->
+                        com.example.domain.repeat.RepeatRule.decode(stored.rrule)?.deadlineDaysBefore?.let { stored.nextGenerationDate }
+                    }
+                    if (templateDue != null) {
+                        val templateDueColor = textSecondaryColor.copy(alpha = DUE_TEXT_ALPHA)
+                        Spacer(modifier = Modifier.width(ThingsSpacing.S))
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically,
+                            modifier = Modifier.padding(end = ThingsSpacing.XS)
+                        ) {
+                            Icon(
+                                imageVector = AppIcons.Deadline,
+                                contentDescription = stringResource(R.string.cd_deadline_flag),
+                                tint = templateDueColor,
+                                modifier = Modifier.size(DUE_ICON_SIZE)
+                            )
+                            Spacer(modifier = Modifier.width(ThingsSpacing.XS))
+                            Text(
+                                text = startDateBadgeText(templateDue),
+                                style = ThingsTheme.type.taskSubtitle.copy(color = templateDueColor),
+                                maxLines = 1,
+                                softWrap = false
+                            )
                         }
                     }
 

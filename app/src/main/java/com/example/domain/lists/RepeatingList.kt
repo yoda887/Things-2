@@ -36,6 +36,15 @@ object RepeatingList {
     fun dayOf(item: Item, rules: Map<String, RecurrenceRule>, zone: java.time.ZoneId = java.time.ZoneId.systemDefault()): Long? {
         if (!item.isRepeatTemplate) return item.startDate
         val stored = rules[item.id]?.takeIf { it.isActive && it.nextGenerationDate > 0 } ?: return null
+        return appearsAt(stored, zone)
+    }
+
+    /**
+     * День (мс начала дня), когда появится ближайшая копия правила: день повтора минус «срок заранее» — у повтора с
+     * дедлайном это не день дедлайна, а день, когда карточка придёт в «Сегодня». 0 — следующего повтора нет.
+     */
+    fun appearsAt(stored: RecurrenceRule, zone: java.time.ZoneId = java.time.ZoneId.systemDefault()): Long {
+        if (stored.nextGenerationDate <= 0) return 0L
         val rule = com.example.domain.repeat.RepeatRule.decode(stored.rrule) ?: return stored.nextGenerationDate
         val occurrence = java.time.Instant.ofEpochMilli(stored.nextGenerationDate).atZone(zone).toLocalDate()
         return com.example.domain.repeat.RepeatPlan.appearsOn(rule, occurrence).atStartOfDay(zone).toInstant().toEpochMilli()
