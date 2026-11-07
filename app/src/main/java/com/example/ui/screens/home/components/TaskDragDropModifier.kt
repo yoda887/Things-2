@@ -10,7 +10,8 @@ import com.example.ui.components.dragdrop.GenericDragDropState
 import com.example.ui.components.dragdrop.universalDragAndDrop
 
 /** Полосы у краёв списка, в которых перетаскивание включает автопрокрутку, в долях высоты экрана */
-private const val TASK_SCROLL_TOP_ZONE_FRACTION = 0.11f
+// Верхняя полоса уже прежней (0.11): автопрокрутка вверх включается, когда карточку подняли выше
+private const val TASK_SCROLL_TOP_ZONE_FRACTION = 0.08f
 private const val TASK_SCROLL_BOTTOM_ZONE_FRACTION = 0.09f
 
 

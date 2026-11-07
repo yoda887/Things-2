@@ -769,6 +769,8 @@ fun AnimatedTaskItem(
                                     view.hideSoftKeyboardNow()
                                     onEvent(ThingsCategoryListEvent.ChangeInlineExpandedTaskId(null))
                                 } else {
+                                    // Карточка раскрывается в редактор — лёгкий отклик, как у других нажатий в приложении
+                                    view.performHapticFeedback(android.view.HapticFeedbackConstants.CLOCK_TICK)
                                     onEvent(ThingsCategoryListEvent.ChangeInlineExpandedTaskId(task.id))
                                 }
                             },
