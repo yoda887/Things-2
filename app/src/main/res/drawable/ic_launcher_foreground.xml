@@ -1,18 +1,27 @@
 <?xml version="1.0" encoding="utf-8"?>
+<!-- Передний план иконки — как в старой сборке Things: тёмно-синяя рамка,
+     белое поле и чёрная галочка. -->
 <vector xmlns:android="http://schemas.android.com/apk/res/android"
     android:width="108dp"
     android:height="108dp"
-    android:viewportWidth="108"
-    android:viewportHeight="108">
-    <!-- Circle Blue Checkbox background -->
-    <path
-        android:fillColor="#1070E0"
-        android:pathData="M 54,54 m -26,0 a 26,26 0 1,1 52,0 a 26,26 0 1,1 -52,0" />
-    <!-- White Checkmark -->
-    <path
-        android:strokeWidth="4.5"
-        android:strokeColor="#FFFFFF"
-        android:strokeLineCap="round"
-        android:strokeLineJoin="round"
-        android:pathData="M 43,53 L 51,61 L 66,45" />
+    android:viewportWidth="512"
+    android:viewportHeight="512">
+    <group
+        android:pivotX="256"
+        android:pivotY="256"
+        android:scaleX="0.62"
+        android:scaleY="0.62">
+        <path
+            android:fillColor="#002368"
+            android:fillType="evenOdd"
+            android:pathData="M117.916,60 C79.802,60 49.117,90.684 49.117,128.799 V391.201 C49.117,429.316 79.802,460 117.916,460 h274.168 c38.114,0 68.799,-30.684 68.799,-68.799 V128.799 C460.883,90.684 430.198,60 392.084,60 Z M100,90h310c11.08,0 20,8.92 20,20v300c0,11.08 -8.92,20 -20,20H100C88.92,430 80,421.08 80,410V110c0,-11.08 8.92,-20 20,-20z" />
+        <path
+            android:fillColor="#FFFFFF"
+            android:pathData="M100,90L410,90A20,20 0,0 1,430 110L430,410A20,20 0,0 1,410 430L100,430A20,20 0,0 1,80 410L80,110A20,20 0,0 1,100 90z" />
+        <path
+            android:fillColor="#000000"
+            android:strokeColor="#000000"
+            android:strokeWidth="1"
+            android:pathData="m166.258,257.135 l22.917,-23.735 54.836,48.289 133.407,-139.136 16.369,22.917c0,0 -76.781,83.13 -138.318,184.97 -43.531,-43.845 -89.211,-93.303 -89.211,-93.303z" />
+    </group>
 </vector>
