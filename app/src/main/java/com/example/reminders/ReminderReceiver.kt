@@ -97,7 +97,12 @@ class ReminderReceiver : BroadcastReceiver() {
         val open = PendingIntent.getActivity(
             context,
             taskId.hashCode(),
-            Intent(context, MainActivity::class.java).setFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TOP),
+            // Как нажатие на иконку: открытое приложение просто выходит вперёд на том экране, где его свернули
+            // (CLEAR_TOP пересоздавал экран и сбрасывал на главный), закрытое — запускается с главного
+            Intent(context, MainActivity::class.java)
+                .setAction(Intent.ACTION_MAIN)
+                .addCategory(Intent.CATEGORY_LAUNCHER)
+                .setFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_RESET_TASK_IF_NEEDED),
             PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
         )
         val notification = NotificationCompat.Builder(context, CHANNEL_ID)
