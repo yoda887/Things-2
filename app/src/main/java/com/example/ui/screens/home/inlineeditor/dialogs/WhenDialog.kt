@@ -1268,6 +1268,8 @@ fun ThingsDeadlineDialog(
                         RepeatCalendar(
                             selected = selected,
                             from = java.time.LocalDate.now(zone),
+                            fromWithMonth = false,
+                            showPastDays = true,
                             modifier = Modifier.height(DEADLINE_CALENDAR_HEIGHT)
                         ) { date ->
                             view.performHapticFeedback(HapticFeedbackConstants.CLOCK_TICK)

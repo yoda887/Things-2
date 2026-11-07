@@ -830,6 +830,10 @@ internal fun RepeatCalendar(
     modifier: Modifier = Modifier,
     // Сегодня — звездой, как в календаре окна «Когда?» (окно «Когда?», календарь дальних дат)
     todayStar: Boolean = false,
+    // Первый день календаря — с подписью месяца; в окне «Термін» сегодня — просто числом, как Deadline в Things
+    fromWithMonth: Boolean = true,
+    // Дни первой недели до [from] — серыми числами, без выбора (окно «Термін», как Deadline в Things); иначе пусто
+    showPastDays: Boolean = false,
     onPick: (LocalDate) -> Unit
 ) {
     val view = LocalView.current
@@ -861,7 +865,19 @@ internal fun RepeatCalendar(
                 for (i in 0 until 7) {
                     val date = firstMonday.plusWeeks(week.toLong()).plusDays(i.toLong())
                     if (date.isBefore(from)) {
-                        Spacer(Modifier.weight(1f).height(MaterialTheme.dimens.calendarCellHeight))
+                        if (showPastDays) {
+                            Box(
+                                modifier = Modifier.weight(1f).height(MaterialTheme.dimens.calendarCellHeight),
+                                contentAlignment = Alignment.Center
+                            ) {
+                                Text(
+                                    date.dayOfMonth.toString(),
+                                    style = ThingsTheme.type.dialogRow.copy(color = ThingsTheme.colors.overlayContentSecondary)
+                                )
+                            }
+                        } else {
+                            Spacer(Modifier.weight(1f).height(MaterialTheme.dimens.calendarCellHeight))
+                        }
                         continue
                     }
                     val isSelected = date == selected
@@ -910,7 +926,7 @@ internal fun RepeatCalendar(
                                 tint = ThingsTheme.colors.badgeText,
                                 modifier = Modifier.size(ThingsIconSize.XS)
                             )
-                        } else if (date.dayOfMonth == 1 || date == from) {
+                        } else if (date.dayOfMonth == 1 || (fromWithMonth && date == from)) {
                             // Первое число (и первый день календаря) — с месяцем; в другом году, как в Things, ещё и с годом
                             val otherYear = date.year != LocalDate.now().year
                             Column(horizontalAlignment = Alignment.CenterHorizontally) {
