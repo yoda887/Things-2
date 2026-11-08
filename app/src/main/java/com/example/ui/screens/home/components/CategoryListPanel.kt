@@ -34,6 +34,7 @@ import com.example.ui.components.fabdrag.FabDropTarget
 import com.example.ui.components.fabdrag.LocalFabDragController
 import com.example.ui.screens.home.inlineeditor.utils.EditorOutsideTouch
 import com.example.ui.screens.home.inlineeditor.utils.observeTouchesOutsideEditor
+import com.example.ui.screens.home.inlineeditor.utils.collapseOnTapOutsideEditor
 
 import kotlinx.coroutines.flow.first
 import androidx.compose.runtime.snapshotFlow
@@ -897,8 +898,8 @@ fun ThingsCategoryListPanel(
     }
 
     // Пока задача раскрыта, прокрутка не уводит её карточку из видимой зоны — той же, в которую карточку
-    // ставит раскрытие: от тулбара до плашки действий (или клавиатуры). Карточка ниже зоны видна целиком
-    // и не уезжает; карточка выше зоны прокручивается только в своих границах, от верха до низа.
+    // ставит раскрытие: от тулбара до плашки действий (или клавиатуры). Ограничители — края карточки:
+    // вверх её можно увести, пока нижний край не дойдёт до верха зоны, вниз — пока верхний не дойдёт до низа.
     // Движение, которое возвращает карточку в зону, разрешено всегда
     val currentExpandedId by rememberUpdatedState(inlineExpandedTaskId)
     val imeInsetsForClamp = WindowInsets.ime
@@ -925,8 +926,10 @@ fun ThingsCategoryListPanel(
                     rootHeight - imeInsetsForClamp.getBottom(density),
                     rootHeight - navBarInsetsForClamp.getBottom(density) - bottomReserve
                 )
-                val lo = minOf(topLimit, zoneBottom - cardHeight)
-                val hi = maxOf(topLimit, zoneBottom - cardHeight)
+                // Прокрутка вверх (карточка уходит вверх) — до нижнего края карточки у верхней границы зоны;
+                // вниз — до верхнего края у нижней границы
+                val lo = topLimit - cardHeight
+                val hi = zoneBottom
                 val dy = available.y
                 val allowed = if (dy > 0f) minOf(dy, maxOf(0f, hi - cardTop)) else maxOf(dy, minOf(0f, lo - cardTop))
                 return Offset(0f, dy - allowed)
@@ -1146,6 +1149,11 @@ fun ThingsCategoryListPanel(
                 .nestedScroll(scrollTrackingConnection)
                 .graphicsLayer {
                     translationY = pullOffset.value
+                }
+                // Нажатие вне раскрытой карточки только сворачивает её — строки под пальцем его не получают
+                .collapseOnTapOutsideEditor(editorOutsideTouch, { isEditorOpen }) {
+                    view.hideSoftKeyboardNow()
+                    onEvent(ThingsCategoryListEvent.ChangeInlineExpandedTaskId(null))
                 }
                 .observeTouchesOutsideEditor(editorOutsideTouch) { isEditorOpen }
                 .pointerInput(Unit) {

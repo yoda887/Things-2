@@ -10,6 +10,11 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.input.pointer.PointerEventPass
 import androidx.compose.ui.input.pointer.PointerId
 import androidx.compose.ui.input.pointer.pointerInput
+import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.geometry.Rect
+import androidx.compose.ui.layout.LayoutCoordinates
+import androidx.compose.ui.layout.boundsInRoot
+import androidx.compose.ui.layout.onGloballyPositioned
 
 /**
  * Касания списка вне раскрытого редактора: по ним маркеры курсора прячутся заранее — когда палец
@@ -42,6 +47,17 @@ class EditorOutsideTouch {
     fun reset() {
         collapseRequested = false
         hideHandles = false
+    }
+
+    /** Границы раскрытого редактора и списка в координатах окна — чтобы понять, внутри ли касание. */
+    internal var editorBounds: Rect? = null
+    internal var listCoordinates: LayoutCoordinates? = null
+
+    /** Точка [local] в координатах списка — внутри раскрытого редактора. */
+    internal fun isInside(local: Offset): Boolean {
+        val bounds = editorBounds ?: return false
+        val list = listCoordinates?.takeIf { it.isAttached } ?: return false
+        return bounds.contains(list.localToRoot(local))
     }
 
     internal fun onInsideDown(id: PointerId) {
@@ -86,9 +102,38 @@ fun Modifier.observeTouchesOutsideEditor(touch: EditorOutsideTouch, isEditorOpen
 
 /** Для раскрытого редактора: отмечает касания внутри него. Initial-проход доходит сюда раньше, чем Main-проход списка. */
 fun Modifier.markTouchesInsideEditor(touch: EditorOutsideTouch): Modifier =
-    pointerInput(touch) {
-        awaitEachGesture {
-            val down = awaitFirstDown(requireUnconsumed = false, pass = PointerEventPass.Initial)
-            touch.onInsideDown(down.id)
+    onGloballyPositioned { touch.editorBounds = it.boundsInRoot() }
+        .pointerInput(touch) {
+            awaitEachGesture {
+                val down = awaitFirstDown(requireUnconsumed = false, pass = PointerEventPass.Initial)
+                touch.onInsideDown(down.id)
+            }
         }
-    }
+
+/**
+ * Для списка с раскрытым редактором: нажатие вне карточки только сворачивает её ([onCollapse]) и больше
+ * ничего — строки, плашки и переключатели под пальцем его не получают. Касание забирается в Initial-проходе,
+ * раньше вложенных обработчиков. Если палец повёл дальше порога — это прокрутка: движение отдаётся списку.
+ */
+fun Modifier.collapseOnTapOutsideEditor(touch: EditorOutsideTouch, isEditorOpen: () -> Boolean, onCollapse: () -> Unit): Modifier =
+    onGloballyPositioned { touch.listCoordinates = it }
+        .pointerInput(touch) {
+            awaitEachGesture {
+                val down = awaitFirstDown(requireUnconsumed = false, pass = PointerEventPass.Initial)
+                if (!isEditorOpen() || touch.isInside(down.position)) return@awaitEachGesture
+                down.consume()
+                val slop = viewConfiguration.touchSlop
+                while (true) {
+                    val event = awaitPointerEvent(PointerEventPass.Initial)
+                    val change = event.changes.firstOrNull { it.id == down.id } ?: return@awaitEachGesture
+                    if (!change.pressed) {
+                        change.consume()
+                        touch.onCollapseRequested()
+                        onCollapse()
+                        return@awaitEachGesture
+                    }
+                    // Второй палец или сдвиг за порог — не нажатие, жест отдаётся списку (прокрутка)
+                    if (event.changes.size > 1 || (change.position - down.position).getDistance() > slop) return@awaitEachGesture
+                }
+            }
+        }
