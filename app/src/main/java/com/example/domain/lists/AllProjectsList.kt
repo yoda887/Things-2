@@ -63,38 +63,64 @@ object AllProjectsList {
      */
     fun reorderLater(later: List<Item>, dragged: String, target: String, now: Long = System.currentTimeMillis()): List<Item>? {
         if (dragged == target) return null
-        fun row(item: Item): Long? = when {
-            item.type != Item.TYPE_PROJECT -> null
-            item.start == Item.START_SOMEDAY || item.startDate == null -> Long.MIN_VALUE
-            else -> UpcomingOrder.dayOf(item.startDate)
-        }
         val from = later.firstOrNull { it.id == dragged } ?: return null
         val to = later.firstOrNull { it.id == target } ?: return null
-        val fromRow = row(from) ?: return null
-        if (row(to) != fromRow) return null
-        val group = later.filter { row(it) == fromRow }.toMutableList()
+        val fromRow = laterRow(from) ?: return null
+        if (laterRow(to) != fromRow) return null
+        val group = later.filter { laterRow(it) == fromRow }.toMutableList()
         group.add(group.indexOfFirst { it.id == target }, group.removeAt(group.indexOfFirst { it.id == dragged }))
-        val someday = fromRow == Long.MIN_VALUE
-        // Прежние номера ряда переходят к новым местам; совпадающие или незаданные — нумеруются заново
-        val numbered: List<Item> = if (someday) {
-            val orders = group.map { it.sortOrder }.sorted()
-            if (orders.distinct().size == orders.size) group.mapIndexed { i, p -> p.copy(sortOrder = orders[i]) }
-            else group.mapIndexed { i, p -> p.copy(sortOrder = orders.first() + i) }
-        } else {
-            val orders = group.map { it.dayOrder }
-            if (orders.none { it == null } && orders.distinct().size == orders.size) {
-                val sorted = orders.filterNotNull().sorted()
-                group.mapIndexed { i, p -> p.copy(dayOrder = sorted[i]) }
-            } else {
-                val renumbered = UpcomingOrder.renumber(group, now).associateBy { it.id }
-                group.map { renumbered[it.id] ?: it }
-            }
-        }
-        val byId = numbered.associateBy { it.id }
+        val byId = numberRow(group, someday = fromRow == Long.MIN_VALUE, now).associateBy { it.id }
         val ids = group.map { it.id }
         var next = 0
         // Ряд встаёт на свои прежние места в общем списке
         return later.map { if (it.id in byId) byId.getValue(ids[next++]) else it }
+    }
+
+    /**
+     * Выбранные проекты, перетащенные стопкой под ведущим [leader] (как группа задач): остальные [followers] встают
+     * сразу за ним в его ряду — к отложенным или на его день (берут его «Когда»), — в том порядке, в каком выбраны.
+     * Шаблоны повторяющихся проектов не переносятся.
+     * @return более поздние проекты в новом порядке, с новыми номерами в ряду ведущего; null — переносить нечего
+     */
+    fun placeFollowers(later: List<Item>, leader: String, followers: List<String>, now: Long = System.currentTimeMillis()): List<Item>? {
+        val lead = later.firstOrNull { it.id == leader } ?: return null
+        val leadRow = laterRow(lead) ?: return null
+        val moving = followers.distinct().filter { it != leader }
+            .mapNotNull { id -> later.firstOrNull { it.id == id && laterRow(it) != null } }
+        if (moving.isEmpty()) return null
+        val movingIds = moving.map { it.id }.toSet()
+        val joined = moving.map { it.copy(start = lead.start, startDate = lead.startDate, isTonight = lead.isTonight) }
+        val ordered = later.filter { it.id !in movingIds }.toMutableList()
+        ordered.addAll(ordered.indexOfFirst { it.id == leader } + 1, joined)
+        val group = ordered.filter { laterRow(it) == leadRow }
+        val byId = numberRow(group, someday = leadRow == Long.MIN_VALUE, now).associateBy { it.id }
+        return ordered.map { byId[it.id] ?: it }
+    }
+
+    /** Ряд более позднего проекта: отложенные — общий ряд, запланированные — их день; шаблоны — не переставляются (null). */
+    private fun laterRow(item: Item): Long? = when {
+        item.type != Item.TYPE_PROJECT -> null
+        item.start == Item.START_SOMEDAY || item.startDate == null -> Long.MIN_VALUE
+        else -> UpcomingOrder.dayOf(item.startDate)
+    }
+
+    /**
+     * Номера ряда [group] в его новом порядке: прежние номера ряда переходят к новым местам; совпадающие или
+     * незаданные — нумеруются заново. Отложенные — sortOrder, запланированные — порядок дня (общий с «Планами»).
+     */
+    private fun numberRow(group: List<Item>, someday: Boolean, now: Long): List<Item> = if (someday) {
+        val orders = group.map { it.sortOrder }.sorted()
+        if (orders.distinct().size == orders.size) group.mapIndexed { i, p -> p.copy(sortOrder = orders[i]) }
+        else group.mapIndexed { i, p -> p.copy(sortOrder = orders.first() + i) }
+    } else {
+        val orders = group.map { it.dayOrder }
+        if (orders.none { it == null } && orders.distinct().size == orders.size) {
+            val sorted = orders.filterNotNull().sorted()
+            group.mapIndexed { i, p -> p.copy(dayOrder = sorted[i]) }
+        } else {
+            val renumbered = UpcomingOrder.renumber(group, now).associateBy { it.id }
+            group.map { renumbered[it.id] ?: it }
+        }
     }
 
     /** Есть ли что показать. */

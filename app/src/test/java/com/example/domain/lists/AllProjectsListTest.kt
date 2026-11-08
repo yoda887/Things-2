@@ -76,6 +76,30 @@ class AllProjectsListTest {
     }
 
     @Test
+    fun placeFollowers_selectedJoinLeaderRowRightAfterIt() {
+        val tomorrow = bounds.endOfToday + day
+        val later = listOf(
+            project("d1", startDate = tomorrow).copy(dayOrder = 10), project("d2", startDate = tomorrow).copy(dayOrder = 20),
+            project("far", startDate = tomorrow + 3 * day).copy(dayOrder = 5),
+            project("s1", start = Item.START_SOMEDAY).copy(sortOrder = 5), project("s2", start = Item.START_SOMEDAY).copy(sortOrder = 9),
+            Item(id = "tpl", title = "tpl", type = Item.TYPE_PROJECT_TEMPLATE)
+        )
+        // Ведущий — отложенный: запланированные из выборки встают за ним и становятся отложенными; шаблон не едет
+        val toSomeday = AllProjectsList.placeFollowers(later, "s1", listOf("far", "d2", "tpl"))!!
+        assertEquals(listOf("d1", "s1", "far", "d2", "s2", "tpl"), toSomeday.map { it.id })
+        val someday = toSomeday.filter { it.start == Item.START_SOMEDAY }
+        assertEquals(listOf("s1", "far", "d2", "s2"), someday.sortedBy { it.sortOrder }.map { it.id })
+        assertEquals(null, toSomeday.first { it.id == "far" }.startDate)
+        // Ведущий — запланированный: отложенный берёт его день и встаёт следом в порядке дня
+        val toDay = AllProjectsList.placeFollowers(later, "d1", listOf("s2"))!!
+        val dayRow = toDay.filter { it.startDate == tomorrow }
+        assertEquals(listOf("d1", "s2", "d2"), dayRow.sortedBy { it.dayOrder }.map { it.id })
+        assertEquals(Item.START_ANYTIME, toDay.first { it.id == "s2" }.start)
+        // Переносить нечего
+        assertEquals(null, AllProjectsList.placeFollowers(later, "d1", listOf("d1", "tpl")))
+    }
+
+    @Test
     fun later_templatesByNextDay_waitingBeforeSomeday() {
         val day = 24 * 3600 * 1000L
         val tomorrow = bounds.endOfToday + 1

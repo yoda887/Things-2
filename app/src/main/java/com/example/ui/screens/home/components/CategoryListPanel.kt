@@ -401,6 +401,8 @@ fun ThingsCategoryListPanel(
     val laterProjectGestures = screen == ActiveScreen.LATER_PROJECTS
     var selectedProjectIds by remember(screen) { mutableStateOf(emptySet<String>()) }
     val isProjectSelectionMode = selectedProjectIds.isNotEmpty()
+    // Проекты сейчас выбирают протяжкой по правому краю
+    var isProjectDragSelecting by remember(screen) { mutableStateOf(false) }
     var swipeWhenProject by remember(screen) { mutableStateOf<Item?>(null) }
     var swipeWhenProjectOrigin by remember(screen) { mutableStateOf<androidx.compose.ui.geometry.Offset?>(null) }
     var laterProjectsOverride by remember(screen) { mutableStateOf<List<Item>?>(null) }
@@ -1437,12 +1439,16 @@ fun ThingsCategoryListPanel(
                                     isNew = screen == ActiveScreen.TODAY && task.id in todayNew.ids,
                                     isSelectionMode = laterProjectGestures && isProjectSelectionMode,
                                     isSelected = task.id in selectedProjectIds,
+                                    isDragSelecting = laterGestures && isProjectDragSelecting,
                                     onToggleSelect = { toggleProject(task) },
                                     swipe = if (!laterGestures) null else com.example.ui.screens.home.subcomponents.ProjectRowSwipe(
                                         onSwipeLeft = { toggleProject(task) },
                                         onSwipeRight = { origin -> swipeWhenProject = task; swipeWhenProjectOrigin = origin },
                                         enabled = dragDropState.draggedItemKey == null
                                     ),
+                                    stackHidden = laterGestures && task.id != dragDropState.draggedItemKey &&
+                                        task.id in dragDropState.stackedDragKeys,
+                                    stackSize = if (laterGestures && task.id == dragDropState.draggedItemKey) dragDropState.stackedDragKeys.size else 0,
                                     tasks = state.displayTasks,
                                     projectProgressMap = state.projectProgressMap,
                                     textPrimaryColor = textPrimaryColor,
@@ -1503,6 +1509,8 @@ fun ThingsCategoryListPanel(
                                     modifier = if (dragDropState.draggedItemKey == task.id) {
                                         // Проект тянут в «Планах» — карточкой над строками, как задачу
                                         val dragShape = ThingsTheme.shapes.rowShape
+                                        // Ведущий стопки не обрезается: карточки стопки выступают из-под него
+                                        val stacked = dragDropState.hasStackedItems
                                         Modifier
                                             .zIndex(UPCOMING_DRAG_Z)
                                             .graphicsLayer {
@@ -1510,11 +1518,11 @@ fun ThingsCategoryListPanel(
                                                 translationX = dragDropState.dragAccumulatedX
                                                 scaleX = UPCOMING_DRAG_SCALE
                                                 scaleY = UPCOMING_DRAG_SCALE
-                                                shadowElevation = ThingsElevation.CARD.toPx()
+                                                shadowElevation = if (stacked) 0f else ThingsElevation.CARD.toPx()
                                                 shape = dragShape
-                                                clip = true
+                                                clip = !stacked
                                             }
-                                            .background(ThingsTheme.colors.background)
+                                            .then(if (stacked) Modifier else Modifier.background(ThingsTheme.colors.background))
                                     } else {
                                         Modifier.animateItem(placementSpec = placementSpec)
                                     }.then(
@@ -1522,8 +1530,10 @@ fun ThingsCategoryListPanel(
                                             Modifier.upcomingProjectDrag(dragDropState, task.id, upcomingDrag) { saved ->
                                                 if (saved.isNotEmpty()) onEvent(ThingsCategoryListEvent.ReorderTasks(saved))
                                             }
-                                        } else if (laterGestures && !isProjectSelectionMode) {
-                                            // «Пізніші проєкти»: между отложенными или между проектами того же дня
+                                        } else if (laterGestures) {
+                                            // «Пізніші проєкти»: между отложенными или между проектами того же дня.
+                                            // Как у задач: тянуть можно и в режиме выбора — выбранные сворачиваются
+                                            // стопкой под ведущим, после сброса встают за ним
                                             Modifier.universalDragAndDrop(
                                                 state = dragDropState,
                                                 key = task.id,
@@ -1536,7 +1546,22 @@ fun ThingsCategoryListPanel(
                                                         true
                                                     }
                                                 },
+                                                onDragStarted = {
+                                                    val selected = selectedProjectIds
+                                                    dragDropState.stackedDragKeys =
+                                                        if (task.id in selected && selected.size > 1) listOf(task.id) + selected.filter { it != task.id }
+                                                        else emptyList()
+                                                    // Режим выбора закрывается при начале перетаскивания — как у задач
+                                                    if (selected.isNotEmpty()) selectedProjectIds = emptySet()
+                                                },
                                                 onDragEnd = {
+                                                    val stack = dragDropState.stackedDragKeys.mapNotNull { it as? String }
+                                                    if (stack.size > 1) {
+                                                        AllProjectsList.placeFollowers(laterProjectsNow(), stack.first(), stack.drop(1))?.let { placed ->
+                                                            val byId = placed.associateBy { it.id }
+                                                            laterProjectsOverride = (laterProjectsOverride ?: currentProjects).map { byId[it.id] ?: it }
+                                                        }
+                                                    }
                                                     val stored = currentProjects.associateBy { it.id }
                                                     val changed = laterProjectsOverride.orEmpty().filter { stored[it.id] != null && stored[it.id] != it }
                                                     if (changed.isNotEmpty()) onEvent(ThingsCategoryListEvent.ReorderTasks(changed))
@@ -2415,6 +2440,56 @@ fun ThingsCategoryListPanel(
                             } finally {
                                 isDragSelecting = false
                             }
+                        }
+                    }
+                }
+        )
+    }
+
+    // «Пізніші проєкти»: выбор проектов протяжкой по правому краю — как у задач
+    if (laterProjectGestures && isProjectSelectionMode) {
+        val currentView = androidx.compose.ui.platform.LocalView.current
+        val currentLaterNow by rememberUpdatedState(laterProjectsNow)
+        Box(
+            modifier = Modifier
+                .align(Alignment.TopEnd)
+                .fillMaxHeight()
+                .width(PULL_INDICATOR_WIDTH)
+                .padding(top = topPaddingTotal, bottom = LIST_BOTTOM_PADDING)
+                .pointerInput(Unit) {
+                    awaitEachGesture {
+                        val down = awaitFirstDown(requireUnconsumed = false)
+                        fun projectIdsInRange(y1: Float, y2: Float, movingDown: Boolean): List<String> {
+                            val minY = minOf(y1, y2) - pullOffset.value
+                            val maxY = maxOf(y1, y2) - pullOffset.value
+                            val ids = currentLaterNow().map { it.id }.toSet()
+                            val hit = lazyListState.layoutInfo.visibleItemsInfo.filter { info ->
+                                info.offset.toFloat() <= maxY && info.offset + info.size.toFloat() >= minY
+                            }
+                            return (if (movingDown) hit else hit.asReversed()).mapNotNull { (it.key as? String)?.takeIf { k -> k in ids } }
+                        }
+                        var lastY = down.position.y
+                        val first = projectIdsInRange(lastY, lastY, movingDown = true).firstOrNull() ?: return@awaitEachGesture
+                        down.consume()
+                        isProjectDragSelecting = true
+                        try {
+                            val select = first !in selectedProjectIds
+                            val touched = mutableSetOf(first)
+                            fun apply(id: String) {
+                                currentView.performHapticFeedback(android.view.HapticFeedbackConstants.CLOCK_TICK)
+                                selectedProjectIds = if (select) selectedProjectIds + id else selectedProjectIds - id
+                            }
+                            apply(first)
+                            while (true) {
+                                val change = awaitPointerEvent().changes.firstOrNull() ?: break
+                                if (!change.pressed) break
+                                change.consume()
+                                val y = change.position.y
+                                projectIdsInRange(lastY, y, movingDown = y >= lastY).forEach { if (touched.add(it)) apply(it) }
+                                lastY = y
+                            }
+                        } finally {
+                            isProjectDragSelecting = false
                         }
                     }
                 }

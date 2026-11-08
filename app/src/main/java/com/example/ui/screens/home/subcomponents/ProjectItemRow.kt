@@ -40,6 +40,16 @@ import androidx.compose.ui.layout.boundsInRoot
 import androidx.compose.ui.layout.findRootCoordinates
 import androidx.compose.ui.layout.onGloballyPositioned
 import com.example.ui.theme.dimens
+import com.example.ui.theme.ThingsElevation
+import com.example.ui.theme.ThingsMotion
+import com.example.ui.theme.ThingsStroke
+import androidx.compose.animation.core.FastOutSlowInEasing
+import androidx.compose.animation.core.tween
+import androidx.compose.animation.expandVertically
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
+import androidx.compose.animation.shrinkVertically
+import androidx.compose.foundation.border
 
 // Название → значок заметок → шеврон
 private val NOTES_ICON_GAP = 5.dp
@@ -78,9 +88,15 @@ fun ProjectItemRow(
     // Множественный выбор проектов (свайп влево, как у задач): нажатие отмечает, справа — кружок выбора
     isSelectionMode: Boolean = false,
     isSelected: Boolean = false,
+    // Строки сейчас выбирают протяжкой по правому краю — кружок крупнее, как у задач
+    isDragSelecting: Boolean = false,
     onToggleSelect: () -> Unit = {},
     // Свайпы по проекту, как на главном экране: вправо — «Когда», влево — выбор; null — строка без свайпов
     swipe: ProjectRowSwipe? = null,
+    // Перетаскивание стопкой (только со свайпами): [stackHidden] — выбранный проект свёрнут под ведущим,
+    // [stackSize] — у ведущего: сколько проектов в стопке (с ним самим)
+    stackHidden: Boolean = false,
+    stackSize: Int = 0,
     modifier: Modifier = Modifier
 ) {
     val progress = projectProgressMap[project.id]
@@ -260,7 +276,7 @@ fun ProjectItemRow(
             exit = androidx.compose.animation.scaleOut() + androidx.compose.animation.fadeOut() +
                 androidx.compose.animation.shrinkHorizontally()
         ) {
-            SelectionCircle(isSelected = isSelected, isDragSelecting = false, onToggle = onToggleSelect)
+            SelectionCircle(isSelected = isSelected, isDragSelecting = isDragSelecting, onToggle = onToggleSelect)
         }
     }
     }
@@ -268,22 +284,62 @@ fun ProjectItemRow(
         rowContent(modifier)
     } else {
         // Смещение центра строки от центра экрана: из него вырастает диалог «Когда», как у задач.
-        // Перетаскивание ([modifier]) — на внешнем контейнере свайпа, иначе долгое нажатие перехватывает свайп
+        // Перетаскивание ([modifier]) — снаружи контейнера свайпа, иначе долгое нажатие перехватывает свайп
         var rowCenter by remember { mutableStateOf<Offset?>(null) }
-        SwipeableTaskContainer(
-            modifier = modifier.onGloballyPositioned { coordinates ->
-                val root = coordinates.findRootCoordinates()
-                rowCenter = coordinates.boundsInRoot().center - Offset(root.size.width / 2f, root.size.height / 2f)
-            },
-            onSwipeLeft = swipe.onSwipeLeft,
-            onSwipeRight = { swipe.onSwipeRight(rowCenter) },
-            enabled = swipe.enabled,
-            // В режиме выбора свайп вправо «Когда» не вызывает — как у задач
-            swipeRightEnabled = !isSelectionMode
-        ) {
-            rowContent(Modifier.background(ThingsTheme.colors.background))
+        Box(modifier = modifier) {
+            // Выбранные проекты, которые тянут стопкой под другим, сворачиваются — как задачи группы
+            androidx.compose.animation.AnimatedVisibility(
+                visible = !stackHidden,
+                enter = expandVertically(tween(ThingsMotion.MEDIUM, easing = FastOutSlowInEasing)) + fadeIn(tween(ThingsMotion.BASE)),
+                exit = shrinkVertically(tween(ThingsMotion.MEDIUM, easing = FastOutSlowInEasing)) + fadeOut(tween(ThingsMotion.BASE))
+            ) {
+                Box {
+                    // Ведущий стопки: карточки остальных выбранных лесенкой под ним, как у задач
+                    if (stackSize >= 3) StackCard(STACK_FAR_OFFSET, STACK_FAR_ROTATION, ThingsElevation.STACK_3)
+                    if (stackSize >= 2) StackCard(STACK_NEAR_OFFSET, STACK_NEAR_ROTATION, ThingsElevation.FAB)
+                    SwipeableTaskContainer(
+                        modifier = Modifier.onGloballyPositioned { coordinates ->
+                            val root = coordinates.findRootCoordinates()
+                            rowCenter = coordinates.boundsInRoot().center - Offset(root.size.width / 2f, root.size.height / 2f)
+                        },
+                        onSwipeLeft = swipe.onSwipeLeft,
+                        onSwipeRight = { swipe.onSwipeRight(rowCenter) },
+                        enabled = swipe.enabled,
+                        // В режиме выбора свайп вправо «Когда» не вызывает — как у задач
+                        swipeRightEnabled = !isSelectionMode
+                    ) {
+                        rowContent(Modifier.background(ThingsTheme.colors.background))
+                    }
+                }
+            }
         }
     }
+}
+
+// Стопка под ведущим проектом — те же сдвиги и наклон, что у стопки задач (AnimatedTaskItem)
+private val STACK_NEAR_OFFSET = 4.dp
+private val STACK_FAR_OFFSET = 8.dp
+private const val STACK_NEAR_ROTATION = 1.6f
+private const val STACK_FAR_ROTATION = 3.2f
+
+/** Карточка стопки под строкой: сдвинута на [offset] вправо-вниз и чуть повёрнута. */
+@Composable
+private fun BoxScope.StackCard(offset: androidx.compose.ui.unit.Dp, rotation: Float, elevation: androidx.compose.ui.unit.Dp) {
+    val shape = ThingsTheme.shapes.rowShape
+    Box(
+        modifier = Modifier
+            .matchParentSize()
+            .graphicsLayer {
+                translationX = offset.toPx()
+                translationY = offset.toPx()
+                rotationZ = rotation
+                shadowElevation = elevation.toPx()
+                this.shape = shape
+                clip = true
+            }
+            .background(ThingsTheme.colors.stackCard, shape)
+            .border(ThingsStroke.HAIRLINE, ThingsTheme.colors.hairline, shape)
+    )
 }
 
 /** Свайпы строки проекта: влево — отметить (выбор), вправо — «Когда» из точки [Offset] (центр строки от центра экрана) */
