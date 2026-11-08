@@ -94,6 +94,25 @@ class ThingsCategoryStateTest {
 
     private fun ids(s: ThingsCategoryListState) = s.displayTasks.map { it.item.id }
 
+    @Test
+    fun `Inbox - переехавшая задача раскрыта под плашкой и остаётся под ней`() {
+        val tasks = listOf(task("a", sortOrder = 1), task("moved", projectId = "p1", sortOrder = 0))
+        fun inbox(ghostInEditor: String?) = ThingsViewModel.computeCategoryListState(
+            screen = ActiveScreen.INBOX, project = null, area = null, expandedTaskId = "moved", selectedTag = null,
+            taskList = tasks, projectList = emptyList(), areaList = emptyList(), calEvents = emptyList(),
+            savedTags = emptyList(), savedTagObjs = emptyList(), allTagsSet = emptySet(), highlighted = null,
+            inboxMovedOut = setOf("moved"), inboxGhostInEditor = ghostInEditor
+        )
+        // Раскрыли под плашкой — над плашкой её нет, под плашкой она есть
+        val underBanner = inbox(ghostInEditor = "moved")
+        assertEquals(listOf("a"), ids(underBanner))
+        assertEquals(listOf("moved"), underBanner.inboxGhosts.map { it.item.id })
+        // Ушла из «Входящих», пока была раскрыта в списке, — стоит на месте снимком до закрытия редактора
+        val inPlace = inbox(ghostInEditor = null)
+        assertEquals(listOf("moved", "a"), ids(inPlace))
+        assertTrue(inPlace.inboxGhosts.isEmpty())
+    }
+
     // ─── Экраны ─────────────────────────────────────────────────────
 
     @Test

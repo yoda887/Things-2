@@ -427,8 +427,10 @@ fun ThingsCategoryListPanel(
         onDialogsActiveChange(anyActive)
     }
     
-    val activeTask = remember(inlineExpandedTaskId, state.displayTasks) {
+    // Раскрытая задача — в списке экрана или под плашкой «Входящих» (переехавшая, раскрытая там же)
+    val activeTask = remember(inlineExpandedTaskId, state.displayTasks, state.inboxGhosts) {
         state.displayTasks.find { it.item.id == inlineExpandedTaskId }
+            ?: state.inboxGhosts.find { it.item.id == inlineExpandedTaskId }
     }
 
     val todayCalendarEvents = remember(calendarEvents) { TodayList.events(calendarEvents) }

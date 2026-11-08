@@ -150,6 +150,9 @@ class ThingsViewModel @Inject constructor(
     /** Задачи, ушедшие из «Входящих», — видны там под плашкой, пока не нажмут «OK» ([com.example.domain.lists.InboxMoves]) */
     private val _inboxMovedOut = MutableStateFlow<Set<String>>(emptySet())
 
+    /** Переехавшая задача, раскрытая в редакторе прямо под плашкой «Входящих», — остаётся под плашкой */
+    private val _inboxGhostInEditor = MutableStateFlow<String?>(null)
+
     init {
         viewModelScope.launch {
             var previousInbox: Set<String>? = null
@@ -259,6 +262,8 @@ class ThingsViewModel @Inject constructor(
     }
 
     fun setInlineExpandedTaskId(taskId: String?) {
+        // Раскрыли задачу, уже стоящую под плашкой «Входящих», — она и в редакторе остаётся там, а не прыгает вверх
+        _inboxGhostInEditor.value = taskId?.takeIf { it in _inboxMovedOut.value }
         _inlineExpandedTaskId.value = taskId
     }
 
@@ -321,7 +326,8 @@ class ThingsViewModel @Inject constructor(
             query: String = "",
             headingList: List<Item> = emptyList(),
             repeatRules: Map<String, com.example.data.model.RecurrenceRule> = emptyMap(),
-            inboxMovedOut: Set<String> = emptySet()
+            inboxMovedOut: Set<String> = emptySet(),
+            inboxGhostInEditor: String? = null
         ): ThingsCategoryListState {
             // Границы дня считаем один раз на весь список, а не в геттерах каждой задачи
             val bounds = DayBounds.now()
@@ -330,7 +336,9 @@ class ThingsViewModel @Inject constructor(
             // Все экраны перечислены явно (без else): новый экран компилятор заставит указать и здесь
             val screenTasks = taskList.filter { wrapper ->
                 val task = wrapper.item
-                if (task.id == expandedTaskId) {
+                // Раскрытая задача стоит в списке снимком, пока редактор открыт; кроме переехавшей из «Входящих»,
+                // раскрытой под плашкой, — она остаётся под плашкой (InboxMoves.ghosts)
+                if (task.id == expandedTaskId && !(screen == ActiveScreen.INBOX && task.id == inboxGhostInEditor)) {
                     true
                 } else {
                     when (screen) {
@@ -457,7 +465,8 @@ class ThingsViewModel @Inject constructor(
             query = searchQuery.value,
             headingList = headings.value,
             repeatRules = recurrenceRules.value,
-            inboxMovedOut = _inboxMovedOut.value
+            inboxMovedOut = _inboxMovedOut.value,
+            inboxGhostInEditor = _inboxGhostInEditor.value
         )
     }
 
@@ -493,7 +502,8 @@ class ThingsViewModel @Inject constructor(
                 searchQuery,
                 headings,
                 recurrenceRules,
-                _inboxMovedOut
+                _inboxMovedOut,
+                _inboxGhostInEditor
             )
         ) { array ->
             val expandedTaskId = array[0] as? String
@@ -535,7 +545,8 @@ class ThingsViewModel @Inject constructor(
                 query = query,
                 headingList = headingList,
                 repeatRules = @Suppress("UNCHECKED_CAST") (array[12] as Map<String, com.example.data.model.RecurrenceRule>),
-                inboxMovedOut = @Suppress("UNCHECKED_CAST") (array[13] as Set<String>)
+                inboxMovedOut = @Suppress("UNCHECKED_CAST") (array[13] as Set<String>),
+                inboxGhostInEditor = array[14] as? String
             )
         }.flowOn(Dispatchers.Default)
     }
