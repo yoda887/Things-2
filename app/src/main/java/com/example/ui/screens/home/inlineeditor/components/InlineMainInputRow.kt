@@ -88,6 +88,9 @@ fun InlineMainInputRow(
     }
 }
 
+/** Ширина панели списка, в которой раскрывается редактор; null — не в списке (берётся ширина окна). */
+val LocalEditorListWidth = androidx.compose.runtime.compositionLocalOf<androidx.compose.ui.unit.Dp?> { null }
+
 @Composable
 private fun InlineMainInputRowContent(
     title: String,
@@ -122,10 +125,12 @@ private fun InlineMainInputRowContent(
     val expandedEndPadding = MaterialTheme.dimens.taskEditorExpandedEndPadding
     val checkboxSize = MaterialTheme.dimens.mainCheckboxSize
 
-    // Целевая ширина текстовой области в полностью раскрытом редакторе (предотвращает перестроение строк текста при анимации)
-    val targetWidthPx = androidx.compose.runtime.remember(configuration.screenWidthDp, density, expandedStartPadding, expandedEndPadding, checkboxSize, titleSpacing) {
+    // Целевая ширина текстовой области в полностью раскрытом редакторе (предотвращает перестроение строк текста при анимации).
+    // Считается от ширины панели списка; вне списка — от ширины окна (на телефоне они совпадают)
+    val listWidth = LocalEditorListWidth.current
+    val targetWidthPx = androidx.compose.runtime.remember(configuration.screenWidthDp, listWidth, density, expandedStartPadding, expandedEndPadding, checkboxSize, titleSpacing) {
         with(density) {
-            val windowWidth = configuration.screenWidthDp.dp
+            val windowWidth = listWidth ?: configuration.screenWidthDp.dp
             (windowWidth - expandedStartPadding - expandedEndPadding - checkboxSize - titleSpacing).roundToPx()
         }
     }

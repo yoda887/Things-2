@@ -76,6 +76,7 @@ import androidx.compose.animation.core.Animatable
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Rect
 import androidx.compose.ui.layout.onGloballyPositioned
+import androidx.compose.ui.layout.onSizeChanged
 import androidx.compose.ui.layout.positionInRoot
 import androidx.compose.ui.unit.toSize
 import com.example.ui.components.PULL_TO_SEARCH_CIRCLE_CENTER_Y
@@ -1125,7 +1126,14 @@ fun ThingsCategoryListPanel(
         label = "toolbarOffset"
     )
 
-    Box(modifier = Modifier.fillMaxSize().background(bkgColor)) {
+    // Ширина панели списка — по ней редактор заранее раскладывает строки заголовка и заметок
+    // (на десктопе список уже окна; по ширине окна заголовок вылезал за карточку)
+    var listPanelWidthPx by remember { androidx.compose.runtime.mutableIntStateOf(0) }
+    androidx.compose.runtime.CompositionLocalProvider(
+        com.example.ui.screens.home.inlineeditor.components.LocalEditorListWidth provides
+            (if (listPanelWidthPx > 0) with(density) { listPanelWidthPx.toDp() } else null)
+    ) {
+    Box(modifier = Modifier.fillMaxSize().background(bkgColor).onSizeChanged { listPanelWidthPx = it.width }) {
         LazyColumn(
             state = lazyListState,
             modifier = Modifier
@@ -2565,6 +2573,7 @@ fun ThingsCategoryListPanel(
                 }
             }
     )
+  }
   }
 }
 
