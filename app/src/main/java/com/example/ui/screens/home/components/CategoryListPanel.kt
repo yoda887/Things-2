@@ -1349,6 +1349,16 @@ fun ThingsCategoryListPanel(
                             // с ней можно всё; бледная, пока не раскрыта
                             val isInboxGhost = screen == ActiveScreen.INBOX && item.item.id in inboxGhostIds &&
                                 inlineExpandedTaskId != item.item.id
+                            // Бледнеет плавно и только когда карточка уже свернулась — закрывается как обычная задача;
+                            // при раскрытии сразу плавно становится непрозрачной
+                            val ghostAlpha = androidx.compose.animation.core.animateFloatAsState(
+                                targetValue = if (isInboxGhost) ThingsAlpha.HALF else 1f,
+                                animationSpec = if (isInboxGhost) androidx.compose.animation.core.tween(
+                                    ThingsMotion.STANDARD,
+                                    delayMillis = com.example.ui.theme.AnimationConstants.TASK_EXPANSION_DURATION_MS.toInt()
+                                ) else androidx.compose.animation.core.tween(ThingsMotion.BASE),
+                                label = "inboxGhostAlpha"
+                            )
                             AnimatedTaskItem(
                                 taskWrapper = liveItem,
                                 // В «Повторюваних завданнях» в конце «Планов» у шаблона без следующего повтора — «Пауза» (на паузе), иначе «Чекає»
@@ -1416,7 +1426,7 @@ fun ThingsCategoryListPanel(
                                 onToggleSelect = { onEvent(ThingsCategoryListEvent.ToggleTaskSelection(item.item.id)) },
                                 selectedTaskIds = state.selectedTaskIds,
                                 onExitSelectionMode = { onEvent(ThingsCategoryListEvent.ExitSelectionMode) },
-                                modifier = (if (isInboxGhost) Modifier.graphicsLayer { alpha = ThingsAlpha.HALF } else Modifier).then(if (dragDropState.draggedItemKey == item.item.id) {
+                                modifier = (if (screen == ActiveScreen.INBOX) Modifier.graphicsLayer { alpha = ghostAlpha.value } else Modifier).then(if (dragDropState.draggedItemKey == item.item.id) {
                                     Modifier
                                 } else {
                                     Modifier.animateItem(
