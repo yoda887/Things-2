@@ -1,0 +1,30 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="512" height="512" viewBox="0 0 100 100">
+  <!-- Иконка Things. Сгенерировано docs/icon/icon_build.py — правки вносить туда (или прислать изменённые пути). -->
+  <defs>
+    <linearGradient id="g-background" x1="0" y1="0" x2="0" y2="100" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#5891F6"/>
+      <stop offset="1" stop-color="#3476DE"/>
+    </linearGradient>
+    <linearGradient id="g-paper" x1="0" y1="15.15" x2="0" y2="84.85" gradientUnits="userSpaceOnUse">
+      <stop offset="0.000" stop-color="#C3CBDC"/>
+      <stop offset="0.042" stop-color="#E3E6EE"/>
+      <stop offset="0.100" stop-color="#FFFFFF"/>
+      <stop offset="1.000" stop-color="#FFFFFF"/>
+    </linearGradient>
+    <clipPath id="shape"><path d="M24 0H76A24 24 0 0 1 100 24V76A24 24 0 0 1 76 100H24A24 24 0 0 1 0 76V24A24 24 0 0 1 24 0Z"/></clipPath>
+  </defs>
+  <g clip-path="url(#shape)">
+    <path id="background" fill="url(#g-background)" d="M0 0H100V100H0Z"/>
+    <path id="tab-shadow-left" fill="#2D6AC6" d="M32 88.75H33V125H32Z"/>
+    <path id="tab-line-left" fill="#3672CB" d="M32.9 88.75H33.6V125H32.9Z"/>
+    <path id="tab-shadow-right" fill="#2D6AC6" d="M66.3 88.75H68.3V125H66.3Z"/>
+    <path id="tab-joint" fill="#0E2D5E" d="M33.6 83H66.3V90.5H33.6Z"/>
+    <path id="frame" fill="#0E2D5E" d="M23.45 10.8H76.55A12.65 12.65 0 0 1 89.2 23.45V76.55A12.65 12.65 0 0 1 76.55 89.2H23.45A12.65 12.65 0 0 1 10.8 76.55V23.45A12.65 12.65 0 0 1 23.45 10.8Z"/>
+    <path id="tab-body" fill="#245EB5" d="M33.6 90.7H64.6V125H33.6Z"/>
+    <path id="tab-highlight" fill="#5893EA" d="M64.6 90H66.3V125H64.6Z"/>
+    <path id="frame-rim" fill="#08193A" d="M24.45 14.15H75.55A10.3 10.3 0 0 1 85.85 24.45V75.55A10.3 10.3 0 0 1 75.55 85.85H24.45A10.3 10.3 0 0 1 14.15 75.55V24.45A10.3 10.3 0 0 1 24.45 14.15Z"/>
+    <path id="paper-lip" fill="#4B566E" d="M22.15 15.15H77.85A7 7 0 0 1 84.85 22.15V78.45A7 7 0 0 1 77.85 85.45H22.15A7 7 0 0 1 15.15 78.45V22.15A7 7 0 0 1 22.15 15.15Z"/>
+    <path id="paper" fill="url(#g-paper)" d="M22.15 15.15H77.85A7 7 0 0 1 84.85 22.15V77.85A7 7 0 0 1 77.85 84.85H22.15A7 7 0 0 1 15.15 77.85V22.15A7 7 0 0 1 22.15 15.15Z"/>
+    <path id="check" d="M36 49.9 L47.55 61.15 Q57.23 46.69 68.35 33.3" fill="none" stroke="#4F5055" stroke-width="6.5" stroke-linecap="round" stroke-linejoin="round"/>
+  </g>
+</svg>

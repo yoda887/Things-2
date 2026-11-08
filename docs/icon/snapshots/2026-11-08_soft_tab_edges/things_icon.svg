@@ -1,0 +1,42 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="512" height="512" viewBox="0 0 100 100">
+  <!-- Иконка Things. Сгенерировано docs/icon/icon_build.py — правки вносить туда (или прислать изменённые пути). -->
+  <defs>
+    <linearGradient id="g-background" x1="0" y1="0" x2="0" y2="100" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#5891F6"/>
+      <stop offset="1" stop-color="#3476DE"/>
+    </linearGradient>
+    <linearGradient id="g-tab" x1="33" y1="0" x2="67.3" y2="0" gradientUnits="userSpaceOnUse">
+      <stop offset="0.000" stop-color="#2B66C2"/>
+      <stop offset="0.058" stop-color="#2660B8"/>
+      <stop offset="0.496" stop-color="#245EB5"/>
+      <stop offset="0.933" stop-color="#2761BA"/>
+      <stop offset="1.000" stop-color="#2A65C0"/>
+    </linearGradient>
+    <linearGradient id="g-tab-shade" x1="0" y1="89.2" x2="0" y2="91.6" gradientUnits="userSpaceOnUse">
+      <stop offset="0.000" stop-color="#0E2D5E"/>
+      <stop offset="0.375" stop-color="#0E2D5E" stop-opacity="0.5"/>
+      <stop offset="1.000" stop-color="#0E2D5E" stop-opacity="0"/>
+    </linearGradient>
+    <linearGradient id="g-paper" x1="0" y1="15.15" x2="0" y2="84.85" gradientUnits="userSpaceOnUse">
+      <stop offset="0.000" stop-color="#C3CBDC"/>
+      <stop offset="0.042" stop-color="#E3E6EE"/>
+      <stop offset="0.100" stop-color="#FFFFFF"/>
+      <stop offset="1.000" stop-color="#FFFFFF"/>
+    </linearGradient>
+    <clipPath id="shape"><path d="M24 0H76A24 24 0 0 1 100 24V76A24 24 0 0 1 76 100H24A24 24 0 0 1 0 76V24A24 24 0 0 1 24 0Z"/></clipPath>
+  </defs>
+  <g clip-path="url(#shape)">
+    <path id="background" fill="url(#g-background)" d="M0 0H100V100H0Z"/>
+    <path id="tab-edge-left-1" d="M31.6 89.58A2.8 2.8 0 0 1 33 92V125" fill="none" stroke="#5A93EE" stroke-opacity="0.3" stroke-width="3.2"/>
+    <path id="tab-edge-left-2" d="M31.6 89.58A2.8 2.8 0 0 1 33 92V125" fill="none" stroke="#5A93EE" stroke-opacity="0.55" stroke-width="1"/>
+    <path id="tab-edge-right-1" d="M68.7 89.58A2.8 2.8 0 0 0 67.3 92V125" fill="none" stroke="#6AA0F2" stroke-opacity="0.4" stroke-width="3.6"/>
+    <path id="tab-edge-right-2" d="M68.7 89.58A2.8 2.8 0 0 0 67.3 92V125" fill="none" stroke="#74A8F5" stroke-opacity="0.95" stroke-width="1.2"/>
+    <path id="tab" fill="url(#g-tab)" d="M30.2 86.2H70.1V89.2A2.8 2.8 0 0 0 67.3 92V125H33V92A2.8 2.8 0 0 0 30.2 89.2Z"/>
+    <path id="tab-shade" fill="url(#g-tab-shade)" d="M30.2 86.2H70.1V89.2A2.8 2.8 0 0 0 67.3 92V125H33V92A2.8 2.8 0 0 0 30.2 89.2Z"/>
+    <path id="frame" fill="#0E2D5E" d="M23.45 10.8H76.55A12.65 12.65 0 0 1 89.2 23.45V76.55A12.65 12.65 0 0 1 76.55 89.2H23.45A12.65 12.65 0 0 1 10.8 76.55V23.45A12.65 12.65 0 0 1 23.45 10.8Z"/>
+    <path id="frame-rim" fill="#08193A" d="M24.45 14.15H75.55A10.3 10.3 0 0 1 85.85 24.45V75.55A10.3 10.3 0 0 1 75.55 85.85H24.45A10.3 10.3 0 0 1 14.15 75.55V24.45A10.3 10.3 0 0 1 24.45 14.15Z"/>
+    <path id="paper-lip" fill="#4B566E" d="M22.15 15.15H77.85A7 7 0 0 1 84.85 22.15V78.45A7 7 0 0 1 77.85 85.45H22.15A7 7 0 0 1 15.15 78.45V22.15A7 7 0 0 1 22.15 15.15Z"/>
+    <path id="paper" fill="url(#g-paper)" d="M22.15 15.15H77.85A7 7 0 0 1 84.85 22.15V77.85A7 7 0 0 1 77.85 84.85H22.15A7 7 0 0 1 15.15 77.85V22.15A7 7 0 0 1 22.15 15.15Z"/>
+    <path id="check" d="M36 49.9 L47.55 61.15 Q57.23 46.69 68.35 33.3" fill="none" stroke="#4F5055" stroke-width="6.5" stroke-linecap="round" stroke-linejoin="round"/>
+  </g>
+</svg>
