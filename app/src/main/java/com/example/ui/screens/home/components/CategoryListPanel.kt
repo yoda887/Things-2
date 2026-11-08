@@ -78,6 +78,7 @@ import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Rect
 import androidx.compose.ui.layout.onGloballyPositioned
 import androidx.compose.ui.layout.onSizeChanged
+import androidx.compose.animation.core.animateDecay
 import androidx.compose.ui.layout.positionInRoot
 import androidx.compose.ui.unit.toSize
 import com.example.ui.components.PULL_TO_SEARCH_CIRCLE_CENTER_Y
@@ -897,10 +898,12 @@ fun ThingsCategoryListPanel(
         if (inlineExpandedTaskId != null) editorOutsideTouch.reset()
     }
 
-    // Пока задача раскрыта, прокрутка не уводит её карточку из видимой зоны — той же, в которую карточку
-    // ставит раскрытие: от тулбара до плашки действий (или клавиатуры). Ограничители — края карточки:
-    // вверх её можно увести, пока нижний край не дойдёт до верха зоны, вниз — пока верхний не дойдёт до низа.
-    // Движение, которое возвращает карточку в зону, разрешено всегда
+    // Пока задача раскрыта, прокрутка не уводит её карточку из видимой зоны — той же, в которую карточку ставит
+    // раскрытие: от тулбара до плашки действий (или клавиатуры). Точки остановки — у краёв зоны, с видимой частью
+    // карточки EXPANDED_VISIBLE_STRIP: вверх карточка встаёт так, что у верха зоны видна её нижняя часть, вниз — что у
+    // низа видна верхняя. За точку остановки её уводит пружина: пальцем — с растущим сопротивлением, броском —
+    // скорость за границей быстро и плавно гаснет (expandedCardFling). Дальше EXPANDED_OVERSCROLL_MAX не уходит,
+    // потом пружиной возвращается к точке остановки. Движение к зоне — всегда свободно
     val currentExpandedId by rememberUpdatedState(inlineExpandedTaskId)
     val imeInsetsForClamp = WindowInsets.ime
     val navBarInsetsForClamp = WindowInsets.navigationBars
@@ -910,29 +913,118 @@ fun ThingsCategoryListPanel(
     }
     val cardGapPx = with(density) { MaterialTheme.dimens.taskExpandedVerticalGap.toPx() }
     val currentCardLimits by rememberUpdatedState(Triple(cardTopLimitPx, cardBottomReservePx, cardGapPx))
+    val cardStripPx = with(density) { EXPANDED_VISIBLE_STRIP.toPx() }
+    val cardOverscrollMaxPx = with(density) { EXPANDED_OVERSCROLL_MAX.toPx() }
+    /** Верх раскрытой карточки на экране и его точки остановки (lo — выше всего, hi — ниже всего); null — не видна. */
+    fun expandedCardStops(): Triple<Float, Float, Float>? {
+        val id = currentExpandedId ?: return null
+        val coords = listCoordinates?.takeIf { it.isAttached } ?: return null
+        val layoutInfo = lazyListState.layoutInfo
+        val info = layoutInfo.visibleItemsInfo.firstOrNull { it.key == id } ?: return null
+        val (topLimit, bottomReserve, gap) = currentCardLimits
+        val rootHeight = coords.findRootCoordinates().size.height.toFloat()
+        // Карточка — строка без отступов раскрытия сверху и снизу, в координатах экрана
+        val cardTop = coords.positionInRoot().y + (info.offset - layoutInfo.viewportStartOffset) + gap
+        val cardHeight = (info.size - 2 * gap).toFloat()
+        val zoneBottom = minOf(
+            rootHeight - imeInsetsForClamp.getBottom(density),
+            rootHeight - navBarInsetsForClamp.getBottom(density) - bottomReserve
+        )
+        val strip = minOf(cardStripPx, cardHeight)
+        return Triple(cardTop, topLimit - cardHeight + strip, zoneBottom - strip)
+    }
+    /** Сколько прокрутить, чтобы карточка встала в точку остановки (0 — она между точками). */
+    fun cardBackDelta(): Float {
+        val (cardTop, lo, hi) = expandedCardStops() ?: return 0f
+        return when {
+            cardTop < lo -> cardTop - lo
+            cardTop > hi -> cardTop - hi
+            else -> 0f
+        }
+    }
     val expandedCardScrollClamp = remember {
         object : NestedScrollConnection {
             override fun onPreScroll(available: Offset, source: NestedScrollSource): Offset {
-                val id = currentExpandedId ?: return Offset.Zero
-                val coords = listCoordinates?.takeIf { it.isAttached } ?: return Offset.Zero
-                val layoutInfo = lazyListState.layoutInfo
-                val info = layoutInfo.visibleItemsInfo.firstOrNull { it.key == id } ?: return Offset.Zero
-                val (topLimit, bottomReserve, gap) = currentCardLimits
-                val rootHeight = coords.findRootCoordinates().size.height.toFloat()
-                // Карточка — строка без отступов раскрытия сверху и снизу, в координатах экрана
-                val cardTop = coords.positionInRoot().y + (info.offset - layoutInfo.viewportStartOffset) + gap
-                val cardHeight = info.size - 2 * gap
-                val zoneBottom = minOf(
-                    rootHeight - imeInsetsForClamp.getBottom(density),
-                    rootHeight - navBarInsetsForClamp.getBottom(density) - bottomReserve
-                )
-                // Прокрутка вверх (карточка уходит вверх) — до нижнего края карточки у верхней границы зоны;
-                // вниз — до верхнего края у нижней границы
-                val lo = topLimit - cardHeight
-                val hi = zoneBottom
+                val (cardTop, lo, hi) = expandedCardStops() ?: return Offset.Zero
                 val dy = available.y
-                val allowed = if (dy > 0f) minOf(dy, maxOf(0f, hi - cardTop)) else maxOf(dy, minOf(0f, lo - cardTop))
+                if (dy == 0f) return Offset.Zero
+                // До точки остановки — свободно; дальше пальцем — с растущим сопротивлением, броском — как решит
+                // expandedCardFling; в любом случае не дальше EXPANDED_OVERSCROLL_MAX
+                val toStop = if (dy > 0f) maxOf(0f, hi - cardTop) else maxOf(0f, cardTop - lo)
+                val overshoot = if (dy > 0f) maxOf(0f, cardTop - hi) else maxOf(0f, lo - cardTop)
+                val size = kotlin.math.abs(dy)
+                val free = minOf(size, toStop)
+                val beyond = size - free
+                val room = maxOf(0f, cardOverscrollMaxPx - overshoot)
+                val extra = if (source == NestedScrollSource.UserInput) {
+                    minOf(room, beyond * (1f - overshoot / cardOverscrollMaxPx).coerceIn(0f, 1f))
+                } else minOf(room, beyond)
+                val allowed = (free + extra) * kotlin.math.sign(dy)
                 return Offset(0f, dy - allowed)
+            }
+
+            override suspend fun onPostFling(consumed: androidx.compose.ui.unit.Velocity, available: androidx.compose.ui.unit.Velocity): androidx.compose.ui.unit.Velocity {
+                // Запасной возврат: бросок закончился, а карточка осталась за точкой остановки
+                val back = cardBackDelta()
+                if (back != 0f) lazyListState.animateScrollBy(back, EXPANDED_SPRING_BACK)
+                return androidx.compose.ui.unit.Velocity.Zero
+            }
+        }
+    }
+    // Бросок при раскрытой задаче: до точки остановки — обычное затухание. Как только карточка пересекла точку
+    // остановки, её ведёт одна пружина с набранной скоростью: по инерции карточка проходит немного дальше, плавно
+    // тормозит и без паузы возвращается к точке остановки (дальше EXPANDED_OVERSCROLL_MAX её не пускает onPreScroll)
+    val defaultFling = androidx.compose.foundation.gestures.ScrollableDefaults.flingBehavior()
+    val currentDefaultFling by rememberUpdatedState(defaultFling)
+    val expandedCardFling = remember {
+        object : androidx.compose.foundation.gestures.FlingBehavior {
+            override suspend fun androidx.compose.foundation.gestures.ScrollScope.performFling(initialVelocity: Float): Float {
+                if (expandedCardStops() == null) return with(currentDefaultFling) { performFling(initialVelocity) }
+                var last = 0f
+                var velocity = initialVelocity
+                // Затухание довело карточку до точки остановки с ненулевой скоростью
+                var reachedStop = false
+                if (kotlin.math.abs(initialVelocity) > 1f && cardBackDelta() == 0f) {
+                    androidx.compose.animation.core.AnimationState(0f, initialVelocity).animateDecay(
+                        androidx.compose.animation.core.exponentialDecay()
+                    ) {
+                        val delta = value - last
+                        last = value
+                        velocity = this.velocity
+                        // Шаг — не дальше точки остановки: за ней карточку ведёт только пружина
+                        val stops = expandedCardStops()
+                        val toStop = when {
+                            stops == null -> Float.POSITIVE_INFINITY
+                            delta > 0f -> maxOf(0f, stops.first - stops.second)
+                            else -> maxOf(0f, stops.third - stops.first)
+                        }
+                        val step = if (kotlin.math.abs(delta) > toStop) toStop * kotlin.math.sign(delta) else delta
+                        val used = scrollBy(step)
+                        // Дошли до точки остановки (или упёрлись в край списка) — дальше ведёт пружина
+                        if (step != delta) reachedStop = true
+                        if (step != delta || kotlin.math.abs(used - step) > 0.5f) cancelAnimation()
+                    }
+                    if (!reachedStop && cardBackDelta() == 0f) return 0f
+                }
+                // Пружина к точке остановки с текущей скоростью: инерция гаснет плавно, затем возврат. Скорость входа
+                // ограничена так, чтобы пружина (без отскока: наибольший заход v / (ω·e)) гасила её внутри
+                // EXPANDED_OVERSCROLL_MAX и не упиралась в предел
+                val back = cardBackDelta()
+                if (back != 0f || reachedStop) {
+                    val omega = kotlin.math.sqrt(EXPANDED_SPRING_STIFFNESS)
+                    // Запас — то, что осталось до предела с учётом захода, уже сделанного пальцем
+                    val room = maxOf(0f, cardOverscrollMaxPx - kotlin.math.abs(back))
+                    val maxVelocity = 0.8f * room * omega * kotlin.math.E.toFloat()
+                    // Скорость к точке остановки не ограничиваем — это уже возврат
+                    val outward = back == 0f || kotlin.math.sign(velocity) != kotlin.math.sign(back)
+                    val entry = if (outward) velocity.coerceIn(-maxVelocity, maxVelocity) else velocity
+                    var prev = 0f
+                    androidx.compose.animation.core.animate(0f, back, initialVelocity = entry, animationSpec = EXPANDED_SPRING_BACK) { v, _ ->
+                        scrollBy(v - prev)
+                        prev = v
+                    }
+                }
+                return 0f
             }
         }
     }
@@ -1169,7 +1261,9 @@ fun ThingsCategoryListPanel(
                 .padding(horizontal = ThingsSpacing.S_PLUS)
                 .onGloballyPositioned { listCoordinates = it }
                 .testTag("tasks_lazy_list"),
-            contentPadding = PaddingValues(top = topPaddingTotal, bottom = LIST_BOTTOM_PADDING)
+            contentPadding = PaddingValues(top = topPaddingTotal, bottom = LIST_BOTTOM_PADDING),
+            // При раскрытой задаче — бросок с мягким торможением у точек остановки
+            flingBehavior = if (anyExpanded) expandedCardFling else defaultFling
         ) {
             item(key = TaskListKeys.MAIN_HEADER) {
                 // Извлеченный подкомпонент заголовка
@@ -2915,6 +3009,16 @@ private fun ListBanner(
 }
 
 /** Перетаскиваемый проект в «Планах» — над строками и чуть крупнее, как задача */
+/** Раскрытая карточка у точки остановки прокрутки: видимая её часть и наибольший заход пружиной за точку */
+private val EXPANDED_VISIBLE_STRIP = 96.dp
+// Меньше видимой части: при заходе край карточки остаётся в зоне, не прячется за статус-бар или панель
+private val EXPANDED_OVERSCROLL_MAX = 72.dp
+/** Возврат раскрытой карточки к точке остановки — мягкая пружина без отскока */
+private const val EXPANDED_SPRING_STIFFNESS = androidx.compose.animation.core.Spring.StiffnessLow
+private val EXPANDED_SPRING_BACK = androidx.compose.animation.core.spring<Float>(
+    dampingRatio = androidx.compose.animation.core.Spring.DampingRatioNoBouncy,
+    stiffness = EXPANDED_SPRING_STIFFNESS
+)
 private const val UPCOMING_DRAG_Z = 100f
 private const val UPCOMING_DRAG_SCALE = 1.04f
 
