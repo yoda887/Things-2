@@ -403,7 +403,11 @@ fun ThingsCategoryListPanel(
     // как у проектов на главном экране
     val laterProjectGestures = screen == ActiveScreen.LATER_PROJECTS
     var selectedProjectIds by remember(screen) { mutableStateOf(emptySet<String>()) }
-    val isProjectSelectionMode = selectedProjectIds.isNotEmpty()
+    // Режим выбора проектов — как у задач: включается свайпом влево или пунктом «Вибрати» в меню тулбара
+    // (тогда и без выбранных), выключается крестиком в тулбаре, «Назад», действием или началом перетаскивания
+    var projectSelectionActive by remember(screen) { mutableStateOf(false) }
+    val isProjectSelectionMode = projectSelectionActive || selectedProjectIds.isNotEmpty()
+    val exitProjectSelection: () -> Unit = { selectedProjectIds = emptySet(); projectSelectionActive = false }
     // Проекты сейчас выбирают протяжкой по правому краю
     var isProjectDragSelecting by remember(screen) { mutableStateOf(false) }
     var swipeWhenProject by remember(screen) { mutableStateOf<Item?>(null) }
@@ -416,10 +420,17 @@ fun ThingsCategoryListPanel(
         AllProjectsList.content(laterProjectsOverride ?: currentProjects, currentAreas, templates = currentAllTasks.map { it.item }, rules = state.repeatRules)
             .groups.firstOrNull { it.area == null }?.later.orEmpty()
     }
+    // Нажатие в режиме выбора — отметить или снять, режим остаётся
     val toggleProject: (Item) -> Unit = { project ->
+        projectSelectionActive = true
         selectedProjectIds = if (project.id in selectedProjectIds) selectedProjectIds - project.id else selectedProjectIds + project.id
     }
-    BackHandler(enabled = isProjectSelectionMode) { selectedProjectIds = emptySet() }
+    // Свайп влево — как у задач: снятие последнего выбранного закрывает режим
+    val swipeSelectProject: (Item) -> Unit = { project ->
+        val next = if (project.id in selectedProjectIds) selectedProjectIds - project.id else selectedProjectIds + project.id
+        if (next.isEmpty()) exitProjectSelection() else { selectedProjectIds = next; projectSelectionActive = true }
+    }
+    BackHandler(enabled = isProjectSelectionMode) { exitProjectSelection() }
 
     LaunchedEffect(
         showMoveDialog, showDeleteConfirm, isWhenDialogOpen, isTagDialogOpen, swipeWhenTask != null,
@@ -1562,7 +1573,7 @@ fun ThingsCategoryListPanel(
                                     isDragSelecting = laterGestures && isProjectDragSelecting,
                                     onToggleSelect = { toggleProject(task) },
                                     swipe = if (!laterGestures) null else com.example.ui.screens.home.subcomponents.ProjectRowSwipe(
-                                        onSwipeLeft = { toggleProject(task) },
+                                        onSwipeLeft = { swipeSelectProject(task) },
                                         onSwipeRight = { origin -> swipeWhenProject = task; swipeWhenProjectOrigin = origin },
                                         enabled = dragDropState.draggedItemKey == null
                                     ),
@@ -1672,7 +1683,7 @@ fun ThingsCategoryListPanel(
                                                         if (task.id in selected && selected.size > 1) listOf(task.id) + selected.filter { it != task.id }
                                                         else emptyList()
                                                     // Режим выбора закрывается при начале перетаскивания — как у задач
-                                                    if (selected.isNotEmpty()) selectedProjectIds = emptySet()
+                                                    if (isProjectSelectionMode) exitProjectSelection()
                                                 },
                                                 onDragEnd = {
                                                     val stack = dragDropState.stackedDragKeys.mapNotNull { it as? String }
@@ -2082,7 +2093,19 @@ fun ThingsCategoryListPanel(
             tasks = state.allTasks,
             backgroundProgress = toolbarBackgroundProgress,
             titleProgress = toolbarTitleProgress,
-            selectionState = TopAppBarSelectionState(
+            // «Пізніші проєкти» — выбор проектов: крестик отмены, «Вибрати всі» / «Зняти вибір», как у задач
+            selectionState = if (laterProjectGestures) {
+                val selectable = laterProjectsNow().filter { it.type == Item.TYPE_PROJECT }.map { it.id }.toSet()
+                TopAppBarSelectionState(
+                    isSelectionMode = isProjectSelectionMode,
+                    selectedCount = selectedProjectIds.size,
+                    isAllSelected = selectable.isNotEmpty() && selectedProjectIds.containsAll(selectable),
+                    onCancelSelection = exitProjectSelection,
+                    onSelectAllClick = { projectSelectionActive = true; selectedProjectIds = selectable },
+                    onDeselectAllClick = { selectedProjectIds = emptySet() },
+                    onEnterSelectionMode = { projectSelectionActive = true }
+                )
+            } else TopAppBarSelectionState(
                 isSelectionMode = state.isSelectionMode,
                 selectedCount = state.selectedTaskIds.size,
                 isAllSelected = state.selectedTaskIds.isNotEmpty() && state.selectedTaskIds.size == state.displayTasks.size,
@@ -2628,7 +2651,7 @@ fun ThingsCategoryListPanel(
             onDeleteProjects = { onEvent(ThingsCategoryListEvent.DeleteProjects(it)) },
             onCompleteProjects = { list -> list.forEach { onEvent(ThingsCategoryListEvent.CompleteProject(it)) } },
             onDuplicateProjects = { onEvent(ThingsCategoryListEvent.DuplicateProjects(it)) },
-            onDone = { selectedProjectIds = emptySet() }
+            onDone = exitProjectSelection
         )
         swipeWhenProject?.let { project ->
             ProjectSwipeWhenDialog(
