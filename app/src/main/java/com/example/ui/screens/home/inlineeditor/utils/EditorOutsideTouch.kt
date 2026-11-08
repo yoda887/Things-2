@@ -47,17 +47,20 @@ class EditorOutsideTouch {
     fun reset() {
         collapseRequested = false
         hideHandles = false
+        extraAreas.clear()
     }
 
     /** Границы раскрытого редактора и списка в координатах окна — чтобы понять, внутри ли касание. */
     internal var editorBounds: Rect? = null
     internal var listCoordinates: LayoutCoordinates? = null
+    /** Элементы раскрытой задачи вне карточки (плашки проекта/области и повтора под ней) — их нажатия работают как обычно. */
+    internal val extraAreas = mutableMapOf<Any, Rect>()
 
-    /** Точка [local] в координатах списка — внутри раскрытого редактора. */
+    /** Точка [local] в координатах списка — внутри раскрытого редактора или его плашек. */
     internal fun isInside(local: Offset): Boolean {
-        val bounds = editorBounds ?: return false
         val list = listCoordinates?.takeIf { it.isAttached } ?: return false
-        return bounds.contains(list.localToRoot(local))
+        val point = list.localToRoot(local)
+        return editorBounds?.contains(point) == true || extraAreas.values.any { it.contains(point) }
     }
 
     internal fun onInsideDown(id: PointerId) {
@@ -109,6 +112,10 @@ fun Modifier.markTouchesInsideEditor(touch: EditorOutsideTouch): Modifier =
                 touch.onInsideDown(down.id)
             }
         }
+
+/** Элемент раскрытой задачи вне карточки (плашка под ней): нажатие на него — не «вне редактора», срабатывает как обычно. */
+fun Modifier.markInsideEditorArea(touch: EditorOutsideTouch, key: Any): Modifier =
+    onGloballyPositioned { touch.extraAreas[key] = it.boundsInRoot() }
 
 /**
  * Для списка с раскрытым редактором: нажатие вне карточки только сворачивает её ([onCollapse]) и больше

@@ -65,6 +65,7 @@ import com.example.ui.screens.home.components.taskDragAndDrop
 import com.example.ui.screens.home.components.UpcomingDay
 import com.example.ui.screens.home.inlineeditor.ThingsTaskInlineEditor
 import com.example.ui.screens.home.inlineeditor.utils.EditorOutsideTouch
+import com.example.ui.screens.home.inlineeditor.utils.markInsideEditorArea
 import com.example.ui.theme.dimens
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.delay
@@ -846,13 +847,15 @@ fun AnimatedTaskItem(
                                     placeable.place(-extraPaddingPx, 0)
                                 }
                             }
-                            // Отступ сверху — одинаковый у каждой плашки (PILL_TOP_GAP), есть ли вторая или нет
+                            // Отступ первой плашки от карточки — PILL_TOP_GAP
                             .padding(top = PILL_TOP_GAP, end = ThingsSpacing.L),
                         horizontalArrangement = Arrangement.End,
                         verticalAlignment = Alignment.CenterVertically
                     ) {
                         Row(
                             modifier = Modifier
+                                // Плашка — часть раскрытой задачи: нажатие на неё работает, а не сворачивает карточку
+                                .then(editorOutsideTouch?.let { Modifier.markInsideEditorArea(it, "place") } ?: Modifier)
                                 .clip(ThingsTheme.shapes.smallShape)
                                 .clickable {
                                     // Save task automatically and navigate
@@ -954,12 +957,19 @@ fun AnimatedTaskItem(
                         val summary = com.example.ui.screens.home.inlineeditor.dialogs.repeatRuleSummary(repeatRule)
                             .replaceFirstChar { it.lowercase() }
                         Row(
-                            modifier = pillRowModifier.padding(top = PILL_TOP_GAP, end = ThingsSpacing.L),
+                            // Под плашкой места — меньший отступ: на глаз промежуток между плашками равен отступу первой
+                            // плашки от карточки (тот кажется меньше из-за тени карточки)
+                            modifier = pillRowModifier.padding(
+                                top = if (currentProject != null || currentArea != null) PILL_BETWEEN_GAP else PILL_TOP_GAP,
+                                end = ThingsSpacing.L
+                            ),
                             horizontalArrangement = Arrangement.End,
                             verticalAlignment = Alignment.CenterVertically
                         ) {
                             Row(
                                 modifier = Modifier
+                                    // Плашка повтора — часть раскрытой задачи, её нажатие работает
+                                    .then(editorOutsideTouch?.let { Modifier.markInsideEditorArea(it, "repeat") } ?: Modifier)
                                     .clip(ThingsTheme.shapes.smallShape)
                                     .clickable {
                                         if (task.isRepeatTemplate) {
@@ -1088,6 +1098,9 @@ private const val PILL_ENTER_MS = 150
 
 /** Отступ над каждой плашкой под раскрытой задачей (место, повтор) — одинаковый, одна плашка или две */
 private val PILL_TOP_GAP = ThingsSpacing.M
+/** Отступ второй плашки от первой: тень карточки визуально съедает часть отступа первой плашки (~9 dp),
+ *  поэтому между плашками отступ меньше — на глаз промежутки равны */
+private val PILL_BETWEEN_GAP = 4.dp
 
 /** Место «›» в конце текста плашки повтора под раскрытой задачей */
 private const val REPEAT_PILL_CHEVRON = "repeat_pill_chevron"
