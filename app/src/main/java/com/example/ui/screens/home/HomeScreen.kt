@@ -216,6 +216,21 @@ fun ThingsHomeScreen(viewModel: ThingsViewModel = hiltViewModel()) {
             else -> false
         }
         if (alreadyOpen) return
+        // Экран уже есть в стеке ниже (область → проект → снова эта область) — возвращаемся к нему, а не кладём
+        // копию сверху: «Назад» ведёт туда, откуда открыли, без петель
+        val stack = navController.currentBackStack.value
+        val earlier = stack.indexOfLast { entry ->
+            when {
+                screen == ActiveScreen.SEARCH -> entry.destination.hasRoute<SearchRoute>()
+                entry.destination.hasRoute<ListRoute>() -> entry.toRoute<ListRoute>() == ListRoute(screen, entityId)
+                else -> false
+            }
+        }
+        if (earlier >= 0) {
+            crossfadeNavigation = crossfade
+            repeat(stack.size - 1 - earlier) { navController.popBackStack() }
+            return
+        }
         crossfadeNavigation = crossfade
         val route: Any = if (screen == ActiveScreen.SEARCH) SearchRoute else ListRoute(screen, entityId)
         // Без launchSingleTop: он сравнивает только маршрут без аргументов, и все списки (области, проекты,
