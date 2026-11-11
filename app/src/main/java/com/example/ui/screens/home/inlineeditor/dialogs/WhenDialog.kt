@@ -57,9 +57,9 @@ import androidx.compose.animation.core.Spring
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.foundation.layout.offset
 import androidx.compose.ui.unit.IntOffset
-import androidx.compose.material.ripple.LocalRippleTheme
 import androidx.compose.material.ripple.RippleAlpha
-import androidx.compose.material.ripple.RippleTheme
+import androidx.compose.material3.LocalRippleConfiguration
+import androidx.compose.material3.RippleConfiguration
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogWindowProvider
@@ -105,18 +105,12 @@ sealed class CalendarCell {
  * Рябь при нажатии внутри диалога: стандартная на тёмной карточке почти не видна —
  * поднимаем её заметность.
  */
-private object DialogRippleTheme : RippleTheme {
-    @Composable
-    override fun defaultColor(): Color = ThingsTheme.colors.overlayContent
-
-    @Composable
-    override fun rippleAlpha(): RippleAlpha = RippleAlpha(
-        pressedAlpha = 0.20f,
-        focusedAlpha = 0.16f,
-        draggedAlpha = 0.14f,
-        hoveredAlpha = 0.08f
+@OptIn(ExperimentalMaterial3Api::class)
+private val DialogRippleConfiguration: RippleConfiguration
+    @Composable get() = RippleConfiguration(
+        color = ThingsTheme.colors.overlayContent,
+        rippleAlpha = RippleAlpha(pressedAlpha = 0.20f, focusedAlpha = 0.16f, draggedAlpha = 0.14f, hoveredAlpha = 0.08f)
     )
-}
 
 /** Фон кружка с крестиком: в эталоне он темнее карточки, а не светлее */
 
@@ -167,6 +161,7 @@ private const val CHOICE_CLOSE_DELAY_MS = 30L
 private const val DIM_ALPHA = 0.20f
 
 @Composable
+@OptIn(ExperimentalMaterial3Api::class)
 fun ThingsWhenDialog(
     startDate: Long?,
     onStartDateChange: (Long?) -> Unit,
@@ -305,7 +300,7 @@ fun ThingsWhenDialog(
             androidx.core.view.ViewCompat.getRootWindowInsets(activityView ?: hostView)
                 ?.getInsets(androidx.core.view.WindowInsetsCompat.Type.statusBars())?.top ?: 0
         }
-        CompositionLocalProvider(LocalRippleTheme provides DialogRippleTheme) {
+        CompositionLocalProvider(LocalRippleConfiguration provides DialogRippleConfiguration) {
         Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
         Card(
             shape = ThingsTheme.shapes.dialogShape,
@@ -1151,6 +1146,7 @@ private val DEADLINE_GAP_BEFORE_CLEAR = 12.dp
  * Нажатие на день ставит срок и закрывает окно; «Очистити» — только если срок уже стоит.
  */
 @Composable
+@OptIn(ExperimentalMaterial3Api::class)
 fun ThingsDeadlineDialog(
     dueDate: Long?,
     onDueDateChange: (Long?) -> Unit,
@@ -1209,7 +1205,7 @@ fun ThingsDeadlineDialog(
             androidx.core.view.ViewCompat.getRootWindowInsets(activityView ?: hostView)
                 ?.getInsets(androidx.core.view.WindowInsetsCompat.Type.statusBars())?.top ?: 0
         }
-        CompositionLocalProvider(LocalRippleTheme provides DialogRippleTheme) {
+        CompositionLocalProvider(LocalRippleConfiguration provides DialogRippleConfiguration) {
             Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
                 Card(
                     shape = ThingsTheme.shapes.dialogShape,
