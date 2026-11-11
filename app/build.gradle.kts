@@ -33,6 +33,15 @@ android {
                 "proguard-rules.pro"
             )
         }
+        // Тестовая сборка для проверок на телефоне: та же релизная (скорость, минификация), но отдельное
+        // приложение «Things QA» со своей базой — жесты и тестовые объекты не трогают рабочие данные.
+        // Ставится рядом с основным: ./gradlew :app:installQa
+        create("qa") {
+            initWith(getByName("release"))
+            applicationIdSuffix = ".qa"
+            versionNameSuffix = "-qa"
+            matchingFallbacks += "release"
+        }
     }
     compileOptions {
         sourceCompatibility = JavaVersion.VERSION_17
