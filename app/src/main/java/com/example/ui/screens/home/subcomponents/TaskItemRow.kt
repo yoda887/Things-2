@@ -654,9 +654,22 @@ sealed class DateIndicatorResult {
     ) : DateIndicatorResult()
 }
 
-/** Серая плашка с датой у строки задачи: число и месяц в месячных разделах, дата — на экранах проекта и сферы */
+/**
+ * Серая плашка с датой у строки задачи или проекта: число и месяц в месячных разделах, дата — на экранах проекта и
+ * сферы. День старта «сегодня» — не плашкой, а звездой, «сегодня вечером» — луной, как у задач в Things.
+ */
 @Composable
 internal fun DateBadge(text: String) {
+    when (text) {
+        DayBadge.TODAY -> {
+            Icon(AppIcons.Today, contentDescription = stringResource(R.string.category_today), tint = Color.Unspecified, modifier = Modifier.size(ThingsIconSize.XS))
+            return
+        }
+        DayBadge.EVENING -> {
+            Icon(AppIcons.Evening, contentDescription = stringResource(R.string.category_this_evening), tint = ThingsTheme.colors.eveningIndicator, modifier = Modifier.size(ThingsIconSize.XS))
+            return
+        }
+    }
     Text(
         text = text,
         style = ThingsTheme.type.badge.copy(
@@ -690,19 +703,36 @@ private fun DateIndicatorMark(indicator: DateIndicatorResult) {
 }
 
 /**
- * Текст плашки дня старта — в том же формате, что у задач на экране проекта: «Сегодня», «Завтра», день
- * недели на этой неделе («Пт»), год у следующих лет («2027»), иначе число и месяц («22 жовт.»). Им пишут
- * плашки и в списках, где дата — не «Когда» задачи: «Повторяющиеся», «Все проекты», «Планы» области.
+ * Особые значения плашки дня старта ([DateBadge]): «сегодня» и «сегодня вечером» — не текст, а отметки; плашка
+ * рисует их звездой и луной, как у задач. Не слова: с названиями дней и переводами они совпасть не могут.
+ */
+internal object DayBadge {
+    const val TODAY = "\u0001today"
+    const val EVENING = "\u0001evening"
+}
+
+/**
+ * Значение плашки дня старта — в том же формате, что у задач на экране проекта: сегодня ([DayBadge.TODAY], вечером —
+ * [DayBadge.EVENING]), «Завтра», день недели на этой неделе («Пт»), год у следующих лет («2027»), иначе число и
+ * месяц («22 жовт.»). Им пишут плашки и в списках, где дата — не «Когда» задачи: «Повторяющиеся», «Все проекты»,
+ * «Планы» области.
  */
 @Composable
-internal fun startDateBadgeText(startDate: Long, isTonight: Boolean = false): String =
+internal fun startDateBadge(startDate: Long, isTonight: Boolean = false): String =
     when (val indicator = getStartDateIndicator(
         startDate, false, Color.Unspecified, "", "", com.example.ui.components.LocalDatesWithMonthName.current
     )) {
-        is DateIndicatorResult.IconIndicator ->
-            stringResource(if (isTonight) R.string.category_this_evening else R.string.category_today)
+        is DateIndicatorResult.IconIndicator -> if (isTonight) DayBadge.EVENING else DayBadge.TODAY
         is DateIndicatorResult.TextIndicator ->
             if (indicator.text == "TOMORROW_PLACEHOLDER") stringResource(R.string.tomorrow) else indicator.text
+    }
+
+/** День словами в том же формате: «Сегодня», «Завтра», «Пт», «22 жовт.» — там, где это текст, а не плашка (срок шаблона). */
+@Composable
+internal fun startDateBadgeText(startDate: Long): String =
+    when (val badge = startDateBadge(startDate)) {
+        DayBadge.TODAY -> stringResource(R.string.category_today)
+        else -> badge
     }
 
 private fun getStartDateIndicator(

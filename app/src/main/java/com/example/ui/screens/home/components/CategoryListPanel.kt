@@ -1598,18 +1598,18 @@ fun ThingsCategoryListPanel(
                                         // Шаблон проекта — день следующего повтора, «Пауза» или «Ждёт»; копия, созданная заранее, — её день
                                         ActiveScreen.REPEATING -> if (task.type == Item.TYPE_PROJECT_TEMPLATE) {
                                             com.example.ui.components.repeatBadge(state.repeatRules[task.id])
-                                        } else task.startDate?.let { com.example.ui.screens.home.subcomponents.startDateBadgeText(it) }
+                                        } else task.startDate?.let { com.example.ui.screens.home.subcomponents.startDateBadge(it, task.isTonight) }
                                         // Шаблон повторяющегося проекта — день следующего повтора, «Пауза» или «Чекає»
                                         ActiveScreen.ALL_PROJECTS, ActiveScreen.LATER_PROJECTS -> if (task.type == Item.TYPE_PROJECT_TEMPLATE) {
                                             com.example.ui.components.repeatBadge(state.repeatRules[task.id])
                                         } else if (LogbookList.includesProject(task)) null else AllProjectsScreen.laterDateBadge(task)
-                                            ?.let { com.example.ui.screens.home.subcomponents.startDateBadgeText(task.startDate!!) }
+                                            ?.let { com.example.ui.screens.home.subcomponents.startDateBadge(task.startDate!!, task.isTonight) }
                                         // В «Планах» области — дата старта запланированного проекта; у шаблона повторяющегося
                                         // проекта — день следующего повтора, «Пауза» или «Чекає»
                                         ActiveScreen.AREA_DETAIL -> if (task.type == Item.TYPE_PROJECT_TEMPLATE) {
                                             com.example.ui.components.repeatBadge(state.repeatRules[task.id])
                                         } else if (HomeList.showsProject(task)) null else AllProjectsScreen.laterDateBadge(task)
-                                            ?.let { com.example.ui.screens.home.subcomponents.startDateBadgeText(task.startDate!!) }
+                                            ?.let { com.example.ui.screens.home.subcomponents.startDateBadge(task.startDate!!, task.isTonight) }
                                         // На экране тега — дата старта запланированного проекта (сегодня — звезда или луна)
                                         // (шаблон повторяющегося проекта — день следующего повтора, «Пауза» или «Чекає»)
                                         // В поиске — у шаблона повторяющегося проекта день следующего повтора
@@ -1620,7 +1620,7 @@ fun ThingsCategoryListPanel(
                                             com.example.ui.components.repeatBadge(state.repeatRules[task.id])
                                         } else task.startDate
                                             ?.takeIf { it > com.example.data.model.DayBounds.now().endOfToday }
-                                            ?.let { com.example.ui.screens.home.subcomponents.startDateBadgeText(it) }
+                                            ?.let { com.example.ui.screens.home.subcomponents.startDateBadge(it) }
                                         else -> null
                                     },
                                     // Копия проекта на сегодня в «Повторяющихся» и проект на сегодня на экране тега — звезда или луна вместо плашки
