@@ -2,8 +2,12 @@
 """
 Общий код Things 2 (телефон) и Things Desktop: что разошлось и как перенести правки телефона на десктоп.
 
-Десктоп — копия кода телефона с добавками под мышь, окно и JDBC, а git у него нет. Чтобы правки телефона
-не терялись, скрипт сравнивает файлы с одинаковым путём в обоих проектах по трём версиям:
+Десктоп при сборке сам берёт исходники телефона (задачи phoneMainSources/phoneTestSources в его build.gradle.kts):
+все файлы, кроме «только для Android» (phone_only), своих версий десктопа (desktop_owned) и тех, для которых
+у десктопа есть СВОЯ копия по тому же пути. Общий файл существует один раз — у телефона, копировать его не нужно.
+
+Скрипт нужен для оставшихся копий — файлов, которые на десктопе отличаются (добавки под мышь, окно и JDBC).
+Чтобы правки телефона в них не терялись, он сравнивает файлы с одинаковым путём по трём версиям:
   телефон сейчас · десктоп сейчас · «база» — версия телефона при последней синхронизации этого файла
 (база хранится у десктопа в `.phone_sync/base`). По ним видно, кто менял файл:
 
@@ -12,13 +16,15 @@
   desktop   менялся только десктоп (его добавки) — ничего делать не нужно
   both      менялись оба — трёхстороннее слияние (pull пробует сам, при конфликте оставляет файл с метками рядом)
   unknown   различаются, а базы нет — решить вручную, потом `baseline ФАЙЛ`
-  new       новый файл телефона — pull копирует его (если он не только для Android — см. phone_only в json)
+  shared    своей копии у десктопа нет — он берёт файл телефона при сборке; делать ничего не нужно
 
 Команды (python -X utf8 tools/desktop_sync.py …):
   status [--all]        что разошлось (--all — и одинаковые)
   diff ФАЙЛ             разница телефон → десктоп (и база, если есть)
-  pull [ФАЙЛ…]          перенести правки телефона: phone и new копируются, both сливаются (git merge-file);
-                        прежние файлы десктопа — в .phone_sync/backups/<время>/
+  pull [ФАЙЛ…]          перенести правки телефона в копии десктопа: phone копируются, both сливаются
+                        (git merge-file); прежние файлы десктопа — в .phone_sync/backups/<время>/
+  share [ФАЙЛ…]         убрать копии десктопа, которые совпадают с телефоном (без файлов — все такие): файл
+                        становится общим (shared). Так же делают общим файл после того, как различия сведены
   baseline [ФАЙЛ…]      запомнить нынешнюю версию телефона базой (после ручного слияния); без файлов —
                         для всех одинаковых
   init                  для файлов без базы (unknown) найти в истории git телефона версию, ближе всего к
@@ -101,7 +107,7 @@ def status_of(key, phone, desk):
     if key in DESKTOP_OWNED:
         return 'owned'
     if desk is None:
-        return 'phone-only' if key in PHONE_ONLY else 'new'
+        return 'phone-only' if key in PHONE_ONLY else 'shared'
     if same(phone, desk):
         return 'same'
     base = base_path(key)
@@ -155,18 +161,18 @@ def cmd_status(args):
         groups.setdefault(status_of(key, phone, desk), []).append(key)
     titles = [
         ('phone', 'менялся только телефон — перенести: pull'),
-        ('new', 'новые файлы телефона — перенести: pull'),
         ('both', 'менялись оба — pull попробует слить'),
         ('unknown', 'различаются, базы нет — слить вручную, затем baseline'),
         ('desktop', 'менялся только десктоп (его добавки)'),
         ('desktop-only', 'есть только на десктопе'),
         ('owned', 'своя версия десктопа (desktop_owned) — не синхронизируется'),
         ('phone-only', 'только для Android (phone_only)'),
-        ('same', 'одинаковые'),
+        ('same', 'копия десктопа совпадает с телефоном — лишняя, убрать: share'),
+        ('shared', 'общие — десктоп берёт файл телефона при сборке'),
     ]
     for status, title in titles:
         items = groups.get(status, [])
-        if not items or (status in ('same', 'phone-only', 'desktop-only', 'owned') and not show_all):
+        if not items or (status in ('shared', 'phone-only', 'desktop-only', 'owned') and not show_all):
             if items:
                 print('%-13s %4d  %s' % (status, len(items), title))
             continue
@@ -211,13 +217,7 @@ def cmd_pull(args):
     copied, merged, conflicts = [], [], []
     for key, phone, desk in selected:
         status = status_of(key, phone, desk)
-        if status == 'new':
-            label, phone_root, desk_root = next(r for r in ROOTS if key.startswith(r[0]) and (r[0] or not key.startswith('test/')))
-            target = os.path.join(desk_root, key[len(label):])
-            write(target, text(phone))
-            set_base(key, phone)
-            copied.append(key)
-        elif status == 'phone':
+        if status == 'phone':
             backup(key, desk, stamp)
             write(desk, text(phone), like=desk)
             set_base(key, phone)
@@ -257,6 +257,25 @@ def cmd_baseline(args):
             set_base(key, phone)
             n += 1
     print('база обновлена:', n)
+
+
+def cmd_share(args):
+    """Убрать копии десктопа, совпадающие с телефоном: дальше десктоп берёт файл телефона при сборке"""
+    targets = find(args) if args else entries()
+    removed, skipped = [], []
+    for key, phone, desk in targets:
+        if status_of(key, phone, desk) == 'same':
+            os.remove(desk)
+            if os.path.exists(base_path(key)):
+                os.remove(base_path(key))
+            removed.append(key)
+        elif args:
+            skipped.append(key)
+    print('стали общими (копия десктопа убрана): %d' % len(removed))
+    for k in removed:
+        print('  ' + k)
+    for k in skipped:
+        print('не тронут (копия отличается от телефона или её нет): ' + k)
 
 
 def phone_repo_path(key):
@@ -330,7 +349,8 @@ def cmd_strings(_args):
     print('строк: %d, множественных: %d → %s' % (len(names), len(plurals), r_path))
 
 
-COMMANDS = {'init': cmd_init, 'status': cmd_status, 'diff': cmd_diff, 'pull': cmd_pull, 'baseline': cmd_baseline, 'strings': cmd_strings}
+COMMANDS = {'init': cmd_init, 'status': cmd_status, 'diff': cmd_diff, 'pull': cmd_pull, 'baseline': cmd_baseline,
+            'share': cmd_share, 'strings': cmd_strings}
 
 if __name__ == '__main__':
     if len(sys.argv) < 2 or sys.argv[1] not in COMMANDS:
