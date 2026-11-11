@@ -9,6 +9,7 @@
     "data/sync/SyncManager.kt",
     "data/sync/SyncWorker.kt",
     "reminders/ReminderSnoozeActivity.kt",
+    "ui/screens/home/CategoryListEvents.kt",
     "ui/backup/DriveBackupCard.kt",
     "ui/backup/DriveBackupViewModel.kt",
     "test/data/backup/DriveBackupTest.kt",

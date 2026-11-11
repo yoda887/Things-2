@@ -1,14 +1,14 @@
 package com.example.ui.screens.home
 
-import com.example.ui.screens.home.components.RepeatAction
 import androidx.navigation.NavDestination.Companion.hasRoute
 import com.example.ui.screens.home.components.HomeProjectBatchLayer
+import com.example.ui.screens.home.components.ProjectSelectionState
+import com.example.ui.screens.home.components.TaskSelectionState
 import com.example.ui.screens.home.components.ProjectSwipeWhenDialog
 import com.example.domain.lists.HomeList
 import java.util.UUID
 import com.example.ui.screens.home.components.newTaskPlace
 import com.example.domain.edits.ProjectEdit
-import com.example.domain.edits.MoveTarget
 import com.example.ui.viewmodel.ActiveScreen
 import com.example.R
 import androidx.compose.ui.res.stringResource
@@ -264,13 +264,10 @@ fun ThingsHomeScreen(viewModel: ThingsViewModel = hiltViewModel()) {
     var searchFromWideField by remember { mutableStateOf(true) }
     var newTaskTitlePrefill by remember { mutableStateOf("") }
     var isListDialogActive by remember { mutableStateOf(false) }
-    var isSelectionMode by remember { mutableStateOf(false) }
+    // Множественный выбор задач на экранах списков (SelectionState.kt)
+    val taskSelection = remember { TaskSelectionState() }
     // Множественный выбор проектов на главном экране (свайп влево по проекту) и «Когда» по свайпу вправо
-    var selectedProjectIds by remember { mutableStateOf(emptySet<String>()) }
-    val isProjectSelectionMode = selectedProjectIds.isNotEmpty()
-    var swipeWhenProject by remember { mutableStateOf<Item?>(null) }
-    var swipeWhenProjectOrigin by remember { mutableStateOf<androidx.compose.ui.geometry.Offset?>(null) }
-    var selectedTaskIds by remember { mutableStateOf(setOf<String>()) }
+    val projectSelection = remember { ProjectSelectionState() }
 
     // [ИЗМЕНЕНИЕ]: Состояния для недавно искавшихся объектов и подсветки конкретной задачи
     var recentSearchItems by remember { mutableStateOf<List<SearchResultItem>>(emptyList()) }
@@ -380,8 +377,7 @@ fun ThingsHomeScreen(viewModel: ThingsViewModel = hiltViewModel()) {
     val dividerColor = ThingsTheme.colors.divider
 
     LaunchedEffect(activeScreen) {
-        isSelectionMode = false
-        selectedTaskIds = emptySet()
+        taskSelection.exit()
     }
 
     // Добавление перетаскиванием кнопки «+» (см. FabDragController)
@@ -410,8 +406,8 @@ fun ThingsHomeScreen(viewModel: ThingsViewModel = hiltViewModel()) {
             AnimatedVisibility(
                 visible = activeScreen != ActiveScreen.LOGBOOK && !isSettingsOpen && (fabDragController.isDragging || fabDragController.isSettling ||
                     fabDragController.tapPending ||
-                    (inlineExpandedTaskId == null && !showFabMenu && !isListDialogActive && !showAddDialog && !isSelectionMode &&
-                        !(activeScreen == ActiveScreen.HOME && isProjectSelectionMode))),
+                    (inlineExpandedTaskId == null && !showFabMenu && !isListDialogActive && !showAddDialog && !taskSelection.isActive &&
+                        !(activeScreen == ActiveScreen.HOME && projectSelection.isSelectionMode))),
                 enter = slideInVertically(
                     initialOffsetY = { it * 2 },
                     animationSpec = spring(
@@ -522,23 +518,14 @@ fun ThingsHomeScreen(viewModel: ThingsViewModel = hiltViewModel()) {
                     // Применяем обертку ScreenTransitionWrapper со сплошным фоном и эффектом затемнения для уходящего экрана
                     ScreenTransitionWrapper(isStartDestination = true, backgroundColor = backgroundColor) {
                         // Выход из выбора проектов — «Назад»
-                        androidx.activity.compose.BackHandler(enabled = isProjectSelectionMode) { selectedProjectIds = emptySet() }
+                        androidx.activity.compose.BackHandler(enabled = projectSelection.isSelectionMode) { projectSelection.exit() }
                         Box(modifier = Modifier.fillMaxSize()) {
                         ThingsHomePanel(
-                            isProjectSelectionMode = isProjectSelectionMode,
-                            selectedProjectIds = selectedProjectIds,
-                            onProjectSwipeRight = { project, origin ->
-                                swipeWhenProject = project
-                                swipeWhenProjectOrigin = origin
-                            },
-                            onProjectSwipeLeft = { project ->
-                                selectedProjectIds = if (project.id in selectedProjectIds) selectedProjectIds - project.id
-                                else selectedProjectIds + project.id
-                            },
-                            onToggleProjectSelection = { project ->
-                                selectedProjectIds = if (project.id in selectedProjectIds) selectedProjectIds - project.id
-                                else selectedProjectIds + project.id
-                            },
+                            isProjectSelectionMode = projectSelection.isSelectionMode,
+                            selectedProjectIds = projectSelection.selectedIds,
+                            onProjectSwipeRight = projectSelection::openWhen,
+                            onProjectSwipeLeft = projectSelection::swipeSelect,
+                            onToggleProjectSelection = projectSelection::toggle,
                             collapsedAreaIds = collapsedAreaIds,
                             onAreaExpandedChange = viewModel::setAreaExpanded,
                             allTasks = allTasksRaw,
@@ -594,8 +581,8 @@ fun ThingsHomeScreen(viewModel: ThingsViewModel = hiltViewModel()) {
                             onAreasReordered = { viewModel.updateAreas(it) }
                         )
                         HomeProjectBatchLayer(
-                            isActive = isProjectSelectionMode,
-                            selected = projects.filter { it.id in selectedProjectIds },
+                            isActive = projectSelection.isSelectionMode,
+                            selected = projectSelection.selected(projects),
                             allTasks = allTasksRaw,
                             projects = projects,
                             areas = areas,
@@ -603,14 +590,14 @@ fun ThingsHomeScreen(viewModel: ThingsViewModel = hiltViewModel()) {
                             onDeleteProjects = { list -> list.forEach { viewModel.deleteProject(it) } },
                             onCompleteProjects = { list -> list.forEach { viewModel.completeProject(it) } },
                             onDuplicateProjects = { list -> list.forEach { viewModel.duplicateProject(it) } },
-                            onDone = { selectedProjectIds = emptySet() }
+                            onDone = projectSelection::exit
                         )
-                        swipeWhenProject?.let { project ->
+                        projectSelection.whenProject?.let { project ->
                             ProjectSwipeWhenDialog(
                                 project = project,
-                                growFromOffset = swipeWhenProjectOrigin,
+                                growFromOffset = projectSelection.whenOrigin,
                                 onEditProject = { p, edit -> viewModel.editProject(p, edit) },
-                                onDismiss = { swipeWhenProject = null; swipeWhenProjectOrigin = null }
+                                onDismiss = projectSelection::closeWhen
                             )
                         }
                         }
@@ -673,275 +660,61 @@ fun ThingsHomeScreen(viewModel: ThingsViewModel = hiltViewModel()) {
                     ) {
                     ThingsCategoryListPanel(
                         state = screenState.copy(
-                            isSelectionMode = isSelectionMode,
-                            selectedTaskIds = selectedTaskIds
+                            isSelectionMode = taskSelection.isActive,
+                            selectedTaskIds = taskSelection.selectedIds
                         ),
                         onDialogsActiveChange = { isListDialogActive = it },
+                        // События списка: правки — в модель, выбор — в taskSelection (CategoryListEvents.kt);
+                        // экрану остаются переходы и окно поиска
                         onEvent = { event ->
-                            when (event) {
-                                is ThingsCategoryListEvent.SelectTag -> {
-                                    viewModel.selectTag(event.tag)
-                                }
-                                is ThingsCategoryListEvent.ToggleEditedTask ->
-                                    viewModel.toggleEditedTask(event.task, event.fields, event.checklist, untitledTaskTitle)
-                                is ThingsCategoryListEvent.ToggleTask -> {
-                                    viewModel.toggleTaskCompletion(event.task)
-                                }
-                                is ThingsCategoryListEvent.ClickTask -> {
-                                    viewModel.setInlineExpandedTaskId(event.task.item.id)
-                                }
-                                is ThingsCategoryListEvent.ClickProject -> {
-                                    selectedProject = event.project
-                                    navigateTo(ActiveScreen.PROJECT_DETAIL, event.project.id)
-                                }
-                                is ThingsCategoryListEvent.ClickArea -> {
-                                    selectedArea = event.area
-                                    navigateTo(ActiveScreen.AREA_DETAIL, event.area.id)
-                                }
-                                is ThingsCategoryListEvent.OpenHeading -> openFoundHeading(event.heading)
-                                is ThingsCategoryListEvent.OpenLoggedProjects -> navigateTo(ActiveScreen.LOGGED_PROJECTS)
-                                is ThingsCategoryListEvent.ChangeInlineExpandedTaskId -> {
-                                    viewModel.setInlineExpandedTaskId(event.taskId)
-                                }
-                                is ThingsCategoryListEvent.ClickSearch -> {
-                                    // На экранах списков окно вырастает из синего круга оттяжки
-                                    searchMorphSource = event.sourceBounds
-                                    searchWasPulled = true
-                                    searchFromWideField = false
-                                    isSearchMorphReady = false
-                                    searchCapsuleAlpha = 0f
-                                    isSearchOverlayActive = true
-                                }
-                                ThingsCategoryListEvent.ClickBack -> {
-                                    val wasSearch = activeScreen == ActiveScreen.SEARCH
-                                    navController.popBackStack()
-                                    viewModel.selectTag(null)
-                                    if (wasSearch) viewModel.setSearchQuery("")
-                                }
-                                is ThingsCategoryListEvent.ChangeSearchQuery -> {
-                                    viewModel.setSearchQuery(event.query)
-                                }
-                                is ThingsCategoryListEvent.ClickTag -> {
-                                    selectedTagDetail = event.tag
-                                    navigateTo(ActiveScreen.TAG_DETAIL, event.tag.id)
-                                }
-                                is ThingsCategoryListEvent.CreateTag -> {
-                                    viewModel.createTagInGroup(event.title, event.parentId)
-                                }
-                                is ThingsCategoryListEvent.DeleteTag -> {
-                                    viewModel.deleteTag(event.tag)
-                                }
-                                is ThingsCategoryListEvent.UpdateTag -> {
-                                    viewModel.updateTag(event.tag)
-                                }
-                                is ThingsCategoryListEvent.UpdateTagsOrder -> {
-                                    viewModel.updateTagsOrder(event.tags)
-                                }
-                                is ThingsCategoryListEvent.SaveTask -> {
-                                    viewModel.updateTask(
-                                        task = event.taskWrapper.item,
-                                        checklist = event.checklist,
-                                        section = event.section,
-                                        title = event.title,
-                                        notes = event.notes,
-                                        isTonight = event.isTonight,
-                                        startDate = event.startDate,
-                                        dueDate = event.dueDate,
-                                        tags = event.tags,
-                                        projectId = event.projectId,
-                                        priority = event.priority,
-                                        reminderTime = event.reminderTime,
-                                        untitledTitle = untitledTaskTitle
-                                    )
-                                }
-                                is ThingsCategoryListEvent.DeleteTask -> {
-                                    viewModel.deleteTask(event.taskWrapper)
-                                }
-                                is ThingsCategoryListEvent.ToggleTaskCancel -> viewModel.toggleTaskCancel(event.taskId)
-                                is ThingsCategoryListEvent.MakeRepeating -> viewModel.makeRepeating(event.taskId, event.rule, event.reminderTime)
-                                is ThingsCategoryListEvent.UpdateRepeatRule -> viewModel.updateRepeatRule(event.templateId, event.rule, event.reminderTime)
-                                // Перенос из редактора панель уже превратила в MoveRepeat (после выбора)
-                                is ThingsCategoryListEvent.RequestRepeatMove -> Unit
-                                // Окно «Перемістити» открывает сама панель списка
-                                is ThingsCategoryListEvent.RequestMoveDialog -> Unit
-                                is ThingsCategoryListEvent.DismissInboxMoved -> viewModel.dismissInboxMoved()
-                                is ThingsCategoryListEvent.MoveRepeat -> viewModel.moveRepeat(event.templateId, event.appearOn, event.updateRule)
-                                is ThingsCategoryListEvent.BatchRepeatAction -> event.templateIds.forEach { id ->
-                                    when (event.action) {
-                                        RepeatAction.PAUSE -> viewModel.pauseRepeat(id)
-                                        RepeatAction.RESUME -> viewModel.resumeRepeat(id)
-                                        RepeatAction.STOP -> viewModel.stopRepeat(id)
-                                        else -> Unit
+                            handleCategoryListEvent(
+                                event = event,
+                                viewModel = viewModel,
+                                taskSelection = taskSelection,
+                                state = screenState,
+                                allTasks = allTasksRaw,
+                                untitledTaskTitle = untitledTaskTitle,
+                                screen = object : CategoryListScreenActions {
+                                    override fun openProject(project: Item) {
+                                        selectedProject = project
+                                        navigateTo(ActiveScreen.PROJECT_DETAIL, project.id)
+                                    }
+                                    override fun openArea(area: Area) {
+                                        selectedArea = area
+                                        navigateTo(ActiveScreen.AREA_DETAIL, area.id)
+                                    }
+                                    override fun openTag(tag: Tag) {
+                                        selectedTagDetail = tag
+                                        navigateTo(ActiveScreen.TAG_DETAIL, tag.id)
+                                    }
+                                    override fun openHeading(heading: Item) = openFoundHeading(heading)
+                                    override fun openLoggedProjects() = navigateTo(ActiveScreen.LOGGED_PROJECTS)
+                                    override fun openSearch(sourceBounds: androidx.compose.ui.geometry.Rect?) {
+                                        // На экранах списков окно вырастает из синего круга оттяжки
+                                        searchMorphSource = sourceBounds
+                                        searchWasPulled = true
+                                        searchFromWideField = false
+                                        isSearchMorphReady = false
+                                        searchCapsuleAlpha = 0f
+                                        isSearchOverlayActive = true
+                                    }
+                                    override fun back() {
+                                        val wasSearch = activeScreen == ActiveScreen.SEARCH
+                                        navController.popBackStack()
+                                        viewModel.selectTag(null)
+                                        if (wasSearch) viewModel.setSearchQuery("")
+                                    }
+                                    override fun showTask(task: ItemWithChecklist) = revealTask(task)
+                                    override fun closeProjectScreen() {
+                                        navController.popBackStack()
+                                        selectedProject = null
+                                    }
+                                    override fun closeAreaScreen() {
+                                        navController.popBackStack()
+                                        selectedArea = null
                                     }
                                 }
-                                is ThingsCategoryListEvent.OpenRepeatTemplate -> {
-                                    viewModel.setInlineExpandedTaskId(null)
-                                    allTasksRaw.firstOrNull { it.item.id == event.templateId }?.let { revealTask(it) }
-                                }
-                                is ThingsCategoryListEvent.RepeatTemplateAction -> when (event.action) {
-                                    RepeatAction.NEXT_COPY -> viewModel.repeatNextCopy(event.templateId)
-                                    RepeatAction.COMPLETE_EARLY -> viewModel.completeRepeatEarly(event.templateId)
-                                    RepeatAction.PAUSE -> viewModel.pauseRepeat(event.templateId)
-                                    RepeatAction.RESUME -> viewModel.resumeRepeat(event.templateId)
-                                    RepeatAction.STOP -> viewModel.stopRepeat(event.templateId)
-                                    // Предыдущая копия — самая поздняя из созданных
-                                    RepeatAction.PREVIOUS_COPY -> {
-                                        val previous = allTasksRaw
-                                            .filter { it.item.repeatTemplateId == event.templateId && !it.item.isTemplatePart && !it.item.trashed }
-                                            .maxByOrNull { it.item.startDate ?: it.item.creationDate }
-                                        if (previous != null) {
-                                            viewModel.setInlineExpandedTaskId(null)
-                                            revealTask(previous)
-                                        }
-                                    }
-                                    RepeatAction.EDIT -> Unit
-                                }
-                                is ThingsCategoryListEvent.DuplicateTask -> {
-                                    viewModel.duplicateTask(event.taskWrapper)
-                                }
-                                is ThingsCategoryListEvent.MoveTaskToNewProject ->
-                                    viewModel.moveTasksToNewProject(listOf(event.taskWrapper), event.title)
-                                is ThingsCategoryListEvent.MoveTask -> viewModel.moveTask(
-                                    event.taskWrapper,
-                                    if (event.moveToInbox) MoveTarget.Inbox else MoveTarget.Place(event.projectId, event.areaId, event.headingId)
-                                )
-                                is ThingsCategoryListEvent.ReorderTasks -> {
-                                    viewModel.updateTasks(event.items)
-                                }
-                                is ThingsCategoryListEvent.DeleteProject -> {
-                                    viewModel.deleteProject(event.project)
-                                    navController.popBackStack()
-                                    selectedProject = null
-                                }
-                                is ThingsCategoryListEvent.RenameArea -> viewModel.updateArea(event.area.copy(title = event.title))
-                                is ThingsCategoryListEvent.EditProject -> viewModel.editProject(event.project, event.edit)
-                                is ThingsCategoryListEvent.CompleteProject -> viewModel.completeProject(event.project)
-                                is ThingsCategoryListEvent.DeleteProjects -> event.projects.forEach { viewModel.deleteProject(it) }
-                                is ThingsCategoryListEvent.DuplicateProjects -> event.projects.forEach { viewModel.duplicateProject(it) }
-                                is ThingsCategoryListEvent.DuplicateProject -> {
-                                    // Как в Things: копия встаёт сразу после проекта, экран проекта закрывается —
-                                    // видно список, где появилась копия
-                                    viewModel.duplicateProject(event.project)
-                                    navController.popBackStack()
-                                    selectedProject = null
-                                }
-                                is ThingsCategoryListEvent.DeleteArea -> {
-                                    viewModel.deleteArea(event.area)
-                                    navController.popBackStack()
-                                    selectedArea = null
-                                }
-                                is ThingsCategoryListEvent.SaveHeading -> viewModel.saveHeading(event.heading)
-                                is ThingsCategoryListEvent.DeleteHeading -> viewModel.deleteHeading(event.heading)
-                                is ThingsCategoryListEvent.DiscardHeading -> viewModel.discardHeading(event.heading, event.tasks, event.groupAboveId)
-                                is ThingsCategoryListEvent.ArchiveHeading -> viewModel.archiveHeading(event.heading)
-                                is ThingsCategoryListEvent.ReorderHeadings -> viewModel.reorderHeadings(event.headings)
-                                is ThingsCategoryListEvent.CreateTaskAt ->
-                                    viewModel.createTaskAt(event.taskId, event.place, event.spot, event.insertIndex, event.listTasks)
-                                is ThingsCategoryListEvent.InsertHeadingAt ->
-                                    viewModel.insertHeadingAt(event.headingId, event.projectId, event.headings, event.index, event.movedTasks)
-                                is ThingsCategoryListEvent.AddHeading -> viewModel.addHeading(event.headingId, event.projectId, event.headings)
-                                is ThingsCategoryListEvent.RenameHeading -> viewModel.renameHeading(event.heading, event.title)
-                                is ThingsCategoryListEvent.SwipeTaskLeft -> {
-                                    viewModel.setInlineExpandedTaskId(null)
-                                    if (isSelectionMode) {
-                                        val taskId = event.task.item.id
-                                        if (selectedTaskIds.contains(taskId)) {
-                                            val newSelected = selectedTaskIds - taskId
-                                            if (newSelected.isEmpty()) {
-                                                isSelectionMode = false
-                                                selectedTaskIds = emptySet()
-                                            } else {
-                                                selectedTaskIds = newSelected
-                                            }
-                                        } else {
-                                            selectedTaskIds = selectedTaskIds + taskId
-                                        }
-                                    } else {
-                                        isSelectionMode = true
-                                        selectedTaskIds = setOf(event.task.item.id)
-                                    }
-                                }
-                                is ThingsCategoryListEvent.SwipeTaskRight -> {
-                                    // Заглушка для When / Календаря
-                                }
-                                is ThingsCategoryListEvent.EnterSelectionMode -> {
-                                    viewModel.setInlineExpandedTaskId(null)
-                                    isSelectionMode = true
-                                    selectedTaskIds = if (event.initialTaskId != null) setOf(event.initialTaskId) else emptySet()
-                                }
-                                is ThingsCategoryListEvent.ToggleTaskSelection -> {
-                                    selectedTaskIds = if (selectedTaskIds.contains(event.taskId)) {
-                                        selectedTaskIds - event.taskId
-                                    } else {
-                                        selectedTaskIds + event.taskId
-                                    }
-                                }
-                                is ThingsCategoryListEvent.SetTaskSelected -> {
-                                    selectedTaskIds = if (event.selected) {
-                                        selectedTaskIds + event.taskId
-                                    } else {
-                                        selectedTaskIds - event.taskId
-                                    }
-                                }
-                                ThingsCategoryListEvent.SelectAllTasks -> {
-                                    selectedTaskIds = screenState.displayTasks.map { it.item.id }.toSet()
-                                }
-                                ThingsCategoryListEvent.DeselectAllTasks -> {
-                                    selectedTaskIds = emptySet()
-                                }
-                                ThingsCategoryListEvent.ExitSelectionMode -> {
-                                    isSelectionMode = false
-                                    selectedTaskIds = emptySet()
-                                }
-                                is ThingsCategoryListEvent.BatchCompleteTasks -> {
-                                    val selectedTasks = screenState.allTasks.filter { selectedTaskIds.contains(it.item.id) }
-                                    viewModel.batchSetCompleted(selectedTasks, event.completed)
-                                    isSelectionMode = false
-                                    selectedTaskIds = emptySet()
-                                }
-                                ThingsCategoryListEvent.BatchDeleteTasks -> {
-                                    val selectedTasks = screenState.allTasks.filter { selectedTaskIds.contains(it.item.id) }.map { it.item }
-                                    viewModel.deleteTasks(selectedTasks)
-                                    isSelectionMode = false
-                                    selectedTaskIds = emptySet()
-                                }
-                                ThingsCategoryListEvent.BatchDuplicateTasks -> {
-                                    val selectedTasks = screenState.allTasks.filter { selectedTaskIds.contains(it.item.id) }
-                                    viewModel.batchDuplicateTasks(selectedTasks)
-                                    isSelectionMode = false
-                                    selectedTaskIds = emptySet()
-                                }
-                                is ThingsCategoryListEvent.BatchScheduleTasks -> {
-                                    val selectedTasks = screenState.allTasks.filter { selectedTaskIds.contains(it.item.id) }
-                                    viewModel.batchScheduleTasks(selectedTasks, event.startDate, event.isTonight, event.section)
-                                    isSelectionMode = false
-                                    selectedTaskIds = emptySet()
-                                }
-                                is ThingsCategoryListEvent.BatchMoveTasksToNewProject -> {
-                                    val selectedTasks = screenState.allTasks.filter { selectedTaskIds.contains(it.item.id) }
-                                    viewModel.moveTasksToNewProject(selectedTasks, event.title)
-                                    isSelectionMode = false
-                                    selectedTaskIds = emptySet()
-                                }
-                                is ThingsCategoryListEvent.BatchMoveTasks -> {
-                                    val selectedTasks = screenState.allTasks.filter { selectedTaskIds.contains(it.item.id) }
-                                    viewModel.batchMoveTasks(selectedTasks, event.projectId, event.areaId, event.moveToInbox, event.headingId)
-                                    isSelectionMode = false
-                                    selectedTaskIds = emptySet()
-                                }
-                                is ThingsCategoryListEvent.BatchSetTags -> {
-                                    val selectedTasks = screenState.allTasks.filter { selectedTaskIds.contains(it.item.id) }
-                                    viewModel.batchAddTags(selectedTasks, event.tags)
-                                    isSelectionMode = false
-                                    selectedTaskIds = emptySet()
-                                }
-                                is ThingsCategoryListEvent.BatchSetDeadline -> {
-                                    val selectedTasks = screenState.allTasks.filter { selectedTaskIds.contains(it.item.id) }
-                                    viewModel.batchSetDeadline(selectedTasks, event.deadline)
-                                    isSelectionMode = false
-                                    selectedTaskIds = emptySet()
-                                }
-                            }
+                            )
                         }
                     )
                     }

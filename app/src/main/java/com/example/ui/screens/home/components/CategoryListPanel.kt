@@ -3,8 +3,6 @@ package com.example.ui.screens.home.components
 import com.example.ui.components.fabdrag.actionAt
 import androidx.compose.material.icons.automirrored.filled.ShortText
 import androidx.compose.ui.layout.findRootCoordinates
-import com.example.ui.screens.home.subcomponents.EXPANDED_BOTTOM_GAP
-import com.example.ui.screens.home.subcomponents.EXPANDED_TOP_LIMIT
 import com.example.domain.lists.HomeList
 import com.example.domain.lists.AllProjectsList
 import com.example.domain.lists.PlaceGroups
@@ -78,7 +76,6 @@ import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Rect
 import androidx.compose.ui.layout.onGloballyPositioned
 import androidx.compose.ui.layout.onSizeChanged
-import androidx.compose.animation.core.animateDecay
 import androidx.compose.ui.layout.positionInRoot
 import androidx.compose.ui.unit.toSize
 import com.example.ui.components.PULL_TO_SEARCH_CIRCLE_CENTER_Y
@@ -140,9 +137,6 @@ import com.example.ui.screens.home.subcomponents.SEARCH_ROW_ICON_SIZE
 import com.example.ui.screens.home.subcomponents.CategoryListTopAppBar
 import com.example.ui.screens.home.subcomponents.TopAppBarSelectionState
 import com.example.ui.screens.home.subcomponents.AnimatedTaskItem
-import com.example.ui.screens.home.subcomponents.BatchActionToolbar
-import com.example.ui.screens.home.inlineeditor.DeadlineDatePickerDialog
-import com.example.ui.screens.home.inlineeditor.dialogs.ThingsTagDialog
 import androidx.activity.compose.BackHandler
 import androidx.compose.ui.platform.LocalContext
 
@@ -379,11 +373,8 @@ fun ThingsCategoryListPanel(
     val deletedTaskIds = remember { mutableStateListOf<String>() }
 
     // Состояния диалогов для пакетных операций
-    var showBatchWhenDialog by remember { mutableStateOf(false) }
-    var showBatchMoveDialog by remember { mutableStateOf(false) }
-    var showBatchDeleteConfirm by remember { mutableStateOf(false) }
-    var showBatchTagDialog by remember { mutableStateOf(false) }
-    var showBatchDeadlineDialog by remember { mutableStateOf(false) }
+    // Диалоги пакетных действий над выбранными задачами и их нижняя панель — TaskBatchActions.kt
+    val batchDialogs = remember { TaskBatchDialogsState() }
     var isDragSelecting by remember { mutableStateOf(false) }
 
     val context = LocalContext.current
@@ -399,47 +390,24 @@ fun ThingsCategoryListPanel(
         onEvent(ThingsCategoryListEvent.ExitSelectionMode)
     }
     
-    // «Пізніші проєкти»: выбор проектов (свайп влево), «Когда» по свайпу вправо и порядок во время перетаскивания —
-    // как у проектов на главном экране
-    val laterProjectGestures = screen == ActiveScreen.LATER_PROJECTS
-    var selectedProjectIds by remember(screen) { mutableStateOf(emptySet<String>()) }
-    // Режим выбора проектов — как у задач: включается свайпом влево или пунктом «Вибрати» в меню тулбара
-    // (тогда и без выбранных), выключается крестиком в тулбаре, «Назад», действием или началом перетаскивания
-    var projectSelectionActive by remember(screen) { mutableStateOf(false) }
-    val isProjectSelectionMode = projectSelectionActive || selectedProjectIds.isNotEmpty()
-    val exitProjectSelection: () -> Unit = { selectedProjectIds = emptySet(); projectSelectionActive = false }
-    // Проекты сейчас выбирают протяжкой по правому краю
-    var isProjectDragSelecting by remember(screen) { mutableStateOf(false) }
-    var swipeWhenProject by remember(screen) { mutableStateOf<Item?>(null) }
-    var swipeWhenProjectOrigin by remember(screen) { mutableStateOf<androidx.compose.ui.geometry.Offset?>(null) }
-    var laterProjectsOverride by remember(screen) { mutableStateOf<List<Item>?>(null) }
+    // «Пізніші проєкти»: выбор проектов, «Когда» по свайпу и порядок во время перетаскивания — LaterProjects.kt
+    val laterProjects = remember(screen) {
+        LaterProjectsController(enabled = screen == ActiveScreen.LATER_PROJECTS) {
+            LaterProjectsSource(currentProjects, currentAreas, currentAllTasks.map { it.item }, currentRepeatRules)
+        }
+    }
     // Сохранённый порядок пришёл из базы — показываем его
-    LaunchedEffect(state.projects) { laterProjectsOverride = null }
-    // Более поздние проекты без области — как на экране сейчас (во время перетаскивания — в новом порядке)
-    val laterProjectsNow: () -> List<Item> = {
-        AllProjectsList.content(laterProjectsOverride ?: currentProjects, currentAreas, templates = currentAllTasks.map { it.item }, rules = state.repeatRules)
-            .groups.firstOrNull { it.area == null }?.later.orEmpty()
-    }
-    // Нажатие в режиме выбора — отметить или снять, режим остаётся
-    val toggleProject: (Item) -> Unit = { project ->
-        projectSelectionActive = true
-        selectedProjectIds = if (project.id in selectedProjectIds) selectedProjectIds - project.id else selectedProjectIds + project.id
-    }
-    // Свайп влево — как у задач: снятие последнего выбранного закрывает режим
-    val swipeSelectProject: (Item) -> Unit = { project ->
-        val next = if (project.id in selectedProjectIds) selectedProjectIds - project.id else selectedProjectIds + project.id
-        if (next.isEmpty()) exitProjectSelection() else { selectedProjectIds = next; projectSelectionActive = true }
-    }
-    BackHandler(enabled = isProjectSelectionMode) { exitProjectSelection() }
+    LaunchedEffect(state.projects) { laterProjects.onProjectsStored() }
+    BackHandler(enabled = laterProjects.selection.isSelectionMode) { laterProjects.selection.exit() }
 
     LaunchedEffect(
         showMoveDialog, showDeleteConfirm, isWhenDialogOpen, isTagDialogOpen, swipeWhenTask != null,
-        showBatchWhenDialog, showBatchMoveDialog, showBatchDeleteConfirm, showBatchTagDialog, showBatchDeadlineDialog,
-        isProjectSelectionMode, swipeWhenProject != null
+        batchDialogs.anyOpen,
+        laterProjects.selection.isSelectionMode, laterProjects.selection.whenProject != null
     ) {
         val anyActive = showMoveDialog || showDeleteConfirm || isWhenDialogOpen || isTagDialogOpen || swipeWhenTask != null ||
-                showBatchWhenDialog || showBatchMoveDialog || showBatchDeleteConfirm || showBatchTagDialog || showBatchDeadlineDialog ||
-                isProjectSelectionMode || swipeWhenProject != null
+                batchDialogs.anyOpen ||
+                laterProjects.selection.isSelectionMode || laterProjects.selection.whenProject != null
         onDialogsActiveChange(anyActive)
     }
     
@@ -497,7 +465,7 @@ fun ThingsCategoryListPanel(
         draggedItemKey = dragDropState.draggedItemKey,
         upcomingDays = upcomingDays,
         upcomingMonths = upcomingMonths,
-        projects = laterProjectsOverride ?: projects,
+        projects = laterProjects.orderOverride ?: projects,
         area = area,
         displayTasks = displayTasks,
         isLaterItemsHidden = isLaterItemsHidden,
@@ -909,136 +877,8 @@ fun ThingsCategoryListPanel(
         if (inlineExpandedTaskId != null) editorOutsideTouch.reset()
     }
 
-    // Пока задача раскрыта, прокрутка не уводит её карточку из видимой зоны — той же, в которую карточку ставит
-    // раскрытие: от тулбара до плашки действий (или клавиатуры). Точки остановки — у краёв зоны, с видимой частью
-    // карточки EXPANDED_VISIBLE_STRIP: вверх карточка встаёт так, что у верха зоны видна её нижняя часть, вниз — что у
-    // низа видна верхняя. За точку остановки её уводит пружина: пальцем — с растущим сопротивлением, броском —
-    // скорость за границей быстро и плавно гаснет (expandedCardFling). Дальше EXPANDED_OVERSCROLL_MAX не уходит,
-    // потом пружиной возвращается к точке остановки. Движение к зоне — всегда свободно
-    val currentExpandedId by rememberUpdatedState(inlineExpandedTaskId)
-    val imeInsetsForClamp = WindowInsets.ime
-    val navBarInsetsForClamp = WindowInsets.navigationBars
-    val cardTopLimitPx = WindowInsets.statusBars.getTop(density) + with(density) { EXPANDED_TOP_LIMIT.toPx() }
-    val cardBottomReservePx = with(density) {
-        (MaterialTheme.dimens.floatingToolbarBottomPadding + MaterialTheme.dimens.floatingToolbarHeight + EXPANDED_BOTTOM_GAP).toPx()
-    }
-    val cardGapPx = with(density) { MaterialTheme.dimens.taskExpandedVerticalGap.toPx() }
-    val currentCardLimits by rememberUpdatedState(Triple(cardTopLimitPx, cardBottomReservePx, cardGapPx))
-    val cardStripPx = with(density) { EXPANDED_VISIBLE_STRIP.toPx() }
-    val cardOverscrollMaxPx = with(density) { EXPANDED_OVERSCROLL_MAX.toPx() }
-    /** Верх раскрытой карточки на экране и его точки остановки (lo — выше всего, hi — ниже всего); null — не видна. */
-    fun expandedCardStops(): Triple<Float, Float, Float>? {
-        val id = currentExpandedId ?: return null
-        val coords = listCoordinates?.takeIf { it.isAttached } ?: return null
-        val layoutInfo = lazyListState.layoutInfo
-        val info = layoutInfo.visibleItemsInfo.firstOrNull { it.key == id } ?: return null
-        val (topLimit, bottomReserve, gap) = currentCardLimits
-        val rootHeight = coords.findRootCoordinates().size.height.toFloat()
-        // Карточка — строка без отступов раскрытия сверху и снизу, в координатах экрана
-        val cardTop = coords.positionInRoot().y + (info.offset - layoutInfo.viewportStartOffset) + gap
-        val cardHeight = (info.size - 2 * gap).toFloat()
-        val zoneBottom = minOf(
-            rootHeight - imeInsetsForClamp.getBottom(density),
-            rootHeight - navBarInsetsForClamp.getBottom(density) - bottomReserve
-        )
-        val strip = minOf(cardStripPx, cardHeight)
-        return Triple(cardTop, topLimit - cardHeight + strip, zoneBottom - strip)
-    }
-    /** Сколько прокрутить, чтобы карточка встала в точку остановки (0 — она между точками). */
-    fun cardBackDelta(): Float {
-        val (cardTop, lo, hi) = expandedCardStops() ?: return 0f
-        return when {
-            cardTop < lo -> cardTop - lo
-            cardTop > hi -> cardTop - hi
-            else -> 0f
-        }
-    }
-    val expandedCardScrollClamp = remember {
-        object : NestedScrollConnection {
-            override fun onPreScroll(available: Offset, source: NestedScrollSource): Offset {
-                val (cardTop, lo, hi) = expandedCardStops() ?: return Offset.Zero
-                val dy = available.y
-                if (dy == 0f) return Offset.Zero
-                // До точки остановки — свободно; дальше пальцем — с растущим сопротивлением, броском — как решит
-                // expandedCardFling; в любом случае не дальше EXPANDED_OVERSCROLL_MAX
-                val toStop = if (dy > 0f) maxOf(0f, hi - cardTop) else maxOf(0f, cardTop - lo)
-                val overshoot = if (dy > 0f) maxOf(0f, cardTop - hi) else maxOf(0f, lo - cardTop)
-                val size = kotlin.math.abs(dy)
-                val free = minOf(size, toStop)
-                val beyond = size - free
-                val room = maxOf(0f, cardOverscrollMaxPx - overshoot)
-                val extra = if (source == NestedScrollSource.UserInput) {
-                    minOf(room, beyond * (1f - overshoot / cardOverscrollMaxPx).coerceIn(0f, 1f))
-                } else minOf(room, beyond)
-                val allowed = (free + extra) * kotlin.math.sign(dy)
-                return Offset(0f, dy - allowed)
-            }
-
-            override suspend fun onPostFling(consumed: androidx.compose.ui.unit.Velocity, available: androidx.compose.ui.unit.Velocity): androidx.compose.ui.unit.Velocity {
-                // Запасной возврат: бросок закончился, а карточка осталась за точкой остановки
-                val back = cardBackDelta()
-                if (back != 0f) lazyListState.animateScrollBy(back, EXPANDED_SPRING_BACK)
-                return androidx.compose.ui.unit.Velocity.Zero
-            }
-        }
-    }
-    // Бросок при раскрытой задаче: до точки остановки — обычное затухание. Как только карточка пересекла точку
-    // остановки, её ведёт одна пружина с набранной скоростью: по инерции карточка проходит немного дальше, плавно
-    // тормозит и без паузы возвращается к точке остановки (дальше EXPANDED_OVERSCROLL_MAX её не пускает onPreScroll)
-    val defaultFling = androidx.compose.foundation.gestures.ScrollableDefaults.flingBehavior()
-    val currentDefaultFling by rememberUpdatedState(defaultFling)
-    val expandedCardFling = remember {
-        object : androidx.compose.foundation.gestures.FlingBehavior {
-            override suspend fun androidx.compose.foundation.gestures.ScrollScope.performFling(initialVelocity: Float): Float {
-                if (expandedCardStops() == null) return with(currentDefaultFling) { performFling(initialVelocity) }
-                var last = 0f
-                var velocity = initialVelocity
-                // Затухание довело карточку до точки остановки с ненулевой скоростью
-                var reachedStop = false
-                if (kotlin.math.abs(initialVelocity) > 1f && cardBackDelta() == 0f) {
-                    androidx.compose.animation.core.AnimationState(0f, initialVelocity).animateDecay(
-                        androidx.compose.animation.core.exponentialDecay()
-                    ) {
-                        val delta = value - last
-                        last = value
-                        velocity = this.velocity
-                        // Шаг — не дальше точки остановки: за ней карточку ведёт только пружина
-                        val stops = expandedCardStops()
-                        val toStop = when {
-                            stops == null -> Float.POSITIVE_INFINITY
-                            delta > 0f -> maxOf(0f, stops.first - stops.second)
-                            else -> maxOf(0f, stops.third - stops.first)
-                        }
-                        val step = if (kotlin.math.abs(delta) > toStop) toStop * kotlin.math.sign(delta) else delta
-                        val used = scrollBy(step)
-                        // Дошли до точки остановки (или упёрлись в край списка) — дальше ведёт пружина
-                        if (step != delta) reachedStop = true
-                        if (step != delta || kotlin.math.abs(used - step) > 0.5f) cancelAnimation()
-                    }
-                    if (!reachedStop && cardBackDelta() == 0f) return 0f
-                }
-                // Пружина к точке остановки с текущей скоростью: инерция гаснет плавно, затем возврат. Скорость входа
-                // ограничена так, чтобы пружина (без отскока: наибольший заход v / (ω·e)) гасила её внутри
-                // EXPANDED_OVERSCROLL_MAX и не упиралась в предел
-                val back = cardBackDelta()
-                if (back != 0f || reachedStop) {
-                    val omega = kotlin.math.sqrt(EXPANDED_SPRING_STIFFNESS)
-                    // Запас — то, что осталось до предела с учётом захода, уже сделанного пальцем
-                    val room = maxOf(0f, cardOverscrollMaxPx - kotlin.math.abs(back))
-                    val maxVelocity = 0.8f * room * omega * kotlin.math.E.toFloat()
-                    // Скорость к точке остановки не ограничиваем — это уже возврат
-                    val outward = back == 0f || kotlin.math.sign(velocity) != kotlin.math.sign(back)
-                    val entry = if (outward) velocity.coerceIn(-maxVelocity, maxVelocity) else velocity
-                    var prev = 0f
-                    androidx.compose.animation.core.animate(0f, back, initialVelocity = entry, animationSpec = EXPANDED_SPRING_BACK) { v, _ ->
-                        scrollBy(v - prev)
-                        prev = v
-                    }
-                }
-                return 0f
-            }
-        }
-    }
+    // Ограничитель и бросок прокрутки при раскрытой задаче — ExpandedCardScroll.kt
+    val expandedCardScroll = rememberExpandedCardScroll(inlineExpandedTaskId, lazyListState) { listCoordinates }
 
     // --- Scroll_B: аккумулятор ручного скролла пользователя ---
     val manualScrollDelta = remember { FloatAccumulator() }
@@ -1245,7 +1085,7 @@ fun ThingsCategoryListPanel(
             modifier = Modifier
                 .fillMaxSize()
                 // Первым в цепочке: ограничение раскрытой карточкой забирает лишнее раньше оттяжки поиска
-                .nestedScroll(expandedCardScrollClamp)
+                .nestedScroll(expandedCardScroll.clamp)
                 // Оттяжка к Quick Find — только без раскрытой задачи: иначе прокрутка вниз у начала списка
                 // открывала поиск и закрывала редактор
                 .then(if (screen == ActiveScreen.SEARCH || anyExpanded) Modifier else Modifier.nestedScroll(nestedScrollConnection))
@@ -1274,7 +1114,7 @@ fun ThingsCategoryListPanel(
                 .testTag("tasks_lazy_list"),
             contentPadding = PaddingValues(top = topPaddingTotal, bottom = LIST_BOTTOM_PADDING),
             // При раскрытой задаче — бросок с мягким торможением у точек остановки
-            flingBehavior = if (anyExpanded) expandedCardFling else defaultFling
+            flingBehavior = if (anyExpanded) expandedCardScroll.fling else expandedCardScroll.defaultFling
         ) {
             item(key = TaskListKeys.MAIN_HEADER) {
                 // Извлеченный подкомпонент заголовка
@@ -1564,19 +1404,15 @@ fun ThingsCategoryListPanel(
                             val task = item
                             if (task.type == Item.TYPE_PROJECT || task.type == Item.TYPE_PROJECT_TEMPLATE) {
                                 // Извлеченный подкомпонент строки проекта (и шаблона повторяющегося проекта)
-                                val laterGestures = laterProjectGestures && task.type == Item.TYPE_PROJECT
+                                val laterGestures = laterProjects.enabled && task.type == Item.TYPE_PROJECT
                                 ProjectItemRow(
                                     project = task,
                                     isNew = screen == ActiveScreen.TODAY && task.id in todayNew.ids,
-                                    isSelectionMode = laterProjectGestures && isProjectSelectionMode,
-                                    isSelected = task.id in selectedProjectIds,
-                                    isDragSelecting = laterGestures && isProjectDragSelecting,
-                                    onToggleSelect = { toggleProject(task) },
-                                    swipe = if (!laterGestures) null else com.example.ui.screens.home.subcomponents.ProjectRowSwipe(
-                                        onSwipeLeft = { swipeSelectProject(task) },
-                                        onSwipeRight = { origin -> swipeWhenProject = task; swipeWhenProjectOrigin = origin },
-                                        enabled = dragDropState.draggedItemKey == null
-                                    ),
+                                    isSelectionMode = laterProjects.enabled && laterProjects.selection.isSelectionMode,
+                                    isSelected = task.id in laterProjects.selection.selectedIds,
+                                    isDragSelecting = laterGestures && laterProjects.isDragSelecting,
+                                    onToggleSelect = { laterProjects.selection.toggle(task) },
+                                    swipe = if (laterGestures) laterProjects.rowSwipe(task, dragDropState) else null,
                                     stackHidden = laterGestures && task.id != dragDropState.draggedItemKey &&
                                         task.id in dragDropState.stackedDragKeys,
                                     stackSize = if (laterGestures && task.id == dragDropState.draggedItemKey) dragDropState.stackedDragKeys.size else 0,
@@ -1662,43 +1498,9 @@ fun ThingsCategoryListPanel(
                                                 if (saved.isNotEmpty()) onEvent(ThingsCategoryListEvent.ReorderTasks(saved))
                                             }
                                         } else if (laterGestures) {
-                                            // «Пізніші проєкти»: между отложенными или между проектами того же дня.
-                                            // Как у задач: тянуть можно и в режиме выбора — выбранные сворачиваются
-                                            // стопкой под ведущим, после сброса встают за ним
-                                            Modifier.universalDragAndDrop(
-                                                state = dragDropState,
-                                                key = task.id,
-                                                canDropOver = { key -> key is String && laterProjectsNow().any { it.id == key } },
-                                                onMoveIfNecessary = { dragged, target ->
-                                                    val moved = AllProjectsList.reorderLater(laterProjectsNow(), dragged as String, target as String)
-                                                    if (moved == null) false else {
-                                                        val byId = moved.associateBy { it.id }
-                                                        laterProjectsOverride = (laterProjectsOverride ?: currentProjects).map { byId[it.id] ?: it }
-                                                        true
-                                                    }
-                                                },
-                                                onDragStarted = {
-                                                    val selected = selectedProjectIds
-                                                    dragDropState.stackedDragKeys =
-                                                        if (task.id in selected && selected.size > 1) listOf(task.id) + selected.filter { it != task.id }
-                                                        else emptyList()
-                                                    // Режим выбора закрывается при начале перетаскивания — как у задач
-                                                    if (isProjectSelectionMode) exitProjectSelection()
-                                                },
-                                                onDragEnd = {
-                                                    val stack = dragDropState.stackedDragKeys.mapNotNull { it as? String }
-                                                    if (stack.size > 1) {
-                                                        AllProjectsList.placeFollowers(laterProjectsNow(), stack.first(), stack.drop(1))?.let { placed ->
-                                                            val byId = placed.associateBy { it.id }
-                                                            laterProjectsOverride = (laterProjectsOverride ?: currentProjects).map { byId[it.id] ?: it }
-                                                        }
-                                                    }
-                                                    val stored = currentProjects.associateBy { it.id }
-                                                    val changed = laterProjectsOverride.orEmpty().filter { stored[it.id] != null && stored[it.id] != it }
-                                                    if (changed.isNotEmpty()) onEvent(ThingsCategoryListEvent.ReorderTasks(changed))
-                                                    else laterProjectsOverride = null
-                                                }
-                                            )
+                                            Modifier.laterProjectDrag(laterProjects, dragDropState, task.id) { changed ->
+                                                onEvent(ThingsCategoryListEvent.ReorderTasks(changed))
+                                            }
                                         } else Modifier
                                     )
                                 )
@@ -2094,17 +1896,8 @@ fun ThingsCategoryListPanel(
             backgroundProgress = toolbarBackgroundProgress,
             titleProgress = toolbarTitleProgress,
             // «Пізніші проєкти» — выбор проектов: крестик отмены, «Вибрати всі» / «Зняти вибір», как у задач
-            selectionState = if (laterProjectGestures) {
-                val selectable = laterProjectsNow().filter { it.type == Item.TYPE_PROJECT }.map { it.id }.toSet()
-                TopAppBarSelectionState(
-                    isSelectionMode = isProjectSelectionMode,
-                    selectedCount = selectedProjectIds.size,
-                    isAllSelected = selectable.isNotEmpty() && selectedProjectIds.containsAll(selectable),
-                    onCancelSelection = exitProjectSelection,
-                    onSelectAllClick = { projectSelectionActive = true; selectedProjectIds = selectable },
-                    onDeselectAllClick = { selectedProjectIds = emptySet() },
-                    onEnterSelectionMode = { projectSelectionActive = true }
-                )
+            selectionState = if (laterProjects.enabled) {
+                laterProjects.topBarSelection()
             } else TopAppBarSelectionState(
                 isSelectionMode = state.isSelectionMode,
                 selectedCount = state.selectedTaskIds.size,
@@ -2389,82 +2182,8 @@ fun ThingsCategoryListPanel(
         )
     }
 
-    // Диалоги для пакетных операций
-    if (showBatchWhenDialog) {
-        // Начальное состояние — общее для выбранных задач: если все они уже в одной секции и с одной
-        // датой, диалог показывает её отмеченной (и даёт кнопку «Clear»); если задачи разные —
-        // не отмечено ничего. Пока пользователь ничего не выбрал, закрытие крестиком ничего не меняет.
-        val batchSelected = remember(state.selectedTaskIds, state.allTasks) {
-            state.allTasks.filter { state.selectedTaskIds.contains(it.item.id) }
-        }
-        var batchStartDate by remember {
-            mutableStateOf(batchSelected.map { it.item.startDate }.distinct().singleOrNull())
-        }
-        var batchSection by remember {
-            mutableStateOf(batchSelected.map { it.item.section }.distinct().singleOrNull() ?: TaskSection.ANYTIME)
-        }
-        var batchIsTonight by remember {
-            mutableStateOf(batchSelected.isNotEmpty() && batchSelected.all { it.item.isTonight })
-        }
-        var batchPicked by remember { mutableStateOf(false) }
-
-        ThingsWhenDialog(
-            startDate = batchStartDate,
-            onStartDateChange = { batchStartDate = it; batchPicked = true },
-            section = batchSection,
-            onSectionChange = { batchSection = it; batchPicked = true },
-            isTonight = batchIsTonight,
-            onIsTonightChange = { batchIsTonight = it; batchPicked = true },
-            onShowCalendarHelperChange = { },
-            onDismissRequest = {
-                if (batchPicked) {
-                    onEvent(
-                        ThingsCategoryListEvent.BatchScheduleTasks(
-                            batchStartDate,
-                            batchIsTonight,
-                            batchSection
-                        )
-                    )
-                }
-                showBatchWhenDialog = false
-            }
-        )
-    }
-
-    if (showBatchMoveDialog) {
-        ThingsMoveDialog(
-            currentProjectId = null,
-            currentAreaId = null,
-            currentIsInbox = false,
-            projects = projects,
-            areas = areasState,
-            allTasks = state.allTasks,
-            onMove = { projectId, areaId, moveToInbox ->
-                onEvent(ThingsCategoryListEvent.BatchMoveTasks(projectId, areaId, moveToInbox))
-                showBatchMoveDialog = false
-            },
-            onMoveToNewProject = { title ->
-                onEvent(ThingsCategoryListEvent.BatchMoveTasksToNewProject(title))
-                showBatchMoveDialog = false
-            },
-            headings = state.allHeadings,
-            onMoveToHeading = { projectId, areaId, headingId ->
-                onEvent(ThingsCategoryListEvent.BatchMoveTasks(projectId, areaId, false, headingId))
-                showBatchMoveDialog = false
-            },
-            onDismissRequest = { showBatchMoveDialog = false }
-        )
-    }
-
-    if (showBatchDeleteConfirm) {
-        DeleteConfirmDialog(
-            onDismissRequest = { showBatchDeleteConfirm = false },
-            onConfirmDelete = {
-                showBatchDeleteConfirm = false
-                onEvent(ThingsCategoryListEvent.BatchDeleteTasks)
-            }
-        )
-    }
+    // Диалоги пакетных действий над выбранными задачами
+    TaskBatchDialogs(batchDialogs, state, onEvent)
 
     if (project != null && projectDialog != null) {
         ProjectDialogs(
@@ -2486,218 +2205,34 @@ fun ThingsCategoryListPanel(
         )
     }
 
-    if (showBatchTagDialog) {
-        ThingsTagDialog(
-            activeTags = emptyList(),
-            allSavedTags = allSavedTags,
-            allSavedTagObjects = allSavedTagObjects,
-            onNewTagCreated = { name, parentId -> onEvent(ThingsCategoryListEvent.CreateTag(name, parentId)) },
-            onDeleteTag = { tag -> onEvent(ThingsCategoryListEvent.DeleteTag(tag)) },
-            onUpdateTag = { tag -> onEvent(ThingsCategoryListEvent.UpdateTag(tag)) },
-            onUpdateTagsOrder = { tags -> onEvent(ThingsCategoryListEvent.UpdateTagsOrder(tags)) },
-            onTagsSelected = { newTags ->
-                onEvent(ThingsCategoryListEvent.BatchSetTags(newTags))
-                showBatchTagDialog = false
-            },
-            onDismissRequest = { showBatchTagDialog = false }
-        )
-    }
-
-    if (showBatchDeadlineDialog) {
-        DeadlineDatePickerDialog(
-            initialSelectedDateMillis = null,
-            onDateSelected = { deadline ->
-                onEvent(ThingsCategoryListEvent.BatchSetDeadline(deadline))
-                showBatchDeadlineDialog = false
-            },
-            onDismiss = { showBatchDeadlineDialog = false }
-        )
-    }
-
-    // Полоса быстрого свайп-выбора задач (drag-to-select) в режиме множественного выбора
+    // Выбор задач протяжкой по правому краю в режиме множественного выбора
     if (state.isSelectionMode) {
-        val currentSelectedIds by rememberUpdatedState(state.selectedTaskIds)
-        val currentOnEvent by rememberUpdatedState(onEvent)
-        val currentAllTasks by rememberUpdatedState(state.allTasks)
-        val currentView = androidx.compose.ui.platform.LocalView.current
-
-        Box(
-            modifier = Modifier
-                .align(Alignment.TopEnd)
-                .fillMaxHeight()
-                .width(PULL_INDICATOR_WIDTH)
-                .padding(top = topPaddingTotal, bottom = LIST_BOTTOM_PADDING)
-                .pointerInput(state.isSelectionMode) {
-                    awaitEachGesture {
-                        val down = awaitFirstDown(requireUnconsumed = false)
-
-                        // Поиск задач, пересекающих вертикальный интервал движения пальца [y1, y2]
-                        fun findTaskIdsInRange(y1: Float, y2: Float, isMovingDown: Boolean): List<String> {
-                            val minY = minOf(y1, y2) - pullOffset.value
-                            val maxY = maxOf(y1, y2) - pullOffset.value
-                            val items = lazyListState.layoutInfo.visibleItemsInfo
-                            val filtered = items.filter { itemInfo ->
-                                val top = itemInfo.offset.toFloat()
-                                val bottom = top + itemInfo.size.toFloat()
-                                top <= maxY && bottom >= minY
-                            }
-                            val ordered = if (isMovingDown) filtered else filtered.asReversed()
-                            return ordered.mapNotNull { hitItem ->
-                                val key = hitItem.key as? String ?: return@mapNotNull null
-                                if (currentAllTasks.any { it.item.id == key }) key else null
-                            }
-                        }
-
-                        var lastY = down.position.y
-                        val initialHitTasks = findTaskIdsInRange(lastY, lastY, isMovingDown = true)
-                        val hitTaskId = initialHitTasks.firstOrNull()
-
-                        if (hitTaskId != null) {
-                            down.consume()
-                            isDragSelecting = true
-                            try {
-                                val initialSelected = currentSelectedIds.contains(hitTaskId)
-                                val targetSelected = !initialSelected
-                                val touchedTaskIds = mutableSetOf<String>()
-
-                                touchedTaskIds.add(hitTaskId)
-                                currentView.performHapticFeedback(android.view.HapticFeedbackConstants.CLOCK_TICK)
-                                currentOnEvent(ThingsCategoryListEvent.SetTaskSelected(hitTaskId, targetSelected))
-
-                                while (true) {
-                                    val event = awaitPointerEvent()
-                                    val change = event.changes.firstOrNull() ?: break
-                                    if (!change.pressed) break
-                                    change.consume()
-
-                                    val currentY = change.position.y
-                                    val crossedTaskIds = findTaskIdsInRange(lastY, currentY, isMovingDown = currentY >= lastY)
-                                    for (taskId in crossedTaskIds) {
-                                        if (touchedTaskIds.add(taskId)) {
-                                            currentView.performHapticFeedback(android.view.HapticFeedbackConstants.CLOCK_TICK)
-                                            currentOnEvent(ThingsCategoryListEvent.SetTaskSelected(taskId, targetSelected))
-                                        }
-                                    }
-                                    lastY = currentY
-                                }
-                            } finally {
-                                isDragSelecting = false
-                            }
-                        }
-                    }
-                }
+        DragSelectStrip(
+            lazyListState = lazyListState,
+            width = PULL_INDICATOR_WIDTH,
+            topPadding = topPaddingTotal,
+            bottomPadding = LIST_BOTTOM_PADDING,
+            listOffsetY = { pullOffset.value },
+            isSelectable = { id -> state.allTasks.any { it.item.id == id } },
+            isSelected = { it in state.selectedTaskIds },
+            onSelect = { id, selected -> onEvent(ThingsCategoryListEvent.SetTaskSelected(id, selected)) },
+            onDraggingChange = { isDragSelecting = it }
         )
     }
-
-    // «Пізніші проєкти»: выбор проектов протяжкой по правому краю — как у задач
-    if (laterProjectGestures && isProjectSelectionMode) {
-        val currentView = androidx.compose.ui.platform.LocalView.current
-        val currentLaterNow by rememberUpdatedState(laterProjectsNow)
-        Box(
-            modifier = Modifier
-                .align(Alignment.TopEnd)
-                .fillMaxHeight()
-                .width(PULL_INDICATOR_WIDTH)
-                .padding(top = topPaddingTotal, bottom = LIST_BOTTOM_PADDING)
-                .pointerInput(Unit) {
-                    awaitEachGesture {
-                        val down = awaitFirstDown(requireUnconsumed = false)
-                        fun projectIdsInRange(y1: Float, y2: Float, movingDown: Boolean): List<String> {
-                            val minY = minOf(y1, y2) - pullOffset.value
-                            val maxY = maxOf(y1, y2) - pullOffset.value
-                            val ids = currentLaterNow().map { it.id }.toSet()
-                            val hit = lazyListState.layoutInfo.visibleItemsInfo.filter { info ->
-                                info.offset.toFloat() <= maxY && info.offset + info.size.toFloat() >= minY
-                            }
-                            return (if (movingDown) hit else hit.asReversed()).mapNotNull { (it.key as? String)?.takeIf { k -> k in ids } }
-                        }
-                        var lastY = down.position.y
-                        val first = projectIdsInRange(lastY, lastY, movingDown = true).firstOrNull() ?: return@awaitEachGesture
-                        down.consume()
-                        isProjectDragSelecting = true
-                        try {
-                            val select = first !in selectedProjectIds
-                            val touched = mutableSetOf(first)
-                            fun apply(id: String) {
-                                currentView.performHapticFeedback(android.view.HapticFeedbackConstants.CLOCK_TICK)
-                                selectedProjectIds = if (select) selectedProjectIds + id else selectedProjectIds - id
-                            }
-                            apply(first)
-                            while (true) {
-                                val change = awaitPointerEvent().changes.firstOrNull() ?: break
-                                if (!change.pressed) break
-                                change.consume()
-                                val y = change.position.y
-                                projectIdsInRange(lastY, y, movingDown = y >= lastY).forEach { if (touched.add(it)) apply(it) }
-                                lastY = y
-                            }
-                        } finally {
-                            isProjectDragSelecting = false
-                        }
-                    }
-                }
-        )
-    }
-
-    // «Пізніші проєкти»: действия с выбранными проектами и «Когда» по свайпу — как на главном экране
-    if (laterProjectGestures) {
-        HomeProjectBatchLayer(
-            isActive = isProjectSelectionMode,
-            selected = projects.filter { it.id in selectedProjectIds },
-            allTasks = state.allTasks,
-            projects = projects,
-            areas = areasState,
-            onEditProjects = { list, edit -> list.forEach { onEvent(ThingsCategoryListEvent.EditProject(it, edit)) } },
-            onDeleteProjects = { onEvent(ThingsCategoryListEvent.DeleteProjects(it)) },
-            onCompleteProjects = { list -> list.forEach { onEvent(ThingsCategoryListEvent.CompleteProject(it)) } },
-            onDuplicateProjects = { onEvent(ThingsCategoryListEvent.DuplicateProjects(it)) },
-            onDone = exitProjectSelection
-        )
-        swipeWhenProject?.let { project ->
-            ProjectSwipeWhenDialog(
-                project = project,
-                growFromOffset = swipeWhenProjectOrigin,
-                onEditProject = { p, edit -> onEvent(ThingsCategoryListEvent.EditProject(p, edit)) },
-                onDismiss = { swipeWhenProject = null; swipeWhenProjectOrigin = null }
-            )
-        }
-    }
-
-    // Плавающий тулбар пакетных операций
-    BatchActionToolbar(
-        isVisible = state.isSelectionMode && !showBatchMoveDialog,
-        selectedCount = state.selectedTaskIds.size,
-        onWhenClick = { showBatchWhenDialog = true },
-        onMoveClick = { showBatchMoveDialog = true },
-        onDeleteClick = { showBatchDeleteConfirm = true },
-        onCompleteClick = { onEvent(ThingsCategoryListEvent.BatchCompleteTasks(true)) },
-        onSetTagsClick = { showBatchTagDialog = true },
-        onSetDeadlineClick = { showBatchDeadlineDialog = true },
-        onDuplicateClick = { onEvent(ThingsCategoryListEvent.BatchDuplicateTasks) },
-        onShareClick = {
-            val selectedTasks = state.allTasks.filter { state.selectedTaskIds.contains(it.item.id) }
-            val shareText = selectedTasks.joinToString("\n") { "• " + it.item.title }
-            if (shareText.isNotEmpty()) {
-                val sendIntent = android.content.Intent().apply {
-                    action = android.content.Intent.ACTION_SEND
-                    putExtra(android.content.Intent.EXTRA_TEXT, shareText)
-                    type = "text/plain"
-                }
-                context.startActivity(android.content.Intent.createChooser(sendIntent, null))
-            }
-        },
-        modifier = Modifier.align(Alignment.BottomCenter),
-        onRepeatAction = state.allTasks
-            .filter { state.selectedTaskIds.contains(it.item.id) && it.item.isRepeatTemplate }
-            .map { it.item.id }
-            .takeIf { it.isNotEmpty() }
-            ?.let { templateIds ->
-                { action ->
-                    onEvent(ThingsCategoryListEvent.BatchRepeatAction(templateIds, action))
-                    onEvent(ThingsCategoryListEvent.ExitSelectionMode)
-                }
-            }
+    // «Пізніші проєкти»: выбор протяжкой, панель действий с выбранными проектами и «Когда» по свайпу
+    LaterProjectsLayer(
+        controller = laterProjects,
+        state = state,
+        lazyListState = lazyListState,
+        stripWidth = PULL_INDICATOR_WIDTH,
+        stripTopPadding = topPaddingTotal,
+        stripBottomPadding = LIST_BOTTOM_PADDING,
+        listOffsetY = { pullOffset.value },
+        onEvent = onEvent
     )
+
+    // Плавающая панель пакетных действий над выбранными задачами
+    TaskBatchToolbar(batchDialogs, state, onEvent)
   }
   }
 }
@@ -3032,16 +2567,6 @@ private fun ListBanner(
 }
 
 /** Перетаскиваемый проект в «Планах» — над строками и чуть крупнее, как задача */
-/** Раскрытая карточка у точки остановки прокрутки: видимая её часть и наибольший заход пружиной за точку */
-private val EXPANDED_VISIBLE_STRIP = 96.dp
-// Меньше видимой части: при заходе край карточки остаётся в зоне, не прячется за статус-бар или панель
-private val EXPANDED_OVERSCROLL_MAX = 72.dp
-/** Возврат раскрытой карточки к точке остановки — мягкая пружина без отскока */
-private const val EXPANDED_SPRING_STIFFNESS = androidx.compose.animation.core.Spring.StiffnessLow
-private val EXPANDED_SPRING_BACK = androidx.compose.animation.core.spring<Float>(
-    dampingRatio = androidx.compose.animation.core.Spring.DampingRatioNoBouncy,
-    stiffness = EXPANDED_SPRING_STIFFNESS
-)
 private const val UPCOMING_DRAG_Z = 100f
 private const val UPCOMING_DRAG_SCALE = 1.04f
 
