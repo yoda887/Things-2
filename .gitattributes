@@ -1,0 +1,6 @@
+# Тексты хранятся и выгружаются с LF: одинаково на любой машине и без предупреждений о замене концов строк
+* text=auto eol=lf
+*.bat text eol=crlf
+*.png binary
+*.ico binary
+*.jar binary
