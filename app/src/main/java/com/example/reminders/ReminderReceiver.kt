@@ -183,6 +183,8 @@ class ReminderRescheduleReceiver : BroadcastReceiver() {
     @Inject @ApplicationScope lateinit var scope: CoroutineScope
 
     override fun onReceive(context: Context, intent: Intent) {
+        // Приёмник открыт системе (exported): принимаем только её события из манифеста, чужие интенты — мимо
+        if (intent.action !in RESCHEDULE_ACTIONS) return
         val pending = goAsync()
         scope.launch {
             try {
@@ -195,3 +197,11 @@ class ReminderRescheduleReceiver : BroadcastReceiver() {
         }
     }
 }
+
+/** Системные события, по которым напоминания и повторы ставятся заново (те же, что в манифесте). */
+private val RESCHEDULE_ACTIONS = setOf(
+    Intent.ACTION_BOOT_COMPLETED,
+    Intent.ACTION_MY_PACKAGE_REPLACED,
+    Intent.ACTION_TIME_CHANGED,
+    Intent.ACTION_TIMEZONE_CHANGED
+)
