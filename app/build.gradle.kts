@@ -54,6 +54,13 @@ android {
         compose = true
         buildConfig = true
     }
+    // Android Lint: замечания, которые уже были в коде, записаны в lint-baseline.xml и не мешают;
+    // новые — ошибка сборки проверки (./gradlew :app:lintDebug, её же запускает CI)
+    lint {
+        baseline = file("lint-baseline.xml")
+        abortOnError = true
+        warningsAsErrors = false
+    }
     packaging {
         resources {
             excludes += "/META-INF/{AL2.0,LGPL2.1}"
