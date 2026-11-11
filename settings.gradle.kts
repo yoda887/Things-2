@@ -21,5 +21,7 @@ dependencyResolutionManagement {
 
 rootProject.name = "Things"
 include(":app")
+// Съёмка профиля запуска (Baseline Profile) — нужна только для ./gradlew :app:generateBaselineProfile
+include(":baselineprofile")
 // Общий модуль правил (domain и data/model) — отдельная сборка, её же подключает десктоп
 includeBuild("shared")

@@ -5,6 +5,7 @@ plugins {
     alias(libs.plugins.compose.compiler)
     alias(libs.plugins.ksp)
     alias(libs.plugins.hilt)
+    alias(libs.plugins.baselineprofile)
 }
 
 android {
@@ -69,6 +70,20 @@ android {
 }
 
 
+// Профиль запуска снимается с тестовой сборки «qa» (./gradlew :app:generateBaselineProfile), а действует
+// для всех сборок: результат кладётся в src/main/generated/baselineProfiles
+baselineProfile {
+    mergeIntoMain = true
+    // Не переснимать профиль при каждой релизной сборке — только по команде
+    automaticGenerationDuringBuild = false
+    // Источник профиля задан только для «qa»: съёмка не должна ставить сборку поверх рабочего приложения
+    variants {
+        create("qa") {
+            from(project(":baselineprofile"))
+        }
+    }
+}
+
 // Схема базы Room по версиям — основа для миграций; файлы хранятся в репозитории
 ksp {
     arg("room.schemaLocation", "$projectDir/schemas")
@@ -115,6 +130,12 @@ dependencies {
     implementation(libs.retrofit.converter.moshi)
     implementation(libs.okhttp)
     implementation(libs.okhttp.logging.interceptor)
+
+    // Профиль запуска: список классов и методов, которые Android компилирует заранее, при установке —
+    // холодный старт и первые прокрутки без «прогрева». Сам профиль снимается с телефона модулем
+    // :baselineprofile и лежит в src/main/generated/baselineProfiles; profileinstaller ставит его и тогда,
+    // когда приложение установлено не из магазина
+    implementation(libs.androidx.profileinstaller)
 
     testImplementation(libs.junit)
     androidTestImplementation(libs.androidx.junit)
