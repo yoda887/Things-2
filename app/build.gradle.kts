@@ -93,6 +93,8 @@ dependencies {
     implementation(libs.moshi.kotlin)
 
     // Room
+    // Общий с десктопом модуль правил и модели данных (вложенная сборка shared/)
+    implementation("com.bgdlab.things:shared")
     implementation(libs.androidx.room.runtime)
     implementation(libs.androidx.room.ktx)
     ksp(libs.androidx.room.compiler)

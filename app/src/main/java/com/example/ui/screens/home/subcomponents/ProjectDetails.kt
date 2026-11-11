@@ -73,7 +73,7 @@ internal val Item.startSection: TaskSection
     get() = when {
         start == Item.START_SOMEDAY -> TaskSection.SOMEDAY
         // «Сегодня» хранится датой старта сегодняшнего дня: в «Когда» отмечается «Сегодня», а не число в календаре
-        startDate != null -> if (startDate <= com.example.data.model.DayBounds.now().endOfToday) TaskSection.TODAY else TaskSection.UPCOMING
+        startDate != null -> if ((startDate ?: 0L) <= com.example.data.model.DayBounds.now().endOfToday) TaskSection.TODAY else TaskSection.UPCOMING
         start == Item.START_TODAY -> TaskSection.TODAY
         else -> TaskSection.ANYTIME
     }

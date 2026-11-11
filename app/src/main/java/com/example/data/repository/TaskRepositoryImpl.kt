@@ -444,8 +444,9 @@ class TaskRepositoryImpl @Inject constructor(
             val unsyncedTasks = localDataSource.getUnsyncedTasks()
             for (task in unsyncedTasks) {
                 try {
-                    val listId = if (task.projectId != null) {
-                        localDataSource.getItemById(task.projectId)?.googleTaskListId ?: GoogleTasksApi.DEFAULT_LIST_ID
+                    val taskProjectId = task.projectId
+                    val listId = if (taskProjectId != null) {
+                        localDataSource.getItemById(taskProjectId)?.googleTaskListId ?: GoogleTasksApi.DEFAULT_LIST_ID
                     } else {
                         GoogleTasksApi.DEFAULT_LIST_ID
                     }

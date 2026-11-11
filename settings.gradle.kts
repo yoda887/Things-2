@@ -21,3 +21,5 @@ dependencyResolutionManagement {
 
 rootProject.name = "Things"
 include(":app")
+// Общий модуль правил (domain и data/model) — отдельная сборка, её же подключает десктоп
+includeBuild("shared")

@@ -28,8 +28,8 @@ jobs:
       # В репозитории gradlew хранится без права на запуск (его добавляли с Windows)
       - run: chmod +x gradlew
 
-      - name: Модульные тесты
-        run: ./gradlew :app:testDebugUnitTest --stacktrace
+      - name: Модульные тесты (общий модуль и приложение)
+        run: ./gradlew :shared:test :app:testDebugUnitTest --stacktrace
 
       - name: Android Lint (новые замечания сверх lint-baseline.xml)
         run: ./gradlew :app:lintDebug --stacktrace
@@ -41,4 +41,5 @@ jobs:
           name: reports
           path: |
             app/build/reports/tests
+            shared/build/reports/tests
             app/build/reports/lint-results-debug.html

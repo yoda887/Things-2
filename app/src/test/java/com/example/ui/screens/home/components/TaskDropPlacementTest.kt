@@ -2,13 +2,15 @@ package com.example.ui.screens.home.components
 
 import com.example.ui.viewmodel.ActiveScreen
 import com.example.data.model.DayBounds
-import com.example.domain.edits.MS_PER_DAY
 import com.example.data.model.Item
 import com.example.data.model.ItemWithChecklist
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNull
 import org.junit.Test
 import java.util.Calendar
+
+/** Сутки в миллисекундах (в общем модуле эта константа внутренняя) */
+private const val MS_PER_DAY = 24 * 3600 * 1000L
 
 /**
  * Закрепляет правила, по которым задача приземляется при перетаскивании через заголовки.

@@ -208,8 +208,9 @@ fun TaskItemRow(
     // Число и месяц — словом или цифрами, по настройке «Месяц словом в датах»
     val monthName = com.example.ui.components.LocalDatesWithMonthName.current
     val dateIndicator = remember(task.startDate, task.isTonight, task.start, task.dueDate, eveningColor, tonightDescription, todayDescription, monthName) {
-        if (task.startDate != null) {
-            getStartDateIndicator(task.startDate, task.isTonight, eveningColor, tonightDescription, todayDescription, monthName)
+        val taskStart = task.startDate
+        if (taskStart != null) {
+            getStartDateIndicator(taskStart, task.isTonight, eveningColor, tonightDescription, todayDescription, monthName)
         } else if (task.isToday) {
             if (task.isTonight) {
                 DateIndicatorResult.IconIndicator(
@@ -555,8 +556,9 @@ fun TaskItemRow(
                         }
                     }
 
-                    if (showMetaIcons && task.dueDate != null) {
-                        val delta = remember(task.dueDate) {
+                    val taskDue = task.dueDate
+                    if (showMetaIcons && taskDue != null) {
+                        val delta = remember(taskDue) {
                             val today = java.util.Calendar.getInstance().apply {
                                 set(java.util.Calendar.HOUR_OF_DAY, 0)
                                 set(java.util.Calendar.MINUTE, 0)
@@ -564,7 +566,7 @@ fun TaskItemRow(
                                 set(java.util.Calendar.MILLISECOND, 0)
                             }
                             val due = java.util.Calendar.getInstance().apply {
-                                timeInMillis = task.dueDate
+                                timeInMillis = taskDue
                                 set(java.util.Calendar.HOUR_OF_DAY, 0)
                                 set(java.util.Calendar.MINUTE, 0)
                                 set(java.util.Calendar.SECOND, 0)
@@ -579,7 +581,7 @@ fun TaskItemRow(
                         }
 
                         // Позже, чем через месяц, — датой, ближе — днями (listDueText)
-                        val relativeText = com.example.ui.screens.home.inlineeditor.utils.listDueText(task.dueDate)
+                        val relativeText = com.example.ui.screens.home.inlineeditor.utils.listDueText(taskDue)
 
                         val isOverdueOrToday = delta <= 0
                         val color = if (isOverdueOrToday) ThingsTheme.colors.danger else textSecondaryColor.copy(alpha = DUE_TEXT_ALPHA)

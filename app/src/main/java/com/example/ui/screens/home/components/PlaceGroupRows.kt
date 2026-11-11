@@ -11,12 +11,14 @@ object PlaceGroupRows {
         entries: (PlaceGroups.Group) -> List<Any> = { it.projectRows + it.tasks }
     ): List<Any> = buildList {
         groups.forEach { group ->
+            val project = group.project
+            val area = group.area
             when {
-                group.project != null -> add(
-                    SearchSectionHeaderItem("place_hdr_project_${group.project.id}", group.project.title, SearchSectionKind.PROJECT, project = group.project)
+                project != null -> add(
+                    SearchSectionHeaderItem("place_hdr_project_${project.id}", project.title, SearchSectionKind.PROJECT, project = project)
                 )
-                group.area != null -> add(
-                    SearchSectionHeaderItem("place_hdr_area_${group.area.id}", group.area.title, SearchSectionKind.AREA, area = group.area)
+                area != null -> add(
+                    SearchSectionHeaderItem("place_hdr_area_${area.id}", area.title, SearchSectionKind.AREA, area = area)
                 )
             }
             addAll(entries(group))

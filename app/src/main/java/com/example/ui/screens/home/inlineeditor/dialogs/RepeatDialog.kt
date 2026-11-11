@@ -208,9 +208,10 @@ private class RepeatDraft(task: Item, today: LocalDate) {
         if ((rule.unit == RepeatUnit.MONTH || rule.unit == RepeatUnit.YEAR) && rule.on.isNotEmpty()) {
             entries.clear(); entries.addAll(rule.on.map { if (it.month == null) it.copy(month = rule.start.monthValue) else it })
         }
+        val ruleEndCount = rule.endCount
         when {
             rule.endDate != null -> { end = RepeatEnd.DATE; endDate = rule.endDate; endDateSet = true }
-            rule.endCount != null -> { end = RepeatEnd.COUNT; endCount = rule.endCount }
+            ruleEndCount != null -> { end = RepeatEnd.COUNT; endCount = ruleEndCount }
             else -> end = RepeatEnd.NEVER
         }
         deadlineOn = rule.deadlineDaysBefore != null
