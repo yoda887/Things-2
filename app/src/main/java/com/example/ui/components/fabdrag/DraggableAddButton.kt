@@ -37,6 +37,7 @@ import androidx.compose.animation.core.LinearEasing
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableFloatStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberUpdatedState
@@ -337,7 +338,7 @@ fun BoxScope.FabDragActions(controller: FabDragController) {
     // «+» над кружком «Входящих» — из угла экрана раскрывается большой тёмный круг с подписью, как в Things
     val overInbox = controller.isDragging && controller.actionAt(controller.pointer) == FabAction.INBOX
     // Высота линии кружков — по центру «+», пока его тянут; после сброса кружки исчезают на том же месте
-    var lineY by remember { mutableStateOf(controller.homeCenter.y) }
+    var lineY by remember { mutableFloatStateOf(controller.homeCenter.y) }
     if (controller.isDragging) lineY = controller.homeCenter.y
     val bubble by animateFloatAsState(
         targetValue = if (overInbox) 1f else 0f,

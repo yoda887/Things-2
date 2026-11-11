@@ -168,7 +168,7 @@ fun ThingsTaskInlineEditor(
     var dueDate by remember(task.item.id) { mutableStateOf<Long?>(task.item.dueDate) }
     var tagInput by remember(task.item.id) { mutableStateOf<String>(task.item.tags.joinToString(", ")) }
     var checklist by remember(task.item.id, task.checklist) { mutableStateOf<List<ChecklistItem>>(task.checklist) }
-    var priority by remember(task.item.id) { mutableStateOf<Int>(task.item.priority) }
+    var priority by remember(task.item.id) { mutableIntStateOf(task.item.priority) }
     // Напоминание — время дня в минутах; задаётся в окне «Когда»
     var reminderTime by remember(task.item.id) { mutableStateOf<Int?>(task.item.reminderTime) }
     var isCompleted by remember(task.item.id) { mutableStateOf<Boolean>(task.item.isCompleted) }

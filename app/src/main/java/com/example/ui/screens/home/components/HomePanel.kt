@@ -1029,10 +1029,15 @@ fun ThingsHomePanel(
         )
 
         val searchHeightPx = with(density) { homeSearchBlockHeightDp.toPx() }
-        val scrollOffset = if (lazyListState.firstVisibleItemIndex > 0) {
-            searchHeightPx
-        } else {
-            lazyListState.firstVisibleItemScrollOffset.toFloat().coerceAtMost(searchHeightPx)
+        // Через derivedStateOf: блок перерисовывается, только пока поле поиска уезжает, а не на каждый пиксель прокрутки
+        val scrollOffset by remember(lazyListState, searchHeightPx) {
+            derivedStateOf {
+                if (lazyListState.firstVisibleItemIndex > 0) {
+                    searchHeightPx
+                } else {
+                    lazyListState.firstVisibleItemScrollOffset.toFloat().coerceAtMost(searchHeightPx)
+                }
+            }
         }
 
         val searchRowInset = MaterialTheme.dimens.homeRowInset

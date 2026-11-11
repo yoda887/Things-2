@@ -147,7 +147,7 @@ fun TaskItemRow(
         label = "titleColor_${task.id}"
     )
 
-    var titleScaleTarget by remember { mutableStateOf(1.0f) }
+    var titleScaleTarget by remember { mutableFloatStateOf(1.0f) }
 
     val animatedTitleScaleX by animateFloatAsState(
         targetValue = titleScaleTarget,
@@ -158,7 +158,7 @@ fun TaskItemRow(
         label = "titleScaleX_${task.id}"
     )
 
-    var cardScaleTarget by remember { mutableStateOf(1.0f) }
+    var cardScaleTarget by remember { mutableFloatStateOf(1.0f) }
 
     val cardScale by animateFloatAsState(
         targetValue = cardScaleTarget,

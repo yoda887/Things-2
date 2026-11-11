@@ -266,7 +266,7 @@ fun AnimatedTaskItem(
         (MaterialTheme.dimens.taskExpandedBottomPadding - MaterialTheme.dimens.taskCollapsedBottomPadding).toPx()
     }
     val totalCompensationPx = verticalGapLimitPx + extraTopPaddingPx
-    var prevPaddingPx by remember(task.id) { mutableStateOf(0f) }
+    var prevPaddingPx by remember(task.id) { mutableFloatStateOf(0f) }
 
     // Раскрытая задача должна помещаться между тулбаром и плашкой действий внизу экрана.
     // Геометрию пишет раскладка карточки, читает только цикл ниже — без рекомпозиций.

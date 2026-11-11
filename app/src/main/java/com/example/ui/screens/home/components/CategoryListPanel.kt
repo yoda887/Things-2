@@ -902,7 +902,7 @@ fun ThingsCategoryListPanel(
     val expandedSpacerHeightPx = with(density) { configuration.screenHeightDp.dp.toPx() }
     val verticalGapLimitPx = with(density) { MaterialTheme.dimens.taskExpandedVerticalGap.toPx() }
 
-    var bottomSpacerHeightPx by remember { mutableStateOf(collapsedSpacerHeightPx) }
+    var bottomSpacerHeightPx by remember { mutableFloatStateOf(collapsedSpacerHeightPx) }
     val bottomSpacerHeight = with(density) { bottomSpacerHeightPx.toDp() }
 
     // Guard: отслеживаем, было ли предыдущее раскрытие, чтобы не скроллить на первой композиции

@@ -128,7 +128,7 @@ fun QuickAddDialog(
     var selectedProjectId by remember { mutableStateOf<String?>(null) }
     var selectedAreaId by remember { mutableStateOf<String?>(null) }
     var checklist by remember { mutableStateOf<List<ChecklistItem>>(emptyList()) }
-    var priority by remember { mutableStateOf(0) }
+    var priority by remember { mutableIntStateOf(0) }
     // Напоминание — время дня в минутах; задаётся в окне «Когда»
     var reminderTime by remember { mutableStateOf<Int?>(null) }
 

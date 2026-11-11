@@ -7,7 +7,6 @@
     <plurals name="all_projects_hide_later"><item quantity="one">Скрыть %1$d более поздний проект</item><item quantity="few">Скрыть %1$d более поздних проекта</item><item quantity="many">Скрыть %1$d более поздних проектов</item><item quantity="other">Скрыть %1$d более поздних проекта</item></plurals>
     <plurals name="home_later_projects"><item quantity="one">%1$d более поздний проект</item><item quantity="few">%1$d более поздних проекта</item><item quantity="many">%1$d более поздних проектов</item><item quantity="other">%1$d более позднего проекта</item></plurals>
     <string name="all_projects_show_logged">Показать завершённые проекты</string>
-    <string name="all_projects_hide_logged">Скрыть завершённые проекты</string>
     <string name="batch_delete_projects_title">Удалить проекты</string>
     <plurals name="batch_delete_projects_message"><item quantity="one">Удалить %1$d выбранный проект вместе с задачами? Отменить это нельзя.</item><item quantity="few">Удалить %1$d выбранных проекта вместе с задачами? Отменить это нельзя.</item><item quantity="many">Удалить %1$d выбранных проектов вместе с задачами? Отменить это нельзя.</item><item quantity="other">Удалить %1$d выбранных проекта вместе с задачами? Отменить это нельзя.</item></plurals>
     <string name="batch_complete_projects_title">Завершить проекты</string>
@@ -16,8 +15,6 @@
     <string name="yesterday">Вчера</string>
     <string name="area_upcoming_heading">Планы</string>
     <string name="area_someday_heading">Когда-нибудь</string>
-    <string name="area_hide_later_items">Скрыть более поздние объекты</string>
-    <string name="area_show_later_items">Показать более поздние объекты</string>
     <plurals name="area_show_later_count"><item quantity="one">Показать %1$d более поздний объект</item><item quantity="few">Показать %1$d более поздних объекта</item><item quantity="many">Показать %1$d более поздних объектов</item><item quantity="other">Показать %1$d более поздних объекта</item></plurals>
     <plurals name="area_hide_later_count"><item quantity="one">Скрыть %1$d более поздний объект</item><item quantity="few">Скрыть %1$d более поздних объекта</item><item quantity="many">Скрыть %1$d более поздних объектов</item><item quantity="other">Скрыть %1$d более поздних объекта</item></plurals>
     <plurals name="anytime_show_more"><item quantity="one">Показать ещё %1$d</item><item quantity="few">Показать ещё %1$d</item><item quantity="many">Показать ещё %1$d</item><item quantity="other">Показать ещё %1$d</item></plurals>
@@ -63,10 +60,6 @@
     <string name="tag_dialog_no_tag">Без тега</string>
     <string name="tag_dialog_select_group">Выберите группу</string>
     <string name="tag_dialog_placeholder">Тег</string>
-    <string name="tag_dialog_group_home">Дом</string>
-    <string name="tag_dialog_group_work">Работа</string>
-    <string name="tag_dialog_group_urgent">Срочно</string>
-    <string name="tag_dialog_group_personal">Личное</string>
     <string name="tag_dialog_edit_tag">Изменить тег</string>
     <string name="delete_group_title">Удалить группу?</string>
     <string name="delete_group_message">Вместе с группой будут удалены все вложенные теги. Продолжить?</string>
@@ -78,15 +71,11 @@
     <string name="select_all">Выбрать все</string>
     <string name="deselect_all">Снять выделение</string>
     <string name="select_items">Выбрать задачи</string>
-    <string name="selected_count">Выбрано: %1$d</string>
-    <string name="batch_delete_confirm_title">Удалить задачи</string>
-    <string name="batch_delete_confirm_message">Удалить выбранные задачи? Отменить это действие нельзя.</string>
     <string name="batch_action_when">Когда</string>
     <string name="batch_action_move">Переместить</string>
     <string name="batch_action_delete">Удалить</string>
     <string name="batch_action_more">Ещё</string>
     <string name="batch_action_complete">Отметить выполненными</string>
-    <string name="batch_action_incomplete">Отметить невыполненными</string>
     <string name="batch_action_set_tags">Назначить теги</string>
     <string name="batch_action_set_deadline">Назначить срок</string>
     <string name="batch_action_duplicate">Дублировать</string>
@@ -207,7 +196,6 @@
         <item quantity="other">В проекте «%1$s» есть %2$d невыполненной задачи. Они тоже будут отмечены выполненными.</item>
     </plurals>
     <string name="reminder_title">Напоминание</string>
-    <string name="cd_remove_reminder">Убрать напоминание</string>
     <string name="reminder_channel_name">Напоминания</string>
     <string name="reminder_channel_description">Напоминания о задачах в назначенное время</string>
     <string name="reminder_remove">Убрать</string>
@@ -274,7 +262,6 @@
     <string name="repeat_every_one_week">Еженедельно</string>
     <string name="repeat_every_one_month">Ежемесячно</string>
     <string name="repeat_every_one_year">Ежегодно</string>
-    <string name="repeat_next_short">следующая %1$s</string>
     <string name="repeat_pill">Повторяется %1$s</string>
     <string name="repeat_pill_paused">Повторы приостановлены</string>
     <string name="repeat_pill_tomorrow">Повторяется завтра</string>

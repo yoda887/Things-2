@@ -476,7 +476,7 @@ fun ThingsSearchOverlay(
     val finalRadiusPx = with(density) { morphFinalCornerRadius.toPx() }
 
     // Высота шапки (поле ввода и ✕) в раскладке — нужна, чтобы содержимое шло сразу под несжатой шапкой
-    var headerHeightPx by remember { mutableStateOf(0) }
+    var headerHeightPx by remember { mutableIntStateOf(0) }
     val headerTopPaddingPx = with(density) { MaterialTheme.dimens.quickFindCardPadding.toPx() }
     var layerTranslationX = 0f
     var layerTranslationY = 0f
