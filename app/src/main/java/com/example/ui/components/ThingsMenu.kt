@@ -22,8 +22,9 @@ import com.example.ui.theme.ThingsTheme
  * Единое выпадающее меню опций: скруглённые углы `menuShape`, тёмный фон `overlaySurface`
  * в обеих темах. Пункты — только [ThingsMenuItem].
  *
- * Material 3 (1.2) берёт форму меню из `shapes.extraSmall`, а фон — из `colorScheme.surface`
- * с тональной подсветкой `surfaceTint`, поэтому они подменяются только внутри меню.
+ * Material 3 берёт форму меню из `shapes.extraSmall`, а фон — из `colorScheme.surface`
+ * с тональной подсветкой `surfaceTint` (1.2) или из `surfaceContainer` (1.3+), поэтому они
+ * подменяются только внутри меню. Без `surfaceContainer` на 1.3 меню светлое, а белый текст не виден.
  */
 @Composable
 fun ThingsDropdownMenu(
@@ -35,7 +36,7 @@ fun ThingsDropdownMenu(
 ) {
     val surface = ThingsTheme.colors.overlaySurface
     MaterialTheme(
-        colorScheme = MaterialTheme.colorScheme.copy(surface = surface, surfaceTint = Color.Transparent),
+        colorScheme = MaterialTheme.colorScheme.copy(surface = surface, surfaceContainer = surface, surfaceTint = Color.Transparent),
         shapes = MaterialTheme.shapes.copy(extraSmall = ThingsTheme.shapes.menuShape)
     ) {
         DropdownMenu(
