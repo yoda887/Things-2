@@ -15,6 +15,7 @@ import com.example.R
 import androidx.compose.ui.res.pluralStringResource
 import androidx.compose.ui.res.stringResource
 import com.example.ui.components.ThingsConfirmDialog
+import com.example.ui.components.ThingsConfirmPopover
 import com.example.ui.components.ThingsDropdownMenu
 import com.example.ui.components.ThingsMenuItem
 import com.example.ui.theme.ThingsTheme
@@ -80,9 +81,14 @@ fun MainCategoryHeader(
     // Переименование: нажатие на название проекта или области (или «Перейменувати» в меню «…»)
     onRenameProject: (Item, String) -> Unit = { _, _ -> },
     onRenameArea: (Area, String) -> Unit = { _, _ -> },
+    // Меню «…» области: «Додати теги» и «Поділитися»
+    onAreaAction: (AreaAction) -> Unit = {},
     modifier: Modifier = Modifier
 ) {
-    var isEditingTitle by remember(project?.id, area?.id, screen) { mutableStateOf(false) }
+    // Новый проект без названия (созданный из меню области) открывается сразу с полем названия, как в Things
+    var isEditingTitle by remember(project?.id, area?.id, screen) {
+        mutableStateOf(screen == ActiveScreen.PROJECT_DETAIL && project != null && project.title.isBlank())
+    }
     val headerEmojiFontSize = ThingsTheme.type.heroEmoji.fontSize
     val headerTitleFontSize = ThingsTheme.type.largeTitle.fontSize
 
@@ -107,20 +113,6 @@ fun MainCategoryHeader(
                 onDeleteProject(project)
             },
             onDismiss = { showDeleteConfirmDialog = false }
-        )
-    }
-
-    if (showAreaDeleteConfirmDialog && area != null) {
-        ThingsConfirmDialog(
-            title = stringResource(R.string.delete_area_title),
-            message = stringResource(R.string.delete_area_message, area.title),
-            confirmText = stringResource(R.string.delete),
-            dismissText = stringResource(R.string.cancel),
-            onConfirm = {
-                showAreaDeleteConfirmDialog = false
-                onDeleteArea(area)
-            },
-            onDismiss = { showAreaDeleteConfirmDialog = false }
         )
     }
 
@@ -437,14 +429,39 @@ fun MainCategoryHeader(
                                 expanded = showAreaOptionsMenu,
                                 onDismissRequest = { showAreaOptionsMenu = false }
                             ) {
+                                // Как в Things: «Додати теги», «Видалити область», «Поділитися»; плюс «Перейменувати»
+                                ThingsMenuItem(stringResource(R.string.ui_add_tags), AppIcons.Tag, onClick = {
+                                    showAreaOptionsMenu = false
+                                    onAreaAction(AreaAction.TAGS)
+                                })
                                 ThingsMenuItem(stringResource(R.string.ui_rename), Icons.Default.Edit, onClick = {
                                     showAreaOptionsMenu = false
                                     isEditingTitle = true
                                 })
+                                ThingsMenuDivider()
                                 ThingsMenuItem(stringResource(R.string.ui_delete_area), Icons.Default.Delete, destructive = true, onClick = {
                                     showAreaOptionsMenu = false
                                     showAreaDeleteConfirmDialog = true
                                 })
+                                ThingsMenuDivider()
+                                ThingsMenuItem(stringResource(R.string.batch_action_share), Icons.Default.Share, onClick = {
+                                    showAreaOptionsMenu = false
+                                    onAreaAction(AreaAction.SHARE)
+                                })
+                            }
+
+                            // Как в Things: подтверждение — карточкой у «…»; удаляется и всё содержимое области
+                            if (area != null) {
+                                ThingsConfirmPopover(
+                                    expanded = showAreaDeleteConfirmDialog,
+                                    message = stringResource(R.string.delete_area_message),
+                                    confirmText = stringResource(R.string.ui_delete_area),
+                                    onConfirm = {
+                                        showAreaDeleteConfirmDialog = false
+                                        onDeleteArea(area)
+                                    },
+                                    onDismiss = { showAreaDeleteConfirmDialog = false }
+                                )
                             }
                         }
                     }

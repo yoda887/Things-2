@@ -167,6 +167,29 @@ class ThingsViewModel @Inject constructor(
         }
     }
 
+    /** Начало текущего дня — заново сразу после каждой полуночи, пока приложение открыто */
+    private val dayStarts: kotlinx.coroutines.flow.Flow<Long> = kotlinx.coroutines.flow.flow {
+        while (true) {
+            val bounds = DayBounds.now()
+            emit(bounds.todayStart)
+            // Секунда запаса: следующий день уже точно наступил
+            kotlinx.coroutines.delay(bounds.endOfToday + 1 - System.currentTimeMillis() + 1_000)
+        }
+    }
+
+    init {
+        // Наступил день дедлайна — задача или проект встают на сегодня (DeadlineToday): при каждом изменении
+        // списка и в полночь. Поставленные уже изменены сегодня — второй раз не трогаются
+        viewModelScope.launch {
+            combine(tasks, projects, dayStarts) { list, projectList, _ -> list to projectList }.collect { (list, projectList) ->
+                if (list.isEmpty()) return@collect
+                val items = (list.map { it.item } + projectList).distinctBy { it.id }
+                val due = com.example.domain.edits.DeadlineToday.dueNow(items, DayBounds.now(), System.currentTimeMillis())
+                if (due.isNotEmpty()) taskUseCases.updateTask(due)
+            }
+        }
+    }
+
     /** «OK» на плашке «Входящих»: переехавшие задачи больше там не показываются */
     fun dismissInboxMoved() {
         _inboxMovedOut.value = emptySet()
@@ -274,25 +297,27 @@ class ThingsViewModel @Inject constructor(
     val filteredTasks: StateFlow<List<ItemWithChecklist>> = combine(
         tasks,
         searchQuery,
-        selectedTagFilter
-    ) { itemList, query, tag ->
+        selectedTagFilter,
+        projects,
+        areas
+    ) { itemList, query, tag, projectList, areaList ->
+        // Тег может быть и унаследованным — от проекта или области
+        val inheritance = com.example.domain.tag.TagInheritance.Index(projectList, areaList)
         itemList.filter { wrapper ->
             val matchesQuery = query.isEmpty() ||
                     wrapper.item.title.contains(query, ignoreCase = true) ||
                     wrapper.item.notes.contains(query, ignoreCase = true)
             
-            val matchesTag = tag == null || wrapper.item.tags.any { TagTitles.key(it) == TagTitles.key(tag) }
+            val matchesTag = tag == null || inheritance.has(wrapper.item, tag)
             
             matchesQuery && matchesTag
         }
     }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
 
-    val allTags: StateFlow<Set<String>> = tasks
-        .combine(searchQuery) { taskList, _ ->
-            taskList.flatMap { wrapper ->
-                wrapper.item.tags
-            }.toSet()
-        }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptySet())
+    /** Теги, что встречаются у задач, проектов и областей — для строки фильтра по тегу */
+    val allTags: StateFlow<Set<String>> = combine(tasks, projects, areas) { taskList, projectList, areaList ->
+        (taskList.flatMap { it.item.tags } + projectList.flatMap { it.tags } + areaList.flatMap { it.tags }).toSet()
+    }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptySet())
 
     val allSavedTags: StateFlow<List<String>> = queryUseCases.observeAllTags()
         .map { tags -> tags.map { it.title } }
@@ -321,7 +346,6 @@ class ThingsViewModel @Inject constructor(
             calEvents: List<Item>,
             savedTags: List<String>,
             savedTagObjs: List<Tag>,
-            allTagsSet: Set<String>,
             highlighted: String?,
             query: String = "",
             headingList: List<Item> = emptyList(),
@@ -332,6 +356,8 @@ class ThingsViewModel @Inject constructor(
             // Границы дня считаем один раз на весь список, а не в геттерах каждой задачи
             val bounds = DayBounds.now()
             val somedayProjectIds = AnytimeList.somedayProjectIds(projectList)
+            // Теги задач вместе с унаследованными от проекта и области — для экрана тега и фильтра по тегу
+            val inheritance = com.example.domain.tag.TagInheritance.Index(projectList, areaList)
 
             // Все экраны перечислены явно (без else): новый экран компилятор заставит указать и здесь
             val screenTasks = taskList.filter { wrapper ->
@@ -350,7 +376,7 @@ class ThingsViewModel @Inject constructor(
                         ActiveScreen.LOGBOOK -> LogbookList.includes(task)
                         ActiveScreen.PROJECT_DETAIL -> ProjectList.includes(task, project?.id)
                         ActiveScreen.AREA_DETAIL -> AreaList.includes(task, area?.id)
-                        ActiveScreen.TAG_DETAIL -> tag != null && TagList.isActiveTask(task, tag.title)
+                        ActiveScreen.TAG_DETAIL -> tag != null && TagList.isActiveTask(task, tag.title, inheritance)
                         ActiveScreen.SEARCH -> SearchList.includes(wrapper, query)
                         // У главного экрана и особых списков проектов нет списка задач
                         ActiveScreen.HOME, ActiveScreen.ALL_PROJECTS, ActiveScreen.LOGGED_PROJECTS, ActiveScreen.LATER_PROJECTS -> false
@@ -395,7 +421,7 @@ class ThingsViewModel @Inject constructor(
             val displayTasks = if (selectedTag == null) {
                 orderedTasks
             } else {
-                orderedTasks.filter { it.item.tags.contains(selectedTag) || it.item.id == expandedTaskId }
+                orderedTasks.filter { inheritance.has(it.item, selectedTag) || it.item.id == expandedTaskId }
             }
 
             val projectProgressMap = taskList
@@ -415,7 +441,13 @@ class ThingsViewModel @Inject constructor(
                 tag = tag,
                 inlineExpandedTaskId = expandedTaskId,
                 selectedTagFilter = selectedTag,
-                allTags = allTagsSet,
+                // Как в Things: в фильтре только теги этого списка (выбранный не пропадает). В области — теги её
+                // задач и проектов (фильтр там отбирает и проекты), на остальных экранах — теги задач экрана
+                allTags = if (screen == ActiveScreen.AREA_DETAIL) {
+                    AreaList.filterTags(area?.id, orderedTasks, projectList)
+                } else {
+                    inheritance.filterTags(orderedTasks.map { it.item })
+                } + listOfNotNull(selectedTag),
                 displayTasks = displayTasks,
                 calendarEvents = calEvents,
                 allSavedTags = savedTags,
@@ -460,7 +492,6 @@ class ThingsViewModel @Inject constructor(
             calEvents = calendarEvents.value,
             savedTags = allSavedTags.value,
             savedTagObjs = allSavedTagObjects.value,
-            allTagsSet = allTags.value,
             highlighted = highlightedTaskId.value,
             query = searchQuery.value,
             headingList = headings.value,
@@ -497,7 +528,6 @@ class ThingsViewModel @Inject constructor(
                 calendarEvents,
                 allSavedTags,
                 allSavedTagObjects,
-                allTags,
                 highlightedTaskId,
                 searchQuery,
                 headings,
@@ -520,12 +550,10 @@ class ThingsViewModel @Inject constructor(
             val savedTags = array[6] as List<String>
             @Suppress("UNCHECKED_CAST")
             val savedTagObjs = array[7] as List<Tag>
+            val highlighted = array[8] as? String
+            val query = array[9] as? String ?: ""
             @Suppress("UNCHECKED_CAST")
-            val allTagsSet = array[8] as Set<String>
-            val highlighted = array[9] as? String
-            val query = array[10] as? String ?: ""
-            @Suppress("UNCHECKED_CAST")
-            val headingList = array[11] as List<Item>
+            val headingList = array[10] as List<Item>
 
             computeCategoryListState(
                 screen = screen,
@@ -540,13 +568,12 @@ class ThingsViewModel @Inject constructor(
                 calEvents = calEvents,
                 savedTags = savedTags,
                 savedTagObjs = savedTagObjs,
-                allTagsSet = allTagsSet,
                 highlighted = highlighted,
                 query = query,
                 headingList = headingList,
-                repeatRules = @Suppress("UNCHECKED_CAST") (array[12] as Map<String, com.example.data.model.RecurrenceRule>),
-                inboxMovedOut = @Suppress("UNCHECKED_CAST") (array[13] as Set<String>),
-                inboxGhostInEditor = array[14] as? String
+                repeatRules = @Suppress("UNCHECKED_CAST") (array[11] as Map<String, com.example.data.model.RecurrenceRule>),
+                inboxMovedOut = @Suppress("UNCHECKED_CAST") (array[12] as Set<String>),
+                inboxGhostInEditor = array[13] as? String
             )
         }.flowOn(Dispatchers.Default)
     }
@@ -920,8 +947,13 @@ class ThingsViewModel @Inject constructor(
      */
     fun batchSetDeadline(taskWrappers: List<ItemWithChecklist>, dueDate: Long?) {
         viewModelScope.launch {
+            val now = System.currentTimeMillis()
+            val bounds = DayBounds.now()
+            // Дедлайн на сегодня или раньше — задачи встают на сегодня
             val updated = taskWrappers.map { wrapper ->
-                wrapper.item.copy(dueDate = dueDate)
+                com.example.domain.edits.DeadlineToday.afterDeadlineEdit(
+                    wrapper.item, wrapper.item.copy(dueDate = dueDate, modificationDate = now), bounds, now
+                )
             }
             taskUseCases.updateTask(updated)
         }
@@ -1059,6 +1091,36 @@ class ThingsViewModel @Inject constructor(
     /**
      * Пакетно обновляет порядок сфер (областей) в БД.
      */
+    /** Теги области: новые названия заводятся в справочнике */
+    fun setAreaTags(area: Area, titles: List<String>) {
+        viewModelScope.launch { areaUseCases.updateArea.setTags(area, titles) }
+    }
+
+    /** Новый проект без названия в области; [onCreated] — когда он уже в базе (его можно открыть) */
+    fun createProjectInArea(areaId: String, onCreated: (Item) -> Unit) {
+        val project = NewProjects.create(areaId)
+        viewModelScope.launch {
+            projectUseCases.updateProject(project)
+            onCreated(project)
+        }
+    }
+
+    /** Задачи области из вставленного текста — по задаче на строку, первой строкой вверху списка */
+    fun addTasksToArea(titles: List<String>, areaId: String) {
+        if (titles.isEmpty()) return
+        val top = NewTasks.topSortOrder(tasks.value.map { it.item })
+        viewModelScope.launch {
+            titles.forEachIndexed { index, title ->
+                taskUseCases.addTask(
+                    sortOrder = top - (titles.size - 1 - index),
+                    title = title,
+                    section = TaskSection.ANYTIME,
+                    areaId = areaId
+                )
+            }
+        }
+    }
+
     fun updateAreas(areas: List<Area>) {
         viewModelScope.launch {
             areaUseCases.updateArea(areas)

@@ -6,6 +6,9 @@ import androidx.compose.material.icons.filled.RemoveDone
 import androidx.compose.material.icons.filled.DoneAll
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Checklist
+import androidx.compose.material.icons.filled.AddCircleOutline
+import androidx.compose.material.icons.filled.ContentPaste
+import androidx.compose.material.icons.filled.Share
 import com.example.ui.components.ThingsDropdownMenu
 import com.example.ui.components.ThingsMenuItem
 import androidx.compose.foundation.layout.*
@@ -98,6 +101,9 @@ data class TopAppBarSelectionState(
  * @param onToggleTagsFilter Обработчик переключения видимости фильтра по тегам.
  * @param onTitleClick Нажатие на компактный заголовок (список прокручен) — открыть Quick Find;
  *   передаются границы заголовка на экране, из них вырастает окно поиска.
+ * @param onNewProject Экран области: пункт «Новий проєкт» — проект в этой области.
+ * @param onPaste Экран области: пункт «Вставити» — задачи из текста в буфере обмена.
+ * @param onShare Экран области: пункт «Поділитися».
  */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -119,7 +125,10 @@ fun CategoryListTopAppBar(
     onToggleTagsFilter: () -> Unit = {},
     // Экран проекта: пункт «Add Heading»
     onAddHeading: (() -> Unit)? = null,
-    onTitleClick: ((androidx.compose.ui.geometry.Rect?) -> Unit)? = null
+    onTitleClick: ((androidx.compose.ui.geometry.Rect?) -> Unit)? = null,
+    onNewProject: (() -> Unit)? = null,
+    onPaste: (() -> Unit)? = null,
+    onShare: (() -> Unit)? = null
 ) {
     // Фон и разделитель проявляются вместе с прокруткой, синхронно с растворением заголовка экрана,
     // а не включаются скачком по порогу
@@ -220,6 +229,27 @@ fun CategoryListTopAppBar(
                             })
                         }
                     } else {
+                        // Фильтр по тегу — первым, как в Things (на экране области); на остальных — после «Вибрати»
+                        val tagsFirst = onNewProject != null
+                        val tagsItem: @Composable () -> Unit = {
+                            ThingsMenuItem(
+                                stringResource(if (isTagsFilterVisible) R.string.hide_tags else R.string.show_tags),
+                                AppIcons.Tag,
+                                onClick = {
+                                    isOptionsMenuExpanded = false
+                                    onToggleTagsFilter()
+                                },
+                                // Как в Things: пункт есть всегда, без тегов — серый
+                                enabled = hasTags
+                            )
+                        }
+                        if (tagsFirst) tagsItem()
+                        if (onNewProject != null) {
+                            ThingsMenuItem(stringResource(R.string.ui_new_project), Icons.Default.AddCircleOutline, onClick = {
+                                isOptionsMenuExpanded = false
+                                onNewProject()
+                            })
+                        }
                         if (onAddHeading != null) {
                             ThingsMenuItem(stringResource(R.string.ui_add_heading), Icons.Default.Add, onClick = {
                                 isOptionsMenuExpanded = false
@@ -230,15 +260,18 @@ fun CategoryListTopAppBar(
                             isOptionsMenuExpanded = false
                             selectionState.onEnterSelectionMode()
                         })
-                        if (hasTags) {
-                            ThingsMenuItem(
-                                stringResource(if (isTagsFilterVisible) R.string.hide_tags else R.string.show_tags),
-                                AppIcons.Tag,
-                                onClick = {
-                                    isOptionsMenuExpanded = false
-                                    onToggleTagsFilter()
-                                }
-                            )
+                        if (onPaste != null) {
+                            ThingsMenuItem(stringResource(R.string.ui_paste), Icons.Default.ContentPaste, onClick = {
+                                isOptionsMenuExpanded = false
+                                onPaste()
+                            })
+                        }
+                        if (!tagsFirst && hasTags) tagsItem()
+                        if (onShare != null) {
+                            ThingsMenuItem(stringResource(R.string.batch_action_share), Icons.Default.Share, onClick = {
+                                isOptionsMenuExpanded = false
+                                onShare()
+                            })
                         }
                     }
                 }

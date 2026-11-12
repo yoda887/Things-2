@@ -109,6 +109,7 @@ object TaskListKeys {
 
     /** Свойства проекта под заголовком: теги, «Когда», дедлайн, заметки */
     const val PROJECT_DETAILS = "project_details"
+    const val AREA_TAGS = "area_tags"
 
     /** Заголовок вечерней секции экрана «Сегодня» */
     const val EVENING_HEADER = "evening_header"
@@ -279,7 +280,7 @@ fun rememberFlattenedList(
                     waiting.map { if (it.item.type == com.example.data.model.Item.TYPE_PROJECT_TEMPLATE) it.item else it }
             }
             // Шаблоны повторяющихся проектов — среди всех задач, не среди проектов
-            ActiveScreen.AREA_DETAIL -> AreaScreen.rows(AreaList.content(area?.id, displayTasks, projects, templates = allTasks.map { it.item }, tagFilter = tagFilter, rules = repeatRules), isLaterItemsHidden)
+            ActiveScreen.AREA_DETAIL -> AreaScreen.rows(AreaList.content(area?.id, displayTasks, projects, templates = allTasks.map { it.item }, tagFilter = tagFilter, rules = repeatRules, inheritance = com.example.domain.tag.TagInheritance.Index(projects, areas)), isLaterItemsHidden)
             ActiveScreen.LOGBOOK -> LogbookScreen.rows(LogbookList.sections(displayTasks, projects), todayLabel, yesterdayLabel)
             // Поздние — сразу, после текущих в своих группах; выполненных на экране тега нет
             ActiveScreen.TAG_DETAIL -> TagScreen.rows(
@@ -511,6 +512,12 @@ sealed interface ThingsCategoryListEvent {
     data class DeleteProjects(val projects: List<Item>) : ThingsCategoryListEvent
     data class DuplicateProjects(val projects: List<Item>) : ThingsCategoryListEvent
     data class DeleteArea(val area: Area) : ThingsCategoryListEvent
+    /** Теги области — названия в порядке выбора */
+    data class SetAreaTags(val area: Area, val titles: List<String>) : ThingsCategoryListEvent
+    /** «Новий проєкт» в меню области: проект в ней, сразу открыт с полем названия */
+    data class NewProjectInArea(val area: Area) : ThingsCategoryListEvent
+    /** «Вставити» в меню области: по задаче на каждую строку текста */
+    data class PasteTasksToArea(val area: Area, val titles: List<String>) : ThingsCategoryListEvent
 
     // Заголовки проекта
     data class SaveHeading(val heading: Item) : ThingsCategoryListEvent

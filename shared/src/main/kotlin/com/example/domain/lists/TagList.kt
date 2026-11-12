@@ -5,21 +5,26 @@ import com.example.data.model.DayBounds
 import com.example.data.model.Item
 import com.example.data.model.ItemWithChecklist
 import com.example.data.model.RecurrenceRule
+import com.example.domain.tag.TagInheritance
 
 /**
  * Тег: открытые задачи и проекты с тегом — по месту, как на главном экране ([PlaceGroups]): сначала без
  * проекта и области, потом под своим проектом или областью. Более поздние (старт после сегодня или
  * «Когда-нибудь») — в тех же группах, после текущих, по дню; шаблоны, что ждут или на паузе, — после них, перед
- * отложенными; без плашки. Выполненных на экране тега нет.
+ * отложенными; без плашки. Выполненных на экране тега нет. Тег может быть и унаследованным — от проекта или
+ * области ([com.example.domain.tag.TagInheritance]).
  * Закреплено тестами TagScreenTest.
  */
 object TagList {
 
-    fun hasTag(item: Item, tag: String): Boolean = item.tags.contains(tag)
+    /** Тег у задачи или проекта — свой или унаследованный от проекта и области ([inheritance]). */
+    fun hasTag(item: Item, tag: String, inheritance: TagInheritance.Index = TagInheritance.NONE): Boolean =
+        inheritance.has(item, tag)
 
     /** Задача списка экрана: открытая, не удалённая задача с тегом — и шаблон повторяющейся задачи (копии — задачи). */
-    fun isActiveTask(item: Item, tag: String): Boolean =
-        (item.type == Item.TYPE_TASK || RepeatingList.includes(item)) && !item.trashed && !ListRules.isClosed(item) && hasTag(item, tag)
+    fun isActiveTask(item: Item, tag: String, inheritance: TagInheritance.Index = TagInheritance.NONE): Boolean =
+        (item.type == Item.TYPE_TASK || RepeatingList.includes(item)) && !item.trashed && !ListRules.isClosed(item) &&
+            hasTag(item, tag, inheritance)
 
     data class Content(
         val projects: List<Item>,
@@ -93,9 +98,11 @@ object TagList {
         rules: Map<String, RecurrenceRule> = emptyMap()
     ): Content {
         val title = tag.orEmpty()
+        // Проект с тегом — и проект области с этим тегом
+        val inheritance = TagInheritance.Index(projects, areas)
         // Проекты с тегом — и шаблоны повторяющихся проектов (их нет среди проектов, они среди всех задач)
-        val projectTemplates = allTasks.map { it.item }.filter { RepeatingList.includesProject(it) && hasTag(it, title) }
-        val taggedProjects = projects.filter { ListRules.isOpenProject(it) && hasTag(it, title) } +
+        val projectTemplates = allTasks.map { it.item }.filter { RepeatingList.includesProject(it) && hasTag(it, title, inheritance) }
+        val taggedProjects = projects.filter { ListRules.isOpenProject(it) && hasTag(it, title, inheritance) } +
             projectTemplates.filter { template -> projects.none { it.id == template.id } }
         val active = tasks.filter { !it.item.trashed && !ListRules.isClosed(it.item) }
         // Задача в открытом редакторе — на месте, даже если ей только что поставили позднюю дату

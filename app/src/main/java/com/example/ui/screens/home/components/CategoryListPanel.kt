@@ -367,6 +367,11 @@ fun ThingsCategoryListPanel(
     var isTagDialogOpen by remember { mutableStateOf(false) }
     // Открытое окно из меню опций проекта («Когда», теги, дедлайн, перемещение, завершение)
     var projectDialog by remember { mutableStateOf<ProjectAction?>(null) }
+    // Окно тегов области (меню «…» у названия или нажатие на её теги)
+    var areaTagsOpen by remember { mutableStateOf(false) }
+    val clipboard = androidx.compose.ui.platform.LocalClipboardManager.current
+    val upcomingTitle = stringResource(R.string.category_upcoming)
+    val somedayTitle = stringResource(R.string.category_someday)
     var swipeWhenTask by remember { mutableStateOf<ItemWithChecklist?>(null) }
     // Смещение строки, по которой сделали свайп, от центра экрана: из неё вырастает диалог When
     var swipeWhenOrigin by remember { mutableStateOf<androidx.compose.ui.geometry.Offset?>(null) }
@@ -378,6 +383,19 @@ fun ThingsCategoryListPanel(
     var isDragSelecting by remember { mutableStateOf(false) }
 
     val context = LocalContext.current
+
+    // «Поділитися» областью — её текст в системное окно «Поделиться»
+    fun shareArea(target: Area) {
+        val sendIntent = android.content.Intent().apply {
+            action = android.content.Intent.ACTION_SEND
+            putExtra(
+                android.content.Intent.EXTRA_TEXT,
+                com.example.ui.screens.home.subcomponents.areaShareText(target, state.allTasks, projects, upcomingTitle, somedayTitle)
+            )
+            type = "text/plain"
+        }
+        context.startActivity(android.content.Intent.createChooser(sendIntent, null))
+    }
 
     LaunchedEffect(state.isSelectionMode) {
         if (!state.isSelectionMode) {
@@ -441,7 +459,10 @@ fun ThingsCategoryListPanel(
     val areaLaterCount = remember(screen, area?.id, state.displayTasks, projects, state.allTasks, state.selectedTagFilter) {
         if (screen == ActiveScreen.PROJECT_DETAIL) ProjectScreen.laterCount(state.displayTasks)
         else if (screen != ActiveScreen.AREA_DETAIL) 0
-        else AreaList.content(area?.id, state.displayTasks, projects, templates = state.allTasks.map { it.item }, tagFilter = state.selectedTagFilter).let {
+        else AreaList.content(
+            area?.id, state.displayTasks, projects, templates = state.allTasks.map { it.item }, tagFilter = state.selectedTagFilter,
+            inheritance = com.example.domain.tag.TagInheritance.Index(projects, areasState)
+        ).let {
             it.upcoming.size + it.someday.size + it.upcomingProjects.size + it.somedayProjects.size
         }
     }
@@ -1137,6 +1158,12 @@ fun ThingsCategoryListPanel(
                         onDeleteArea = { onEvent(ThingsCategoryListEvent.DeleteArea(it)) },
                         onRenameProject = { proj, title -> onEvent(ThingsCategoryListEvent.EditProject(proj, ProjectEdit.Rename(title))) },
                         onRenameArea = { a, title -> onEvent(ThingsCategoryListEvent.RenameArea(a, title)) },
+                        onAreaAction = { areaAction ->
+                            when (areaAction) {
+                                com.example.ui.screens.home.subcomponents.AreaAction.TAGS -> areaTagsOpen = true
+                                com.example.ui.screens.home.subcomponents.AreaAction.SHARE -> area?.let { shareArea(it) }
+                            }
+                        },
                         onProjectAction = { projectAction ->
                             val currentProject = project ?: return@MainCategoryHeader
                             when (projectAction) {
@@ -1159,6 +1186,19 @@ fun ThingsCategoryListPanel(
                                 else -> projectDialog = projectAction
                             }
                         }
+                    )
+                }
+            }
+
+            // Теги области — плашками под названием, как в Things
+            if (screen == ActiveScreen.AREA_DETAIL && area != null && area.tags.isNotEmpty()) {
+                item(key = TaskListKeys.AREA_TAGS) {
+                    com.example.ui.screens.home.subcomponents.AreaTagsRow(
+                        area = area,
+                        onClick = { areaTagsOpen = true },
+                        modifier = Modifier
+                            .padding(horizontal = ThingsSpacing.S)
+                            .graphicsLayer { alpha = globalDimAlpha }
                     )
                 }
             }
@@ -1909,6 +1949,17 @@ fun ThingsCategoryListPanel(
             ),
             hasTags = allTags.isNotEmpty(),
             isTagsFilterVisible = isTagsFilterVisible,
+            // Экран области: «Новий проєкт», «Вставити», «Поділитися», как в Things
+            onNewProject = area?.takeIf { screen == ActiveScreen.AREA_DETAIL }?.let { a ->
+                { onEvent(ThingsCategoryListEvent.NewProjectInArea(a)) }
+            },
+            onPaste = area?.takeIf { screen == ActiveScreen.AREA_DETAIL }?.let { a ->
+                {
+                    val titles = com.example.ui.screens.home.subcomponents.pastedTaskTitles(clipboard.getText()?.text.orEmpty())
+                    if (titles.isNotEmpty()) onEvent(ThingsCategoryListEvent.PasteTasksToArea(a, titles))
+                }
+            },
+            onShare = area?.takeIf { screen == ActiveScreen.AREA_DETAIL }?.let { a -> { shareArea(a) } },
             onTitleClick = { bounds -> onEvent(ThingsCategoryListEvent.ClickSearch(bounds)) },
             onToggleTagsFilter = {
                 val newVisible = !isTagsFilterVisible
@@ -2184,6 +2235,21 @@ fun ThingsCategoryListPanel(
 
     // Диалоги пакетных действий над выбранными задачами
     TaskBatchDialogs(batchDialogs, state, onEvent)
+
+    // Теги области — то же окно, что у задачи и проекта
+    if (areaTagsOpen && area != null) {
+        com.example.ui.screens.home.inlineeditor.dialogs.ThingsTagDialog(
+            activeTags = area.tags,
+            allSavedTags = allSavedTags,
+            allSavedTagObjects = allSavedTagObjects,
+            onNewTagCreated = { name, parentId -> onEvent(ThingsCategoryListEvent.CreateTag(name, parentId)) },
+            onDeleteTag = { tag -> onEvent(ThingsCategoryListEvent.DeleteTag(tag)) },
+            onUpdateTag = { tag -> onEvent(ThingsCategoryListEvent.UpdateTag(tag)) },
+            onUpdateTagsOrder = { tags -> onEvent(ThingsCategoryListEvent.UpdateTagsOrder(tags)) },
+            onTagsSelected = { titles -> onEvent(ThingsCategoryListEvent.SetAreaTags(area, titles)) },
+            onDismissRequest = { areaTagsOpen = false }
+        )
+    }
 
     if (project != null && projectDialog != null) {
         ProjectDialogs(

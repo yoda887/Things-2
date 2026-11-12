@@ -38,6 +38,29 @@ object AreaList {
     fun isOwnTask(item: Item, areaId: String?): Boolean =
         areaId != null && item.areaId == areaId && item.projectId.isNullOrEmpty()
 
+    /**
+     * Теги строки фильтра на экране области — как в Things, только теги того, что в ней видно: её задач и
+     * открытых проектов. Тег самой области сюда не входит: фильтр по нему оставил бы всё.
+     */
+    fun filterTags(areaId: String?, tasks: List<ItemWithChecklist>, projects: List<Item>): Set<String> {
+        if (areaId == null) return emptySet()
+        val ownTasks = tasks.asSequence().map { it.item }.filter { isOwnTask(it, areaId) && includes(it, areaId) }
+        val areaProjects = projects.asSequence().filter { it.areaId == areaId && ListRules.isOpenProject(it) }
+        return (ownTasks + areaProjects).flatMap { it.tags }.toCollection(LinkedHashSet())
+    }
+
+    /**
+     * Всё, что удаляется вместе с областью, как в Things: её задачи, проекты (и шаблоны повторяющихся), а также
+     * всё внутри этих проектов — задачи и подзаголовки; выполненные и в корзине — тоже.
+     */
+    fun contents(areaId: String, items: List<Item>): List<Item> {
+        val inArea = items.filter { it.areaId == areaId }
+        val projectIds = inArea
+            .filter { it.type == Item.TYPE_PROJECT || it.type == Item.TYPE_PROJECT_TEMPLATE }
+            .mapTo(HashSet()) { it.id }
+        return items.filter { it.areaId == areaId || it.projectId in projectIds }
+    }
+
     /** Содержимое экрана, разложенное по разделам. */
     data class Content(
         val projects: List<Item>,
@@ -64,10 +87,11 @@ object AreaList {
         // Фильтр по тегу над списком: проекты (и шаблоны проектов) — только с этим тегом, как задачи
         tagFilter: String? = null,
         // Правила повтора: по ним день шаблона в «Планах»
-        rules: Map<String, RecurrenceRule> = emptyMap()
+        rules: Map<String, RecurrenceRule> = emptyMap(),
+        // Теги, унаследованные от проекта и области: с тегом области фильтр по нему оставляет всё
+        inheritance: com.example.domain.tag.TagInheritance.Index = com.example.domain.tag.TagInheritance.NONE
     ): Content {
-        fun tagged(item: Item) = tagFilter == null ||
-            item.tags.any { com.example.domain.tag.TagTitles.key(it) == com.example.domain.tag.TagTitles.key(tagFilter) }
+        fun tagged(item: Item) = tagFilter == null || inheritance.has(item, tagFilter)
         val own = tasks.filter { isOwnTask(it.item, areaId) && tagged(it.item) }
         val bySection = own.groupBy { sectionOf(it.item, bounds) }
         val areaProjects = projects.filter { areaId != null && it.areaId == areaId && ListRules.isOpenProject(it) && tagged(it) }

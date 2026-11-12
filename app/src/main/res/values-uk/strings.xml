@@ -41,8 +41,7 @@
         <item quantity="many">Проєкт «%1$s» буде видалено разом із %2$d завданнями.</item>
         <item quantity="other">Проєкт «%1$s» буде видалено разом із %2$d завдання.</item>
     </plurals>
-    <string name="delete_area_title">Видалити область?</string>
-    <string name="delete_area_message">Область «%1$s» буде видалено.</string>
+    <string name="delete_area_message">Ви впевнені, що хочете видалити цю область? Завдання та проєкти в ній теж буде видалено. Цю дію не можна скасувати.</string>
     <string name="delete_heading_title">Видалити підзаголовок?</string>
     <plurals name="delete_heading_message">
         <item quantity="one">Підзаголовок «%1$s» буде видалено разом із %2$d завданням.</item>
@@ -140,6 +139,8 @@
     <string name="ui_new_heading">НОВИЙ ПІДЗАГОЛОВОК</string>
     <string name="ui_new_heading_2">Новий підзаголовок</string>
     <string name="ui_new_project">Новий проєкт</string>
+    <string name="ui_add_tags">Додати теги</string>
+    <string name="ui_paste">Вставити</string>
     <string name="ui_new_to_do">Нове завдання</string>
     <string name="ui_no">Немає</string>
     <string name="ui_notes">Нотатки</string>

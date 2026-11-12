@@ -172,6 +172,9 @@ fun handleCategoryListEvent(
             viewModel.deleteArea(event.area)
             screen.closeAreaScreen()
         }
+        is ThingsCategoryListEvent.SetAreaTags -> viewModel.setAreaTags(event.area, event.titles)
+        is ThingsCategoryListEvent.NewProjectInArea -> viewModel.createProjectInArea(event.area.id) { screen.openProject(it) }
+        is ThingsCategoryListEvent.PasteTasksToArea -> viewModel.addTasksToArea(event.titles, event.area.id)
 
         // ── Подзаголовки проекта ──
         is ThingsCategoryListEvent.SaveHeading -> viewModel.saveHeading(event.heading)

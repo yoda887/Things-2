@@ -86,7 +86,6 @@ class ThingsCategoryStateTest {
         calEvents = emptyList(),
         savedTags = emptyList(),
         savedTagObjs = emptyList(),
-        allTagsSet = emptySet(),
         highlighted = null,
         query = query,
         headingList = headings
@@ -95,12 +94,22 @@ class ThingsCategoryStateTest {
     private fun ids(s: ThingsCategoryListState) = s.displayTasks.map { it.item.id }
 
     @Test
+    fun `Фильтр тегов - только теги задач этого списка, выбранный не пропадает`() {
+        val tasks = listOf(
+            task("in", start = Item.START_INBOX, tags = "Home"),
+            task("other", start = Item.START_ANYTIME, tags = "Work")
+        )
+        assertEquals(setOf("Home"), state(ActiveScreen.INBOX, tasks).allTags)
+        assertEquals(setOf("Home", "Old"), state(ActiveScreen.INBOX, tasks, selectedTag = "Old").allTags)
+    }
+
+    @Test
     fun `Inbox - переехавшая задача раскрыта под плашкой и остаётся под ней`() {
         val tasks = listOf(task("a", sortOrder = 1), task("moved", projectId = "p1", sortOrder = 0))
         fun inbox(ghostInEditor: String?) = ThingsViewModel.computeCategoryListState(
             screen = ActiveScreen.INBOX, project = null, area = null, expandedTaskId = "moved", selectedTag = null,
             taskList = tasks, projectList = emptyList(), areaList = emptyList(), calEvents = emptyList(),
-            savedTags = emptyList(), savedTagObjs = emptyList(), allTagsSet = emptySet(), highlighted = null,
+            savedTags = emptyList(), savedTagObjs = emptyList(), highlighted = null,
             inboxMovedOut = setOf("moved"), inboxGhostInEditor = ghostInEditor
         )
         // Раскрыли под плашкой — над плашкой её нет, под плашкой она есть
