@@ -109,6 +109,9 @@ class LocalTaskDataSource(private val taskDao: TaskDao) {
      * Вставляет новую область или обновляет существующую.
      * @param area Область для вставки
      */
+    /** Все области — разом, без потока */
+    suspend fun getAllAreas(): List<Area> = taskDao.getAllAreas()
+
     suspend fun insertArea(area: Area) {
         taskDao.insertArea(area)
     }

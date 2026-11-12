@@ -18,6 +18,18 @@ class UpdateAreaUseCase @Inject constructor(private val repository: ITaskReposit
     }
 
     /**
+     * Теги области: названия сверяются со справочником (новых там заводит), область хранит их названия в порядке
+     * выбора — так же, как задача.
+     */
+    suspend fun setTags(area: Area, titles: List<String>) {
+        repository.inTransaction {
+            val resolution = com.example.domain.tag.TagTitles.resolve(titles, repository.getAllTags())
+            resolution.created.forEach { repository.insertTag(it) }
+            repository.insertArea(area.copy(cachedTags = com.example.domain.tag.TagTitles.join(resolution.tags.map { it.title })))
+        }
+    }
+
+    /**
      * Пакетно обновляет порядок сфер (областей) деятельности в БД.
      */
     suspend operator fun invoke(areas: List<Area>) {

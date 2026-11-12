@@ -47,6 +47,16 @@ val MIGRATION_11_12 = object : Migration(11, 12) {
 }
 
 /**
+ * 12 → 13: теги области (areas.cachedTags) — строкой названий, как у задачи; задачи и проекты области их наследуют.
+ * Только добавляется столбец: у существующих областей тегов нет.
+ */
+val MIGRATION_12_13 = object : Migration(12, 13) {
+    override fun migrate(db: SupportSQLiteDatabase) {
+        db.execSQL("ALTER TABLE `areas` ADD COLUMN `cachedTags` TEXT NOT NULL DEFAULT ''")
+    }
+}
+
+/**
  * Версия 10: синхронизация устройств — у каждой записи время последнего изменения (`updatedAt`), журнал удалений
  * (`sync_deletions`) и триггеры, которые их ведут (SyncTriggers). Время уже существующих записей — время миграции
  * (у задач — их modificationDate): до синхронизации все записи «изменены» одинаково.

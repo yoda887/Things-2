@@ -244,8 +244,8 @@ class TaskRepositoryImpl @Inject constructor(
     }
 
     /**
-     * Меняет строки тегов у всех задач по [transform] и сохраняет одним пакетом —
-     * только изменившиеся задачи.
+     * Меняет строки тегов у всех задач и областей по [transform] и сохраняет одним пакетом —
+     * только изменившиеся.
      */
     private suspend fun updateItemsTags(transform: (List<String>) -> List<String>) {
         val changed = localDataSource.getAllItemsSync().mapNotNull { item ->
@@ -253,6 +253,11 @@ class TaskRepositoryImpl @Inject constructor(
             if (newCached != item.cachedTags) item.copy(cachedTags = newCached) else null
         }
         if (changed.isNotEmpty()) localDataSource.insertItems(changed)
+        // У области тоже есть теги — переименованный или удалённый тег меняется и у неё
+        localDataSource.getAllAreas().forEach { area ->
+            val newCached = TagTitles.join(transform(TagTitles.parse(area.cachedTags)))
+            if (newCached != area.cachedTags) localDataSource.insertArea(area.copy(cachedTags = newCached))
+        }
     }
 
     override suspend fun createGroup(groupName: String): Tag = withContext(Dispatchers.IO) {
