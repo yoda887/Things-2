@@ -46,7 +46,7 @@ class AddTaskUseCase @Inject constructor(private val repository: ITaskRepository
         }
         val startValue = effectiveSection.toStartVal()
         val computedStartDate = startDate ?: if (effectiveSection == TaskSection.TODAY) System.currentTimeMillis() else null
-        val item = Item(
+        val created = Item(
             id = itemId,
             type = Item.TYPE_TASK,
             title = title.ifBlank { "Untitled To-Do" },
@@ -58,9 +58,11 @@ class AddTaskUseCase @Inject constructor(private val repository: ITaskRepository
             projectId = projectId,
             areaId = area,
             priority = priority,
-            sortOrder = sortOrder,
-            reminderTime = reminderTime?.takeIf { Reminders.hasDay(computedStartDate, startValue) }
+            sortOrder = sortOrder
         )
+        // Дедлайн на сегодня или раньше — задача сразу на сегодня; напоминание — если у задачи (уже) есть день
+        val dated = com.example.domain.edits.DeadlineToday.forNew(created, com.example.data.model.DayBounds.now(), System.currentTimeMillis())
+        val item = dated.copy(reminderTime = reminderTime?.takeIf { Reminders.hasDay(dated.startDate, dated.start) })
         repository.inTransaction {
             repository.insertTask(item)
             if (cleanTags.isNotEmpty()) repository.setItemTagsByTitles(itemId, cleanTags)

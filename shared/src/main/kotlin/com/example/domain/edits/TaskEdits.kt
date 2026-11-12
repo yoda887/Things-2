@@ -27,14 +27,20 @@ data class TaskEditorFields(
  */
 object TaskEdits {
 
-    fun apply(task: Item, fields: TaskEditorFields, untitledTitle: String, now: Long = System.currentTimeMillis()): Item {
+    fun apply(
+        task: Item,
+        fields: TaskEditorFields,
+        untitledTitle: String,
+        now: Long = System.currentTimeMillis(),
+        bounds: com.example.data.model.DayBounds = com.example.data.model.DayBounds.now()
+    ): Item {
         // Задача «Входящих», попавшая в проект, — уже разобрана
         val start = if (fields.projectId != null && fields.section == TaskSection.INBOX) {
             TaskSection.ANYTIME.toStartVal()
         } else {
             fields.section.toStartVal()
         }
-        return task.copy(
+        val edited = task.copy(
             title = fields.title.ifBlank { untitledTitle },
             notes = fields.notes,
             start = start,
@@ -51,6 +57,8 @@ object TaskEdits {
             else fields.reminderTime?.takeIf { Reminders.hasDay(fields.startDate, start) },
             modificationDate = now
         )
+        // Дедлайн поставили на сегодня или раньше — задача встаёт на сегодня
+        return DeadlineToday.afterDeadlineEdit(task, edited, bounds, now)
     }
 
     /**

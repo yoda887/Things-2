@@ -32,7 +32,12 @@ data class ReminderChange(val time: Int?)
 object ProjectEdits {
 
     /** Проект после правки; если ничего не изменилось — тот же объект (сохранять нечего). */
-    fun apply(project: Item, edit: ProjectEdit, now: Long = System.currentTimeMillis()): Item {
+    fun apply(
+        project: Item,
+        edit: ProjectEdit,
+        now: Long = System.currentTimeMillis(),
+        bounds: com.example.data.model.DayBounds = com.example.data.model.DayBounds.now()
+    ): Item {
         val changed = when (edit) {
             is ProjectEdit.Rename -> project.copy(title = edit.title)
             is ProjectEdit.Notes -> project.copy(notes = edit.notes)
@@ -52,6 +57,8 @@ object ProjectEdits {
             is ProjectEdit.Deadline -> project.copy(dueDate = edit.dueDate)
             is ProjectEdit.MoveToArea -> project.copy(areaId = edit.areaId)
         }
-        return if (changed == project) project else changed.copy(modificationDate = now)
+        if (changed == project) return project
+        // Дедлайн поставили на сегодня или раньше — проект встаёт на сегодня
+        return DeadlineToday.afterDeadlineEdit(project, changed.copy(modificationDate = now), bounds, now)
     }
 }
