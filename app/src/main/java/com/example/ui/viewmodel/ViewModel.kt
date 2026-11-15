@@ -260,13 +260,16 @@ class ThingsViewModel @Inject constructor(
     }
 
     /** «OK» на плашке «Сегодня»: всё, что там сейчас, — виденное, точки и плашка пропадают — и на других устройствах */
-    fun dismissTodayNew() {
-        val dismissed = _todayNewIds.value
-        val known = (todayKnown ?: emptySet()) + dismissed
+    fun dismissTodayNew() = markTodayNewSeen(_todayNewIds.value)
+
+    /** [ids] из нового в «Сегодня» — виденные: точки пропадают (и на других устройствах), плашка считает остальные */
+    private fun markTodayNewSeen(ids: Set<String>) {
+        if (ids.isEmpty()) return
+        val known = (todayKnown ?: emptySet()) + ids
         todayKnown = known
         homeLayoutPrefs.setTodaySeenIds(known)
-        _todayNewIds.value = emptySet()
-        val toMark = com.example.domain.lists.TodayNews.toMarkSeen(dismissed, tasks.value, com.example.data.model.DayBounds.now())
+        _todayNewIds.value = _todayNewIds.value - ids
+        val toMark = com.example.domain.lists.TodayNews.toMarkSeen(ids, tasks.value, com.example.data.model.DayBounds.now())
         if (toMark.isNotEmpty()) markTodaySeen(toMark)
     }
 
@@ -292,6 +295,8 @@ class ThingsViewModel @Inject constructor(
         // Раскрыли задачу, уже стоящую под плашкой «Входящих», — она и в редакторе остаётся там, а не прыгает вверх
         _inboxGhostInEditor.value = taskId?.takeIf { it in _inboxMovedOut.value }
         _inlineExpandedTaskId.value = taskId
+        // Как в Things: открытую задачу увидели — жёлтая точка «новое в «Сегодня»» у неё пропадает
+        if (taskId != null && taskId in _todayNewIds.value) markTodayNewSeen(setOf(taskId))
     }
 
     fun setHighlightedTaskId(taskId: String?) {
