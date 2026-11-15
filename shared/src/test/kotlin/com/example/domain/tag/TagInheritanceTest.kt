@@ -54,10 +54,10 @@ class TagInheritanceTest {
     @Test
     fun areaFilterByAreaTag_keepsEverything() {
         val tasks = listOf(ItemWithChecklist(inArea), ItemWithChecklist(inArea.copy(id = "t4", cachedTags = "Other")))
-        val content = AreaList.content("a", tasks, listOf(project), tagFilter = "Home", inheritance = index)
+        val content = AreaList.content("a", tasks, listOf(project), tagFilter = TagFilter(tags = listOf("Home")), inheritance = index)
         assertEquals(2, content.current.size)
         assertEquals(listOf("p"), content.projects.map { it.id })
-        val filtered = AreaList.content("a", tasks, listOf(project), tagFilter = "Other", inheritance = index)
+        val filtered = AreaList.content("a", tasks, listOf(project), tagFilter = TagFilter(tags = listOf("Other")), inheritance = index)
         assertEquals(listOf("t4"), filtered.current.map { it.item.id })
         assertTrue(filtered.projects.isEmpty())
     }

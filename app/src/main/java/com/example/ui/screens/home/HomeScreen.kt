@@ -691,7 +691,7 @@ fun ThingsHomeScreen(viewModel: ThingsViewModel = hiltViewModel()) {
                                     override fun back() {
                                         val wasSearch = activeScreen == ActiveScreen.SEARCH
                                         navController.popBackStack()
-                                        viewModel.selectTag(null)
+                                        viewModel.setTagFilter(com.example.domain.tag.TagFilter.NONE)
                                         if (wasSearch) viewModel.setSearchQuery("")
                                     }
                                     override fun showTask(task: ItemWithChecklist) = revealTask(task)
@@ -900,7 +900,7 @@ fun ThingsHomeScreen(viewModel: ThingsViewModel = hiltViewModel()) {
                     recentSearchItems = recentSearchItems,
                     onContinueSearchClick = {
                         // Фильтр по тегу общий для списков: в поиске он молча отсекал бы результаты
-                        viewModel.selectTag(null)
+                        viewModel.setTagFilter(com.example.domain.tag.TagFilter.NONE)
                         navigateTo(ActiveScreen.SEARCH, crossfade = true)
                         leaveSearchOverlay(keepQuery = true)
                     }

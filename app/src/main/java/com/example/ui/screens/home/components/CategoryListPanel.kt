@@ -126,7 +126,7 @@ import com.example.ui.screens.home.subcomponents.SubCategoryHeader
 import com.example.ui.screens.home.subcomponents.UpcomingDateHeader
 import com.example.ui.screens.home.subcomponents.UpcomingMonthHeader
 import com.example.ui.screens.home.subcomponents.LogbookSectionHeader
-import com.example.ui.screens.home.subcomponents.TagFilterRow
+import com.example.ui.screens.home.subcomponents.TagFilterBar
 import com.example.ui.screens.home.subcomponents.ProjectItemRow
 import com.example.ui.screens.home.subcomponents.EmptyStateView
 import com.example.ui.screens.home.subcomponents.SearchEmptyState
@@ -472,7 +472,8 @@ fun ThingsCategoryListPanel(
             it.upcoming.size + it.someday.size + it.upcomingProjects.size + it.somedayProjects.size
         }
     }
-    var isTagsFilterVisible by remember(screen, project?.id, area?.id) { mutableStateOf(false) }
+    // Окно «Теги» фильтра списка (пункт «Фільтр за тегом» в меню вверху или нажатие на полосу фильтра)
+    var tagFilterDialogOpen by remember(screen, project?.id, area?.id) { mutableStateOf(false) }
 
     // Извлечение выравнивания плоского списка для LazyColumn
     // Задача в открытом редакторе стоит в своей группе до закрытия: место запоминается, когда она раскрылась
@@ -883,7 +884,7 @@ fun ThingsCategoryListPanel(
                     if (screen == ActiveScreen.TODAY && todayCalendarEvents.isNotEmpty()) {
                         count += 1
                     }
-                    if (allTags.isNotEmpty() && isTagsFilterVisible) {
+                    if (selectedTag.isActive) {
                         count += 1
                     }
                     count
@@ -1265,15 +1266,13 @@ fun ThingsCategoryListPanel(
                 }
             }
 
-            if (allTags.isNotEmpty() && isTagsFilterVisible) {
+            // Как в Things: включённый фильтр — зелёная капсула над списком (под заметками проекта), ✕ снимает его
+            if (selectedTag.isActive) {
                 item(key = TaskListKeys.TAG_FILTER) {
-                    // Извлеченный подкомпонент строки тегов
-                    TagFilterRow(
-                        allTags = allTags,
-                        selectedTag = selectedTag,
-                        textSecondaryColor = textSecondaryColor,
-                        dividerColor = dividerColor,
-                        onTagSelect = { onEvent(ThingsCategoryListEvent.SelectTag(it)) },
+                    TagFilterBar(
+                        filter = selectedTag,
+                        onClick = { tagFilterDialogOpen = true },
+                        onClear = { onEvent(ThingsCategoryListEvent.SetTagFilter(com.example.domain.tag.TagFilter.NONE)) },
                         modifier = Modifier
                             .padding(horizontal = ThingsSpacing.S)
                             .graphicsLayer { alpha = globalDimAlpha }
@@ -1284,12 +1283,12 @@ fun ThingsCategoryListPanel(
 
             // Все экраны перечислены явно (без else): новый экран компилятор заставит указать и здесь
             val hasTasks = when (screen) {
-                ActiveScreen.TODAY -> !TodayScreen.isEmpty(standardToday, eveningToday, isDragging = dragDropState.draggedItemKey != null, projects = com.example.domain.lists.TodayList.projects(projects))
+                ActiveScreen.TODAY -> !TodayScreen.isEmpty(standardToday, eveningToday, isDragging = dragDropState.draggedItemKey != null, projects = com.example.domain.lists.TodayList.projects(projects.filter { selectedTag.matches(it, com.example.domain.tag.TagInheritance.Index(projects, areasState)) }))
                 ActiveScreen.UPCOMING -> !UpcomingScreen.isEmpty(upcomingSchedule)
                 ActiveScreen.AREA_DETAIL -> !AreaList.content(area?.id, displayTasks, projects, templates = state.allTasks.map { it.item }).isEmpty
                 ActiveScreen.LOGBOOK -> LogbookList.entries(displayTasks, projects).isNotEmpty()
                 ActiveScreen.TAG_DETAIL -> !TagList.content(state.tag?.title, displayTasks, state.allTasks, projects, areasState).isEmpty
-                ActiveScreen.PROJECT_DETAIL -> !ProjectScreen.isEmpty(displayTasks, localHeadings)
+                ActiveScreen.PROJECT_DETAIL -> !ProjectScreen.isEmpty(displayTasks, localHeadings, filtered = selectedTag.isActive)
                 ActiveScreen.ANYTIME -> displayTasks.isNotEmpty()
                 // «Когда-нибудь» показывает и отложенные проекты — без задач экран не пуст
                 ActiveScreen.SOMEDAY -> SomedayList.hasContent(displayTasks, projects)
@@ -1754,6 +1753,7 @@ fun ThingsCategoryListPanel(
                                 ProjectHeadingRow(
                                     heading = heading,
                                     isFound = heading.id == highlightedTaskId,
+                                    muted = selectedTag.isActive,
                                     isEditing = editingHeadingId == heading.id,
                                     dividerColor = dividerColor,
                                     onStartEditing = { editingHeadingId = heading.id },
@@ -1955,8 +1955,8 @@ fun ThingsCategoryListPanel(
                 onDeselectAllClick = { onEvent(ThingsCategoryListEvent.DeselectAllTasks) },
                 onEnterSelectionMode = { onEvent(ThingsCategoryListEvent.EnterSelectionMode(null)) }
             ),
-            hasTags = allTags.isNotEmpty(),
-            isTagsFilterVisible = isTagsFilterVisible,
+            // Как в Things: пункт есть всегда, без тегов в списке — серый (включённый фильтр снять можно всегда)
+            hasTags = allTags.isNotEmpty() || selectedTag.isActive,
             // Экран области: «Новий проєкт», «Вставити», «Поділитися», как в Things
             onNewProject = area?.takeIf { screen == ActiveScreen.AREA_DETAIL }?.let { a ->
                 { onEvent(ThingsCategoryListEvent.NewProjectInArea(a)) }
@@ -1969,13 +1969,7 @@ fun ThingsCategoryListPanel(
             },
             onShare = area?.takeIf { screen == ActiveScreen.AREA_DETAIL }?.let { a -> { shareArea(a) } },
             onTitleClick = { bounds -> onEvent(ThingsCategoryListEvent.ClickSearch(bounds)) },
-            onToggleTagsFilter = {
-                val newVisible = !isTagsFilterVisible
-                isTagsFilterVisible = newVisible
-                if (!newVisible && selectedTag != null) {
-                    onEvent(ThingsCategoryListEvent.SelectTag(null))
-                }
-            },
+            onFilterByTag = { tagFilterDialogOpen = true },
             onAddHeading = if (screen == ActiveScreen.PROJECT_DETAIL) { { addHeading() } } else null,
             isEditingTitle = isEditingTitle,
             // Уход фокуса из поля названия сохраняет его (EditableLargeTitle)
@@ -2246,6 +2240,15 @@ fun ThingsCategoryListPanel(
 
     // Диалоги пакетных действий над выбранными задачами
     TaskBatchDialogs(batchDialogs, state, onEvent)
+
+    if (tagFilterDialogOpen) {
+        com.example.ui.screens.home.inlineeditor.dialogs.TagFilterDialog(
+            tags = allTags.toList(),
+            filter = selectedTag,
+            onFilterChange = { onEvent(ThingsCategoryListEvent.SetTagFilter(it)) },
+            onDismissRequest = { tagFilterDialogOpen = false }
+        )
+    }
 
     // Теги области — то же окно, что у задачи и проекта
     if (areaTagsOpen && area != null) {

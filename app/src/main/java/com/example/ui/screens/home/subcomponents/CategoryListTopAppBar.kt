@@ -100,8 +100,7 @@ data class TopAppBarSelectionState(
  *   заголовок экрана уже почти растворился, чтобы они не накладывались друг на друга.
  * @param selectionState Состояние и действия режима множественного выбора.
  * @param hasTags Флаг наличия тегов в текущем списке.
- * @param isTagsFilterVisible Флаг отображения строки фильтрации по тегам.
- * @param onToggleTagsFilter Обработчик переключения видимости фильтра по тегам.
+ * @param onFilterByTag Пункт «Фільтр за тегом» — открыть окно «Теги» фильтра списка.
  * @param onTitleClick Нажатие на компактный заголовок (список прокручен) — открыть Quick Find;
  *   передаются границы заголовка на экране, из них вырастает окно поиска.
  * @param onNewProject Экран области: пункт «Новий проєкт» — проект в этой области.
@@ -127,8 +126,7 @@ fun CategoryListTopAppBar(
     titleProgress: Float = 0f,
     selectionState: TopAppBarSelectionState = TopAppBarSelectionState(),
     hasTags: Boolean = false,
-    isTagsFilterVisible: Boolean = false,
-    onToggleTagsFilter: () -> Unit = {},
+    onFilterByTag: () -> Unit = {},
     // Экран проекта: пункт «Add Heading»
     onAddHeading: (() -> Unit)? = null,
     onTitleClick: ((androidx.compose.ui.geometry.Rect?) -> Unit)? = null,
@@ -243,21 +241,16 @@ fun CategoryListTopAppBar(
                             })
                         }
                     } else {
-                        // Фильтр по тегу — первым, как в Things (на экране области); на остальных — после «Вибрати»
-                        val tagsFirst = onNewProject != null
-                        val tagsItem: @Composable () -> Unit = {
-                            ThingsMenuItem(
-                                stringResource(if (isTagsFilterVisible) R.string.hide_tags else R.string.show_tags),
-                                AppIcons.Tag,
-                                onClick = {
-                                    isOptionsMenuExpanded = false
-                                    onToggleTagsFilter()
-                                },
-                                // Как в Things: пункт есть всегда, без тегов — серый
-                                enabled = hasTags
-                            )
-                        }
-                        if (tagsFirst) tagsItem()
+                        // «Фільтр за тегом» — первым, как в Things; пункт есть всегда, без тегов в списке — серый
+                        ThingsMenuItem(
+                            stringResource(R.string.filter_by_tag),
+                            AppIcons.Tag,
+                            onClick = {
+                                isOptionsMenuExpanded = false
+                                onFilterByTag()
+                            },
+                            enabled = hasTags
+                        )
                         if (onNewProject != null) {
                             ThingsMenuItem(stringResource(R.string.ui_new_project), Icons.Default.AddCircleOutline, onClick = {
                                 isOptionsMenuExpanded = false
@@ -280,7 +273,6 @@ fun CategoryListTopAppBar(
                                 onPaste()
                             })
                         }
-                        if (!tagsFirst && hasTags) tagsItem()
                         if (onShare != null) {
                             ThingsMenuItem(stringResource(R.string.batch_action_share), Icons.Default.Share, onClick = {
                                 isOptionsMenuExpanded = false

@@ -67,7 +67,7 @@ fun handleCategoryListEvent(
         is ThingsCategoryListEvent.ClickSearch -> screen.openSearch(event.sourceBounds)
         ThingsCategoryListEvent.ClickBack -> screen.back()
         is ThingsCategoryListEvent.ChangeSearchQuery -> viewModel.setSearchQuery(event.query)
-        is ThingsCategoryListEvent.SelectTag -> viewModel.selectTag(event.tag)
+        is ThingsCategoryListEvent.SetTagFilter -> viewModel.setTagFilter(event.filter)
         // Перенос из редактора панель уже превратила в MoveRepeat (после выбора)
         is ThingsCategoryListEvent.RequestRepeatMove -> Unit
         // Окно «Перемістити» открывает сама панель списка

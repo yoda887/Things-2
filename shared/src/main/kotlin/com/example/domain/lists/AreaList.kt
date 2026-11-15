@@ -84,14 +84,14 @@ object AreaList {
         projects: List<Item>,
         bounds: DayBounds = DayBounds.now(),
         templates: List<Item> = emptyList(),
-        // Фильтр по тегу над списком: проекты (и шаблоны проектов) — только с этим тегом, как задачи
-        tagFilter: String? = null,
+        // Фильтр по тегам: проекты (и шаблоны проектов) отбираются им так же, как задачи
+        tagFilter: com.example.domain.tag.TagFilter = com.example.domain.tag.TagFilter.NONE,
         // Правила повтора: по ним день шаблона в «Планах»
         rules: Map<String, RecurrenceRule> = emptyMap(),
         // Теги, унаследованные от проекта и области: с тегом области фильтр по нему оставляет всё
         inheritance: com.example.domain.tag.TagInheritance.Index = com.example.domain.tag.TagInheritance.NONE
     ): Content {
-        fun tagged(item: Item) = tagFilter == null || inheritance.has(item, tagFilter)
+        fun tagged(item: Item) = tagFilter.matches(item, inheritance)
         val own = tasks.filter { isOwnTask(it.item, areaId) && tagged(it.item) }
         val bySection = own.groupBy { sectionOf(it.item, bounds) }
         val areaProjects = projects.filter { areaId != null && it.areaId == areaId && ListRules.isOpenProject(it) && tagged(it) }

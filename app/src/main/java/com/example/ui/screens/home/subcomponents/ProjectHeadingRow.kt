@@ -81,7 +81,9 @@ fun ProjectHeadingRow(
     onDelete: () -> Unit,
     modifier: Modifier = Modifier,
     // Подзаголовок, к которому перешли из поиска: кратко подсвечивается, как найденная задача
-    isFound: Boolean = false
+    isFound: Boolean = false,
+    // Список отфильтрован по тегам: как в Things, подзаголовок серый и без «…»
+    muted: Boolean = false
 ) {
     var showMenu by remember { mutableStateOf(false) }
     val found = com.example.ui.components.rememberFoundHighlight(isFound)
@@ -109,11 +111,16 @@ fun ProjectHeadingRow(
                 if (isEditing) {
                     HeadingTitleField(heading = heading, onCommit = onTitleCommit)
                 } else {
-                    Text(text = heading.title, style = headingTitleStyle, maxLines = 1, overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis)
+                    Text(
+                        text = heading.title,
+                        style = if (muted) headingTitleStyle.copy(color = ThingsTheme.colors.textSecondary) else headingTitleStyle,
+                        maxLines = 1,
+                        overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis
+                    )
                 }
             }
 
-            Box {
+            if (!muted) Box {
                 Icon(
                     imageVector = Icons.Default.MoreHoriz,
                     contentDescription = stringResource(R.string.cd_heading_options),

@@ -32,7 +32,7 @@ data class ThingsCategoryListState(
     val area: Area? = null,
     val tag: Tag? = null,
     val inlineExpandedTaskId: String? = null,
-    val selectedTagFilter: String? = null,
+    val selectedTagFilter: com.example.domain.tag.TagFilter = com.example.domain.tag.TagFilter.NONE,
     val allTags: Set<String> = emptySet(),
     val displayTasks: List<ItemWithChecklist> = emptyList(),
     val calendarEvents: List<Item> = emptyList(),

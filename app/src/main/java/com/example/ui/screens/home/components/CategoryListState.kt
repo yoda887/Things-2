@@ -251,8 +251,8 @@ fun rememberFlattenedList(
     todayNewCount: Int = 0,
     // «Сегодня»: дневная часть по проектам и областям (настройка)
     todayGroupedDay: Boolean = false,
-    // Фильтр по тегу над списком (область): проекты — только с этим тегом
-    tagFilter: String? = null
+    // Фильтр по тегам (область): проекты отбираются им так же, как задачи
+    tagFilter: com.example.domain.tag.TagFilter = com.example.domain.tag.TagFilter.NONE
 ): List<Any> {
     val headerLogbook = stringResource(R.string.category_logbook)
     val todayLabel = stringResource(R.string.category_today)
@@ -266,7 +266,10 @@ fun rememberFlattenedList(
             ActiveScreen.TODAY -> {
                 val rows = TodayScreen.rows(
                     standardToday, eveningToday, isDragging = draggedItemKey != null,
-                    projects = com.example.domain.lists.TodayList.projects(projects),
+                    // Фильтр по тегам отбирает и проекты дня, как задачи
+                    projects = com.example.domain.lists.TodayList.projects(
+                        projects.filter { tagFilter.matches(it, com.example.domain.tag.TagInheritance.Index(projects, areas)) }
+                    ),
                     groupedDay = todayGroupedDay, allProjects = projects, areas = areas
                 )
                 // Новое — плашка «У вас N нових завдань» над списком
@@ -287,7 +290,7 @@ fun rememberFlattenedList(
                 TagList.content(tag?.title, displayTasks, allTasks, projects, areas, pinnedPlaces, rules = repeatRules)
             )
             // Более поздние — в конце своих частей; переключатель тот же, что у области
-            ActiveScreen.PROJECT_DETAIL -> ProjectScreen.rows(displayTasks, headings, draggedItemKey, isLaterItemsHidden)
+            ActiveScreen.PROJECT_DETAIL -> ProjectScreen.rows(displayTasks, headings, draggedItemKey, isLaterItemsHidden, filtered = tagFilter.isActive)
             // Задачи без места — все, вверху без заголовка; в разделе проекта или области — первые три и «Показати ще N»
             ActiveScreen.ANYTIME -> PlaceGroupRows.rows(AnytimeList.groups(displayTasks, projects, areas, pinnedPlaces)) { group ->
                 val key = TaskListKeys.LIST_TOGGLE_PREFIX + "more_" + (group.project?.id ?: group.area?.id ?: "none")
@@ -413,7 +416,8 @@ fun rememberPullToSearchConnection(
  * События пользовательского интерфейса для CategoryListPanel.
  */
 sealed interface ThingsCategoryListEvent {
-    data class SelectTag(val tag: String?) : ThingsCategoryListEvent
+    /** Фильтр списка по тегам — выбор в окне «Теги» или «✕» на полосе фильтра */
+    data class SetTagFilter(val filter: com.example.domain.tag.TagFilter) : ThingsCategoryListEvent
     data class ToggleTask(val task: ItemWithChecklist) : ThingsCategoryListEvent
     /** Отметка из открытого редактора — вместе с ещё не сохранёнными правками полей */
     data class ToggleEditedTask(val task: ItemWithChecklist, val fields: TaskEditorFields, val checklist: List<ChecklistItem>) : ThingsCategoryListEvent

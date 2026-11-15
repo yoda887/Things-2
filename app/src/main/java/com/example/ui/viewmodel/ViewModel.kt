@@ -146,7 +146,7 @@ class ThingsViewModel @Inject constructor(
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
 
     val searchQuery = MutableStateFlow("")
-    val selectedTagFilter = MutableStateFlow<String?>(null)
+    val selectedTagFilter = MutableStateFlow(com.example.domain.tag.TagFilter.NONE)
 
     private val _inlineExpandedTaskId = MutableStateFlow<String?>(null)
     val inlineExpandedTaskId: StateFlow<String?> = _inlineExpandedTaskId.asStateFlow()
@@ -317,7 +317,7 @@ class ThingsViewModel @Inject constructor(
                     wrapper.item.title.contains(query, ignoreCase = true) ||
                     wrapper.item.notes.contains(query, ignoreCase = true)
             
-            val matchesTag = tag == null || inheritance.has(wrapper.item, tag)
+            val matchesTag = tag.matches(wrapper.item, inheritance)
             
             matchesQuery && matchesTag
         }
@@ -348,7 +348,7 @@ class ThingsViewModel @Inject constructor(
             area: Area?,
             tag: Tag? = null,
             expandedTaskId: String?,
-            selectedTag: String?,
+            selectedTag: com.example.domain.tag.TagFilter,
             taskList: List<ItemWithChecklist>,
             projectList: List<Item>,
             areaList: List<Area>,
@@ -427,10 +427,10 @@ class ThingsViewModel @Inject constructor(
                 ActiveScreen.REPEATING -> com.example.domain.lists.RepeatingList.order(listTasks, repeatRules)
             }
 
-            val displayTasks = if (selectedTag == null) {
+            val displayTasks = if (!selectedTag.isActive) {
                 orderedTasks
             } else {
-                orderedTasks.filter { inheritance.has(it.item, selectedTag) || it.item.id == expandedTaskId }
+                orderedTasks.filter { selectedTag.matches(it.item, inheritance) || it.item.id == expandedTaskId }
             }
 
             val projectProgressMap = taskList
@@ -456,7 +456,7 @@ class ThingsViewModel @Inject constructor(
                     AreaList.filterTags(area?.id, orderedTasks, projectList)
                 } else {
                     inheritance.filterTags(orderedTasks.map { it.item })
-                } + listOfNotNull(selectedTag),
+                } + selectedTag.tags,
                 displayTasks = displayTasks,
                 calendarEvents = calEvents,
                 allSavedTags = savedTags,
@@ -546,7 +546,7 @@ class ThingsViewModel @Inject constructor(
             )
         ) { array ->
             val expandedTaskId = array[0] as? String
-            val selectedTag = array[1] as? String
+            val selectedTag = array[1] as com.example.domain.tag.TagFilter
             @Suppress("UNCHECKED_CAST")
             val taskList = array[2] as List<ItemWithChecklist>
             @Suppress("UNCHECKED_CAST")
@@ -1187,7 +1187,8 @@ class ThingsViewModel @Inject constructor(
         searchQuery.value = query
     }
 
-    fun selectTag(tag: String?) {
-        selectedTagFilter.value = tag
+    /** Фильтр списка по тегам ([com.example.domain.tag.TagFilter.NONE] — без фильтра) */
+    fun setTagFilter(filter: com.example.domain.tag.TagFilter) {
+        selectedTagFilter.value = filter
     }
 }

@@ -70,7 +70,7 @@ class ThingsCategoryStateTest {
         area: Area? = null,
         tag: Tag? = null,
         expandedTaskId: String? = null,
-        selectedTag: String? = null,
+        selectedTag: com.example.domain.tag.TagFilter = com.example.domain.tag.TagFilter.NONE,
         query: String = "",
         headings: List<Item> = emptyList()
     ): ThingsCategoryListState = ThingsViewModel.computeCategoryListState(
@@ -100,14 +100,14 @@ class ThingsCategoryStateTest {
             task("other", start = Item.START_ANYTIME, tags = "Work")
         )
         assertEquals(setOf("Home"), state(ActiveScreen.INBOX, tasks).allTags)
-        assertEquals(setOf("Home", "Old"), state(ActiveScreen.INBOX, tasks, selectedTag = "Old").allTags)
+        assertEquals(setOf("Home", "Old"), state(ActiveScreen.INBOX, tasks, selectedTag = com.example.domain.tag.TagFilter(tags = listOf("Old"))).allTags)
     }
 
     @Test
     fun `Inbox - переехавшая задача раскрыта под плашкой и остаётся под ней`() {
         val tasks = listOf(task("a", sortOrder = 1), task("moved", projectId = "p1", sortOrder = 0))
         fun inbox(ghostInEditor: String?) = ThingsViewModel.computeCategoryListState(
-            screen = ActiveScreen.INBOX, project = null, area = null, expandedTaskId = "moved", selectedTag = null,
+            screen = ActiveScreen.INBOX, project = null, area = null, expandedTaskId = "moved", selectedTag = com.example.domain.tag.TagFilter.NONE,
             taskList = tasks, projectList = emptyList(), areaList = emptyList(), calEvents = emptyList(),
             savedTags = emptyList(), savedTagObjs = emptyList(), highlighted = null,
             inboxMovedOut = setOf("moved"), inboxGhostInEditor = ghostInEditor
@@ -267,9 +267,9 @@ class ThingsCategoryStateTest {
             task("home", tags = "home", sortOrder = 1),
             task("edited", sortOrder = 2)
         )
-        val s = state(ActiveScreen.INBOX, tasks, expandedTaskId = "edited", selectedTag = "work")
+        val s = state(ActiveScreen.INBOX, tasks, expandedTaskId = "edited", selectedTag = com.example.domain.tag.TagFilter(tags = listOf("work")))
         assertEquals(listOf("work", "edited"), ids(s))
-        assertEquals("work", s.selectedTagFilter)
+        assertEquals(listOf("work"), s.selectedTagFilter.tags)
     }
 
     @Test

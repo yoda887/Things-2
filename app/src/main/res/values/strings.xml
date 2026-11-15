@@ -57,8 +57,10 @@
     <string name="category_someday">Someday</string>
     <string name="category_logbook">Logbook</string>
     <string name="category_this_evening">This Evening</string>
-    <string name="show_tags">Show Tags</string>
-    <string name="hide_tags">Hide Tags</string>
+    <string name="filter_by_tag">Filter by Tag</string>
+    <string name="tag_filter_title">Tags</string>
+    <string name="tag_filter_no_tag">No Tag</string>
+    <string name="cd_clear_tag_filter">Clear Tag Filter</string>
     <string name="cd_back">Back</string>
     <string name="cd_options">Options</string>
     <string name="cd_close">Close</string>

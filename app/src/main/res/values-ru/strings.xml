@@ -26,8 +26,10 @@
     <string name="category_someday">Когда-нибудь</string>
     <string name="category_logbook">Журнал</string>
     <string name="category_this_evening">Сегодня вечером</string>
-    <string name="show_tags">Показать теги</string>
-    <string name="hide_tags">Скрыть теги</string>
+    <string name="filter_by_tag">Фильтр по тегу</string>
+    <string name="tag_filter_title">Теги</string>
+    <string name="tag_filter_no_tag">Без тега</string>
+    <string name="cd_clear_tag_filter">Снять фильтр по тегам</string>
     <string name="cd_back">Назад</string>
     <string name="cd_options">Опции</string>
     <string name="cd_close">Закрыть</string>
