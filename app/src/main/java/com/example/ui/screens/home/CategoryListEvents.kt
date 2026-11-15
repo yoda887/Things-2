@@ -168,10 +168,8 @@ fun handleCategoryListEvent(
             screen.closeProjectScreen()
         }
         is ThingsCategoryListEvent.RenameArea -> viewModel.updateArea(event.area.copy(title = event.title))
-        is ThingsCategoryListEvent.DeleteArea -> {
-            viewModel.deleteArea(event.area)
-            screen.closeAreaScreen()
-        }
+        // Назад — когда область уже удалена: главный экран появляется сразу без неё
+        is ThingsCategoryListEvent.DeleteArea -> viewModel.deleteArea(event.area) { screen.closeAreaScreen() }
         is ThingsCategoryListEvent.SetAreaTags -> viewModel.setAreaTags(event.area, event.titles)
         is ThingsCategoryListEvent.NewProjectInArea -> viewModel.createProjectInArea(event.area.id) { screen.openProject(it) }
         is ThingsCategoryListEvent.PasteTasksToArea -> viewModel.addTasksToArea(event.titles, event.area.id)

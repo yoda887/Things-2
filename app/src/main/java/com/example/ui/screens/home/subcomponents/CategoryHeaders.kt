@@ -52,6 +52,8 @@ import androidx.compose.material.icons.outlined.LocalOffer
 import com.example.ui.components.ProjectProgressArc
 import com.example.ui.screens.home.components.TaskListKeys
 import com.example.ui.theme.*
+import kotlinx.coroutines.delay
+import kotlinx.coroutines.launch
 
 // Отступы над подзаголовками: секция области, проекты/задачи области, день и месяц в «Планах»
 private val AREA_SECTION_TOP = 22.dp
@@ -96,6 +98,7 @@ fun MainCategoryHeader(
     var showDeleteConfirmDialog by remember { mutableStateOf(false) }
 
     var showAreaDeleteConfirmDialog by remember { mutableStateOf(false) }
+    val areaDeleteScope = rememberCoroutineScope()
 
     if (showDeleteConfirmDialog && project != null) {
         val taskCountInProj = tasks.count { it.item.projectId == project.id }
@@ -458,7 +461,12 @@ fun MainCategoryHeader(
                                     confirmText = stringResource(R.string.ui_delete_area),
                                     onConfirm = {
                                         showAreaDeleteConfirmDialog = false
-                                        onDeleteArea(area)
+                                        // Как в Things: карточка ушла, область ещё миг видна целиком — затем
+                                        // удаление и переход назад на главный экран
+                                        areaDeleteScope.launch {
+                                            delay(ThingsMotion.SLOW.toLong())
+                                            onDeleteArea(area)
+                                        }
                                     },
                                     onDismiss = { showAreaDeleteConfirmDialog = false }
                                 )

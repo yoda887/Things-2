@@ -48,6 +48,7 @@ import com.example.domain.usecase.QueryUseCases
 import com.example.data.model.toStartVal
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
@@ -58,6 +59,9 @@ import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.launch
+
+/** Сколько ждать, пока удалённая область уйдёт из списков, прежде чем вернуться назад (мс) */
+private const val AREA_DELETED_WAIT_MS = 1_000L
 
 /**
  * ViewModel для управления состоянием UI приложения Things.
@@ -1127,9 +1131,17 @@ class ThingsViewModel @Inject constructor(
         }
     }
 
-    fun deleteArea(area: Area) {
+    /**
+     * Удаляет область со всем содержимым. [onDeleted] — когда списки приложения уже без неё: так экран, на
+     * который возвращаются после удаления, сразу показывается без области (как в Things), а не убирает её у
+     * всех на глазах.
+     */
+    fun deleteArea(area: Area, onDeleted: () -> Unit = {}) {
         viewModelScope.launch {
             areaUseCases.deleteArea(area)
+            // Списка областей может никто не слушать — тогда он не обновится; ждать вечно нельзя
+            kotlinx.coroutines.withTimeoutOrNull(AREA_DELETED_WAIT_MS) { areas.first { list -> list.none { it.id == area.id } } }
+            onDeleted()
         }
     }
 
