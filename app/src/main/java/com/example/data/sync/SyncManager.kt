@@ -102,6 +102,9 @@ class SyncManager @Inject constructor(
                         result.applyLocally, result.deleteLocally,
                         pruneBefore = now - SyncMerge.DELETION_KEEP_MS, deletedAt = result.deletionTimes
                     )
+                    // Экраны узнают о записи, когда она закончилась: окно «свои изменения» (SyncAutoRun) — от этого
+                    // момента. От начала долгой записи оно успевало истечь, и синхронизация отменяла сама себя
+                    lastAppliedAt = System.currentTimeMillis()
                 }
 
                 val bytes = SyncCodec.encode(merged)
