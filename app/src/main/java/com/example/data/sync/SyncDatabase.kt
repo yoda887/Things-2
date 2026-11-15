@@ -50,15 +50,35 @@ class SyncDatabase @Inject constructor(private val database: AppDatabase) {
      * Применить пришедшее: удалить [deletions] (сначала зависимые таблицы), вставить или заменить [rows] (сначала те,
      * на кого ссылаются). Запись, которой не на что сослаться (её задачу здесь удалили), пропускается — кроме
      * области задачи: задача из удалённой области остаётся, без области (как при удалении области здесь).
+     * Удаления пишутся в журнал с их настоящим временем ([deletedAt], см. [SyncMerge.Result.deletionTimes]), а не
+     * временем применения; удаление без времени (образец новой базы) в журнал не пишется.
      * Журнал удалений чистится от записей старше [pruneBefore].
      */
-    suspend fun apply(rows: List<SyncRow>, deletions: List<Key>, pruneBefore: Long) = database.withTransaction {
+    suspend fun apply(
+        rows: List<SyncRow>,
+        deletions: List<Key>,
+        pruneBefore: Long,
+        deletedAt: Map<Key, Long> = emptyMap()
+    ) = database.withTransaction {
         SyncTriggers.beginApplyingRemote(db)
         try {
             for (table in SyncTables.ORDER.reversed()) {
                 deletions.filter { it.table == table }.forEach { key ->
                     val (where, args) = whereOf(key)
                     db.delete("`$table`", where, args)
+                }
+            }
+            // Триггер удаления записал в журнал время «сейчас» — возвращаем настоящее. После всех удалений: каскад
+            // от задачи пишет в журнал и её пункты, и связи
+            deletions.forEach { key ->
+                val at = deletedAt[key]
+                if (at != null) {
+                    db.execSQL(
+                        "UPDATE sync_deletions SET deletedAt = ? WHERE tableName = ? AND recordId = ?",
+                        arrayOf<Any>(at, key.table, key.id)
+                    )
+                } else {
+                    db.delete("sync_deletions", "tableName = ? AND recordId = ?", arrayOf<Any>(key.table, key.id))
                 }
             }
             for (table in SyncTables.ORDER) {

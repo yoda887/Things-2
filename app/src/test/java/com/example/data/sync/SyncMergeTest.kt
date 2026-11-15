@@ -327,4 +327,18 @@ class SyncMergeTest {
         assertTrue(result.merged.rows.containsKey(key("a")))
         assertTrue(result.deleteLocally.isEmpty())
     }
+
+    @Test
+    fun deletionTimes_keepOriginalTime_seedsWithoutMarkAreNotJournaled() {
+        // Там удалили в 20 — у себя удаление пишется в журнал тем же временем, а не временем применения
+        val deleted = SyncMerge.merge(state(listOf(row("a", 10))), state(deletions = listOf(deletion("a", 20))))
+        assertEquals(mapOf(key("a") to 20L), deleted.deletionTimes)
+
+        // Образец новой базы, которого в общем файле нет, убирается без записи в журнал; удалённый там — с его временем
+        val local = state(listOf(row("seed_never", SyncMerge.SEED_TIME), row("seed_deleted", SyncMerge.SEED_TIME)))
+        val remote = state(listOf(row("other", 600)), listOf(deletion("seed_deleted", 400)))
+        val seeds = SyncMerge.merge(local, remote)
+        assertEquals(setOf("seed_never", "seed_deleted"), seeds.deleteLocally.map { it.id }.toSet())
+        assertEquals(mapOf(key("seed_deleted") to 400L), seeds.deletionTimes)
+    }
 }

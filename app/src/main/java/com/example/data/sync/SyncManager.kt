@@ -98,7 +98,10 @@ class SyncManager @Inject constructor(
                 val merged = SyncMerge.pruneDeletions(result.merged, now)
                 if (result.applyLocally.isNotEmpty() || result.deleteLocally.isNotEmpty()) {
                     lastAppliedAt = now
-                    database.apply(result.applyLocally, result.deleteLocally, pruneBefore = now - SyncMerge.DELETION_KEEP_MS)
+                    database.apply(
+                        result.applyLocally, result.deleteLocally,
+                        pruneBefore = now - SyncMerge.DELETION_KEEP_MS, deletedAt = result.deletionTimes
+                    )
                 }
 
                 val bytes = SyncCodec.encode(merged)
