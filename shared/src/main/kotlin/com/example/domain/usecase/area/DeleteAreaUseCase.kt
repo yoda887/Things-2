@@ -14,16 +14,21 @@ class DeleteAreaUseCase @Inject constructor(private val repository: ITaskReposit
 
     /**
      * Удаляет область вместе с её задачами и проектами (и всем внутри проектов) — как в Things.
-     * Содержимое удаляется явно, а не каскадом базы: в базе десктопа каскадных ключей нет, а
-     * ключ `areaId` и в базе телефона лишь обнуляется.
+     * Задачи и проекты удаляются явно: ключ `areaId` в базе при удалении области лишь обнуляется. Подзаголовки
+     * проектов, пункты чек-листов и связи с тегами уходят каскадом базы вслед за своими проектами и задачами.
+     * Одной транзакцией: синхронизация не застанет область удалённой наполовину (на десктопе транзакции
+     * репозитория нет — там шаги идут подряд).
      */
     suspend operator fun invoke(area: Area) {
+        // Читаем до транзакции: поток списка внутри неё ждал бы её же окончания
         val items = repository.observeAllTasks().first().map { it.item }
         val contents = AreaList.contents(area.id, items)
-        contents
-            .filter { it.type == Item.TYPE_TEMPLATE || it.type == Item.TYPE_PROJECT_TEMPLATE }
-            .forEach { repository.deleteRecurrenceRule(it.id) }
-        repository.deleteTasks(contents)
-        repository.deleteArea(area)
+        repository.inTransaction {
+            contents
+                .filter { it.type == Item.TYPE_TEMPLATE || it.type == Item.TYPE_PROJECT_TEMPLATE }
+                .forEach { repository.deleteRecurrenceRule(it.id) }
+            repository.deleteTasks(contents)
+            repository.deleteArea(area)
+        }
     }
 }
