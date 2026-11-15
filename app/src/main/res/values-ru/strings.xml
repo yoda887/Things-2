@@ -140,6 +140,7 @@
     <string name="ui_new_heading_2">Новый подзаголовок</string>
     <string name="ui_new_project">Новый проект</string>
     <string name="ui_add_tags">Добавить теги</string>
+    <string name="ui_done">Готово</string>
     <string name="ui_paste">Вставить</string>
     <string name="ui_new_to_do">Новая задача</string>
     <string name="ui_no">Нет</string>

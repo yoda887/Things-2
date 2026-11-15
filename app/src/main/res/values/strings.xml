@@ -137,6 +137,7 @@
     <string name="ui_new_heading_2">New Heading</string>
     <string name="ui_new_project">New Project</string>
     <string name="ui_add_tags">Add Tags</string>
+    <string name="ui_done">Done</string>
     <string name="ui_paste">Paste</string>
     <string name="ui_new_to_do">New To-Do</string>
     <string name="ui_no">No</string>

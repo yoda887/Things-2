@@ -369,6 +369,12 @@ fun ThingsCategoryListPanel(
     var projectDialog by remember { mutableStateOf<ProjectAction?>(null) }
     // Окно тегов области (меню «…» у названия или нажатие на её теги)
     var areaTagsOpen by remember { mutableStateOf(false) }
+    // Правка названия проекта или области — здесь, а не в заголовке: на её время верхняя панель показывает «Готово».
+    // Новый проект без названия (созданный из меню области) открывается сразу с полем названия, как в Things
+    var isEditingTitle by remember(project?.id, area?.id, screen) {
+        mutableStateOf(screen == ActiveScreen.PROJECT_DETAIL && project != null && project.title.isBlank())
+    }
+    val titleFocusManager = androidx.compose.ui.platform.LocalFocusManager.current
     val clipboard = androidx.compose.ui.platform.LocalClipboardManager.current
     val upcomingTitle = stringResource(R.string.category_upcoming)
     val somedayTitle = stringResource(R.string.category_someday)
@@ -1158,6 +1164,8 @@ fun ThingsCategoryListPanel(
                         onDeleteArea = { onEvent(ThingsCategoryListEvent.DeleteArea(it)) },
                         onRenameProject = { proj, title -> onEvent(ThingsCategoryListEvent.EditProject(proj, ProjectEdit.Rename(title))) },
                         onRenameArea = { a, title -> onEvent(ThingsCategoryListEvent.RenameArea(a, title)) },
+                        isEditingTitle = isEditingTitle,
+                        onEditingTitleChange = { isEditingTitle = it },
                         onAreaAction = { areaAction ->
                             when (areaAction) {
                                 com.example.ui.screens.home.subcomponents.AreaAction.TAGS -> areaTagsOpen = true
@@ -1968,7 +1976,10 @@ fun ThingsCategoryListPanel(
                     onEvent(ThingsCategoryListEvent.SelectTag(null))
                 }
             },
-            onAddHeading = if (screen == ActiveScreen.PROJECT_DETAIL) { { addHeading() } } else null
+            onAddHeading = if (screen == ActiveScreen.PROJECT_DETAIL) { { addHeading() } } else null,
+            isEditingTitle = isEditingTitle,
+            // Уход фокуса из поля названия сохраняет его (EditableLargeTitle)
+            onDoneEditing = { titleFocusManager.clearFocus() }
         )
 
     // PullToSearchIndicator

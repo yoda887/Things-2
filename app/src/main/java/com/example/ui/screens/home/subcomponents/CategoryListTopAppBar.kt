@@ -44,6 +44,9 @@ import com.example.data.model.Tag
 import androidx.compose.material.icons.outlined.LocalOffer
 import com.example.ui.theme.AppIcons
 import com.example.ui.theme.ThingsTheme
+import com.example.ui.theme.ThingsSpacing
+import androidx.compose.foundation.background
+import androidx.compose.ui.draw.clip
 import com.example.ui.theme.topAppBarTitle
 
 private val TOP_APP_BAR_ACTION_ICON_SIZE = 24.dp
@@ -104,6 +107,9 @@ data class TopAppBarSelectionState(
  * @param onNewProject Экран области: пункт «Новий проєкт» — проект в этой области.
  * @param onPaste Экран области: пункт «Вставити» — задачи из текста в буфере обмена.
  * @param onShare Экран области: пункт «Поділитися».
+ * @param isEditingTitle Идёт правка названия проекта или области: вместо «назад» и меню — синяя капсула «Готово»,
+ *   как в Things.
+ * @param onDoneEditing Нажатие «Готово» — закончить правку названия.
  */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -128,7 +134,9 @@ fun CategoryListTopAppBar(
     onTitleClick: ((androidx.compose.ui.geometry.Rect?) -> Unit)? = null,
     onNewProject: (() -> Unit)? = null,
     onPaste: (() -> Unit)? = null,
-    onShare: (() -> Unit)? = null
+    onShare: (() -> Unit)? = null,
+    isEditingTitle: Boolean = false,
+    onDoneEditing: () -> Unit = {}
 ) {
     // Фон и разделитель проявляются вместе с прокруткой, синхронно с растворением заголовка экрана,
     // а не включаются скачком по порогу
@@ -179,7 +187,9 @@ fun CategoryListTopAppBar(
             }
         },
         navigationIcon = {
-            if (selectionState.isSelectionMode) {
+            if (isEditingTitle) {
+                // В правке названия «назад» нет — только «Готово» справа
+            } else if (selectionState.isSelectionMode) {
                 IconButton(onClick = selectionState.onCancelSelection) {
                     Icon(
                         imageVector = Icons.Default.Close,
@@ -200,6 +210,10 @@ fun CategoryListTopAppBar(
             }
         },
         actions = {
+            if (isEditingTitle) {
+                TitleDoneButton(onClick = onDoneEditing)
+                return@CenterAlignedTopAppBar
+            }
             Box {
                 IconButton(
                     onClick = { isOptionsMenuExpanded = true }
@@ -297,6 +311,25 @@ fun CategoryListTopAppBar(
                 }
             }
     )
+}
+
+/** «Готово» правки названия — синяя капсула справа вверху, как в Things. */
+@Composable
+private fun TitleDoneButton(onClick: () -> Unit) {
+    Box(
+        modifier = Modifier
+            .padding(end = ThingsSpacing.L)
+            .clip(ThingsTheme.shapes.capsuleShape)
+            .background(ThingsTheme.colors.accent)
+            .clickable(onClick = onClick)
+            .padding(horizontal = ThingsSpacing.M_PLUS, vertical = ThingsSpacing.XS_PLUS)
+    ) {
+        Text(
+            text = stringResource(R.string.ui_done),
+            color = ThingsTheme.colors.onAccent,
+            style = ThingsTheme.type.button
+        )
+    }
 }
 
 /**

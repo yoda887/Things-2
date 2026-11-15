@@ -85,12 +85,11 @@ fun MainCategoryHeader(
     onRenameArea: (Area, String) -> Unit = { _, _ -> },
     // Меню «…» области: «Додати теги» и «Поділитися»
     onAreaAction: (AreaAction) -> Unit = {},
+    // Правка названия проекта или области — состояние у экрана: на время правки верхняя панель показывает «Готово»
+    isEditingTitle: Boolean = false,
+    onEditingTitleChange: (Boolean) -> Unit = {},
     modifier: Modifier = Modifier
 ) {
-    // Новый проект без названия (созданный из меню области) открывается сразу с полем названия, как в Things
-    var isEditingTitle by remember(project?.id, area?.id, screen) {
-        mutableStateOf(screen == ActiveScreen.PROJECT_DETAIL && project != null && project.title.isBlank())
-    }
     val headerEmojiFontSize = ThingsTheme.type.heroEmoji.fontSize
     val headerTitleFontSize = ThingsTheme.type.largeTitle.fontSize
 
@@ -256,14 +255,17 @@ fun MainCategoryHeader(
                 // проект» в меню (с открытыми задачами — с подтверждением)
                 val canComplete = project != null && !projectDone && project.type != Item.TYPE_PROJECT_TEMPLATE
                 val headerView = androidx.compose.ui.platform.LocalView.current
+                // Как в Things: значок — перед первой строкой названия, следующие строки уходят под него, к краю
+                val projectIconSize = (26 * scaleFactor).dp
+                val projectTitleIndent = titleIndent(projectIconSize)
+                Box(modifier = Modifier.weight(1f)) {
                 com.example.ui.components.ProjectStatusIcon(
                     project = project,
                     completed = completedCount,
                     total = totalCount,
                     modifier = Modifier
-                        .align(Alignment.Top)
                         .padding(top = (4 * scaleFactor).dp)
-                        .size((26 * scaleFactor).dp)
+                        .size(projectIconSize)
                         .clip(androidx.compose.foundation.shape.CircleShape)
                         .then(
                             if (canComplete) Modifier.clickable {
@@ -272,7 +274,6 @@ fun MainCategoryHeader(
                             } else Modifier
                         )
                 )
-                Spacer(modifier = Modifier.width(ThingsSpacing.M))
 
                 val projectNameText = project?.name ?: stringResource(R.string.fallback_project)
                 val projectTitleAnnotated = remember(projectNameText) {
@@ -325,7 +326,7 @@ fun MainCategoryHeader(
                                 }
                                 ThingsMenuItem(stringResource(R.string.ui_rename), Icons.Default.Edit, onClick = {
                                     showOptionsMenu = false
-                                    isEditingTitle = true
+                                    onEditingTitleChange(true)
                                 })
                                 // У шаблона «Когда» переносит его ближайший повтор
                                 ThingsMenuItem(stringResource(R.string.batch_action_when), AppIcons.Upcoming, onClick = { action(ProjectAction.WHEN) })
@@ -357,39 +358,43 @@ fun MainCategoryHeader(
                     }
                 )
 
+                // В правке «…» после названия нет — оно возвращается, когда правка закончена
                 if (isEditingTitle && project != null) {
                     EditableLargeTitle(
                         initial = project.title,
                         textColor = textPrimaryColor,
-                        onCommit = { title -> isEditingTitle = false; if (title != project.title) onRenameProject(project, title) },
-                        modifier = Modifier.weight(1f)
+                        textIndent = projectTitleIndent,
+                        onCommit = { title -> onEditingTitleChange(false); if (title != project.title) onRenameProject(project, title) },
+                        modifier = Modifier.fillMaxWidth()
                     )
                 } else {
                     Text(
                         text = projectTitleAnnotated,
                         inlineContent = inlineContentMap,
-                        style = ThingsTheme.type.largeTitle.copy(color = textPrimaryColor),
+                        style = ThingsTheme.type.largeTitle.copy(color = textPrimaryColor, textIndent = projectTitleIndent),
                         modifier = Modifier
-                            .weight(1f, fill = false)
                             .clickable(
                                 interactionSource = remember { MutableInteractionSource() },
                                 indication = null,
                                 enabled = project != null
-                            ) { isEditingTitle = true }
+                            ) { onEditingTitleChange(true) }
                     )
+                }
                 }
             }
             ActiveScreen.AREA_DETAIL -> {
+                // Как у проекта: следующие строки названия уходят под значок
+                val areaIconSize = (30 * scaleFactor).dp
+                val areaTitleIndent = titleIndent(areaIconSize)
+                Box(modifier = Modifier.weight(1f)) {
                 Icon(
                     imageVector = AppIcons.Area,
                     contentDescription = null,
                     tint = ThingsTheme.colors.area,
                     modifier = Modifier
-                        .size((30 * scaleFactor).dp)
-                        .align(Alignment.Top)
+                        .size(areaIconSize)
                         .padding(top = (2 * scaleFactor).dp)
                 )
-                Spacer(modifier = Modifier.width(ThingsSpacing.M))
 
                 val areaTitleText = area?.title ?: stringResource(R.string.fallback_area)
                 val areaTitleAnnotated = remember(areaTitleText) {
@@ -439,7 +444,7 @@ fun MainCategoryHeader(
                                 })
                                 ThingsMenuItem(stringResource(R.string.ui_rename), Icons.Default.Edit, onClick = {
                                     showAreaOptionsMenu = false
-                                    isEditingTitle = true
+                                    onEditingTitleChange(true)
                                 })
                                 ThingsMenuDivider()
                                 ThingsMenuItem(stringResource(R.string.ui_delete_area), Icons.Default.Delete, destructive = true, onClick = {
@@ -479,22 +484,23 @@ fun MainCategoryHeader(
                     EditableLargeTitle(
                         initial = area.title,
                         textColor = textPrimaryColor,
-                        onCommit = { title -> isEditingTitle = false; if (title != area.title) onRenameArea(area, title) },
-                        modifier = Modifier.weight(1f)
+                        textIndent = areaTitleIndent,
+                        onCommit = { title -> onEditingTitleChange(false); if (title != area.title) onRenameArea(area, title) },
+                        modifier = Modifier.fillMaxWidth()
                     )
                 } else {
                     Text(
                         text = areaTitleAnnotated,
                         inlineContent = areaInlineContentMap,
-                        style = ThingsTheme.type.largeTitle.copy(color = textPrimaryColor),
+                        style = ThingsTheme.type.largeTitle.copy(color = textPrimaryColor, textIndent = areaTitleIndent),
                         modifier = Modifier
-                            .weight(1f, fill = false)
                             .clickable(
                                 interactionSource = remember { MutableInteractionSource() },
                                 indication = null,
                                 enabled = area != null
-                            ) { isEditingTitle = true }
+                            ) { onEditingTitleChange(true) }
                     )
+                }
                 }
             }
             ActiveScreen.TAG_DETAIL -> {
@@ -858,16 +864,28 @@ fun LogbookSectionHeader(
 }
 
 /**
- * Название проекта или области в режиме правки — тем же крупным шрифтом, что заголовок экрана. Курсор
- * сразу в конце; «Готово» на клавиатуре или уход фокуса сохраняют ([onCommit] с обрезанным названием),
- * пустое название не сохраняется — остаётся прежнее.
+ * Отступ первой строки названия под значок перед ним ([iconSize] и промежуток): следующие строки длинного
+ * названия начинаются от края, под значком, как в Things.
+ */
+@Composable
+private fun titleIndent(iconSize: androidx.compose.ui.unit.Dp): androidx.compose.ui.text.style.TextIndent {
+    val firstLine = with(androidx.compose.ui.platform.LocalDensity.current) { (iconSize + ThingsSpacing.M).toSp() }
+    return androidx.compose.ui.text.style.TextIndent(firstLine = firstLine)
+}
+
+/**
+ * Название проекта или области в режиме правки — тем же крупным шрифтом и на том же месте, что заголовок
+ * экрана, как в Things: длинное переносится на следующие строки (под значок, [textIndent]). Курсор сразу в
+ * конце; «Готово» на клавиатуре или в верхней панели (уход фокуса) сохраняют ([onCommit] с обрезанным
+ * названием), пустое название не сохраняется — остаётся прежнее. Перевода строки в названии нет: Enter — тоже «Готово».
  */
 @Composable
 private fun EditableLargeTitle(
     initial: String,
     textColor: Color,
     onCommit: (String) -> Unit,
-    modifier: Modifier = Modifier
+    modifier: Modifier = Modifier,
+    textIndent: androidx.compose.ui.text.style.TextIndent? = null
 ) {
     var value by remember {
         mutableStateOf(androidx.compose.ui.text.input.TextFieldValue(initial, androidx.compose.ui.text.TextRange(initial.length)))
@@ -883,10 +901,20 @@ private fun EditableLargeTitle(
     }
     androidx.compose.foundation.text.BasicTextField(
         value = value,
-        onValueChange = { value = it },
-        textStyle = ThingsTheme.type.largeTitle.copy(color = textColor),
+        onValueChange = { changed ->
+            // Enter с аппаратной клавиатуры или вставленный перевод строки — конец правки, а не новая строка
+            if (changed.text.contains('\n')) {
+                value = changed.copy(text = changed.text.replace("\n", ""))
+                view.hideSoftKeyboardNow()
+                commit()
+            } else {
+                value = changed
+            }
+        },
+        textStyle = ThingsTheme.type.largeTitle.copy(color = textColor, textIndent = textIndent),
         cursorBrush = androidx.compose.ui.graphics.SolidColor(ThingsTheme.colors.accent),
-        singleLine = true,
+        // Многострочное: длинное название переносится, а клавиша клавиатуры остаётся «Готово»
+        singleLine = false,
         keyboardOptions = androidx.compose.foundation.text.KeyboardOptions(
             imeAction = androidx.compose.ui.text.input.ImeAction.Done,
             capitalization = androidx.compose.ui.text.input.KeyboardCapitalization.Sentences
