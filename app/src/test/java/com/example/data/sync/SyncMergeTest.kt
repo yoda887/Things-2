@@ -341,4 +341,61 @@ class SyncMergeTest {
         assertEquals(setOf("seed_never", "seed_deleted"), seeds.deleteLocally.map { it.id }.toSet())
         assertEquals(mapOf(key("seed_deleted") to 400L), seeds.deletionTimes)
     }
+
+    @Test
+    fun tagRenamedThere_oldNameSetHere_followsTheTag() {
+        // Прошлый обмен: тег «Дом» (id T), область и задача без тегов
+        val tagWas = other("tags", "T", 5, "id" to "T", "title" to "Дом", "sortOrder" to 0L)
+        val areaWas = other("areas", "ar", 5, "id" to "ar", "title" to "Быт", "cachedTags" to "")
+        val itemWas = other("items", "it", 5, "id" to "it", "title" to "Задача", "cachedTags" to "")
+        val base = state(listOf(tagWas, areaWas, itemWas))
+        // Там тег переименовали; здесь, ещё не зная об этом, поставили прежнее название области и задаче
+        val remote = state(listOf(tagWas.copy(updatedAt = 20, values = tagWas.values + ("title" to "Квартира") + ("updatedAt" to 20L)), areaWas, itemWas))
+        val local = state(listOf(
+            tagWas,
+            areaWas.copy(updatedAt = 30, values = areaWas.values + ("cachedTags" to "Дом, Работа") + ("updatedAt" to 30L)),
+            itemWas.copy(updatedAt = 30, values = itemWas.values + ("cachedTags" to "дом") + ("updatedAt" to 30L))
+        ))
+
+        val result = SyncMerge.merge(local, remote, base)
+        assertEquals("Квартира, Работа", result.merged.rows[Key("areas", "ar")]?.values?.get("cachedTags"))
+        assertEquals("Квартира", result.merged.rows[Key("items", "it")]?.values?.get("cachedTags"))
+        // Исправленные записи — новые: применяются здесь и уходят в общий файл
+        assertTrue(result.applyLocally.any { it.key == Key("areas", "ar") })
+        assertTrue(result.remoteChanged)
+    }
+
+    @Test
+    fun tagDeletedThere_nameAndLinkSetHere_goWithTheTag() {
+        val tagWas = other("tags", "T", 5, "id" to "T", "title" to "Дом", "sortOrder" to 0L)
+        val areaWas = other("areas", "ar", 5, "id" to "ar", "title" to "Быт", "cachedTags" to "")
+        val base = state(listOf(tagWas, areaWas))
+        val remote = State(mapOf(areaWas.key to areaWas), mapOf(tagWas.key to SyncDeletionMark(tagWas.key, 20)))
+        val link = other("item_tags", "it|T", 30, "itemId" to "it", "tagId" to "T")
+        val local = state(listOf(
+            tagWas, link,
+            areaWas.copy(updatedAt = 30, values = areaWas.values + ("cachedTags" to "Дом, Работа") + ("updatedAt" to 30L))
+        ))
+
+        val result = SyncMerge.merge(local, remote, base)
+        assertEquals("Работа", result.merged.rows[Key("areas", "ar")]?.values?.get("cachedTags"))
+        // Связь с удалённым тегом уходит вместе с ним
+        assertFalse(result.merged.rows.containsKey(link.key))
+        assertTrue(link.key in result.deleteLocally)
+    }
+
+    @Test
+    fun oldTagNameTakenByAnotherTag_staysAsIs() {
+        // Тег T переименовали, а название «Дом» завёл новый тег N — у области оно законно
+        val tagWas = other("tags", "T", 5, "id" to "T", "title" to "Дом", "sortOrder" to 0L)
+        val area = other("areas", "ar", 30, "id" to "ar", "title" to "Быт", "cachedTags" to "Дом")
+        val base = state(listOf(tagWas))
+        val remote = state(listOf(
+            tagWas.copy(updatedAt = 20, values = tagWas.values + ("title" to "Квартира") + ("updatedAt" to 20L)),
+            other("tags", "N", 25, "id" to "N", "title" to "Дом", "sortOrder" to 1L)
+        ))
+
+        val result = SyncMerge.merge(state(listOf(tagWas, area)), remote, base)
+        assertEquals("Дом", result.merged.rows[Key("areas", "ar")]?.values?.get("cachedTags"))
+    }
 }

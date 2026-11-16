@@ -16,6 +16,11 @@ import com.example.domain.tag.TagTitles
  * телефоне, дата на компьютере) не перебивают друг друга. Строка тегов задачи и счётчики её чек-листа, изменённые на
  * обоих, не выбираются, а пересчитываются по слитым связям и пунктам — чтобы сходились с ними.
  * Без общего состояния прошлого обмена (первый обмен устройства) — целиком побеждает более поздняя запись.
+ *
+ * Строка тегов задачи и области хранит названия. Если тег с прошлого обмена переименовали или удалили на одном
+ * устройстве, а на другом его прежнее название успели поставить задаче или области, название в строке идёт вслед
+ * за тегом ([followTagRenames]) — иначе у области осталось бы название, которого нет в справочнике, а у задачи оно
+ * при запуске завелось бы заново отдельным тегом.
  */
 object SyncMerge {
 
@@ -76,6 +81,12 @@ object SyncMerge {
 
     /** Таблицы, чьи записи принадлежат задаче (поле itemId): без задачи они не нужны */
     private val ITEM_CHILDREN = setOf("item_tags", "checklist_items")
+
+    /** Справочник тегов, связи задача–тег и области: по ним строка тегов идёт вслед за переименованным тегом */
+    private const val TAGS = "tags"
+    private const val ITEM_TAGS = "item_tags"
+    private const val AREAS = "areas"
+    private const val TITLE = "title"
 
     /** Поля задачи, которые выводятся из других таблиц: при правке на обоих — пересчитываются */
     private const val CACHED_TAGS = "cachedTags"
@@ -166,7 +177,23 @@ object SyncMerge {
             }
         }
 
+        // Связь задачи с тегом, удалённым насовсем, уходит вместе с ним: поставленная на другом устройстве, пока там
+        // об удалении не знали, она осталась бы без тега
+        val deletedTags = deletions.keys.filter { it.table == TAGS && it !in rows }.associateBy { it.id }
+        if (deletedTags.isNotEmpty()) {
+            val orphans = rows.keys.filter { it.table == ITEM_TAGS && (rows.getValue(it).values["tagId"] as? String) in deletedTags }
+            for (key in orphans) {
+                val tagKey = deletedTags.getValue(rows.getValue(key).values["tagId"] as String)
+                rows.remove(key)
+                sources.remove(key)
+                deletions[key] = SyncDeletionMark(key, deletions.getValue(tagKey).deletedAt)
+                if (key in local.rows) delete += key
+                if (key in remote.rows || key !in remote.deletions) remoteChanged = true
+            }
+        }
+
         deriveItemFields(rows, sources, conflicts)
+        followTagRenames(rows, sources, base)
 
         val apply = ArrayList<SyncRow>()
         for ((key, row) in rows) {
@@ -307,6 +334,43 @@ object SyncMerge {
                 rows[key] = SyncRow(key, at, values + (UPDATED_AT to at))
                 sources[key] = Source.MERGED
             }
+        }
+    }
+
+    /**
+     * Названия в строках тегов задач и областей — вслед за тегами, которые с прошлого обмена ([base]) переименовали
+     * или удалили: прежнее название заменяется нынешним, название удалённого тега убирается. Только если прежнее
+     * название сейчас не носит другой тег (его могли завести заново — тогда оно законно). Изменённая запись — новая,
+     * позже обеих. Без прошлого обмена сравнивать не с чем — ничего не меняется.
+     */
+    private fun followTagRenames(rows: HashMap<Key, SyncRow>, sources: HashMap<Key, Source>, base: State?) {
+        if (base == null) return
+        val currentTitles = rows.values.asSequence()
+            .filter { it.key.table == TAGS }
+            .mapNotNullTo(HashSet()) { (it.values[TITLE] as? String)?.let(TagTitles::key) }
+        // Прежнее название (ключ) → нынешнее; null — тег удалён
+        val renamed = HashMap<String, String?>()
+        for (was in base.rows.values) {
+            if (was.key.table != TAGS) continue
+            val oldKey = (was.values[TITLE] as? String)?.let(TagTitles::key) ?: continue
+            if (oldKey in currentTitles) continue
+            renamed[oldKey] = rows[was.key]?.values?.get(TITLE) as? String
+        }
+        if (renamed.isEmpty()) return
+        for (key in rows.keys.filter { it.table == ITEMS || it.table == AREAS }) {
+            val row = rows.getValue(key)
+            val cached = row.values[CACHED_TAGS] as? String ?: continue
+            if (cached.isEmpty()) continue
+            val titles = TagTitles.parse(cached)
+            if (titles.none { TagTitles.key(it) in renamed }) continue
+            val followed = TagTitles.join(TagTitles.clean(titles.mapNotNull { title ->
+                val titleKey = TagTitles.key(title)
+                if (titleKey in renamed) renamed[titleKey] else title
+            }))
+            if (followed == cached) continue
+            val at = if (sources[key] == Source.MERGED) row.updatedAt else row.updatedAt + 1
+            rows[key] = SyncRow(key, at, row.values + (CACHED_TAGS to followed) + (UPDATED_AT to at))
+            sources[key] = Source.MERGED
         }
     }
 

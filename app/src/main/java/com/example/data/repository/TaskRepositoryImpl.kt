@@ -364,6 +364,10 @@ class TaskRepositoryImpl @Inject constructor(
             localDataSource.getAllItemsSync()
                 .filter { it.cachedTags.isNotBlank() || it.id in linkedItemIds }
                 .forEach { item -> linkItemTags(item.id, TagTitles.parse(item.cachedTags), tags) }
+            // 3. Теги областей — только названиями (связей у области нет): названия, которых нет в справочнике,
+            // заводятся в нём, как у задач, — иначе у такого тега не было бы ни экрана, ни места в окне тегов
+            val missing = TagTitles.resolve(localDataSource.getAllAreas().flatMap { TagTitles.parse(it.cachedTags) }, tags).created
+            if (missing.isNotEmpty()) localDataSource.insertTags(missing)
         }
     }
 
