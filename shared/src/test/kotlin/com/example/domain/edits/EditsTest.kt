@@ -151,13 +151,18 @@ class EditsTest {
     }
 
     @Test
-    fun moveUnderHeading_setsProjectAndHeading_withoutHeadingKeepsCurrent() {
-        val task = Item(id = "t", title = "t", start = Item.START_INBOX, headingId = "old")
-        val moved = TaskMoves.moved(task, MoveTarget.Place("p", null, "h"))
-        assertEquals("p", moved.projectId)
+    fun moveUnderHeading_setsProjectAndHeading_otherProjectDropsOldHeading() {
+        val task = Item(id = "t", title = "t", start = Item.START_INBOX, projectId = "p", headingId = "old")
+        val moved = TaskMoves.moved(task, MoveTarget.Place("p2", null, "h"))
+        assertEquals("p2", moved.projectId)
         assertEquals("h", moved.headingId)
         assertEquals(Item.START_ANYTIME, moved.start)
+        // В том же проекте без подзаголовка — прежний остаётся
         assertEquals("old", TaskMoves.moved(task, MoveTarget.Place("p", null)).headingId)
+        // В другой проект, в область, во «Входящие» — подзаголовок старого проекта не идёт с задачей
+        assertEquals(null, TaskMoves.moved(task, MoveTarget.Place("p2", null)).headingId)
+        assertEquals(null, TaskMoves.moved(task, MoveTarget.Place(null, "a")).headingId)
+        assertEquals(null, TaskMoves.moved(task, MoveTarget.Inbox).headingId)
     }
 
     @Test
