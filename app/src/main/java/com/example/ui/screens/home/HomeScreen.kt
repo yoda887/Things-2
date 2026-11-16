@@ -349,6 +349,15 @@ fun ThingsHomeScreen(viewModel: ThingsViewModel = hiltViewModel()) {
         }
     }
 
+    /**
+     * Окно поиска открывается с пустым полем. Запрос живёт дольше окна только ради экрана результатов
+     * («Продовжити пошук»): уйдя с него не кнопкой «назад» (открыв найденное), его не очищали — и следующее окно
+     * поиска открывалось со старым текстом. С самого экрана результатов окно открывается с его запросом.
+     */
+    fun clearStaleSearchQuery() {
+        if (activeScreen != ActiveScreen.SEARCH) viewModel.setSearchQuery("")
+    }
+
     fun leaveSearchOverlay(keepQuery: Boolean = false) {
         rootView.hideSoftKeyboardNow()
         scope.launch {
@@ -551,6 +560,7 @@ fun ThingsHomeScreen(viewModel: ThingsViewModel = hiltViewModel()) {
                             onDeleteProject = { viewModel.deleteProject(it) },
                             onSettingsClick = { openSettings() },
                             onSearchClick = { sourceBounds, wasPulled ->
+                                clearStaleSearchQuery()
                                 searchMorphSource = sourceBounds
                                 searchWasPulled = wasPulled
                                 searchFromWideField = true
@@ -681,6 +691,7 @@ fun ThingsHomeScreen(viewModel: ThingsViewModel = hiltViewModel()) {
                                     override fun openLoggedProjects() = navigateTo(ActiveScreen.LOGGED_PROJECTS)
                                     override fun openSearch(sourceBounds: androidx.compose.ui.geometry.Rect?) {
                                         // На экранах списков окно вырастает из синего круга оттяжки
+                                        clearStaleSearchQuery()
                                         searchMorphSource = sourceBounds
                                         searchWasPulled = true
                                         searchFromWideField = false
