@@ -30,7 +30,6 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
-import com.example.ui.components.performSoftTick
 import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.draw.drawBehind
 import androidx.compose.ui.geometry.CornerRadius
@@ -771,8 +770,8 @@ fun AnimatedTaskItem(
                                     view.hideSoftKeyboardNow()
                                     onEvent(ThingsCategoryListEvent.ChangeInlineExpandedTaskId(null))
                                 } else {
-                                    // Карточка раскрывается в редактор — самый мягкий отклик (короче и слабее CLOCK_TICK)
-                                    view.performSoftTick()
+                                    // Карточка раскрывается в редактор — тот же отклик, что у свайпа карточки за порогом
+                                    view.performHapticFeedback(android.view.HapticFeedbackConstants.CLOCK_TICK)
                                     onEvent(ThingsCategoryListEvent.ChangeInlineExpandedTaskId(task.id))
                                 }
                             },
