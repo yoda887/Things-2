@@ -141,12 +141,15 @@ class TaskRepositoryImpl @Inject constructor(
     /**
      * Задача, перенесённая в другой проект (или из проекта), теряет заголовок прежнего проекта.
      * Проверка здесь, а не на каждом пути переноса: редактор, «Переместить», пакетный перенос.
+     * Заголовок, сохраняемый тем же вызовом (перенос заголовка вместе с задачами), сверяется по новому проекту,
+     * а не по базе: иначе задачи, переносимые с ним, теряли бы его.
      */
     private suspend fun detachForeignHeadings(items: List<Item>): List<Item> {
         if (items.none { it.headingId != null && !it.isHeading }) return items
         val headingProjects = localDataSource.getAllItemsSync()
             .filter { it.isHeading }
-            .associate { it.id to it.projectId }
+            .associate { it.id to it.projectId } +
+            items.filter { it.isHeading }.associate { it.id to it.projectId }
         return items.map { item ->
             val headingId = item.headingId
             if (headingId != null && !item.isHeading && headingProjects[headingId] != item.projectId) {
