@@ -926,7 +926,8 @@ fun DeadlineDatePickerDialog(
 /**
  * Строка повтора в редакторе, как в Things. У шаблона — синяя стрелка, «Повтор» и ближайшая дата повтора
  * серым («22 жовт.…», троеточие — если повторы есть и дальше), иначе просто «Чекає» или «Пауза»; нажатие — меню
- * действий; у копии — «Це копія повторюваного завдання ›», ведёт к шаблону. У обычной задачи строки нет.
+ * действий; у копии — «Це копія повторюваного завдання –» и ниже, от левого края, правило шаблона серым с «›» в
+ * конце; нажатие ведёт к шаблону. У обычной задачи строки нет.
  */
 @Composable
 internal fun RepeatEditorRow(
@@ -996,7 +997,21 @@ internal fun RepeatEditorRow(
         }
     val ruleText = rule?.let { com.example.ui.screens.home.inlineeditor.dialogs.repeatRuleSentence(it) } ?: repeatLabel
     val text: androidx.compose.ui.text.AnnotatedString = when {
-        !isTemplate -> androidx.compose.ui.text.AnnotatedString(copyText)
+        // Копия: значок — первым «символом», как у шаблона; правило — новой строкой от левого края, шеврон — в конце
+        // последней строки. Без правила (шаблона уже нет) — шеврон сразу после ссылки
+        !isTemplate -> androidx.compose.ui.text.buildAnnotatedString {
+            appendInlineContent(REPEAT_ROW_COPY_ICON_ID, "↻")
+            append(" ")
+            append(copyText)
+            if (copyRuleText != null) {
+                append(" –\n")
+                pushStyle(androidx.compose.ui.text.SpanStyle(color = secondaryColor))
+                append(copyRuleText)
+                pop()
+            }
+            append(" ")
+            appendInlineContent(REPEAT_ROW_CHEVRON_ID, "›")
+        }
         else -> androidx.compose.ui.text.buildAnnotatedString {
             // Значок — первым «символом» текста: перенесённые строки начинаются с левого края, под ним
             appendInlineContent(REPEAT_ROW_ICON_ID, "↻")
@@ -1023,49 +1038,31 @@ internal fun RepeatEditorRow(
                 }
                 .padding(vertical = MaterialTheme.dimens.taskEditorIndicatorVerticalPadding)
         ) {
-        Row(verticalAlignment = Alignment.Top) {
-            if (!isTemplate) {
+        // Шаблон и копия — обычным размером, как строка даты, одним текстом: значок внутри него, поэтому перенесённые
+        // строки (и правило копии) начинаются от левого края, под значком, как в Things
+        val iconEm = with(LocalDensity.current) { (ThingsIconSize.S + ThingsSpacing.XXS).toSp() }
+        fun inlineIcon(content: @Composable () -> Unit) = androidx.compose.foundation.text.InlineTextContent(
+            androidx.compose.ui.text.Placeholder(
+                width = iconEm,
+                height = iconEm,
+                placeholderVerticalAlign = androidx.compose.ui.text.PlaceholderVerticalAlign.TextCenter
+            )
+        ) { content() }
+        Text(
+            text = text,
+            style = ThingsTheme.type.editorDate.copy(color = ThingsTheme.colors.editorText),
+            inlineContent = mapOf(
+                // Обычный значок повтора — синяя стрелка в голубом круге, как у строки шаблона в списке
+                REPEAT_ROW_ICON_ID to inlineIcon { com.example.ui.components.RepeatTemplateIcon(modifier = Modifier.size(ThingsIconSize.S)) },
                 // Копия — серая круговая стрелка, как в строке списка
-                Icon(AppIcons.RepeatCopy, contentDescription = null, tint = ThingsTheme.colors.textSecondary, modifier = Modifier.size(ThingsIconSize.S))
-                Spacer(modifier = Modifier.width(ThingsSpacing.XS_PLUS))
-            }
-            // Шаблон и копия — обычным размером, как строка даты. Правило шаблона с датами переносится, как в Things,
-            // и перенесённые строки начинаются под значком (он внутри текста); ссылка копии — в одну строку
-            // (троеточие — только если не помещается: узкий экран, крупный шрифт)
-            val iconEm = with(LocalDensity.current) { (ThingsIconSize.S + ThingsSpacing.XXS).toSp() }
-            Text(
-                text = text,
-                maxLines = if (isTemplate) Int.MAX_VALUE else 1,
-                overflow = TextOverflow.Ellipsis,
-                style = ThingsTheme.type.editorDate.copy(color = ThingsTheme.colors.editorText),
-                inlineContent = if (isTemplate) mapOf(
-                    REPEAT_ROW_ICON_ID to androidx.compose.foundation.text.InlineTextContent(
-                        androidx.compose.ui.text.Placeholder(
-                            width = iconEm,
-                            height = iconEm,
-                            placeholderVerticalAlign = androidx.compose.ui.text.PlaceholderVerticalAlign.TextCenter
-                        )
-                    ) {
-                        // Обычный значок повтора — синяя стрелка в голубом круге, как у строки шаблона в списке
-                        com.example.ui.components.RepeatTemplateIcon(modifier = Modifier.size(ThingsIconSize.S))
-                    }
-                ) else emptyMap(),
-                modifier = Modifier.weight(1f, fill = false)
+                REPEAT_ROW_COPY_ICON_ID to inlineIcon {
+                    Icon(AppIcons.RepeatCopy, contentDescription = null, tint = secondaryColor, modifier = Modifier.size(ThingsIconSize.S))
+                },
+                REPEAT_ROW_CHEVRON_ID to inlineIcon {
+                    Icon(Icons.Default.ChevronRight, contentDescription = null, tint = secondaryColor, modifier = Modifier.size(ThingsIconSize.S))
+                }
             )
-            if (!isTemplate) {
-                Icon(Icons.Default.ChevronRight, contentDescription = null, tint = ThingsTheme.colors.textSecondary, modifier = Modifier.size(ThingsIconSize.S))
-            }
-        }
-        if (copyRuleText != null) {
-            // Под текстом ссылки, с того же края, что он (после значка)
-            Text(
-                text = copyRuleText,
-                maxLines = 2,
-                overflow = TextOverflow.Ellipsis,
-                style = ThingsTheme.type.editorDate.copy(color = secondaryColor),
-                modifier = Modifier.padding(start = ThingsIconSize.S + ThingsSpacing.XS_PLUS)
-            )
-        }
+        )
         }
         // Шаблон — меню действий, как в Things: «Изменить правило» | следующая и предыдущая копия | пауза | остановить
         if (isTemplate) {
@@ -1093,6 +1090,10 @@ internal fun RepeatEditorRow(
 
 /** Значок повтора внутри текста строки повтора шаблона */
 private const val REPEAT_ROW_ICON_ID = "repeat_row_icon"
+
+/** Значок копии повтора и шеврон в конце — внутри текста строки повтора копии */
+private const val REPEAT_ROW_COPY_ICON_ID = "repeat_row_copy_icon"
+private const val REPEAT_ROW_CHEVRON_ID = "repeat_row_chevron"
 
 /** Строка повтора шаблона показывает столько ближайших дат повторов («Завтра, 25 жовт., 26 жовт., …»; троеточие — если есть ещё) */
 private const val REPEAT_UPCOMING_SHOWN = 3
