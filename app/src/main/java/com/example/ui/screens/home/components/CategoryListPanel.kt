@@ -1754,6 +1754,11 @@ fun ThingsCategoryListPanel(
                                     heading = heading,
                                     isFound = heading.id == highlightedTaskId,
                                     muted = selectedTag.isActive,
+                                    // Подзаголовки отмечаются наравне с задачами (действия — HeadingBatch)
+                                    isSelectionMode = state.isSelectionMode,
+                                    isSelected = heading.id in state.selectedTaskIds,
+                                    isDragSelecting = isDragSelecting,
+                                    onToggleSelect = { onEvent(ThingsCategoryListEvent.ToggleTaskSelection(heading.id)) },
                                     isEditing = editingHeadingId == heading.id,
                                     dividerColor = dividerColor,
                                     onStartEditing = { editingHeadingId = heading.id },
@@ -1949,7 +1954,9 @@ fun ThingsCategoryListPanel(
             } else TopAppBarSelectionState(
                 isSelectionMode = state.isSelectionMode,
                 selectedCount = state.selectedTaskIds.size,
-                isAllSelected = state.selectedTaskIds.isNotEmpty() && state.selectedTaskIds.size == state.displayTasks.size,
+                // На экране проекта «все» — это и его подзаголовки
+                isAllSelected = state.selectedTaskIds.isNotEmpty() && state.selectedTaskIds.size ==
+                    state.displayTasks.size + if (screen == ActiveScreen.PROJECT_DETAIL) state.headings.size else 0,
                 onCancelSelection = { onEvent(ThingsCategoryListEvent.ExitSelectionMode) },
                 onSelectAllClick = { onEvent(ThingsCategoryListEvent.SelectAllTasks) },
                 onDeselectAllClick = { onEvent(ThingsCategoryListEvent.DeselectAllTasks) },
@@ -2293,9 +2300,12 @@ fun ThingsCategoryListPanel(
             topPadding = topPaddingTotal,
             bottomPadding = LIST_BOTTOM_PADDING,
             listOffsetY = { pullOffset.value },
-            isSelectable = { id -> state.allTasks.any { it.item.id == id } },
-            isSelected = { it in state.selectedTaskIds },
-            onSelect = { id, selected -> onEvent(ThingsCategoryListEvent.SetTaskSelected(id, selected)) },
+            // Ключ строки подзаголовка — с приставкой HEADING_PREFIX; отмечается сам подзаголовок
+            isSelectable = { key -> state.allTasks.any { it.item.id == key } || key.startsWith(TaskListKeys.HEADING_PREFIX) },
+            isSelected = { key -> key.removePrefix(TaskListKeys.HEADING_PREFIX) in state.selectedTaskIds },
+            onSelect = { key, selected ->
+                onEvent(ThingsCategoryListEvent.SetTaskSelected(key.removePrefix(TaskListKeys.HEADING_PREFIX), selected))
+            },
             onDraggingChange = { isDragSelecting = it }
         )
     }

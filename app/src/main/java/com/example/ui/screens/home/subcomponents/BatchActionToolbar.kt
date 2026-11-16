@@ -80,10 +80,13 @@ fun BatchActionToolbar(
     onShareClick: () -> Unit,
     modifier: Modifier = Modifier,
     // Среди выбранных есть повторяющиеся задачи: пауза, возобновить и остановить повтор у всех сразу
-    onRepeatAction: ((com.example.ui.screens.home.components.RepeatAction) -> Unit)? = null
+    onRepeatAction: ((com.example.ui.screens.home.components.RepeatAction) -> Unit)? = null,
+    // «Когда», «Срок», «Теги», «Завершить» — только к задачам: выбраны одни подзаголовки — эти действия неактивны
+    taskActionsEnabled: Boolean = true
 ) {
     var isMoreMenuExpanded by remember { mutableStateOf(false) }
     val isEnabled = selectedCount > 0
+    val taskActions = isEnabled && taskActionsEnabled
     val view = LocalView.current
 
     AnimatedVisibility(
@@ -109,7 +112,7 @@ fun BatchActionToolbar(
                 CapsuleToolbarIconButton(
                     icon = AppIcons.Upcoming,
                     contentDescription = stringResource(R.string.batch_action_when),
-                    enabled = isEnabled,
+                    enabled = taskActions,
                     onClick = {
                         view.performHapticFeedback(HapticFeedbackConstants.CLOCK_TICK)
                         onWhenClick()
@@ -154,19 +157,19 @@ fun BatchActionToolbar(
                         expanded = isMoreMenuExpanded,
                         onDismissRequest = { isMoreMenuExpanded = false }
                     ) {
-                        ThingsMenuItem(stringResource(R.string.batch_action_complete), Icons.Outlined.CheckCircleOutline, onClick = {
+                        ThingsMenuItem(stringResource(R.string.batch_action_complete), Icons.Outlined.CheckCircleOutline, enabled = taskActions, onClick = {
                             view.performHapticFeedback(HapticFeedbackConstants.CLOCK_TICK)
                             isMoreMenuExpanded = false
                             onCompleteClick()
                         })
                         if (onSetTagsClick != null) {
-                            ThingsMenuItem(stringResource(R.string.batch_action_set_tags), AppIcons.Tag, onClick = {
+                            ThingsMenuItem(stringResource(R.string.batch_action_set_tags), AppIcons.Tag, enabled = taskActions, onClick = {
                                 view.performHapticFeedback(HapticFeedbackConstants.CLOCK_TICK)
                                 isMoreMenuExpanded = false
                                 onSetTagsClick()
                             })
                         }
-                        ThingsMenuItem(stringResource(R.string.batch_action_set_deadline), AppIcons.Deadline, onClick = {
+                        ThingsMenuItem(stringResource(R.string.batch_action_set_deadline), AppIcons.Deadline, enabled = taskActions, onClick = {
                             view.performHapticFeedback(HapticFeedbackConstants.CLOCK_TICK)
                             isMoreMenuExpanded = false
                             onSetDeadlineClick()

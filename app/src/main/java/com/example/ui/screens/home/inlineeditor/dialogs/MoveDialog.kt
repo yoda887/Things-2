@@ -85,6 +85,8 @@ import com.example.ui.theme.dimens
  * Стиль полностью унифицирован с ThingsTagDialog, включая цвета, размеры, круглый крестик.
  * Список содержит "Inbox", "No project", далее разделитель, проекты без области и проекты, разбитые по областям.
  * С [areasOnly] — для перемещения самого проекта: только «Без области» и области, без «Входящих» и проектов.
+ * С [projectsOnly] — для перемещения подзаголовков: только проекты (области — подписями групп), без «Входящих»,
+ * «Без проекта» и выбора области.
  */
 @OptIn(ExperimentalLayoutApi::class)
 @Composable
@@ -98,6 +100,7 @@ fun ThingsMoveDialog(
     onMove: (projectId: String?, areaId: String?, moveToInbox: Boolean) -> Unit,
     onDismissRequest: () -> Unit,
     areasOnly: Boolean = false,
+    projectsOnly: Boolean = false,
     // «+ Новый проект „…“» в конце результатов поиска: проект с названием из поиска, задачи — в него.
     // null — строки нет (перенос самого проекта в область)
     onMoveToNewProject: ((title: String) -> Unit)? = null,
@@ -294,12 +297,12 @@ fun ThingsMoveDialog(
                     // а если ничего не найдено — создаёт новый проект с этим названием
                     val inboxTitle = stringResource(R.string.category_inbox)
                     val noPlaceTitle = stringResource(if (areasOnly) R.string.move_no_area else R.string.move_no_project)
-                    val found = remember(query, projects, areas, headings, areasOnly, inboxTitle, noPlaceTitle) {
+                    val found = remember(query, projects, areas, headings, areasOnly, projectsOnly, inboxTitle, noPlaceTitle) {
                         moveSearch(
-                            query.trim(), if (areasOnly) emptyList() else projects, areas,
+                            query.trim(), if (areasOnly) emptyList() else projects, if (projectsOnly) emptyList() else areas,
                             if (onMoveToHeading == null) emptyList() else headings,
-                            inboxTitle = if (areasOnly) null else inboxTitle,
-                            noPlaceTitle = noPlaceTitle
+                            inboxTitle = if (areasOnly || projectsOnly) null else inboxTitle,
+                            noPlaceTitle = noPlaceTitle.takeUnless { projectsOnly }
                         )
                     }
                     fun choose(result: MoveFound) {
@@ -404,7 +407,7 @@ fun ThingsMoveDialog(
                             }
                         } else {
                         // 1. Inbox Option
-                        if (!areasOnly) item {
+                        if (!areasOnly && !projectsOnly) item {
                             val isSelected = currentProjectId == null && currentAreaId == null && currentIsInbox
                             MoveDialogRow(
                                 title = stringResource(R.string.category_inbox),
@@ -418,7 +421,7 @@ fun ThingsMoveDialog(
                         }
 
                         // 2. Clear/No project Option
-                        item {
+                        if (!projectsOnly) item {
                             val isSelected = currentProjectId == null && currentAreaId == null && !currentIsInbox
                             MoveDialogRow(
                                 title = stringResource(if (areasOnly) R.string.move_no_area else R.string.move_no_project),
@@ -432,7 +435,7 @@ fun ThingsMoveDialog(
                         }
 
                         // Horizontal Divider
-                        item {
+                        if (!projectsOnly) item {
                             HorizontalDivider(
                                 modifier = Modifier.padding(vertical = ThingsSpacing.XS, horizontal = ThingsSpacing.L_PLUS),
                                 color = ThingsTheme.colors.overlayDivider,
@@ -476,7 +479,8 @@ fun ThingsMoveDialog(
                                     isSelected = isSelected,
                                     isAreaHeader = true,
                                     onClick = {
-                                        moveAnimated(null, area.id, false)
+                                        // Подзаголовок в область не переносится — область здесь только подпись группы
+                                        if (!projectsOnly) moveAnimated(null, area.id, false)
                                     }
                                 )
                             }
@@ -876,7 +880,7 @@ private fun moveSearch(
     areas: List<Area>,
     headings: List<Item>,
     inboxTitle: String?,
-    noPlaceTitle: String
+    noPlaceTitle: String?
 ): List<MoveFound> {
     if (query.isEmpty()) return emptyList()
     val openProjects = projects.filter { ListRules.isOpenProject(it) }
@@ -887,7 +891,7 @@ private fun moveSearch(
         areas.filter { !it.trashed && it.title.contains(query, ignoreCase = true) }.map { MoveFound.Area(it) } +
         listOfNotNull(
             MoveFound.Inbox.takeIf { inboxTitle?.contains(query, ignoreCase = true) == true },
-            MoveFound.NoPlace.takeIf { noPlaceTitle.contains(query, ignoreCase = true) }
+            MoveFound.NoPlace.takeIf { noPlaceTitle?.contains(query, ignoreCase = true) == true }
         )
 }
 

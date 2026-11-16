@@ -1,5 +1,6 @@
 package com.example.ui.screens.home.subcomponents
 
+import com.example.ui.components.selectionTint
 import androidx.compose.ui.graphics.graphicsLayer
 import com.example.ui.components.foundHighlight
 import androidx.compose.material3.MaterialTheme
@@ -83,7 +84,13 @@ fun ProjectHeadingRow(
     // Подзаголовок, к которому перешли из поиска: кратко подсвечивается, как найденная задача
     isFound: Boolean = false,
     // Список отфильтрован по тегам: как в Things, подзаголовок серый и без «…»
-    muted: Boolean = false
+    muted: Boolean = false,
+    // Множественный выбор, как у задач: нажатие отмечает подзаголовок, справа — кружок выбора вместо «…»,
+    // выбранный залит цветом выбора
+    isSelectionMode: Boolean = false,
+    isSelected: Boolean = false,
+    isDragSelecting: Boolean = false,
+    onToggleSelect: () -> Unit = {}
 ) {
     var showMenu by remember { mutableStateOf(false) }
     val found = com.example.ui.components.rememberFoundHighlight(isFound)
@@ -94,15 +101,21 @@ fun ProjectHeadingRow(
             .graphicsLayer { scaleX = found.scale; scaleY = found.scale }
             .foundHighlight(found, ThingsTheme.shapes.rowShape)
     ) {
+        val selectionTint by androidx.compose.animation.animateColorAsState(
+            targetValue = if (isSelected) ThingsTheme.colors.accentSelection else Color.Transparent,
+            animationSpec = androidx.compose.animation.core.tween(durationMillis = com.example.ui.theme.ThingsMotion.BASE),
+            label = "headingSelectionTint"
+        )
         Row(
             modifier = Modifier
                 .fillMaxWidth()
                 .height(MaterialTheme.dimens.headingRowHeight)
+                .selectionTint(selectionTint, ThingsTheme.shapes.rowShape)
                 .clickable(
                     enabled = !isEditing,
                     interactionSource = remember { MutableInteractionSource() },
                     indication = null,
-                    onClick = onStartEditing
+                    onClick = if (isSelectionMode) onToggleSelect else onStartEditing
                 )
                 .padding(horizontal = ThingsSpacing.S),
             verticalAlignment = Alignment.CenterVertically
@@ -120,7 +133,9 @@ fun ProjectHeadingRow(
                 }
             }
 
-            if (!muted) Box {
+            if (isSelectionMode) {
+                SelectionCircle(isSelected = isSelected, isDragSelecting = isDragSelecting, onToggle = onToggleSelect)
+            } else if (!muted) Box {
                 Icon(
                     imageVector = Icons.Default.MoreHoriz,
                     contentDescription = stringResource(R.string.cd_heading_options),

@@ -607,6 +607,51 @@ class ThingsViewModel @Inject constructor(
         viewModelScope.launch { headingUseCases.discard(heading, tasksBack) }
     }
 
+    /**
+     * Множественный выбор: подзаголовки ([selection]) — в проект [projectId] (его область — [areaId]) вместе с их
+     * задачами ([com.example.domain.edits.HeadingBatch.moved]); задачи, выбранные сами по себе, переносит вызывающий
+     */
+    fun moveHeadings(selection: com.example.domain.edits.HeadingBatch.Selection, projectId: String, areaId: String?) {
+        val saved = com.example.domain.edits.HeadingBatch.moved(selection, projectId, areaId, headings.value)
+        if (saved.isEmpty()) return
+        viewModelScope.launch { taskUseCases.updateTask(saved) }
+    }
+
+    /** Множественный выбор: подзаголовки — в новый проект «[title]» вместе с задачами, выбранные отдельно задачи — туда же */
+    fun moveSelectionToNewProject(selection: com.example.domain.edits.HeadingBatch.Selection, tasks: List<ItemWithChecklist>, title: String) {
+        if (title.isBlank()) return
+        val project = NewProjects.create(title = title)
+        viewModelScope.launch {
+            projectUseCases.updateProject(project)
+            val saved = com.example.domain.edits.HeadingBatch.moved(selection, project.id, null, headings.value)
+            if (saved.isNotEmpty()) taskUseCases.updateTask(saved)
+            if (tasks.isNotEmpty()) taskUseCases.updateTask(tasks.map { TaskMoves.moved(it.item, MoveTarget.Place(project.id, null)) })
+        }
+    }
+
+    /** Множественный выбор: подзаголовки удаляются вместе с их задачами */
+    fun deleteHeadings(selected: List<Item>) {
+        if (selected.isEmpty()) return
+        viewModelScope.launch { selected.forEach { headingUseCases.delete(it) } }
+    }
+
+    /** Множественный выбор: копия каждого подзаголовка — в конце его проекта, с копиями его задач */
+    fun duplicateHeadings(selected: List<Item>) {
+        if (selected.isEmpty()) return
+        val all = tasks.value
+        viewModelScope.launch {
+            var known = headings.value
+            selected.forEach { heading ->
+                val copy = com.example.domain.edits.HeadingBatch.copy(heading, known, java.util.UUID.randomUUID().toString())
+                known = known + copy
+                headingUseCases.save(copy)
+                all.filter { it.item.headingId == heading.id }.forEach { wrapper ->
+                    taskUseCases.duplicateTask(wrapper.copy(item = wrapper.item.copy(headingId = copy.id)))
+                }
+            }
+        }
+    }
+
     /** Архивирует заголовок: он и его задачи уходят в Logbook, невыполненные отмечаются выполненными */
     fun archiveHeading(heading: Item) {
         viewModelScope.launch { headingUseCases.archive(heading) }

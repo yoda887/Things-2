@@ -57,6 +57,16 @@ fun handleCategoryListEvent(
         action(taskSelection.selected(state.allTasks))
         taskSelection.exit()
     }
+    // Подзаголовки в выборе: «Переместить», «Удалить», «Дублировать» действуют на них вместе с их задачами
+    // ([HeadingBatch]); задачи — только выбранные сами по себе, не те, что идут с подзаголовком
+    fun batchWithHeadings(action: (com.example.domain.edits.HeadingBatch.Selection, List<ItemWithChecklist>) -> Unit) {
+        val selection = com.example.domain.edits.HeadingBatch.split(
+            taskSelection.selectedIds, state.allTasks.map { it.item }, state.allHeadings
+        )
+        val own = selection.tasks.mapTo(HashSet()) { it.id }
+        action(selection, state.allTasks.filter { it.item.id in own })
+        taskSelection.exit()
+    }
     when (event) {
         // ── Переходы и окна ──
         is ThingsCategoryListEvent.ClickProject -> screen.openProject(event.project)
@@ -196,19 +206,36 @@ fun handleCategoryListEvent(
         }
         is ThingsCategoryListEvent.ToggleTaskSelection -> taskSelection.toggle(event.taskId)
         is ThingsCategoryListEvent.SetTaskSelected -> taskSelection.set(event.taskId, event.selected)
-        ThingsCategoryListEvent.SelectAllTasks -> taskSelection.selectAll(state.displayTasks.map { it.item.id })
+        // На экране проекта «Вибрати все» отмечает и его подзаголовки
+        ThingsCategoryListEvent.SelectAllTasks -> taskSelection.selectAll(
+            state.displayTasks.map { it.item.id } +
+                if (state.screen == com.example.ui.viewmodel.ActiveScreen.PROJECT_DETAIL) state.headings.map { it.id } else emptyList()
+        )
         ThingsCategoryListEvent.DeselectAllTasks -> taskSelection.deselectAll()
         ThingsCategoryListEvent.ExitSelectionMode -> taskSelection.exit()
 
         // ── Пакетные действия над выбранными задачами ──
         is ThingsCategoryListEvent.BatchCompleteTasks -> batch { viewModel.batchSetCompleted(it, event.completed) }
-        ThingsCategoryListEvent.BatchDeleteTasks -> batch { selected -> viewModel.deleteTasks(selected.map { it.item }) }
-        ThingsCategoryListEvent.BatchDuplicateTasks -> batch { viewModel.batchDuplicateTasks(it) }
+        ThingsCategoryListEvent.BatchDeleteTasks -> batchWithHeadings { headings, tasks ->
+            viewModel.deleteHeadings(headings.headings)
+            viewModel.deleteTasks(tasks.map { it.item })
+        }
+        ThingsCategoryListEvent.BatchDuplicateTasks -> batchWithHeadings { headings, tasks ->
+            viewModel.duplicateHeadings(headings.headings)
+            viewModel.batchDuplicateTasks(tasks)
+        }
         is ThingsCategoryListEvent.BatchScheduleTasks ->
             batch { viewModel.batchScheduleTasks(it, event.startDate, event.isTonight, event.section) }
-        is ThingsCategoryListEvent.BatchMoveTasksToNewProject -> batch { viewModel.moveTasksToNewProject(it, event.title) }
-        is ThingsCategoryListEvent.BatchMoveTasks ->
-            batch { viewModel.batchMoveTasks(it, event.projectId, event.areaId, event.moveToInbox, event.headingId) }
+        is ThingsCategoryListEvent.BatchMoveTasksToNewProject -> batchWithHeadings { headings, tasks ->
+            if (headings.headings.isEmpty()) viewModel.moveTasksToNewProject(tasks, event.title)
+            else viewModel.moveSelectionToNewProject(headings, tasks, event.title)
+        }
+        is ThingsCategoryListEvent.BatchMoveTasks -> batchWithHeadings { headings, tasks ->
+            // С подзаголовками окно предлагает только проекты: подзаголовок живёт в проекте
+            val projectId = event.projectId
+            if (projectId != null) viewModel.moveHeadings(headings, projectId, event.areaId)
+            if (tasks.isNotEmpty()) viewModel.batchMoveTasks(tasks, event.projectId, event.areaId, event.moveToInbox, event.headingId)
+        }
         is ThingsCategoryListEvent.BatchSetTags -> batch { viewModel.batchAddTags(it, event.tags) }
         is ThingsCategoryListEvent.BatchSetDeadline -> batch { viewModel.batchSetDeadline(it, event.deadline) }
     }

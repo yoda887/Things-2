@@ -78,7 +78,11 @@ fun TaskBatchDialogs(
     }
 
     if (dialogs.moveOpen) {
+        // Среди выбранных есть подзаголовки — их можно перенести только в проект (не во «Входящие», не в область
+        // и не под чужой подзаголовок)
+        val withHeadings = state.allHeadings.any { it.id in state.selectedTaskIds }
         ThingsMoveDialog(
+            projectsOnly = withHeadings,
             currentProjectId = null,
             currentAreaId = null,
             currentIsInbox = false,
@@ -94,7 +98,7 @@ fun TaskBatchDialogs(
                 dialogs.moveOpen = false
             },
             headings = state.allHeadings,
-            onMoveToHeading = { projectId, areaId, headingId ->
+            onMoveToHeading = if (withHeadings) null else { projectId, areaId, headingId ->
                 onEvent(ThingsCategoryListEvent.BatchMoveTasks(projectId, areaId, false, headingId))
                 dialogs.moveOpen = false
             },
@@ -162,9 +166,13 @@ fun BoxScope.TaskBatchToolbar(
         onSetTagsClick = { dialogs.tagsOpen = true },
         onSetDeadlineClick = { dialogs.deadlineOpen = true },
         onDuplicateClick = { onEvent(ThingsCategoryListEvent.BatchDuplicateTasks) },
+        // «Когда», «Срок», «Теги», «Завершить» — только к задачам: выбраны одни подзаголовки — неактивны
+        taskActionsEnabled = state.allTasks.any { state.selectedTaskIds.contains(it.item.id) },
         onShareClick = {
-            val selectedTasks = state.allTasks.filter { state.selectedTaskIds.contains(it.item.id) }
-            val shareText = selectedTasks.joinToString("\n") { "• " + it.item.title }
+            // Подзаголовок — с его задачами, затем выбранные задачи
+            val shareText = com.example.domain.edits.HeadingBatch.shareText(
+                com.example.domain.edits.HeadingBatch.split(state.selectedTaskIds, state.allTasks.map { it.item }, state.allHeadings)
+            )
             if (shareText.isNotEmpty()) {
                 val sendIntent = android.content.Intent().apply {
                     action = android.content.Intent.ACTION_SEND
