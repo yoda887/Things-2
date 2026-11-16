@@ -27,9 +27,11 @@ class TaskBatchDialogsState {
     var deleteOpen by mutableStateOf(false)
     var tagsOpen by mutableStateOf(false)
     var deadlineOpen by mutableStateOf(false)
+    /** Среди выбранных есть проекты с открытыми задачами — их завершение нужно подтвердить */
+    var completeOpen by mutableStateOf(false)
 
     /** Открыт любой из диалогов. */
-    val anyOpen: Boolean get() = whenOpen || moveOpen || deleteOpen || tagsOpen || deadlineOpen
+    val anyOpen: Boolean get() = whenOpen || moveOpen || deleteOpen || tagsOpen || deadlineOpen || completeOpen
 }
 
 /**
@@ -81,8 +83,11 @@ fun TaskBatchDialogs(
         // Среди выбранных есть подзаголовки — их можно перенести только в проект (не во «Входящие», не в область
         // и не под чужой подзаголовок)
         val withHeadings = state.allHeadings.any { it.id in state.selectedTaskIds }
+        // Среди выбранных есть проекты — только области: проект в проект не кладётся
+        val withProjects = state.allTasks.any { it.item.id in state.selectedTaskIds && com.example.domain.edits.MixedSelection.isProject(it.item) }
         ThingsMoveDialog(
             projectsOnly = withHeadings,
+            areasOnly = withProjects,
             currentProjectId = null,
             currentAreaId = null,
             currentIsInbox = false,
@@ -93,12 +98,12 @@ fun TaskBatchDialogs(
                 onEvent(ThingsCategoryListEvent.BatchMoveTasks(projectId, areaId, moveToInbox))
                 dialogs.moveOpen = false
             },
-            onMoveToNewProject = { title ->
+            onMoveToNewProject = if (withProjects) null else { title ->
                 onEvent(ThingsCategoryListEvent.BatchMoveTasksToNewProject(title))
                 dialogs.moveOpen = false
             },
             headings = state.allHeadings,
-            onMoveToHeading = if (withHeadings) null else { projectId, areaId, headingId ->
+            onMoveToHeading = if (withHeadings || withProjects) null else { projectId, areaId, headingId ->
                 onEvent(ThingsCategoryListEvent.BatchMoveTasks(projectId, areaId, false, headingId))
                 dialogs.moveOpen = false
             },
@@ -133,6 +138,23 @@ fun TaskBatchDialogs(
         )
     }
 
+    if (dialogs.completeOpen) {
+        // Как у проектов главного экрана: завершение проекта завершает и его открытые задачи
+        val count = state.allTasks.count { it.item.id in state.selectedTaskIds && com.example.domain.edits.MixedSelection.isProject(it.item) }
+        com.example.ui.components.ThingsConfirmDialog(
+            title = androidx.compose.ui.res.stringResource(com.example.R.string.batch_complete_projects_title),
+            message = androidx.compose.ui.res.pluralStringResource(com.example.R.plurals.batch_complete_projects_message, count, count),
+            confirmText = androidx.compose.ui.res.stringResource(com.example.R.string.project_complete),
+            dismissText = androidx.compose.ui.res.stringResource(com.example.R.string.cancel),
+            onConfirm = {
+                dialogs.completeOpen = false
+                onEvent(ThingsCategoryListEvent.BatchCompleteTasks(true))
+            },
+            onDismiss = { dialogs.completeOpen = false },
+            destructive = false
+        )
+    }
+
     if (dialogs.deadlineOpen) {
         DeadlineDatePickerDialog(
             initialSelectedDateMillis = null,
@@ -162,7 +184,15 @@ fun BoxScope.TaskBatchToolbar(
         onWhenClick = { dialogs.whenOpen = true },
         onMoveClick = { dialogs.moveOpen = true },
         onDeleteClick = { dialogs.deleteOpen = true },
-        onCompleteClick = { onEvent(ThingsCategoryListEvent.BatchCompleteTasks(true)) },
+        onCompleteClick = {
+            // Проекты с открытыми задачами — с подтверждением, как на главном экране
+            val parts = com.example.domain.edits.MixedSelection.split(state.allTasks.filter { it.item.id in state.selectedTaskIds })
+            if (com.example.domain.edits.MixedSelection.projectsWithOpenTasks(parts.projects, state.allTasks).isNotEmpty()) {
+                dialogs.completeOpen = true
+            } else {
+                onEvent(ThingsCategoryListEvent.BatchCompleteTasks(true))
+            }
+        },
         onSetTagsClick = { dialogs.tagsOpen = true },
         onSetDeadlineClick = { dialogs.deadlineOpen = true },
         onDuplicateClick = { onEvent(ThingsCategoryListEvent.BatchDuplicateTasks) },

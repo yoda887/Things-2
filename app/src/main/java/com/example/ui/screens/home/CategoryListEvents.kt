@@ -215,28 +215,60 @@ fun handleCategoryListEvent(
         ThingsCategoryListEvent.ExitSelectionMode -> taskSelection.exit()
 
         // ── Пакетные действия над выбранными задачами ──
-        is ThingsCategoryListEvent.BatchCompleteTasks -> batch { viewModel.batchSetCompleted(it, event.completed) }
-        ThingsCategoryListEvent.BatchDeleteTasks -> batchWithHeadings { headings, tasks ->
+        // Среди выбранного могут быть проекты (строки смешанных списков) — к ним свои правила ([MixedSelection])
+        is ThingsCategoryListEvent.BatchCompleteTasks -> batch { selected ->
+            val parts = com.example.domain.edits.MixedSelection.split(selected)
+            viewModel.batchSetCompleted(parts.tasks, event.completed)
+            if (event.completed) parts.projects.forEach { viewModel.completeProject(it) }
+        }
+        ThingsCategoryListEvent.BatchDeleteTasks -> batchWithHeadings { headings, selected ->
+            val parts = com.example.domain.edits.MixedSelection.split(selected)
             viewModel.deleteHeadings(headings.headings)
-            viewModel.deleteTasks(tasks.map { it.item })
+            parts.projects.forEach { viewModel.deleteProject(it) }
+            viewModel.deleteTasks(parts.tasks.map { it.item })
         }
-        ThingsCategoryListEvent.BatchDuplicateTasks -> batchWithHeadings { headings, tasks ->
+        ThingsCategoryListEvent.BatchDuplicateTasks -> batchWithHeadings { headings, selected ->
+            val parts = com.example.domain.edits.MixedSelection.split(selected)
             viewModel.duplicateHeadings(headings.headings)
-            viewModel.batchDuplicateTasks(tasks)
+            parts.projects.forEach { viewModel.duplicateProject(it) }
+            viewModel.batchDuplicateTasks(parts.tasks)
         }
-        is ThingsCategoryListEvent.BatchScheduleTasks ->
-            batch { viewModel.batchScheduleTasks(it, event.startDate, event.isTonight, event.section) }
+        is ThingsCategoryListEvent.BatchScheduleTasks -> batch { selected ->
+            val parts = com.example.domain.edits.MixedSelection.split(selected)
+            viewModel.batchScheduleTasks(parts.tasks, event.startDate, event.isTonight, event.section)
+            parts.projects.forEach {
+                viewModel.editProject(it, com.example.domain.edits.ProjectEdit.Start(event.section, event.startDate, event.isTonight))
+            }
+        }
         is ThingsCategoryListEvent.BatchMoveTasksToNewProject -> batchWithHeadings { headings, tasks ->
             if (headings.headings.isEmpty()) viewModel.moveTasksToNewProject(tasks, event.title)
             else viewModel.moveSelectionToNewProject(headings, tasks, event.title)
         }
-        is ThingsCategoryListEvent.BatchMoveTasks -> batchWithHeadings { headings, tasks ->
+        is ThingsCategoryListEvent.BatchMoveTasks -> batchWithHeadings { headings, selected ->
             // С подзаголовками окно предлагает только проекты: подзаголовок живёт в проекте
             val projectId = event.projectId
             if (projectId != null) viewModel.moveHeadings(headings, projectId, event.areaId)
-            if (tasks.isNotEmpty()) viewModel.batchMoveTasks(tasks, event.projectId, event.areaId, event.moveToInbox, event.headingId)
+            val parts = com.example.domain.edits.MixedSelection.split(selected)
+            if (parts.hasProjects) {
+                // С проектами окно предлагает только области: проекты и задачи — туда, без проекта
+                parts.projects.forEach { viewModel.editProject(it, com.example.domain.edits.ProjectEdit.MoveToArea(event.areaId)) }
+                if (parts.hasTasks) viewModel.batchMoveTasks(parts.tasks, null, event.areaId, false)
+            } else if (parts.hasTasks) {
+                viewModel.batchMoveTasks(parts.tasks, event.projectId, event.areaId, event.moveToInbox, event.headingId)
+            }
         }
-        is ThingsCategoryListEvent.BatchSetTags -> batch { viewModel.batchAddTags(it, event.tags) }
-        is ThingsCategoryListEvent.BatchSetDeadline -> batch { viewModel.batchSetDeadline(it, event.deadline) }
+        // Теги — и задачам, и проектам: добавляются к уже стоящим
+        is ThingsCategoryListEvent.BatchSetTags -> batch { selected ->
+            val parts = com.example.domain.edits.MixedSelection.split(selected)
+            viewModel.batchAddTags(parts.tasks, event.tags)
+            parts.projects.forEach {
+                viewModel.editProject(it, com.example.domain.edits.ProjectEdit.Tags(com.example.domain.tag.TagTitles.clean(it.tags + event.tags)))
+            }
+        }
+        is ThingsCategoryListEvent.BatchSetDeadline -> batch { selected ->
+            val parts = com.example.domain.edits.MixedSelection.split(selected)
+            viewModel.batchSetDeadline(parts.tasks, event.deadline)
+            parts.projects.forEach { viewModel.editProject(it, com.example.domain.edits.ProjectEdit.Deadline(event.deadline)) }
+        }
     }
 }

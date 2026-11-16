@@ -141,6 +141,15 @@ import androidx.activity.compose.BackHandler
 import androidx.compose.ui.platform.LocalContext
 
 // Плашка места вставки «+», промежуток и подзаголовок проекта при перетаскивании
+/**
+ * Экраны, где проекты стоят строками вместе с задачами: там проект свайпается, как задача, и выбирается вместе с
+ * задачами. На главном экране и в списках одних проектов у проектов свой выбор, в «Журнале» и поиске его нет
+ */
+private val MIXED_PROJECT_SCREENS = setOf(
+    ActiveScreen.TODAY, ActiveScreen.UPCOMING, ActiveScreen.AREA_DETAIL, ActiveScreen.TAG_DETAIL,
+    ActiveScreen.SOMEDAY, ActiveScreen.ANYTIME
+)
+
 private val FAB_GAP_HEIGHT = 44.dp
 private val NEW_HEADING_TEXT_ZONE = 22.dp
 private val NEW_HEADING_TEXT_BOTTOM = 3.dp
@@ -486,6 +495,11 @@ fun ThingsCategoryListPanel(
     // «Все проекты»: раскрытые группы поздних проектов и показ завершённых — пока открыт экран
     var expandedLaterProjects by remember(screen) { mutableStateOf(emptySet<String>()) }
     var showLoggedProjects by remember(screen) { mutableStateOf(false) }
+    // Проект строкой среди задач (не на главном экране и не в списках одних проектов): свайпы, как у задачи, и общий
+    // с задачами выбор (пакетные действия — MixedSelection)
+    val mixedProjectScreen = screen in MIXED_PROJECT_SCREENS && !laterProjects.enabled
+    // Проект, для которого свайпом вправо открыт «Когда», и точка, из которой окно вырастает
+    var mixedWhenProject by remember { mutableStateOf<Pair<Item, androidx.compose.ui.geometry.Offset?>?>(null) }
     val flattened = rememberFlattenedList(
         screen = screen,
         standardToday = standardToday,
@@ -517,6 +531,12 @@ fun ThingsCategoryListPanel(
         todayNewCount = if (screen == ActiveScreen.TODAY) todayNew.ids.size else 0,
         todayGroupedDay = screen == ActiveScreen.TODAY && com.example.ui.components.LocalTodayGrouped.current
     )
+    val mixedProjectIds = remember(flattened, mixedProjectScreen) {
+        if (!mixedProjectScreen) emptySet()
+        else flattened.filterIsInstance<Item>()
+            .filter { com.example.domain.edits.MixedSelection.isProject(it) && !LogbookList.includesProject(it) }
+            .mapTo(LinkedHashSet()) { it.id }
+    }
 
     // ── Добавление перетаскиванием кнопки «+» (см. FabDragController) ──
     val fabDrag = LocalFabDragController.current
@@ -1452,14 +1472,28 @@ fun ThingsCategoryListPanel(
                             if (task.type == Item.TYPE_PROJECT || task.type == Item.TYPE_PROJECT_TEMPLATE) {
                                 // Извлеченный подкомпонент строки проекта (и шаблона повторяющегося проекта)
                                 val laterGestures = laterProjects.enabled && task.type == Item.TYPE_PROJECT
+                                val mixedGestures = mixedProjectScreen && com.example.domain.edits.MixedSelection.isProject(task) &&
+                                    !LogbookList.includesProject(task)
                                 ProjectItemRow(
                                     project = task,
                                     isNew = screen == ActiveScreen.TODAY && task.id in todayNew.ids,
-                                    isSelectionMode = laterProjects.enabled && laterProjects.selection.isSelectionMode,
-                                    isSelected = task.id in laterProjects.selection.selectedIds,
-                                    isDragSelecting = laterGestures && laterProjects.isDragSelecting,
-                                    onToggleSelect = { laterProjects.selection.toggle(task) },
-                                    swipe = if (laterGestures) laterProjects.rowSwipe(task, dragDropState) else null,
+                                    isSelectionMode = if (mixedGestures) state.isSelectionMode else laterProjects.enabled && laterProjects.selection.isSelectionMode,
+                                    isSelected = if (mixedGestures) task.id in state.selectedTaskIds else task.id in laterProjects.selection.selectedIds,
+                                    isDragSelecting = (laterGestures && laterProjects.isDragSelecting) || (mixedGestures && isDragSelecting),
+                                    onToggleSelect = {
+                                        if (mixedGestures) onEvent(ThingsCategoryListEvent.ToggleTaskSelection(task.id))
+                                        else laterProjects.selection.toggle(task)
+                                    },
+                                    swipe = when {
+                                        laterGestures -> laterProjects.rowSwipe(task, dragDropState)
+                                        // Как у задачи: влево — выбор, вправо — «Когда»
+                                        mixedGestures -> com.example.ui.screens.home.subcomponents.ProjectRowSwipe(
+                                            onSwipeLeft = { onEvent(ThingsCategoryListEvent.SwipeTaskLeft(ItemWithChecklist(task))) },
+                                            onSwipeRight = { origin -> mixedWhenProject = task to origin },
+                                            enabled = dragDropState.draggedItemKey == null
+                                        )
+                                        else -> null
+                                    },
                                     stackHidden = laterGestures && task.id != dragDropState.draggedItemKey &&
                                         task.id in dragDropState.stackedDragKeys,
                                     stackSize = if (laterGestures && task.id == dragDropState.draggedItemKey) dragDropState.stackedDragKeys.size else 0,
@@ -1956,9 +1990,14 @@ fun ThingsCategoryListPanel(
                 selectedCount = state.selectedTaskIds.size,
                 // На экране проекта «все» — это и его подзаголовки
                 isAllSelected = state.selectedTaskIds.isNotEmpty() && state.selectedTaskIds.size ==
-                    state.displayTasks.size + if (screen == ActiveScreen.PROJECT_DETAIL) state.headings.size else 0,
+                    state.displayTasks.size + (if (screen == ActiveScreen.PROJECT_DETAIL) state.headings.size else 0) +
+                    mixedProjectIds.size,
                 onCancelSelection = { onEvent(ThingsCategoryListEvent.ExitSelectionMode) },
-                onSelectAllClick = { onEvent(ThingsCategoryListEvent.SelectAllTasks) },
+                onSelectAllClick = {
+                    onEvent(ThingsCategoryListEvent.SelectAllTasks)
+                    // Проекты строками экрана — тоже
+                    mixedProjectIds.forEach { onEvent(ThingsCategoryListEvent.SetTaskSelected(it, true)) }
+                },
                 onDeselectAllClick = { onEvent(ThingsCategoryListEvent.DeselectAllTasks) },
                 onEnterSelectionMode = { onEvent(ThingsCategoryListEvent.EnterSelectionMode(null)) }
             ),
@@ -2248,6 +2287,16 @@ fun ThingsCategoryListPanel(
     // Диалоги пакетных действий над выбранными задачами
     TaskBatchDialogs(batchDialogs, state, onEvent)
 
+    // «Когда» проекта по свайпу вправо в смешанном списке — как у проектов главного экрана
+    mixedWhenProject?.let { (project, origin) ->
+        ProjectSwipeWhenDialog(
+            project = project,
+            growFromOffset = origin,
+            onEditProject = { p, edit -> onEvent(ThingsCategoryListEvent.EditProject(p, edit)) },
+            onDismiss = { mixedWhenProject = null }
+        )
+    }
+
     if (tagFilterDialogOpen) {
         com.example.ui.screens.home.inlineeditor.dialogs.TagFilterDialog(
             tags = allTags.toList(),
@@ -2301,7 +2350,11 @@ fun ThingsCategoryListPanel(
             bottomPadding = LIST_BOTTOM_PADDING,
             listOffsetY = { pullOffset.value },
             // Ключ строки подзаголовка — с приставкой HEADING_PREFIX; отмечается сам подзаголовок
-            isSelectable = { key -> state.allTasks.any { it.item.id == key } || key.startsWith(TaskListKeys.HEADING_PREFIX) },
+            // Проекты — только строками смешанных списков (на остальных экранах их выбор — свой или его нет)
+            isSelectable = { key ->
+                key.startsWith(TaskListKeys.HEADING_PREFIX) || key in mixedProjectIds ||
+                    state.allTasks.any { it.item.id == key && !com.example.domain.edits.MixedSelection.isProject(it.item) }
+            },
             isSelected = { key -> key.removePrefix(TaskListKeys.HEADING_PREFIX) in state.selectedTaskIds },
             onSelect = { key, selected ->
                 onEvent(ThingsCategoryListEvent.SetTaskSelected(key.removePrefix(TaskListKeys.HEADING_PREFIX), selected))
