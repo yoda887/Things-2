@@ -17,7 +17,8 @@
     "test/ui/theme/DesignSystemDocGenerator.kt",
     "test/ui/theme/DesignSystemDocSyncTest.kt",
     "test/ui/theme/DesignSystemEnforcementTest.kt",
-    "test/ui/theme/StringsTranslationTest.kt"
+    "test/ui/theme/StringsTranslationTest.kt",
+    "ui/screens/settings/ReminderSettingsCard.kt"
   ],
   "desktop_owned": [
     "ThingsApplication.kt",

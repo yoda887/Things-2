@@ -247,6 +247,13 @@
     <string name="settings_today_grouped_hint">The day part of Today — under its projects and areas; This Evening stays as it is</string>
     <string name="settings_dates_month_name">Month as a word in dates</string>
     <string name="settings_dates_month_name_hint">Dates on to-do and project cards in every list: “9 Oct” instead of “9.10.”</string>
+    <string name="settings_reminders">Reminders</string>
+    <string name="settings_reminders_hint">For reminders to arrive when the app is closed and the screen is off, allow it to run in the background</string>
+    <string name="settings_reminders_battery">Battery: no restrictions</string>
+    <string name="settings_reminders_battery_on">Allowed</string>
+    <string name="settings_reminders_battery_off">Restricted — reminders may be late or missed</string>
+    <string name="settings_reminders_autostart">Autostart</string>
+    <string name="settings_reminders_autostart_hint">Turn on for Things — otherwise closing the app stops its reminders</string>
     <plurals name="repeat_days_earlier"><item quantity="one">%d day earlier</item><item quantity="other">%d days earlier</item></plurals>
     <plurals name="repeat_repetitions"><item quantity="one">%d repetition</item><item quantity="other">%d repetitions</item></plurals>
     <plurals name="repeat_ends_after"><item quantity="one">after %d repetition</item><item quantity="other">after %d repetitions</item></plurals>

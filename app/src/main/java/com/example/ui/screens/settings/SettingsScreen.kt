@@ -115,6 +115,14 @@ fun SettingsScreen(
                 )
             }
             item {
+                ReminderSettingsCard(
+                    textPrimaryColor = textPrimaryColor,
+                    textSecondaryColor = textSecondaryColor,
+                    cardSurfaceColor = cardSurfaceColor,
+                    dividerColor = dividerColor
+                )
+            }
+            item {
                 GoogleTasksSyncCard(
                     googleToken = googleToken,
                     syncError = syncError,
