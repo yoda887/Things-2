@@ -746,14 +746,15 @@ fun AnimatedTaskItem(
                                 )
                             ),
                         onSwipeLeft = { onEvent(ThingsCategoryListEvent.SwipeTaskLeft(taskWrapper)) },
+                        // В режиме мультивыбора свайп вправо закрывает режим выбора, как в Things (не окно «Когда»)
                         onSwipeRight = {
-                            onEvent(ThingsCategoryListEvent.SwipeTaskRight(taskWrapper, rowCenter.value))
+                            if (isSelectionMode) onEvent(ThingsCategoryListEvent.ExitSelectionMode)
+                            else onEvent(ThingsCategoryListEvent.SwipeTaskRight(taskWrapper, rowCenter.value))
                         },
                         enabled = inlineExpandedTaskId == null
                                 && dragDropState.draggedItemKey == null
                                 && !task.id.startsWith("cal_"),
-                        // В режиме мультивыбора свайп вправо не вызывает диалог When
-                        swipeRightEnabled = !isSelectionMode
+                        swipeRightPlain = isSelectionMode
                     ) {
                         TaskItemRow(
                             modifier = Modifier,

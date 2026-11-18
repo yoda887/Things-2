@@ -1490,7 +1490,8 @@ fun ThingsCategoryListPanel(
                                         mixedGestures -> com.example.ui.screens.home.subcomponents.ProjectRowSwipe(
                                             onSwipeLeft = { onEvent(ThingsCategoryListEvent.SwipeTaskLeft(ItemWithChecklist(task))) },
                                             onSwipeRight = { origin -> mixedWhenProject = task to origin },
-                                            enabled = dragDropState.draggedItemKey == null
+                                            enabled = dragDropState.draggedItemKey == null,
+                                            onExitSelection = { onEvent(ThingsCategoryListEvent.ExitSelectionMode) }
                                         )
                                         else -> null
                                     },

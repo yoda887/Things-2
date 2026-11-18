@@ -67,7 +67,8 @@ class LaterProjectsController(
     fun rowSwipe(project: Item, dragDropState: GenericDragDropState) = ProjectRowSwipe(
         onSwipeLeft = { selection.swipeSelect(project) },
         onSwipeRight = { origin -> selection.openWhen(project, origin) },
-        enabled = dragDropState.draggedItemKey == null
+        enabled = dragDropState.draggedItemKey == null,
+        onExitSelection = selection::exit
     )
 
     /** Верхний бар в режиме выбора проектов: крестик отмены, «Вибрати все» / «Зняти вибір», как у задач. */

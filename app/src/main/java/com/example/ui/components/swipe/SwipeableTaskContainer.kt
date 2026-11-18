@@ -55,7 +55,9 @@ private enum class SwipeDirection {
  * @param onSwipeLeft Callback при успешном свайпе влево (мультиселекция)
  * @param onSwipeRight Callback при успешном свайпе вправо (When/Календарь)
  * @param enabled Включён ли свайп (блокируется при inline editor, drag-and-drop, cal_ задачах)
- * @param swipeRightEnabled Разрешён ли свайп вправо (выключен в режиме мультивыбора)
+ * @param swipeRightEnabled Разрешён ли свайп вправо
+ * @param swipeRightPlain Свайп вправо без значка календаря, на синем фоне — как в Things в режиме мультивыбора,
+ *   где он закрывает режим выбора (что сделать, решает [onSwipeRight] вызывающего)
  * @param content Содержимое контейнера
  */
 @Composable
@@ -65,6 +67,7 @@ fun SwipeableTaskContainer(
     onSwipeRight: () -> Unit,
     enabled: Boolean = true,
     swipeRightEnabled: Boolean = true,
+    swipeRightPlain: Boolean = false,
     content: @Composable () -> Unit
 ) {
     // Текущее смещение элемента по горизонтали (в пикселях)
@@ -104,7 +107,7 @@ fun SwipeableTaskContainer(
     // Цвет и иконка фона в зависимости от зафиксированного направления
     val backgroundColor = when (lockedDirection) {
         SwipeDirection.LEFT -> ThingsTheme.colors.accent
-        SwipeDirection.RIGHT -> ThingsTheme.colors.swipeWhen
+        SwipeDirection.RIGHT -> if (swipeRightPlain) ThingsTheme.colors.accent else ThingsTheme.colors.swipeWhen
         SwipeDirection.NONE -> Color.Transparent
     }
 
@@ -129,7 +132,7 @@ fun SwipeableTaskContainer(
                     },
                 contentAlignment = if (lockedDirection == SwipeDirection.LEFT) Alignment.CenterEnd else Alignment.CenterStart
             ) {
-                if (lockedDirection == SwipeDirection.RIGHT) {
+                if (lockedDirection == SwipeDirection.RIGHT && !swipeRightPlain) {
                     // Свайп вправо → When/Календарь → AppIcons.Upcoming
                     Icon(
                         imageVector = AppIcons.Upcoming,

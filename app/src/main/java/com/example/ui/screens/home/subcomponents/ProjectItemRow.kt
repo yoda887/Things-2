@@ -304,10 +304,11 @@ fun ProjectItemRow(
                             rowCenter = coordinates.boundsInRoot().center - Offset(root.size.width / 2f, root.size.height / 2f)
                         },
                         onSwipeLeft = swipe.onSwipeLeft,
-                        onSwipeRight = { swipe.onSwipeRight(rowCenter) },
+                        // В режиме мультивыбора свайп вправо закрывает режим выбора, как в Things
+                        onSwipeRight = { if (isSelectionMode) swipe.onExitSelection() else swipe.onSwipeRight(rowCenter) },
                         enabled = swipe.enabled,
                         // В режиме выбора свайп вправо «Когда» не вызывает — как у задач
-                        swipeRightEnabled = !isSelectionMode
+                        swipeRightPlain = isSelectionMode
                     ) {
                         rowContent(Modifier.background(ThingsTheme.colors.background))
                     }
@@ -347,5 +348,7 @@ private fun BoxScope.StackCard(offset: androidx.compose.ui.unit.Dp, rotation: Fl
 class ProjectRowSwipe(
     val onSwipeLeft: () -> Unit,
     val onSwipeRight: (Offset?) -> Unit,
-    val enabled: Boolean = true
+    val enabled: Boolean = true,
+    // Свайп вправо в режиме выбора — закрыть режим
+    val onExitSelection: () -> Unit = {}
 )
