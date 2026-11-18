@@ -86,6 +86,10 @@ fun SwipeableTaskContainer(
 
     // Зафиксированное направление свайпа
     var lockedDirection by remember { mutableStateOf(SwipeDirection.NONE) }
+    // Вид свайпа вправо запоминается в начале жеста и держится до возврата карточки на место: в режиме выбора
+    // свайп его закрывает уже при отпускании, и без этого подложка на возврате стала бы жёлтой с календарём
+    val currentSwipeRightPlain by rememberUpdatedState(swipeRightPlain)
+    var rightPlain by remember { mutableStateOf(swipeRightPlain) }
 
     /**
      * Плавный возврат карточки в исходное положение с адаптивной длительностью,
@@ -107,7 +111,7 @@ fun SwipeableTaskContainer(
     // Цвет и иконка фона в зависимости от зафиксированного направления
     val backgroundColor = when (lockedDirection) {
         SwipeDirection.LEFT -> ThingsTheme.colors.accent
-        SwipeDirection.RIGHT -> if (swipeRightPlain) ThingsTheme.colors.accent else ThingsTheme.colors.swipeWhen
+        SwipeDirection.RIGHT -> if (rightPlain) ThingsTheme.colors.accent else ThingsTheme.colors.swipeWhen
         SwipeDirection.NONE -> Color.Transparent
     }
 
@@ -132,7 +136,7 @@ fun SwipeableTaskContainer(
                     },
                 contentAlignment = if (lockedDirection == SwipeDirection.LEFT) Alignment.CenterEnd else Alignment.CenterStart
             ) {
-                if (lockedDirection == SwipeDirection.RIGHT && !swipeRightPlain) {
+                if (lockedDirection == SwipeDirection.RIGHT && !rightPlain) {
                     // Свайп вправо → When/Календарь → AppIcons.Upcoming
                     Icon(
                         imageVector = AppIcons.Upcoming,
@@ -220,6 +224,7 @@ fun SwipeableTaskContainer(
                                             if (absDx > absDy * 1.5f && absDx > touchSlopPx && (toLeft || swipeRightEnabled)) {
                                                 isHorizontalSwipe = true
                                                 swipeOriginX = rawOffsetX
+                                                rightPlain = currentSwipeRightPlain
                                                 lockedDirection = if (toLeft) SwipeDirection.LEFT else SwipeDirection.RIGHT
                                                 change.consume()
                                             } else {
