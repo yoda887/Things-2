@@ -1341,61 +1341,21 @@ private fun wheelIndices(day: RepeatDay): Pair<Int, Int> = when (day) {
 private fun key(value: Any, content: @Composable () -> Unit) = androidx.compose.runtime.key(value) { content() }
 
 /**
- * Правило предложением, как в карточке шаблона Things: «Повторювати щотижня: понеділок, вівторок і субота»,
- * «Повторювати кожні 3 місяці: 23-й день, 25-й день і 27-й день», «Повторювати через 1 день після виконання
- * попереднього». Дни недели — полными названиями, последний — через «і».
+ * Правило предложением, как в карточке шаблона Things: «Повторювати щотижня по понеділках, вівторках і суботах»,
+ * «Повторювати кожні 3 місяці 23-го, 25-го і 27-го числа», «Повторювати через 1 день після виконання попереднього».
  */
 @Composable
 fun repeatRuleSentence(rule: RepeatRule): String {
     if (rule.afterCompletion) return stringResource(R.string.repeat_sentence_after, unitText(rule.unit, rule.interval))
-    val every = if (rule.interval == 1) {
-        stringResource(
-            when (rule.unit) {
-                RepeatUnit.DAY -> R.string.repeat_every_one_day
-                RepeatUnit.WEEK -> R.string.repeat_every_one_week
-                RepeatUnit.MONTH -> R.string.repeat_every_one_month
-                RepeatUnit.YEAR -> R.string.repeat_every_one_year
-            }
-        )
-    } else "${stringResource(R.string.repeat_every)} ${rule.interval} ${unitName(rule.unit, rule.interval)}"
-    val parts = when (rule.unit) {
-        RepeatUnit.DAY -> emptyList()
-        RepeatUnit.WEEK -> rule.on.mapNotNull { (it.day as? RepeatDay.Weekday)?.dayOfWeek }
-            .map { DayOfWeek.of(it).getDisplayName(TextStyle.FULL_STANDALONE, Locale.getDefault()) }
-        else -> rule.on.map { entryText(it, rule.unit == RepeatUnit.YEAR) }
-    }
-    val and = stringResource(R.string.repeat_list_and)
-    val list = when (parts.size) {
-        0 -> ""
-        1 -> parts[0]
-        else -> parts.dropLast(1).joinToString(", ") + " $and " + parts.last()
-    }
-    val head = stringResource(R.string.repeat_sentence, every.replaceFirstChar { it.lowercase() })
-    return if (list.isEmpty()) head else "$head: $list"
+    return stringResource(R.string.repeat_sentence, repeatRulePhrase(rule).replaceFirstChar { it.lowercase() })
 }
 
 /**
- * Краткое описание правила для редактора шаблона: «Щотижня: ср», «Кожні 2 місяці: 1-й пн»,
+ * Краткое описание правила — для копии и строки под задачей: «Щотижня по середах», «Кожні 2 місяці у 1-й понеділок»,
  * «Через тиждень після виконання».
  */
 @Composable
 fun repeatRuleSummary(rule: RepeatRule): String {
     if (rule.afterCompletion) return stringResource(R.string.repeat_summary_after, unitText(rule.unit, rule.interval))
-    val every = if (rule.interval == 1) {
-        stringResource(
-            when (rule.unit) {
-                RepeatUnit.DAY -> R.string.repeat_every_one_day
-                RepeatUnit.WEEK -> R.string.repeat_every_one_week
-                RepeatUnit.MONTH -> R.string.repeat_every_one_month
-                RepeatUnit.YEAR -> R.string.repeat_every_one_year
-            }
-        )
-    } else "${stringResource(R.string.repeat_every)} ${rule.interval} ${unitName(rule.unit, rule.interval)}"
-    val on = when (rule.unit) {
-        RepeatUnit.DAY -> ""
-        RepeatUnit.WEEK -> rule.on.mapNotNull { (it.day as? RepeatDay.Weekday)?.dayOfWeek }
-            .joinToString(", ") { DayOfWeek.of(it).getDisplayName(TextStyle.SHORT_STANDALONE, Locale.getDefault()) }
-        else -> rule.on.map { entryText(it, rule.unit == RepeatUnit.YEAR) }.joinToString("; ")
-    }
-    return if (on.isEmpty()) every else "$every: $on"
+    return repeatRulePhrase(rule)
 }
