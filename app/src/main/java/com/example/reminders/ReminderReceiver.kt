@@ -22,7 +22,6 @@ import dagger.hilt.android.AndroidEntryPoint
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.launch
 import javax.inject.Inject
-import kotlin.math.abs
 
 /**
  * Срабатывание напоминания: показывает уведомление с названием задачи. Перед показом сверяется с
@@ -79,9 +78,10 @@ class ReminderReceiver : BroadcastReceiver() {
             try {
                 val item = dao.getItemById(taskId)
                 val now = System.currentTimeMillis()
-                // Напоминание ещё в силе и это его время (а не будильник, оставшийся от прежнего времени)
+                // Напоминание ещё в силе и его время пришло (а не будильник, оставшийся от прежнего времени).
+                // Опоздавшее — тоже, до конца дня: телефон мог придержать будильник ([Reminders.shouldShow])
                 val fireAt = item?.let { Reminders.fireAt(it, now) }
-                if (item != null && fireAt != null && abs(fireAt - now) <= STALE_TOLERANCE_MS) {
+                if (item != null && fireAt != null && Reminders.shouldShow(fireAt, now)) {
                     show(context, taskId, item.title)
                 }
             } finally {
@@ -155,9 +155,6 @@ class ReminderReceiver : BroadcastReceiver() {
         const val EXTRA_TASK_ID = "task_id"
         const val EXTRA_TITLE = "title"
         private const val CHANNEL_ID = "reminders"
-
-        /** Будильник считается своим, если сработал не позже этого после назначенного времени (Doze откладывает) */
-        private const val STALE_TOLERANCE_MS = 15 * 60 * 1000L
 
         /** Канал уведомлений «Напоминания» — создаётся при первом показе, повторное создание ничего не меняет */
         fun ensureChannel(context: Context) {

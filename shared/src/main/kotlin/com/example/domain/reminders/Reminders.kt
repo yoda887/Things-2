@@ -30,6 +30,22 @@ object Reminders {
         }.timeInMillis
     }
 
+    /**
+     * Показывать ли напоминание, будильник которого сработал в [now], а по задаче оно должно сработать в [fireAt].
+     * Раньше времени — нет: это будильник, оставшийся от прежнего, более раннего времени (напоминание перенесли
+     * позже). Опоздавшее — да, до конца того же дня: телефон мог придержать будильник (сон, экономия батареи) —
+     * лучше напомнить позже, чем потерять напоминание.
+     */
+    fun shouldShow(fireAt: Long, now: Long): Boolean {
+        if (now < fireAt - EARLY_TOLERANCE_MS) return false
+        val day = Calendar.getInstance().apply { timeInMillis = fireAt }
+        val current = Calendar.getInstance().apply { timeInMillis = now }
+        return day.get(Calendar.YEAR) == current.get(Calendar.YEAR) && day.get(Calendar.DAY_OF_YEAR) == current.get(Calendar.DAY_OF_YEAR)
+    }
+
+    /** Будильник может сработать чуть раньше своего времени — на столько не считается «раньше» */
+    const val EARLY_TOLERANCE_MS = 60_000L
+
     /** Напоминания, которые ещё впереди: задача и момент срабатывания, по времени. */
     fun upcoming(items: List<Item>, now: Long = System.currentTimeMillis()): List<Pair<Item, Long>> =
         items.mapNotNull { item -> fireAt(item, now)?.takeIf { it > now }?.let { item to it } }

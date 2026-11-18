@@ -6,6 +6,8 @@ import com.example.domain.edits.TaskEditorFields
 import com.example.domain.edits.TaskEdits
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNull
+import org.junit.Assert.assertTrue
+import org.junit.Assert.assertFalse
 import org.junit.Test
 import java.util.Calendar
 
@@ -104,5 +106,20 @@ class RemindersTest {
         assertEquals(Item.START_ANYTIME, snoozed.start)
         assertEquals(false, snoozed.isTonight)
         assertEquals(at(11, 0, 30), Reminders.fireAt(snoozed, late))
+    }
+
+    @Test
+    fun shouldShow_lateSameDay_yes_earlyOrNextDay_no() {
+        val at = java.util.Calendar.getInstance().apply { set(2026, 10, 18, 9, 0, 0); set(java.util.Calendar.MILLISECOND, 0) }.timeInMillis
+        val hour = 3_600_000L
+        // Вовремя и с опозданием в тот же день — показывать
+        assertTrue(Reminders.shouldShow(at, at))
+        assertTrue(Reminders.shouldShow(at, at + 5 * hour))
+        // Будильник от прежнего, более раннего времени (напоминание перенесли на 9:00) — нет
+        assertFalse(Reminders.shouldShow(at, at - hour))
+        // Чуть раньше — в пределах допуска
+        assertTrue(Reminders.shouldShow(at, at - 30_000))
+        // На следующий день — уже нет
+        assertFalse(Reminders.shouldShow(at, at + 16 * hour))
     }
 }
