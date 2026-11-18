@@ -10,7 +10,6 @@ import androidx.compose.material.icons.filled.Stop
 import androidx.compose.material.icons.filled.Pause
 import androidx.compose.material.icons.filled.PlayArrow
 import androidx.compose.material.icons.filled.History
-import androidx.compose.material.icons.filled.ChevronRight
 import androidx.compose.material.icons.filled.Notifications
 import com.example.ui.viewmodel.ActiveScreen
 import com.example.ui.theme.ThingsElevation
@@ -38,6 +37,7 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.text.TextStyle
+import androidx.compose.ui.text.withStyle
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
@@ -926,8 +926,8 @@ fun DeadlineDatePickerDialog(
 /**
  * Строка повтора в редакторе, как в Things. У шаблона — синяя стрелка, «Повтор» и ближайшая дата повтора
  * серым («22 жовт.…», троеточие — если повторы есть и дальше), иначе просто «Чекає» или «Пауза»; нажатие — меню
- * действий; у копии — «Це копія повторюваного завдання –» и ниже, от левого края, правило шаблона серым с «›» в
- * конце; нажатие ведёт к шаблону. У обычной задачи строки нет.
+ * действий; у копии — «Це копія повторюваного завдання» и ниже правило шаблона серым, с того же края, что и текст
+ * над ним; нажатие ведёт к шаблону. У обычной задачи строки нет.
  */
 @Composable
 internal fun RepeatEditorRow(
@@ -996,21 +996,24 @@ internal fun RepeatEditorRow(
             )
         }
     val ruleText = rule?.let { com.example.ui.screens.home.inlineeditor.dialogs.repeatRuleSentence(it) } ?: repeatLabel
+    val density = LocalDensity.current
+    val iconEm = with(density) { (ThingsIconSize.S + ThingsSpacing.XXS).toSp() }
+    // Значок копии вместе с промежутком после него — заданной ширины: правило под ним встаёт ровно под начало текста
+    val copyIconEm = with(density) { (ThingsIconSize.S + ThingsSpacing.XXS + ThingsSpacing.XS).toSp() }
     val text: androidx.compose.ui.text.AnnotatedString = when {
-        // Копия: значок — первым «символом», как у шаблона; правило — новой строкой от левого края, шеврон — в конце
-        // последней строки. Без правила (шаблона уже нет) — шеврон сразу после ссылки
+        // Копия: значок — первым «символом», как у шаблона; правило — отдельным абзацем с отступом на ширину значка
         !isTemplate -> androidx.compose.ui.text.buildAnnotatedString {
             appendInlineContent(REPEAT_ROW_COPY_ICON_ID, "↻")
-            append(" ")
             append(copyText)
             if (copyRuleText != null) {
-                append(" –\n")
-                pushStyle(androidx.compose.ui.text.SpanStyle(color = secondaryColor))
-                append(copyRuleText)
-                pop()
+                withStyle(
+                    androidx.compose.ui.text.ParagraphStyle(
+                        textIndent = androidx.compose.ui.text.style.TextIndent(firstLine = copyIconEm, restLine = copyIconEm)
+                    )
+                ) {
+                    withStyle(androidx.compose.ui.text.SpanStyle(color = secondaryColor)) { append(copyRuleText) }
+                }
             }
-            append(" ")
-            appendInlineContent(REPEAT_ROW_CHEVRON_ID, "›")
         }
         else -> androidx.compose.ui.text.buildAnnotatedString {
             // Значок — первым «символом» текста: перенесённые строки начинаются с левого края, под ним
@@ -1039,11 +1042,13 @@ internal fun RepeatEditorRow(
                 .padding(vertical = MaterialTheme.dimens.taskEditorIndicatorVerticalPadding)
         ) {
         // Шаблон и копия — обычным размером, как строка даты, одним текстом: значок внутри него, поэтому перенесённые
-        // строки (и правило копии) начинаются от левого края, под значком, как в Things
-        val iconEm = with(LocalDensity.current) { (ThingsIconSize.S + ThingsSpacing.XXS).toSp() }
-        fun inlineIcon(content: @Composable () -> Unit) = androidx.compose.foundation.text.InlineTextContent(
+        // строки начинаются от левого края, под значком, как в Things (правило копии — с отступом, под текстом)
+        fun inlineIcon(
+            width: androidx.compose.ui.unit.TextUnit = iconEm,
+            content: @Composable () -> Unit
+        ) = androidx.compose.foundation.text.InlineTextContent(
             androidx.compose.ui.text.Placeholder(
-                width = iconEm,
+                width = width,
                 height = iconEm,
                 placeholderVerticalAlign = androidx.compose.ui.text.PlaceholderVerticalAlign.TextCenter
             )
@@ -1055,11 +1060,10 @@ internal fun RepeatEditorRow(
                 // Обычный значок повтора — синяя стрелка в голубом круге, как у строки шаблона в списке
                 REPEAT_ROW_ICON_ID to inlineIcon { com.example.ui.components.RepeatTemplateIcon(modifier = Modifier.size(ThingsIconSize.S)) },
                 // Копия — серая круговая стрелка, как в строке списка
-                REPEAT_ROW_COPY_ICON_ID to inlineIcon {
-                    Icon(AppIcons.RepeatCopy, contentDescription = null, tint = secondaryColor, modifier = Modifier.size(ThingsIconSize.S))
-                },
-                REPEAT_ROW_CHEVRON_ID to inlineIcon {
-                    Icon(Icons.Default.ChevronRight, contentDescription = null, tint = secondaryColor, modifier = Modifier.size(ThingsIconSize.S))
+                REPEAT_ROW_COPY_ICON_ID to inlineIcon(copyIconEm) {
+                    Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.CenterStart) {
+                        Icon(AppIcons.RepeatCopy, contentDescription = null, tint = secondaryColor, modifier = Modifier.size(ThingsIconSize.S))
+                    }
                 }
             )
         )
@@ -1091,9 +1095,8 @@ internal fun RepeatEditorRow(
 /** Значок повтора внутри текста строки повтора шаблона */
 private const val REPEAT_ROW_ICON_ID = "repeat_row_icon"
 
-/** Значок копии повтора и шеврон в конце — внутри текста строки повтора копии */
+/** Значок копии повтора внутри текста строки повтора копии */
 private const val REPEAT_ROW_COPY_ICON_ID = "repeat_row_copy_icon"
-private const val REPEAT_ROW_CHEVRON_ID = "repeat_row_chevron"
 
 /** Строка повтора шаблона показывает столько ближайших дат повторов («Завтра, 25 жовт., 26 жовт., …»; троеточие — если есть ещё) */
 private const val REPEAT_UPCOMING_SHOWN = 3
