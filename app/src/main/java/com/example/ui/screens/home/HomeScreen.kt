@@ -1,6 +1,8 @@
 package com.example.ui.screens.home
 
 import androidx.navigation.NavDestination.Companion.hasRoute
+import com.example.ui.screens.home.components.FabMenuItem
+import com.example.ui.screens.home.components.FabMenuOverlay
 import com.example.ui.screens.home.components.HomeProjectBatchLayer
 import com.example.ui.screens.home.components.ProjectSelectionState
 import com.example.ui.screens.home.components.TaskSelectionState
@@ -52,7 +54,6 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.foundation.interaction.collectIsPressedAsState
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.TransformOrigin
 import androidx.compose.ui.platform.LocalContext
@@ -240,6 +241,9 @@ fun ThingsHomeScreen(viewModel: ThingsViewModel = hiltViewModel()) {
     var editingProjectId by remember { mutableStateOf<String?>(null) }
     var editingAreaId by remember { mutableStateOf<String?>(null) }
     var showFabMenu by remember { mutableStateOf(false) }
+    // Меню «+» на экране (кнопка спрятана под его формой) и как оно закроется: в кнопку или угасанием
+    var fabMenuOnScreen by remember { mutableStateOf(false) }
+    var fabMenuCloseIntoButton by remember { mutableStateOf(true) }
     var isSearchOverlayActive by remember { mutableStateOf(false) }
     // Прозрачность окна поиска при уходе к найденной задаче
     val searchOverlayFade = remember { androidx.compose.animation.core.Animatable(1f) }
@@ -405,7 +409,7 @@ fun ThingsHomeScreen(viewModel: ThingsViewModel = hiltViewModel()) {
             AnimatedVisibility(
                 visible = activeScreen != ActiveScreen.LOGBOOK && !isSettingsOpen && (fabDragController.isDragging || fabDragController.isSettling ||
                     fabDragController.tapPending ||
-                    (inlineExpandedTaskId == null && !showFabMenu && !isListDialogActive && !showAddDialog && !taskSelection.isActive &&
+                    (inlineExpandedTaskId == null && !isListDialogActive && !showAddDialog && !taskSelection.isActive &&
                         !(activeScreen == ActiveScreen.HOME && projectSelection.isSelectionMode))),
                 enter = slideInVertically(
                     initialOffsetY = { it * 2 },
@@ -424,6 +428,7 @@ fun ThingsHomeScreen(viewModel: ThingsViewModel = hiltViewModel()) {
                                                 if (activeScreen == ActiveScreen.HOME || activeScreen == ActiveScreen.ALL_PROJECTS ||
                             activeScreen == ActiveScreen.LOGGED_PROJECTS || activeScreen == ActiveScreen.LATER_PROJECTS
                         ) {
+                            fabMenuCloseIntoButton = true
                             showFabMenu = true
                         } else if (activeScreen == ActiveScreen.SEARCH) {
                             // На экране поиска новая задача создаётся с текстом запроса
@@ -461,6 +466,8 @@ fun ThingsHomeScreen(viewModel: ThingsViewModel = hiltViewModel()) {
                     // Отступы 16 dp от краёв (Material Design 3) задаёт слот Scaffold
                     modifier = Modifier
                         .size(FAB_SIZE)
+                        // Пока открыто меню, место кнопки занимает его форма (FabMenuOverlay)
+                        .graphicsLayer { alpha = if (fabMenuOnScreen) 0f else 1f }
                         .testTag("add_task_fab")
                 )
             }
@@ -920,108 +927,72 @@ fun ThingsHomeScreen(viewModel: ThingsViewModel = hiltViewModel()) {
                 }
             }
 
-            // Меню «+», как в Things: лёгкое затемнение и карточка появляются сразу, уходят — карточка сжимается к
-            // углу кнопки и гаснет вместе с затемнением
-            AnimatedVisibility(
+            // Меню «+», как в Things: кнопка превращается в карточку меню (FabMenuOverlay)
+            FabMenuOverlay(
                 visible = showFabMenu,
-                enter = fadeIn(tween(ThingsMotion.FAST)),
-                exit = fadeOut(tween(ThingsMotion.MEDIUM, easing = FastOutSlowInEasing))
+                fabCenter = { fabDragController.homeCenter },
+                fabSize = FAB_SIZE,
+                closeIntoButton = fabMenuCloseIntoButton,
+                onDismiss = { showFabMenu = false },
+                onOnScreenChange = { fabMenuOnScreen = it }
             ) {
-                Box(
-                    modifier = Modifier
-                        .fillMaxSize()
-                        .background(ThingsTheme.colors.scrim.copy(alpha = ThingsAlpha.SUBTLE))
-                        .clickable(
-                            interactionSource = remember { MutableInteractionSource() },
-                            indication = null
-                        ) {
-                            showFabMenu = false
-                        }
-                ) {
-                    AnimatedVisibility(
-                        visible = showFabMenu,
-                        enter = scaleIn(
-                            transformOrigin = TransformOrigin(1f, 1f),
-                            initialScale = FAB_MENU_ENTER_SCALE,
-                            animationSpec = tween(ThingsMotion.FAST, easing = FastOutSlowInEasing)
-                        ) + fadeIn(tween(ThingsMotion.FAST)),
-                        exit = scaleOut(
-                            transformOrigin = TransformOrigin(1f, 1f),
-                            targetScale = FAB_MENU_EXIT_SCALE,
-                            animationSpec = tween(ThingsMotion.MEDIUM, easing = FastOutSlowInEasing)
-                        ) + fadeOut(tween(ThingsMotion.MEDIUM, easing = FastOutSlowInEasing)),
-                        modifier = Modifier
-                            .align(Alignment.BottomCenter)
-                            .padding(bottom = ThingsSpacing.XXL, start = ThingsSpacing.L, end = ThingsSpacing.L)
-                            .fillMaxWidth()
-                            .wrapContentHeight()
-                    ) {
-                        // Пункты без разделителей; нажатый подсвечивается скруглённой плашкой внутри карточки
-                        Column(
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .background(ThingsTheme.colors.overlaySurface, shape = ThingsTheme.shapes.menuShape)
-                                .border(ThingsStroke.THIN, ThingsTheme.colors.overlayContent.copy(alpha = ThingsAlpha.FAINT), ThingsTheme.shapes.menuShape)
-                                .padding(ThingsSpacing.S)
-                        ) {
-                            FabMenuItem(
-                                icon = { Icon(
-                                    imageVector = Icons.Default.Add,
-                                    contentDescription = null,
-                                    tint = ThingsTheme.colors.overlayContent,
-                                    modifier = Modifier.size(ThingsIconSize.M)
-                                ) },
-                                title = stringResource(R.string.ui_new_to_do),
-                                description = stringResource(R.string.ui_quickly_add_a_to_do_to),
-                                onClick = {
-                                    showFabMenu = false
-                                    showAddDialog = true
-                                }
-                            )
-                            FabMenuItem(
-                                icon = { // Значок проекта — кольцо с сектором, как в списках
-                                com.example.ui.components.ProjectProgressArc(
-                                    completed = 2,
-                                    total = 3,
-                                    color = ThingsTheme.colors.accent,
-                                    modifier = Modifier.size(ThingsIconSize.M)
-                                ) },
-                                title = stringResource(R.string.ui_new_project),
-                                description = stringResource(R.string.ui_define_a_goal_then_work_towards),
-                                onClick = {
-                                    showFabMenu = false
-                                    // Проект и область создаются и называются на главном экране — с особого
-                                    // списка сначала возвращаемся туда
-                                    if (activeScreen != ActiveScreen.HOME) navController.popBackStack(HomeRoute, inclusive = false)
-                                    val newProjectId = java.util.UUID.randomUUID().toString()
-                                    viewModel.createProject(newProjectId)
-                                    editingProjectId = newProjectId
-                                }
-                            )
-                            FabMenuItem(
-                                icon = { Icon(
-                                    imageVector = AppIcons.Area,
-                                    contentDescription = null,
-                                    tint = ThingsTheme.colors.area,
-                                    modifier = Modifier.size(ThingsIconSize.M)
-                                ) },
-                                title = stringResource(R.string.ui_new_area),
-                                description = stringResource(R.string.ui_group_projects_and_to_dos_based),
-                                onClick = {
-                                    showFabMenu = false
-                                    if (activeScreen != ActiveScreen.HOME) navController.popBackStack(HomeRoute, inclusive = false)
-                                    val newAreaId = java.util.UUID.randomUUID().toString()
-                                    val newArea = Area(
-                                        id = newAreaId,
-                                        title = ""
-                                    )
-                                    viewModel.updateArea(newArea)
-                                    editingAreaId = newAreaId
-                                }
-                            )
-                        }
-                    }
+            FabMenuItem(
+                icon = { Icon(
+                    imageVector = Icons.Default.Add,
+                    contentDescription = null,
+                    tint = ThingsTheme.colors.overlayContent,
+                    modifier = Modifier.size(ThingsIconSize.M)
+                ) },
+                title = stringResource(R.string.ui_new_to_do),
+                description = stringResource(R.string.ui_quickly_add_a_to_do_to),
+                onClick = {
+                    // Кнопки за окном новой задачи нет — меню гаснет на месте, а не сворачивается в неё
+                    fabMenuCloseIntoButton = false
+                    showFabMenu = false
+                    showAddDialog = true
                 }
+            )
+            FabMenuItem(
+                icon = { // Значок проекта — кольцо с сектором, как в списках
+                com.example.ui.components.ProjectProgressArc(
+                    completed = 2,
+                    total = 3,
+                    color = ThingsTheme.colors.accent,
+                    modifier = Modifier.size(ThingsIconSize.M)
+                ) },
+                title = stringResource(R.string.ui_new_project),
+                description = stringResource(R.string.ui_define_a_goal_then_work_towards),
+                onClick = {
+                    showFabMenu = false
+                    // Проект и область создаются и называются на главном экране — с особого
+                    // списка сначала возвращаемся туда
+                    if (activeScreen != ActiveScreen.HOME) navController.popBackStack(HomeRoute, inclusive = false)
+                    val newProjectId = java.util.UUID.randomUUID().toString()
+                    viewModel.createProject(newProjectId)
+                    editingProjectId = newProjectId
+                }
+            )
+            FabMenuItem(
+                icon = { Icon(
+                    imageVector = AppIcons.Area,
+                    contentDescription = null,
+                    tint = ThingsTheme.colors.area,
+                    modifier = Modifier.size(ThingsIconSize.M)
+                ) },
+                title = stringResource(R.string.ui_new_area),
+                description = stringResource(R.string.ui_group_projects_and_to_dos_based),
+                onClick = {
+                    showFabMenu = false
+                    if (activeScreen != ActiveScreen.HOME) navController.popBackStack(HomeRoute, inclusive = false)
+                    val newAreaId = java.util.UUID.randomUUID().toString()
+                    val newArea = Area(
+                        id = newAreaId,
+                        title = ""
+                    )
+                    viewModel.updateArea(newArea)
+                    editingAreaId = newAreaId
+                }
+            )
             }
 
             // Кнопки отмены и «во Входящие», пока тянут кнопку «+»
@@ -1118,52 +1089,3 @@ private fun AnimatedVisibilityScope.ScreenTransitionWrapper(
     }
 }
 
-/** Пункт меню «+»: значок, полужирное название и пояснение; нажатие — скруглённая подсветка внутри карточки */
-@Composable
-private fun FabMenuItem(
-    icon: @Composable () -> Unit,
-    title: String,
-    description: String,
-    onClick: () -> Unit
-) {
-    // Нажатый пункт, как в Things, — светлая скруглённая плашка (волна на тёмной карточке почти не видна)
-    val interaction = remember { MutableInteractionSource() }
-    val pressed by interaction.collectIsPressedAsState()
-    // Выбранный пункт остаётся подсвеченным, пока меню уходит
-    var chosen by remember { mutableStateOf(false) }
-    Row(
-        modifier = Modifier
-            .fillMaxWidth()
-            .clip(ThingsTheme.shapes.chipShape)
-            .background(if (pressed || chosen) ThingsTheme.colors.overlayControl else Color.Transparent)
-            .clickable(interactionSource = interaction, indication = null) {
-                chosen = true
-                onClick()
-            }
-            .padding(horizontal = ThingsSpacing.S, vertical = ThingsSpacing.S_PLUS),
-        verticalAlignment = Alignment.Top
-    ) {
-        Box(
-            modifier = Modifier
-                .size(ThingsIconSize.XL)
-                .padding(top = ThingsSpacing.XXS),
-            contentAlignment = Alignment.Center
-        ) { icon() }
-        Spacer(modifier = Modifier.width(ThingsSpacing.M))
-        Column {
-            Text(
-                text = title,
-                style = ThingsTheme.type.dialogRowSelected.copy(color = ThingsTheme.colors.overlayContent)
-            )
-            Spacer(modifier = Modifier.height(ThingsSpacing.XXS))
-            Text(
-                text = description,
-                style = ThingsTheme.type.subhead.copy(color = ThingsTheme.colors.overlayContentSecondary)
-            )
-        }
-    }
-}
-
-/** Меню «+»: карточка появляется с этого масштаба и уходит к углу кнопки до этого (как в Things) */
-private const val FAB_MENU_ENTER_SCALE = 0.92f
-private const val FAB_MENU_EXIT_SCALE = 0.2f
