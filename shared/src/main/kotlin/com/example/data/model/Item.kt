@@ -253,9 +253,10 @@ class DayBounds private constructor(
      */
     fun isToday(item: Item): Boolean {
         if (item.type != Item.TYPE_TASK || item.isClosed) return false
-        if (item.start == Item.START_TODAY) return true
         if (deadlinePullsToToday(item)) return true
-        val startDate = item.startDate ?: return false
+        // Дата старта решает раньше раздела — как в [sectionOf]: «Сегодня» с будущей датой (такое давало слияние
+        // синхронизации) стояло бы в «Сегодня», а редактор показывал бы будущий день
+        val startDate = item.startDate ?: return item.start == Item.START_TODAY
         return startDate <= endOfToday
     }
 

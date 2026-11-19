@@ -63,6 +63,15 @@ class DayBoundsTest {
     }
 
     @Test
+    fun `раздел Сегодня с будущей датой — в Upcoming, как показывает редактор`() {
+        // Такое сочетание давало слияние синхронизации: задача стояла в «Сегодня», а редактор показывал будущий день
+        val item = task(start = 1, startDate = noonInDays(30))
+        assertFalse(bounds.isToday(item))
+        assertTrue(bounds.isUpcoming(item))
+        assertEquals(TaskSection.UPCOMING, bounds.sectionOf(item))
+    }
+
+    @Test
     fun `дата старта завтра попадает в Upcoming а не в Today`() {
         val item = task(start = 2, startDate = noonInDays(1))
         assertFalse(bounds.isToday(item))

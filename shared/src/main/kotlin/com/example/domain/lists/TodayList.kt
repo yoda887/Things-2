@@ -16,8 +16,8 @@ object TodayList {
      */
     fun includesProject(project: Item, bounds: DayBounds): Boolean {
         if (project.type != Item.TYPE_PROJECT || !ListRules.isOpenProject(project) || project.start == Item.START_SOMEDAY) return false
-        if (project.start == Item.START_TODAY) return true
-        val startDate = project.startDate ?: return false
+        // Дата старта решает раньше раздела, как у задачи (DayBounds.isToday)
+        val startDate = project.startDate ?: return project.start == Item.START_TODAY
         return startDate <= bounds.endOfToday
     }
 
