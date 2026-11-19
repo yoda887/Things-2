@@ -129,6 +129,33 @@ class SyncMergeTest {
     }
 
     @Test
+    fun whenFields_takenTogetherFromOneSide() {
+        // Задача была в «Сегодня» по дате (раздел «В любое время», дата — сегодня). Там её сохранили редактором —
+        // раздел стал «Сегодня», дата та же; здесь перенесли на будущую дату (раздел остался «В любое время»).
+        // Раньше раздел брался оттуда, дата — отсюда: «Сегодня» с будущей датой, задача возвращалась в «Сегодня»
+        val base = state(listOf(item(10, "title" to "t", "start" to 2L, "startDate" to 100L, "isTonight" to 0L)))
+        val local = state(listOf(item(30, "title" to "t", "start" to 2L, "startDate" to 900L, "isTonight" to 0L)))
+        val remote = state(listOf(item(20, "title" to "t2", "start" to 1L, "startDate" to 100L, "isTonight" to 0L)))
+        val merged = SyncMerge.merge(local, remote, base).merged.rows.getValue(key("a")).values
+        // «Когда» — целиком с более поздней правки (здесь), остальные поля сливаются как раньше
+        assertEquals(2L, merged["start"])
+        assertEquals(900L, merged["startDate"])
+        assertEquals("t2", merged["title"])
+    }
+
+    @Test
+    fun whenFields_changedOnOneSideOnly_takenFromIt() {
+        // «Когда» правили только там — берётся оттуда целиком, даже если здесь запись правили позже (название)
+        val base = state(listOf(item(10, "title" to "t", "start" to 1L, "startDate" to 100L, "isTonight" to 0L)))
+        val local = state(listOf(item(30, "title" to "mine", "start" to 1L, "startDate" to 100L, "isTonight" to 0L)))
+        val remote = state(listOf(item(20, "title" to "t", "start" to 2L, "startDate" to 900L, "isTonight" to 0L)))
+        val merged = SyncMerge.merge(local, remote, base).merged.rows.getValue(key("a")).values
+        assertEquals(2L, merged["start"])
+        assertEquals(900L, merged["startDate"])
+        assertEquals("mine", merged["title"])
+    }
+
+    @Test
     fun sameFieldOnTwoDevices_laterWins() {
         val base = state(listOf(item(10, "title" to "old", "notes" to "")))
         val theirsLater = SyncMerge.merge(

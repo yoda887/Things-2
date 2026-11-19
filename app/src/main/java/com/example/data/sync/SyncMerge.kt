@@ -76,6 +76,13 @@ object SyncMerge {
     /** Item.STATUS_CANCELLED, Item.STATUS_COMPLETED */
     private val CLOSED_STATUSES = setOf(2L, 3L)
 
+    /**
+     * Задачи: «Когда» — раздел, дата старта и «Вечер». Это одно решение, а не независимые поля: сливать их по
+     * отдельности нельзя. Раздел «Сегодня» с одного устройства и будущая дата с другого давали задачу, которая
+     * стоит в «Сегодня», а в редакторе — на будущий день. Поэтому «Когда» берётся целиком с одной стороны ([whenSide])
+     */
+    private val WHEN_FIELDS = listOf("start", "startDate", "isTonight")
+
     /** Задачи: когда видели новой в «Сегодня» — из двух устройств берётся самое позднее ([keepLatestSeen]) */
     private const val TODAY_SEEN = "todaySeenAt"
 
@@ -270,8 +277,16 @@ object SyncMerge {
         val mineIsNewer = mine.updatedAt >= theirs.updatedAt
         val conflicts = HashSet<String>()
         val values = LinkedHashMap<String, Any?>()
+        // «Когда» задачи — одно решение из нескольких полей: берётся целиком с одной стороны (см. [WHEN_FIELDS])
+        val whenFrom = if (mine.key.table == ITEMS) whenSide(mine, theirs, was, mineIsNewer) else null
         for (field in mine.values.keys + theirs.values.keys) {
             if (field == UPDATED_AT) continue
+            if (whenFrom != null && field in WHEN_FIELDS) {
+                // Поля нет у выбранной стороны (файл старой версии) — с другой
+                val from = if (field in whenFrom.values) whenFrom else if (whenFrom === mine) theirs else mine
+                values[field] = from.values[field]
+                continue
+            }
             val m = mine.values[field]
             val t = theirs.values[field]
             // Выводимое поле, изменённое на обоих (пусть и одинаково: по одному пункту чек-листа с каждой стороны), —
@@ -298,6 +313,24 @@ object SyncMerge {
                 val at = maxOf(mine.updatedAt, theirs.updatedAt) + 1
                 FieldMerge(SyncRow(mine.key, at, values + (UPDATED_AT to at)), Source.MERGED, conflicts)
             }
+        }
+    }
+
+    /**
+     * С какой стороны взять «Когда» задачи ([WHEN_FIELDS]) целиком: правили только на одной — оттуда, на обеих
+     * по-разному — с более поздней правки, нигде или одинаково — свою (значения те же).
+     */
+    private fun whenSide(mine: SyncRow, theirs: SyncRow, was: SyncRow, mineIsNewer: Boolean): SyncRow {
+        fun SyncRow.whenValues() = WHEN_FIELDS.associateWith { values[it] }
+        val wasWhen = was.whenValues()
+        val mineWhen = mine.whenValues()
+        val theirsWhen = theirs.whenValues()
+        return when {
+            mineWhen == theirsWhen -> mine
+            theirsWhen == wasWhen -> mine
+            mineWhen == wasWhen -> theirs
+            mineIsNewer -> mine
+            else -> theirs
         }
     }
 
