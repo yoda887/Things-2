@@ -45,6 +45,8 @@ fun Modifier.taskDragAndDrop(
     todayGroupedDay: Boolean = false,
     // «Планы»: перенос в днях — общий порядок задач и проектов дня (UpcomingDragController)
     upcomingDrag: UpcomingDragController? = null,
+    // Отклик при подъёме задачи; false — строка уже откликнулась на само нажатие (TaskItemRow.onPress)
+    hapticOnStart: Boolean = true,
 ): Modifier {
     val lazyListState = state.lazyListState
     val taskItem = taskWrapper.item
@@ -52,6 +54,7 @@ fun Modifier.taskDragAndDrop(
     return this.universalDragAndDrop(
         state = state,
         key = taskItem.id,
+        hapticOnStart = hapticOnStart,
         topScrollZoneFraction = TASK_SCROLL_TOP_ZONE_FRACTION,
         bottomScrollZoneFraction = TASK_SCROLL_BOTTOM_ZONE_FRACTION,
         canDropOver = { targetKey ->

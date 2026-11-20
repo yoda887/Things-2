@@ -239,6 +239,8 @@ fun rememberGenericDragDropState(lazyListState: LazyListState): GenericDragDropS
  * @param onDragSettled Функция обратного вызова после завершения анимации возврата, в том числе
  *                      при отмене жеста. Здесь удобно восстанавливать состояние, которое было
  *                      временно изменено на время перетаскивания.
+ * @param hapticOnStart Отклик при подъёме элемента. false — если строка уже откликнулась на само нажатие
+ *                      (строка задачи, TaskItemRow): иначе при перетаскивании было бы два щелчка подряд.
  */
 fun Modifier.universalDragAndDrop(
     state: GenericDragDropState,
@@ -251,7 +253,8 @@ fun Modifier.universalDragAndDrop(
     onMoveIfNecessary: (draggedKey: Any, targetKey: Any) -> Boolean,
     onDragStarted: () -> Unit = {},
     onDragEnd: () -> Unit,
-    onDragSettled: () -> Unit = {}
+    onDragSettled: () -> Unit = {},
+    hapticOnStart: Boolean = true
 ): Modifier {
     val lazyListState = state.lazyListState
 
@@ -357,7 +360,8 @@ fun Modifier.universalDragAndDrop(
         onDrag = { dragDeltaY -> performIntersectionCheck(dragDeltaY) },
         onDragged = { scrollDeltaY -> performIntersectionCheck(scrollDeltaY) },
         onDragEnd = onDragEnd,
-        onDragSettled = onDragSettled
+        onDragSettled = onDragSettled,
+        hapticOnStart = hapticOnStart
     )
 }
 
@@ -391,6 +395,7 @@ fun Modifier.reorderableItem(
     onDragged: (scrollDelta: Float) -> Boolean = { false },
     onDragEnd: () -> Unit = {},
     onDragSettled: () -> Unit = {},
+    hapticOnStart: Boolean = true,
 ): Modifier = this then ReorderableItemElement(
     state = state,
     key = key,
@@ -400,7 +405,8 @@ fun Modifier.reorderableItem(
     onDrag = onDrag,
     onDragged = onDragged,
     onDragEnd = onDragEnd,
-    onDragSettled = onDragSettled
+    onDragSettled = onDragSettled,
+    hapticOnStart = hapticOnStart
 )
 
 private data class ReorderableItemElement(
@@ -412,7 +418,8 @@ private data class ReorderableItemElement(
     val onDrag: (Float) -> Boolean,
     val onDragged: (Float) -> Boolean,
     val onDragEnd: () -> Unit,
-    val onDragSettled: () -> Unit
+    val onDragSettled: () -> Unit,
+    val hapticOnStart: Boolean
 ) : ModifierNodeElement<ReorderableItemNode>() {
 
     override fun create() = ReorderableItemNode(
@@ -424,7 +431,8 @@ private data class ReorderableItemElement(
         onDrag = onDrag,
         onDragged = onDragged,
         onDragEnd = onDragEnd,
-        onDragSettled = onDragSettled
+        onDragSettled = onDragSettled,
+        hapticOnStart = hapticOnStart
     )
 
     override fun update(node: ReorderableItemNode) {
@@ -437,7 +445,8 @@ private data class ReorderableItemElement(
             onDrag = onDrag,
             onDragged = onDragged,
             onDragEnd = onDragEnd,
-            onDragSettled = onDragSettled
+            onDragSettled = onDragSettled,
+            hapticOnStart = hapticOnStart
         )
     }
 
@@ -460,7 +469,8 @@ private class ReorderableItemNode(
     private var onDrag: (Float) -> Boolean,
     private var onDragged: (Float) -> Boolean,
     private var onDragEnd: () -> Unit,
-    private var onDragSettled: () -> Unit
+    private var onDragSettled: () -> Unit,
+    private var hapticOnStart: Boolean
 ) : DelegatingNode(), CompositionLocalConsumerModifierNode {
 
     /** Корутина автопрокрутки живёт ровно столько, сколько пользователь удерживает элемент */
@@ -531,7 +541,8 @@ private class ReorderableItemNode(
         onDrag: (Float) -> Boolean,
         onDragged: (Float) -> Boolean,
         onDragEnd: () -> Unit,
-        onDragSettled: () -> Unit
+        onDragSettled: () -> Unit,
+        hapticOnStart: Boolean
     ) {
         // Аналог pointerInput(key): при смене ключа или общего состояния жест начинается заново
         val gestureRestartNeeded = this.key != key || this.state !== state
@@ -545,6 +556,7 @@ private class ReorderableItemNode(
         this.onDragged = onDragged
         this.onDragEnd = onDragEnd
         this.onDragSettled = onDragSettled
+        this.hapticOnStart = hapticOnStart
 
         if (gestureRestartNeeded) {
             pointerInputNode.resetPointerInputHandler()
@@ -583,7 +595,7 @@ private class ReorderableItemNode(
         pinnedHandle?.release()
         pinnedHandle = currentValueOf(LocalPinnableContainer)?.pin()
 
-        performHaptic(HapticFeedbackConstants.LONG_PRESS)
+        if (hapticOnStart) performHaptic(HapticFeedbackConstants.LONG_PRESS)
         onDragStart()
         startAutoScroll(key)
     }

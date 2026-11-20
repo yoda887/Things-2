@@ -742,7 +742,9 @@ fun AnimatedTaskItem(
                                     selectedTaskIds = selectedTaskIds,
                                     onExitSelectionMode = onExitSelectionMode,
                                     todayGroupedDay = com.example.ui.components.LocalTodayGrouped.current,
-                                    upcomingDrag = upcomingDrag
+                                    upcomingDrag = upcomingDrag,
+                                    // Нажатие на строку уже дало щелчок (onPress ниже) — второй при подъёме не нужен
+                                    hapticOnStart = isSelectionMode || inlineExpandedTaskId != null
                                 )
                             ),
                         onSwipeLeft = { onEvent(ThingsCategoryListEvent.SwipeTaskLeft(taskWrapper)) },
@@ -771,9 +773,14 @@ fun AnimatedTaskItem(
                                     view.hideSoftKeyboardNow()
                                     onEvent(ThingsCategoryListEvent.ChangeInlineExpandedTaskId(null))
                                 } else {
-                                    // Карточка раскрывается в редактор — тот же отклик, что у свайпа карточки за порогом
-                                    view.performHapticFeedback(android.view.HapticFeedbackConstants.CLOCK_TICK)
                                     onEvent(ThingsCategoryListEvent.ChangeInlineExpandedTaskId(task.id))
+                                }
+                            },
+                            // Карточка раскроется в редактор — тот же отклик, что у свайпа карточки за порогом, и так же
+                            // под пальцем: в момент нажатия, а не после отпускания
+                            onPress = {
+                                if (!isSelectionMode && inlineExpandedTaskId == null) {
+                                    view.performHapticFeedback(android.view.HapticFeedbackConstants.CLOCK_TICK)
                                 }
                             },
                             projects = projects,

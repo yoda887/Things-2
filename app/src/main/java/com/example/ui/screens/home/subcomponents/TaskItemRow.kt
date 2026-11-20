@@ -87,6 +87,8 @@ fun TaskItemRow(
     onToggle: () -> Unit,
     onClick: () -> Unit,
     projects: List<Item>,
+    // Палец лёг на строку и не двинулся (момент подсветки нажатия; при прокрутке не наступает) — раньше [onClick]
+    onPress: () -> Unit = {},
     showTodayIndicator: Boolean = false,
     isDragging: Boolean = false,
     dragOffsetY: Float = 0f,
@@ -231,6 +233,12 @@ fun TaskItemRow(
     }
 
     val rowInteractionSource = remember { androidx.compose.foundation.interaction.MutableInteractionSource() }
+    val currentOnPress by rememberUpdatedState(onPress)
+    LaunchedEffect(rowInteractionSource) {
+        rowInteractionSource.interactions.collect {
+            if (it is androidx.compose.foundation.interaction.PressInteraction.Press) currentOnPress()
+        }
+    }
 
     Row(
         modifier = modifier
