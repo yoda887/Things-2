@@ -44,6 +44,7 @@
         <item quantity="other">Проект «%1$s» будет удалён вместе с %2$d задачи.</item>
     </plurals>
     <string name="delete_area_message">Вы уверены, что хотите удалить эту область? Задачи и проекты в ней тоже будут удалены. Это действие нельзя отменить.</string>
+    <string name="delete_project_popover_message">Вы уверены, что хотите удалить этот проект? Задачи и заголовки в нём тоже будут удалены. Это действие нельзя отменить.</string>
     <string name="delete_heading_title">Удалить подзаголовок?</string>
     <plurals name="delete_heading_message">
         <item quantity="one">Подзаголовок «%1$s» будет удалён вместе с %2$d задачей.</item>

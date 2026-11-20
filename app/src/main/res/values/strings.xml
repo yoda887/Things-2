@@ -72,6 +72,7 @@
         <item quantity="other">The project “%1$s” and its %2$d to-dos will be deleted.</item>
     </plurals>
     <string name="delete_area_message">Are you sure you want to delete this area? The to-dos and projects contained within it will also be deleted. This cannot be undone.</string>
+    <string name="delete_project_popover_message">Are you sure you want to delete this project? The to-dos and headings contained within it will also be deleted. This cannot be undone.</string>
     <string name="delete_heading_title">Delete Heading?</string>
     <plurals name="delete_heading_message">
         <item quantity="one">The heading “%1$s” and its %2$d to-do will be deleted.</item>

@@ -12,9 +12,7 @@ import androidx.compose.material.icons.filled.ContentCopy
 import androidx.compose.material.icons.automirrored.filled.ArrowForward
 import androidx.compose.material.icons.outlined.CheckCircle
 import com.example.R
-import androidx.compose.ui.res.pluralStringResource
 import androidx.compose.ui.res.stringResource
-import com.example.ui.components.ThingsConfirmDialog
 import com.example.ui.components.ThingsConfirmPopover
 import com.example.ui.components.ThingsDropdownMenu
 import com.example.ui.components.ThingsMenuItem
@@ -62,6 +60,10 @@ private val UPCOMING_DAY_TOP = 36.dp
 private val UPCOMING_MONTH_TOP = 40.dp
 
 private const val OPTIONS_ICON_ALPHA = 0.45f
+/** Место значка «…» после названия — в долях размера шрифта заголовка */
+private const val OPTIONS_ICON_WIDTH_EM = 1.1f
+/** Поле слева у точек значка «…» (MoreHoriz: первая точка начинается с 4 из 24) */
+private const val MORE_HORIZ_DOT_INSET = 4f / 24f
 
 /**
  * Компонент основного заголовка категории (Inbox, Today, Upcoming и т.д.).
@@ -97,26 +99,8 @@ fun MainCategoryHeader(
     var showDeleteConfirmDialog by remember { mutableStateOf(false) }
 
     var showAreaDeleteConfirmDialog by remember { mutableStateOf(false) }
+    // Удаление проекта и области после подтверждения — с паузой, см. ThingsConfirmPopover ниже
     val areaDeleteScope = rememberCoroutineScope()
-
-    if (showDeleteConfirmDialog && project != null) {
-        val taskCountInProj = tasks.count { it.item.projectId == project.id }
-        ThingsConfirmDialog(
-            title = stringResource(R.string.delete_project_title),
-            message = if (taskCountInProj > 0) {
-                pluralStringResource(R.plurals.delete_project_message_tasks, taskCountInProj, project.name, taskCountInProj)
-            } else {
-                stringResource(R.string.delete_project_message, project.name)
-            },
-            confirmText = stringResource(R.string.delete),
-            dismissText = stringResource(R.string.cancel),
-            onConfirm = {
-                showDeleteConfirmDialog = false
-                onDeleteProject(project)
-            },
-            onDismiss = { showDeleteConfirmDialog = false }
-        )
-    }
 
     Row(
         modifier = modifier
@@ -259,23 +243,12 @@ fun MainCategoryHeader(
                 val projectIconSize = (26 * scaleFactor).dp
                 val projectTitleIndent = titleIndent(projectIconSize)
                 Box(modifier = Modifier.weight(1f)) {
-                com.example.ui.components.ProjectStatusIcon(
-                    project = project,
-                    completed = completedCount,
-                    total = totalCount,
-                    modifier = Modifier
-                        .padding(top = (4 * scaleFactor).dp)
-                        .size(projectIconSize)
-                        .clip(androidx.compose.foundation.shape.CircleShape)
-                        .then(
-                            if (canComplete) Modifier.clickable {
-                                headerView.performHapticFeedback(android.view.HapticFeedbackConstants.CLOCK_TICK)
-                                onProjectAction(ProjectAction.COMPLETE)
-                            } else Modifier
-                        )
-                )
 
-                val projectNameText = project?.name ?: stringResource(R.string.fallback_project)
+                // Новое название — пока база не вернёт его: правка закрылась, а в записи ещё прежнее, и
+                // заголовок на миг показывал старое
+                var projectPendingTitle by remember(project?.id) { mutableStateOf<String?>(null) }
+                LaunchedEffect(project?.title) { if (project?.title == projectPendingTitle) projectPendingTitle = null }
+                val projectNameText = projectPendingTitle ?: project?.name ?: stringResource(R.string.fallback_project)
                 val projectTitleAnnotated = remember(projectNameText) {
                     buildAnnotatedString {
                         append(projectNameText)
@@ -284,17 +257,29 @@ fun MainCategoryHeader(
                     }
                 }
 
+                // На строку ниже перенеслись одни «…» — они встают под первую букву названия, а не к краю под значок:
+                // место значка шире на отступ первой строки, сам значок — в его конце
+                var optionsAlone by remember(projectNameText) { mutableStateOf(false) }
+                val optionsWidthSp = headerTitleFontSize.value * OPTIONS_ICON_WIDTH_EM
+                val optionsIconWidth = with(androidx.compose.ui.platform.LocalDensity.current) { optionsWidthSp.sp.toDp() }
                 val inlineContentMap = mapOf(
                     "project_options_icon" to InlineTextContent(
                         Placeholder(
-                            width = (headerTitleFontSize.value * 1.1f).sp,
+                            width = (optionsWidthSp + if (optionsAlone) projectTitleIndent.firstLine.value else 0f).sp,
                             height = headerTitleFontSize,
                             placeholderVerticalAlign = PlaceholderVerticalAlign.Center
                         )
                     ) {
+                        Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.CenterEnd) {
+                        // Одни «…» на строке: левый край точек — ровно под первой буквой (значок в своём месте по центру,
+                        // и у самих точек есть поле слева)
+                        val optionsIconSize = (headerTitleFontSize.value * 0.88f).dp
+                        val dotsShift = if (optionsAlone) (optionsIconWidth - optionsIconSize) / 2 + optionsIconSize * MORE_HORIZ_DOT_INSET else androidx.compose.ui.unit.Dp.Hairline
                         Box(
                             modifier = Modifier
-                                .fillMaxSize()
+                                .offset(x = -dotsShift)
+                                .fillMaxHeight()
+                                .width(optionsIconWidth)
                                 .clickable(
                                     interactionSource = remember { MutableInteractionSource() },
                                     indication = null
@@ -354,6 +339,25 @@ fun MainCategoryHeader(
                                 ThingsMenuDivider()
                                 ThingsMenuItem(stringResource(R.string.batch_action_share), Icons.Default.Share, onClick = { action(ProjectAction.SHARE) })
                             }
+
+                            // Как у области: подтверждение — карточкой у «…»; удаляются и задачи и заголовки проекта
+                            if (project != null) {
+                                ThingsConfirmPopover(
+                                    expanded = showDeleteConfirmDialog,
+                                    message = stringResource(R.string.delete_project_popover_message),
+                                    confirmText = stringResource(R.string.ui_delete_project),
+                                    onConfirm = {
+                                        showDeleteConfirmDialog = false
+                                        // Карточка ушла, проект ещё миг виден целиком — затем удаление и переход назад
+                                        areaDeleteScope.launch {
+                                            delay(ThingsMotion.SLOW.toLong())
+                                            onDeleteProject(project)
+                                        }
+                                    },
+                                    onDismiss = { showDeleteConfirmDialog = false }
+                                )
+                            }
+                        }
                         }
                     }
                 )
@@ -364,7 +368,11 @@ fun MainCategoryHeader(
                         initial = project.title,
                         textColor = textPrimaryColor,
                         textIndent = projectTitleIndent,
-                        onCommit = { title -> onEditingTitleChange(false); if (title != project.title) onRenameProject(project, title) },
+                        onCommit = { title ->
+                            if (title != project.title) projectPendingTitle = title
+                            onEditingTitleChange(false)
+                            if (title != project.title) onRenameProject(project, title)
+                        },
                         modifier = Modifier.fillMaxWidth()
                     )
                 } else {
@@ -372,12 +380,41 @@ fun MainCategoryHeader(
                         text = projectTitleAnnotated,
                         inlineContent = inlineContentMap,
                         style = ThingsTheme.type.largeTitle.copy(color = textPrimaryColor, textIndent = projectTitleIndent),
+                        onTextLayout = { layout ->
+                            // «…» одни на последней строке: она начинается не раньше их места в тексте (после «название »)
+                            val last = layout.lineCount - 1
+                            optionsAlone = last > 0 && layout.getLineStart(last) > projectNameText.length
+                        },
                         modifier = Modifier
                             .clickable(
                                 interactionSource = remember { MutableInteractionSource() },
                                 indication = null,
                                 enabled = project != null
                             ) { onEditingTitleChange(true) }
+                    )
+                }
+                // Значок — поверх названия: строка названия начинается под ним (отступ первой строки), и её
+                // нажатие (правка названия) перехватывало касание значка — проект не завершался
+                // Попасть пальцем в кольцо 26 dp трудно — нажимается круг шире на ThingsSpacing.S с каждой стороны
+                // (в промежуток до названия), сам значок на прежнем месте
+                Box(
+                    modifier = Modifier
+                        .offset(x = -ThingsSpacing.S, y = (4 * scaleFactor).dp - ThingsSpacing.S)
+                        .size(projectIconSize + ThingsSpacing.S * 2)
+                        .clip(androidx.compose.foundation.shape.CircleShape)
+                        .then(
+                            if (canComplete) Modifier.clickable {
+                                headerView.performHapticFeedback(android.view.HapticFeedbackConstants.CLOCK_TICK)
+                                onProjectAction(ProjectAction.COMPLETE)
+                            } else Modifier
+                        ),
+                    contentAlignment = Alignment.Center
+                ) {
+                    com.example.ui.components.ProjectStatusIcon(
+                        project = project,
+                        completed = completedCount,
+                        total = totalCount,
+                        modifier = Modifier.size(projectIconSize)
                     )
                 }
                 }
@@ -396,7 +433,10 @@ fun MainCategoryHeader(
                         .padding(top = (2 * scaleFactor).dp)
                 )
 
-                val areaTitleText = area?.title ?: stringResource(R.string.fallback_area)
+                // Новое название — пока база не вернёт его (см. projectPendingTitle)
+                var areaPendingTitle by remember(area?.id) { mutableStateOf<String?>(null) }
+                LaunchedEffect(area?.title) { if (area?.title == areaPendingTitle) areaPendingTitle = null }
+                val areaTitleText = areaPendingTitle ?: area?.title ?: stringResource(R.string.fallback_area)
                 val areaTitleAnnotated = remember(areaTitleText) {
                     buildAnnotatedString {
                         append(areaTitleText)
@@ -485,7 +525,11 @@ fun MainCategoryHeader(
                         initial = area.title,
                         textColor = textPrimaryColor,
                         textIndent = areaTitleIndent,
-                        onCommit = { title -> onEditingTitleChange(false); if (title != area.title) onRenameArea(area, title) },
+                        onCommit = { title ->
+                            if (title != area.title) areaPendingTitle = title
+                            onEditingTitleChange(false)
+                            if (title != area.title) onRenameArea(area, title)
+                        },
                         modifier = Modifier.fillMaxWidth()
                     )
                 } else {
