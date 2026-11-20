@@ -68,6 +68,8 @@ import androidx.compose.animation.core.animateDpAsState
 import androidx.compose.animation.core.tween
 import androidx.compose.animation.core.FastOutSlowInEasing
 import androidx.compose.runtime.withFrameNanos
+import kotlinx.coroutines.flow.debounce
+import kotlinx.coroutines.flow.first
 import androidx.compose.ui.layout.LayoutCoordinates
 import com.example.ui.components.fabdrag.FabDropTarget
 import com.example.ui.components.fabdrag.LocalFabDragController
@@ -177,6 +179,15 @@ private sealed interface HomeTreeItem {
  *
  * Движок перетаскивания про эти ключи ничего не знает: для него ключ — просто `Any`.
  */
+/**
+ * Индекс первой строки проектов и областей в списке главного экрана: перед ними — место под поиском, умные
+ * списки и разделитель [HomeListKeys.ROOT_DIVIDER]. Добавили строку над ними — поправить и здесь.
+ */
+private const val HOME_TREE_FIRST_INDEX = 3
+
+/** Клавиатура считается вставшей, если её высота не менялась столько мс */
+private const val HOME_EDIT_IME_SETTLE_MS = 150L
+
 internal object HomeListKeys {
     /** Префикс строки проекта */
     const val PROJECT_PREFIX = "proj_"
@@ -574,6 +585,34 @@ fun ThingsHomePanel(
             flattenedTree.toMutableList().apply { add(gap.coerceIn(0, size), HomeTreeItem.FabGap) }
         }
 
+        // Новый проект или область из меню «+»: строка с полем названия может оказаться ниже видимой части списка
+        // (или под клавиатурой) — список прокручивается к ней. Уже видимая строка — список стоит на месте
+        val editingKey = editingProjectId?.let { HomeListKeys.project(it) } ?: editingAreaId?.let { HomeListKeys.area(it) }
+        val currentDisplayedTree by rememberUpdatedState(displayedTree)
+        val imeInsets = androidx.compose.foundation.layout.WindowInsets.ime
+        val statusBarInsets = androidx.compose.foundation.layout.WindowInsets.statusBars
+        LaunchedEffect(editingKey) {
+            val key = editingKey ?: return@LaunchedEffect
+            // Строка появляется, когда новая запись пришла из базы
+            val treeIndex = snapshotFlow { currentDisplayedTree.indexOfFirst { it.key == key } }.first { it >= 0 }
+            // Поле названия открывает клавиатуру: решать по её полной высоте — пока она выезжает, строка ещё «видна».
+            // Высота не менялась HOME_EDIT_IME_SETTLE_MS — клавиатура встала (или так и не открылась)
+            @OptIn(kotlinx.coroutines.FlowPreview::class)
+            val imeBottom = snapshotFlow { imeInsets.getBottom(density) }
+                .debounce(HOME_EDIT_IME_SETTLE_MS)
+                .first()
+            val info = lazyListState.layoutInfo
+            val row = info.visibleItemsInfo.firstOrNull { it.key == key }
+            // Список идёт под строкой состояния и под клавиатурой — видимая часть между ними
+            val visibleStart = info.viewportStartOffset + statusBarInsets.getTop(density)
+            val visibleEnd = info.viewportEndOffset - imeBottom
+            val fullyVisible = row != null && row.offset >= visibleStart && row.offset + row.size <= visibleEnd
+            if (!fullyVisible) {
+                // Строка — в верхней трети видимой части, над клавиатурой
+                lazyListState.animateScrollToItem(HOME_TREE_FIRST_INDEX + treeIndex, -(visibleStart + (visibleEnd - visibleStart) / 3))
+            }
+        }
+
         LazyColumn(
             state = lazyListState,
             modifier = Modifier
@@ -784,6 +823,8 @@ fun ThingsHomePanel(
                     Column(
                         modifier = (if (!isAreaDragging && areaDragElev == ThingsElevation.NONE) {
                             Modifier.animateItem(
+                                // Новая область проявляется, соседние строки расступаются
+                                fadeInSpec = tween(durationMillis = ThingsMotion.MEDIUM, easing = FastOutSlowInEasing),
                                 placementSpec = tween(durationMillis = ThingsMotion.BASE, easing = FastOutSlowInEasing)
                             )
                         } else {
@@ -803,6 +844,13 @@ fun ThingsHomePanel(
 
                         // Title block for Area
                         val areaChipShape = ThingsTheme.shapes.chipShape
+                        // Подсветка поля названия проявляется и гаснет, как у проекта
+                        val areaEditAccent = ThingsTheme.colors.accent
+                        val areaEditTint by animateColorAsState(
+                            targetValue = areaEditAccent.copy(alpha = if (isAreaEditing) ThingsAlpha.SUBTLE else 0f),
+                            animationSpec = tween(ThingsMotion.MEDIUM, easing = FastOutSlowInEasing),
+                            label = "areaEditTint"
+                        )
                         Box(
                             modifier = Modifier.fillMaxWidth()
                         ) {
@@ -832,9 +880,7 @@ fun ThingsHomePanel(
                                     .height(MaterialTheme.dimens.homeRowHeight)
                                     .clip(areaChipShape)
                                     .background(
-                                        if (isAreaDragging || areaDragElev > ThingsElevation.NONE) cardSurfaceColor
-                                        else if (isAreaEditing) ThingsTheme.colors.accent.copy(alpha = ThingsAlpha.SUBTLE)
-                                        else Color.Transparent
+                                        if (isAreaDragging || areaDragElev > ThingsElevation.NONE) cardSurfaceColor else areaEditTint
                                     )
                                     .areaDragAndDrop(
                                         state = dragDropState,
@@ -857,6 +903,10 @@ fun ThingsHomePanel(
                             )
                             Spacer(modifier = Modifier.width(MaterialTheme.dimens.homeRowIconTextGap))
 
+                            // Введённое название — пока база не вернёт его: поле уже ушло, а в записи ещё прежнее (у новой
+                            // области — пустое), и название на миг пропадало
+                            var areaPendingTitle by remember(area.id) { mutableStateOf<String?>(null) }
+                            LaunchedEffect(area.title) { if (area.title == areaPendingTitle) areaPendingTitle = null }
                             if (isAreaEditing) {
                                 var textState by remember { mutableStateOf(area.title) }
                                 var hasFocused by remember { mutableStateOf(false) }
@@ -882,6 +932,7 @@ fun ThingsHomePanel(
                                                 if (trimmed.isEmpty() && area.title.isEmpty()) {
                                                     onDeleteArea(area)
                                                 } else if (trimmed.isNotEmpty() && trimmed != area.title) {
+                                                    areaPendingTitle = trimmed
                                                     onUpdateArea(area.copy(title = trimmed))
                                                 }
                                                 onEditingAreaIdChange(null)
@@ -905,6 +956,7 @@ fun ThingsHomePanel(
                                                     if (trimmed.isEmpty()) {
                                                         onDeleteArea(area)
                                                     } else {
+                                                        if (trimmed != area.title) areaPendingTitle = trimmed
                                                         onUpdateArea(area.copy(title = trimmed))
                                                     }
                                                     onEditingAreaIdChange(null)
@@ -932,7 +984,7 @@ fun ThingsHomePanel(
                                 }
                             } else {
                                 Text(
-                                    text = area.title,
+                                    text = areaPendingTitle ?: area.title,
                                     style = ThingsTheme.type.listTitle.copy(
                                         color = textPrimaryColor
                                     ),
@@ -1219,6 +1271,8 @@ private fun LazyItemScope.ProjectItemRow(
             .then(
                 if (!isDragging && dragElev == ThingsElevation.NONE) {
                     Modifier.animateItem(
+                        // Новый проект проявляется, соседние строки расступаются
+                        fadeInSpec = tween(durationMillis = ThingsMotion.MEDIUM, easing = FastOutSlowInEasing),
                         placementSpec = tween(durationMillis = ThingsMotion.BASE, easing = FastOutSlowInEasing)
                     )
                 } else {
@@ -1270,6 +1324,13 @@ private fun LazyItemScope.ProjectItemRow(
             // В режиме выбора свайп вправо «Когда» не вызывает — как у задач
             swipeRightEnabled = !isSelectionMode
         ) {
+        // Подсветка поля названия проявляется и гаснет, а не включается разом (новый проект, «Готово»)
+        val editAccent = ThingsTheme.colors.accent
+        val editTint by animateColorAsState(
+            targetValue = editAccent.copy(alpha = if (isEditing) ThingsAlpha.SUBTLE else 0f),
+            animationSpec = tween(ThingsMotion.MEDIUM, easing = FastOutSlowInEasing),
+            label = "projectEditTint"
+        )
         Row(
             modifier = Modifier
                 .graphicsLayer {
@@ -1285,9 +1346,7 @@ private fun LazyItemScope.ProjectItemRow(
                 .height(MaterialTheme.dimens.homeRowHeight)
                 .clip(projectChipShape)
                 .background(
-                    if (isDragging || dragElev > ThingsElevation.NONE) cardSurfaceColor
-                    else if (isEditing) ThingsTheme.colors.accent.copy(alpha = ThingsAlpha.SUBTLE)
-                    else Color.Transparent
+                    if (isDragging || dragElev > ThingsElevation.NONE) cardSurfaceColor else editTint
                 )
                 // Выделение — поверх строки, на всех её элементах
                 .selectionTint(
@@ -1312,6 +1371,9 @@ private fun LazyItemScope.ProjectItemRow(
                 )
             }
             Spacer(modifier = Modifier.width(MaterialTheme.dimens.homeRowIconTextGap))
+            // Введённое название — пока база не вернёт его (см. areaPendingTitle выше)
+            var pendingTitle by remember(project.id) { mutableStateOf<String?>(null) }
+            LaunchedEffect(project.title) { if (project.title == pendingTitle) pendingTitle = null }
             if (isEditing) {
                 var textState by remember { mutableStateOf(project.title) }
                 var hasFocused by remember { mutableStateOf(false) }
@@ -1336,6 +1398,7 @@ private fun LazyItemScope.ProjectItemRow(
                                 if (trimmed.isEmpty() && project.title.isEmpty()) {
                                     onDeleteProject(project)
                                 } else if (trimmed.isNotEmpty() && trimmed != project.title) {
+                                    pendingTitle = trimmed
                                     onRenameProject(project, trimmed)
                                 }
                                 onEditingProjectIdChange(null)
@@ -1359,6 +1422,7 @@ private fun LazyItemScope.ProjectItemRow(
                                     if (trimmed.isEmpty()) {
                                         onDeleteProject(project)
                                     } else {
+                                        if (trimmed != project.title) pendingTitle = trimmed
                                         onRenameProject(project, trimmed)
                                     }
                                     onEditingProjectIdChange(null)
@@ -1384,7 +1448,7 @@ private fun LazyItemScope.ProjectItemRow(
                 }
             } else {
                 Text(
-                    text = project.title,
+                    text = pendingTitle ?: project.title,
                     style = ThingsTheme.type.listItem.copy(color = textPrimaryColor),
                     modifier = Modifier.weight(1f),
                     maxLines = 1,
