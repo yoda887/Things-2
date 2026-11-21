@@ -59,13 +59,16 @@ fun handleCategoryListEvent(
     }
     // Подзаголовки в выборе: «Переместить», «Удалить», «Дублировать» действуют на них вместе с их задачами
     // ([HeadingBatch]); задачи — только выбранные сами по себе, не те, что идут с подзаголовком
-    fun batchWithHeadings(action: (com.example.domain.edits.HeadingBatch.Selection, List<ItemWithChecklist>) -> Unit) {
+    fun batchWithHeadings(
+        exitSelection: Boolean = true,
+        action: (com.example.domain.edits.HeadingBatch.Selection, List<ItemWithChecklist>) -> Unit
+    ) {
         val selection = com.example.domain.edits.HeadingBatch.split(
             taskSelection.selectedIds, state.allTasks.map { it.item }, state.allHeadings
         )
         val own = selection.tasks.mapTo(HashSet()) { it.id }
         action(selection, state.allTasks.filter { it.item.id in own })
-        taskSelection.exit()
+        if (exitSelection) taskSelection.exit()
     }
     when (event) {
         // ── Переходы и окна ──
@@ -227,11 +230,14 @@ fun handleCategoryListEvent(
             parts.projects.forEach { viewModel.deleteProject(it) }
             viewModel.deleteTasks(parts.tasks.map { it.item })
         }
-        ThingsCategoryListEvent.BatchDuplicateTasks -> batchWithHeadings { headings, selected ->
+        // Как в Things: выбор остаётся (выбраны те же оригиналы), копии задач — группой над верхней выбранной
+        ThingsCategoryListEvent.BatchDuplicateTasks -> batchWithHeadings(exitSelection = false) { headings, selected ->
             val parts = com.example.domain.edits.MixedSelection.split(selected)
             viewModel.duplicateHeadings(headings.headings)
             parts.projects.forEach { viewModel.duplicateProject(it) }
-            viewModel.batchDuplicateTasks(parts.tasks)
+            // Верхняя выбранная — по порядку экрана; чего на нём нет — после
+            val screenOrder = state.displayTasks.withIndex().associate { (index, task) -> task.item.id to index }
+            viewModel.batchDuplicateTasks(parts.tasks.sortedBy { screenOrder[it.item.id] ?: Int.MAX_VALUE })
         }
         is ThingsCategoryListEvent.BatchScheduleTasks -> batch { selected ->
             val parts = com.example.domain.edits.MixedSelection.split(selected)

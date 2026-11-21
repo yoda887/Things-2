@@ -1064,12 +1064,15 @@ class ThingsViewModel @Inject constructor(
     }
 
     /**
-     * Пакетно дублирует список задач.
+     * Дублирует выбранные задачи ([taskWrappers] — в порядке экрана): копии встают группой над самой верхней
+     * выбранной ([com.example.domain.edits.BatchDuplicates]).
      */
     fun batchDuplicateTasks(taskWrappers: List<ItemWithChecklist>) {
+        val byId = taskWrappers.associateBy { it.item.id }
+        val places = com.example.domain.edits.BatchDuplicates.places(taskWrappers.map { it.item })
         viewModelScope.launch {
-            taskWrappers.forEach { wrapper ->
-                taskUseCases.duplicateTask(wrapper)
+            places.forEach { (item, place) ->
+                byId[item.id]?.let { taskUseCases.duplicateTask(it, place) }
             }
         }
     }
