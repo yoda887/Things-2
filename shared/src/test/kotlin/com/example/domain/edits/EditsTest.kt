@@ -1,5 +1,6 @@
 package com.example.domain.edits
 
+import com.example.data.model.Area
 import com.example.data.model.Item
 import com.example.data.model.ItemWithChecklist
 import com.example.data.model.TaskSection
@@ -148,6 +149,14 @@ class EditsTest {
         assertEquals("Ремонт", project.title)
         assertEquals(Item.TYPE_PROJECT, project.type)
         assertEquals("", NewProjects.create(id = "q").title)
+    }
+
+    @Test
+    fun newArea_standsFirst_beforeTheTopArea() {
+        val areas = listOf(Area(id = "a", title = "a", sortOrder = 3), Area(id = "b", title = "b", sortOrder = -2))
+        assertEquals(-3, NewAreas.create(areas, id = "n").sortOrder)
+        assertEquals("", NewAreas.create(areas, id = "n").title)
+        assertEquals(0, NewAreas.create(emptyList(), id = "n").sortOrder)
     }
 
     @Test

@@ -1090,6 +1090,13 @@ class ThingsViewModel @Inject constructor(
     /** Новый проект с пустым названием (его тут же правят на главном экране). */
     fun createProject(id: String, areaId: String? = null) = updateProject(NewProjects.create(areaId, id))
 
+    /** Новый проект из меню «+»: как в Things, первым среди проектов без области (под «Журналом»). */
+    fun createProjectFirst(id: String) =
+        createProjectAt(id, null, 0, projects.value.filter { it.areaId == null && !it.trashed && !it.isClosed })
+
+    /** Новая область из меню «+»: как в Things, первой среди областей. */
+    fun createAreaFirst(id: String) = updateArea(com.example.domain.edits.NewAreas.create(areas.value, id))
+
     /** Новый проект на месте [index] среди [projects] (в порядке главного экрана); соседи при нужде перенумеровываются. */
     fun createProjectAt(id: String, areaId: String?, index: Int, projects: List<Item>) {
         val insertion = SortOrders.insert(projects, index, NewProjects.create(areaId, id))

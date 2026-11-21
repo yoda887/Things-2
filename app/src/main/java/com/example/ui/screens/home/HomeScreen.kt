@@ -968,7 +968,7 @@ fun ThingsHomeScreen(viewModel: ThingsViewModel = hiltViewModel()) {
                     // списка сначала возвращаемся туда
                     if (activeScreen != ActiveScreen.HOME) navController.popBackStack(HomeRoute, inclusive = false)
                     val newProjectId = java.util.UUID.randomUUID().toString()
-                    viewModel.createProject(newProjectId)
+                    viewModel.createProjectFirst(newProjectId)
                     editingProjectId = newProjectId
                 }
             )
@@ -985,11 +985,7 @@ fun ThingsHomeScreen(viewModel: ThingsViewModel = hiltViewModel()) {
                     showFabMenu = false
                     if (activeScreen != ActiveScreen.HOME) navController.popBackStack(HomeRoute, inclusive = false)
                     val newAreaId = java.util.UUID.randomUUID().toString()
-                    val newArea = Area(
-                        id = newAreaId,
-                        title = ""
-                    )
-                    viewModel.updateArea(newArea)
+                    viewModel.createAreaFirst(newAreaId)
                     editingAreaId = newAreaId
                 }
             )

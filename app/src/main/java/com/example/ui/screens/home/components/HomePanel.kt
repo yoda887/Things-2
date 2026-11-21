@@ -68,7 +68,9 @@ import androidx.compose.animation.core.animateDpAsState
 import androidx.compose.animation.core.tween
 import androidx.compose.animation.core.FastOutSlowInEasing
 import androidx.compose.runtime.withFrameNanos
-import kotlinx.coroutines.flow.debounce
+import androidx.compose.foundation.gestures.animateScrollBy
+import androidx.compose.foundation.layout.windowInsetsBottomHeight
+import androidx.compose.foundation.relocation.bringIntoViewResponder
 import kotlinx.coroutines.flow.first
 import androidx.compose.ui.layout.LayoutCoordinates
 import com.example.ui.components.fabdrag.FabDropTarget
@@ -185,8 +187,38 @@ private sealed interface HomeTreeItem {
  */
 private const val HOME_TREE_FIRST_INDEX = 3
 
-/** Клавиатура считается вставшей, если её высота не менялась столько мс */
-private const val HOME_EDIT_IME_SETTLE_MS = 150L
+/**
+ * Столько ждать, пока клавиатура начнёт выезжать после появления поля названия (на тестовом телефоне — ~1,3 с),
+ * и столько же — пока доедет
+ */
+private const val HOME_EDIT_IME_WAIT_MS = 2_500L
+
+/** Доля высоты экрана под клавиатурой — пока её настоящая высота ещё ни разу не была известна */
+private const val HOME_EDIT_IME_GUESS_FRACTION = 0.4f
+
+/** Запас между новой строкой и клавиатурой — в строках, как в Things */
+private const val HOME_EDIT_MARGIN_ROWS = 2
+
+/** Запас над новой строкой, пришедшей сверху: в Things она встаёт примерно на четверть высоты экрана */
+private const val HOME_EDIT_TOP_MARGIN_ROWS = 3
+
+private const val HOME_EDIT_NANOS_PER_MS = 1_000_000f
+
+/**
+ * Поле названия новой строки само список не двигает. Получив фокус (и при каждом сдвиге курсора), поле просит
+ * показать себя — список прижимал строку к самому верху экрана и обрывал прокрутку главного экрана к ней, отчего
+ * список дёргался. Место строки задаёт главный экран (LaunchedEffect(editingKey) в ThingsHomePanel)
+ */
+@OptIn(androidx.compose.foundation.ExperimentalFoundationApi::class)
+private fun Modifier.homeEditKeepsListPlace(): Modifier =
+    bringIntoViewResponder(HomeEditIgnoresBringIntoView)
+
+@OptIn(androidx.compose.foundation.ExperimentalFoundationApi::class)
+private object HomeEditIgnoresBringIntoView : androidx.compose.foundation.relocation.BringIntoViewResponder {
+    // Родителю — пустой прямоугольник в углу строки: он уже на экране, и списку прокручивать нечего
+    override fun calculateRectForParent(localRect: androidx.compose.ui.geometry.Rect) = androidx.compose.ui.geometry.Rect.Zero
+    override suspend fun bringChildIntoView(localRect: () -> androidx.compose.ui.geometry.Rect?) = Unit
+}
 
 internal object HomeListKeys {
     /** Префикс строки проекта */
@@ -586,31 +618,97 @@ fun ThingsHomePanel(
         }
 
         // Новый проект или область из меню «+»: строка с полем названия может оказаться ниже видимой части списка
-        // (или под клавиатурой) — список прокручивается к ней. Уже видимая строка — список стоит на месте
+        // (или под клавиатурой) — список прокручивается к ней. Строка в середине экрана — список стоит на месте
         val editingKey = editingProjectId?.let { HomeListKeys.project(it) } ?: editingAreaId?.let { HomeListKeys.area(it) }
         val currentDisplayedTree by rememberUpdatedState(displayedTree)
         val imeInsets = androidx.compose.foundation.layout.WindowInsets.ime
+        @OptIn(androidx.compose.foundation.layout.ExperimentalLayoutApi::class)
+        val imeTargetInsets = androidx.compose.foundation.layout.WindowInsets.imeAnimationTarget
+        val rowHeightPx = with(density) { MaterialTheme.dimens.homeRowHeight.roundToPx() }
         val statusBarInsets = androidx.compose.foundation.layout.WindowInsets.statusBars
+        // Высота клавиатуры с прошлого раза — куда ставить строку, которой ещё нет на экране (см. ниже)
+        var lastImeBottomPx by remember { mutableIntStateOf(0) }
+        LaunchedEffect(imeTargetInsets) {
+            snapshotFlow { imeTargetInsets.getBottom(density) }.collect { if (it > 0) lastImeBottomPx = it }
+        }
         LaunchedEffect(editingKey) {
             val key = editingKey ?: return@LaunchedEffect
             // Строка появляется, когда новая запись пришла из базы
             val treeIndex = snapshotFlow { currentDisplayedTree.indexOfFirst { it.key == key } }.first { it >= 0 }
-            // Поле названия открывает клавиатуру: решать по её полной высоте — пока она выезжает, строка ещё «видна».
-            // Высота не менялась HOME_EDIT_IME_SETTLE_MS — клавиатура встала (или так и не открылась)
-            @OptIn(kotlinx.coroutines.FlowPreview::class)
-            val imeBottom = snapshotFlow { imeInsets.getBottom(density) }
-                .debounce(HOME_EDIT_IME_SETTLE_MS)
-                .first()
-            val info = lazyListState.layoutInfo
-            val row = info.visibleItemsInfo.firstOrNull { it.key == key }
-            // Список идёт под строкой состояния и под клавиатурой — видимая часть между ними
-            val visibleStart = info.viewportStartOffset + statusBarInsets.getTop(density)
-            val visibleEnd = info.viewportEndOffset - imeBottom
-            val fullyVisible = row != null && row.offset >= visibleStart && row.offset + row.size <= visibleEnd
-            if (!fullyVisible) {
-                // Строка — в верхней трети видимой части, над клавиатурой
-                lazyListState.animateScrollToItem(HOME_TREE_FIRST_INDEX + treeIndex, -(visibleStart + (visibleEnd - visibleStart) / 3))
+            val coords = listCoordinates?.takeIf { it.isAttached } ?: return@LaunchedEffect
+            // Всё — в координатах списка (offset строки). Клавиатура и строка состояния — края экрана: переводим их
+            // в координаты списка через его место на экране (низ списка с низом экрана не совпадает)
+            val listTop = coords.positionInRoot().y - lazyListState.layoutInfo.viewportStartOffset
+            val rootHeight = coords.findRootCoordinates().size.height
+            val visibleStart = statusBarInsets.getTop(density) - listTop
+            fun visibleEnd(imeBottom: Int) = rootHeight - imeBottom - listTop
+            val margin = rowHeightPx * HOME_EDIT_MARGIN_ROWS
+
+            // Как в Things: список сдвигается ровно настолько, чтобы строку было видно, и с запасом в пару строк
+            // до края — сверху до верха экрана, снизу до клавиатуры. Шла сверху — встаёт у верха, снизу — над
+            // клавиатурой; вплотную к краю не прижимается. Строка в середине экрана, вне этих запасов, — на месте;
+            // видимая, но прижатая к краю (у самого верха или над клавиатурой) — отодвигается от него
+            suspend fun bringIntoView(imeBottom: Int) {
+                val top = visibleStart + rowHeightPx * HOME_EDIT_TOP_MARGIN_ROWS
+                val bottom = visibleEnd(imeBottom) - margin
+                val index = HOME_TREE_FIRST_INDEX + treeIndex
+                // Где строка сейчас (offset её верха). Пока её нет на экране — оценка по средней высоте видимых
+                // строк; как только появилась — точно, и движение на ходу доворачивает к настоящей цели
+                fun rowTop(): Pair<Float, Int>? {
+                    val visible = lazyListState.layoutInfo.visibleItemsInfo
+                    visible.firstOrNull { it.key == key }?.let { return it.offset.toFloat() to it.size }
+                    val first = visible.firstOrNull() ?: return null
+                    val last = visible.last()
+                    val average = visible.sumOf { it.size }.toFloat() / visible.size
+                    return if (index < first.index) first.offset - (first.index - index) * average to rowHeightPx
+                    else last.offset + last.size + (index - last.index - 1) * average to rowHeightPx
+                }
+                val (startTop, startSize) = rowTop() ?: return
+                val toTop = when {
+                    startTop < top -> true
+                    startTop + startSize > bottom -> false
+                    else -> return
+                }
+                fun remaining(): Float {
+                    val (rowOffset, size) = rowTop() ?: return 0f
+                    return if (toTop) rowOffset - top else rowOffset + size - bottom
+                }
+                // Одно плавное движение (раньше — прокрутка к строке, а потом доводка обратно: список дёргался
+                // туда-обратно). Каждый кадр проходит ту долю оставшегося пути, что задаёт кривая замедления
+                lazyListState.scroll {
+                    val startNanos = withFrameNanos { it }
+                    var previous = 0f
+                    while (true) {
+                        val now = withFrameNanos { it }
+                        val t = ((now - startNanos) / HOME_EDIT_NANOS_PER_MS / ThingsMotion.STANDARD).coerceIn(0f, 1f)
+                        val eased = FastOutSlowInEasing.transform(t)
+                        val share = if (previous >= 1f) 1f else (eased - previous) / (1f - previous)
+                        previous = eased
+                        val left = remaining()
+                        val consumed = scrollBy(left * share)
+                        if (t >= 1f || kotlin.math.abs(consumed) < kotlin.math.abs(left * share) - 1f) break
+                    }
+                }
             }
+
+            // Список едет сразу, вместе с выезжающей клавиатурой, а не после неё: её высота — с прошлого раза
+            // (впервые — доля экрана)
+            val guess = lastImeBottomPx.takeIf { it > 0 } ?: (rootHeight * HOME_EDIT_IME_GUESS_FRACTION).toInt()
+            bringIntoView(guess)
+
+            // Когда клавиатура встала — доводка по её настоящей высоте. Ждём начала выезда (конечная высота —
+            // imeAnimationTarget), потом — пока доедет; не открылась за HOME_EDIT_IME_WAIT_MS — решаем без неё.
+            // Окно системой не сдвигается (adjustResize в манифесте): иначе при закрытом поле оно уезжало целиком,
+            // вместе с верхом экрана, и спорило с прокруткой
+            val imeBottom = kotlinx.coroutines.withTimeoutOrNull(HOME_EDIT_IME_WAIT_MS) {
+                snapshotFlow { imeTargetInsets.getBottom(density) }.first { it > 0 }
+            } ?: 0
+            if (imeBottom > 0) {
+                kotlinx.coroutines.withTimeoutOrNull(HOME_EDIT_IME_WAIT_MS) {
+                    snapshotFlow { imeInsets.getBottom(density) }.first { it >= imeBottom }
+                }
+            }
+            bringIntoView(imeBottom)
         }
 
         LazyColumn(
@@ -922,6 +1020,7 @@ fun ThingsHomePanel(
                                     cursorBrush = SolidColor(if (isFinishing) Color.Unspecified else ThingsTheme.colors.accent),
                                     modifier = Modifier
                                         .weight(1f)
+                                        .homeEditKeepsListPlace()
                                         .focusRequester(focusRequester)
                                         .onFocusChanged { focusState ->
                                             if (focusState.isFocused) {
@@ -1027,10 +1126,15 @@ fun ThingsHomePanel(
             Spacer(modifier = Modifier.height(with(density) { homeSettingsFillerPx.toDp() }))
         }
         item(key = HOME_SETTINGS_ROW_KEY) {
-            HomeSettingsRow(
-                textSecondaryColor = textSecondaryColor,
-                onClick = onSettingsClick
-            )
+            Column {
+                HomeSettingsRow(
+                    textSecondaryColor = textSecondaryColor,
+                    onClick = onSettingsClick
+                )
+                // Под открытой клавиатурой список продлевается на её высоту: строку у самого конца списка (новая
+                // область, проект) можно поднять над клавиатурой. Закрылась — список оседает к концу сам, как в Things
+                Spacer(modifier = Modifier.windowInsetsBottomHeight(androidx.compose.foundation.layout.WindowInsets.ime))
+            }
         }
     }
 
@@ -1388,6 +1492,7 @@ private fun LazyItemScope.ProjectItemRow(
                     cursorBrush = SolidColor(if (isFinishing) Color.Unspecified else ThingsTheme.colors.accent),
                     modifier = Modifier
                         .weight(1f)
+                        .homeEditKeepsListPlace()
                         .focusRequester(focusRequester)
                         .onFocusChanged { focusState ->
                             if (focusState.isFocused) {
