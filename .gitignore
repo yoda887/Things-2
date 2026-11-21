@@ -30,3 +30,6 @@ firebase-applet-config.json
 debug.keystore.base64
 .build-outputs/
 
+
+# Вывод компиляции IDE с расширением Java от Red Hat (Antigravity, VS Code) — папки bin/ в модулях
+bin/
