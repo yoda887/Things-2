@@ -1181,6 +1181,9 @@ fun ThingsCategoryListPanel(
                         textPrimaryColor = textPrimaryColor,
                         globalDimAlpha = globalDimAlpha,
                         onDeleteProject = { onEvent(ThingsCategoryListEvent.DeleteProject(it)) },
+                        projectContentCount = project?.let { p ->
+                            com.example.domain.lists.ProjectList.contentCount(p.id, state.allTasks.map { it.item }, state.allHeadings)
+                        } ?: 0,
                         onAddHeading = { addHeading() },
                         onDeleteArea = { onEvent(ThingsCategoryListEvent.DeleteArea(it)) },
                         onRenameProject = { proj, title -> onEvent(ThingsCategoryListEvent.EditProject(proj, ProjectEdit.Rename(title))) },

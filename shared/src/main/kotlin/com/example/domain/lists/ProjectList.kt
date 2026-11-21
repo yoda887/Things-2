@@ -10,6 +10,13 @@ object ProjectList {
     fun includes(item: Item, projectId: String?): Boolean =
         projectId != null && item.projectId == projectId && !item.isClosed
 
+    /**
+     * Сколько записей удалится вместе с проектом — для предупреждения: его задачи (и выполненные) и заголовки.
+     * Удаляет их база каскадом по projectId; лежащие в корзине не считаются — пользователь их в проекте не видит.
+     */
+    fun contentCount(projectId: String, tasks: List<Item>, headings: List<Item>): Int =
+        tasks.count { it.projectId == projectId && !it.trashed } + headings.count { it.projectId == projectId && !it.trashed }
+
     /** Открытые заголовки проекта по порядку. */
     fun headings(all: List<Item>, projectId: String?): List<Item> =
         all.filter { projectId != null && it.projectId == projectId && it.status == Item.STATUS_OPEN && !it.trashed }

@@ -34,6 +34,19 @@ class ProjectScreenTest {
     }
 
     @Test
+    fun contentCount_tasksAndHeadingsOfTheProject_withoutTrash() {
+        val tasks = listOf(
+            task("open").item,
+            task("done", status = Item.STATUS_COMPLETED).item,
+            task("trashed").item.copy(trashed = true),
+            task("other", project = "x").item
+        )
+        val headings = listOf(heading("h1", 1), heading("hDone", 2, Item.STATUS_COMPLETED), heading("hx", 3).copy(projectId = "x"))
+        // Открытая и выполненная задача, два заголовка; задача в корзине и чужие — нет
+        assertEquals(4, ProjectList.contentCount("p", tasks, headings))
+    }
+
+    @Test
     fun headings_openOnlyInOrder() {
         val all = listOf(heading("h2", 2), heading("h1", 1), heading("done", 0, Item.STATUS_COMPLETED),
             heading("other", 0).copy(projectId = "x"))

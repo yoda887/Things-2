@@ -79,6 +79,8 @@ fun MainCategoryHeader(
     textPrimaryColor: Color,
     globalDimAlpha: Float,
     onDeleteProject: (Item) -> Unit = {},
+    // Сколько задач и заголовков удалится вместе с проектом — для предупреждения (ProjectList.contentCount)
+    projectContentCount: Int = 0,
     onDeleteArea: (Area) -> Unit = {},
     onAddHeading: () -> Unit = {},
     onProjectAction: (ProjectAction) -> Unit = {},
@@ -344,7 +346,11 @@ fun MainCategoryHeader(
                             if (project != null) {
                                 ThingsConfirmPopover(
                                     expanded = showDeleteConfirmDialog,
-                                    message = stringResource(R.string.delete_project_popover_message),
+                                    message = if (projectContentCount > 0) {
+                                        androidx.compose.ui.res.pluralStringResource(
+                                            R.plurals.delete_project_popover_message_items, projectContentCount, projectContentCount
+                                        )
+                                    } else stringResource(R.string.delete_project_popover_message),
                                     confirmText = stringResource(R.string.ui_delete_project),
                                     onConfirm = {
                                         showDeleteConfirmDialog = false
